@@ -1,0 +1,522 @@
+/* "다운로드 전 요약" 화면 전용 스타일. 기존 리포트(app.css의 .page/.card 등)와는
+   분리된 별도 화면이라 독립된 스타일시트로 관리한다. */
+
+.simple-summary {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 20px 40px;
+  color: var(--ink);
+  font-size: 14px;
+}
+.simple-summary::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url(../assets/inner-vine.png);
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+  opacity: .10;
+}
+.simple-summary > * { position: relative; z-index: 1; }
+.simple-summary section { margin-bottom: 34px; }
+
+.simple-summary-topbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+.ss-back-btn {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.ss-back-btn:hover { color: var(--navy-700); }
+.ss-back-btn:focus-visible,
+.overview-card-note-icon:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.simple-summary-date {
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 18px;
+}
+
+.simple-summary-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--navy-800);
+  margin: 0 0 6px;
+}
+
+.simple-summary-subtitle {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0 0 16px;
+}
+
+.ss-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--navy-800);
+  margin: 22px 0 10px;
+}
+
+.ss-guidance {
+  background: var(--amber-soft);
+  border-left: 4px solid var(--amber);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #8A5A12;
+  line-height: 1.6;
+}
+
+/* ---------- 1. 재무 현황 카드 ---------- */
+.overview-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.overview-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+  min-width: 0;
+}
+.overview-card--highlight {
+  border-color: var(--gold);
+  border-width: 2px;
+  background: var(--paper);
+}
+.overview-card--risk {
+  border-color: var(--red);
+}
+.overview-card-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+.overview-card-note-icon {
+  cursor: help;
+  color: var(--ink-soft);
+  font-size: 11px;
+  border: none;
+  background: none;
+}
+.overview-card-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--navy-800);
+  word-break: keep-all;
+}
+.overview-card--risk .overview-card-value { color: var(--red); }
+.overview-card-missing {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* ---------- 1-1. 자산현황 세부내역 카드 (수입/지출/자산·부채 그룹형) ---------- */
+.detail-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px 14px;
+}
+.detail-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.detail-card-icon { font-size: 16px; }
+.detail-card-title { font-size: 15px; font-weight: 800; color: var(--navy-800); }
+.detail-group {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.detail-group:first-of-type { border-top: none; }
+.detail-group-head {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.detail-group-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 13.5px;
+}
+.detail-row-label { color: var(--ink); }
+.detail-row-value { color: var(--ink); font-variant-numeric: tabular-nums; }
+.detail-row--total {
+  margin-top: 4px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  font-weight: 800;
+}
+.detail-row--total .detail-row-value { color: var(--navy-800); font-size: 14.5px; }
+.detail-row--highlight {
+  margin: 6px -20px -10px;
+  padding: 10px 20px 12px;
+  background: var(--teal-soft);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+}
+.detail-row--highlight .detail-row-value { color: #0E6C5E; font-size: 16px; }
+
+/* ---------- 2. 도넛 차트 ---------- */
+.donut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.donut-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.donut-card-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--navy-800);
+  margin-bottom: 2px;
+}
+.donut-card-desc {
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+}
+.donut-chart-wrap {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  margin: 4px 0 12px;
+}
+.donut-center-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.donut-center-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy-900);
+  line-height: 1.2;
+}
+.donut-center-caption {
+  font-size: 9.5px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+  max-width: 74px;
+  line-height: 1.25;
+}
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+}
+.donut-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+}
+.donut-legend li:last-child { border-bottom: none; }
+.donut-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.donut-legend-label { flex: 1; color: var(--ink); }
+.donut-legend-value { color: var(--ink-soft); white-space: nowrap; }
+.donut-empty-message {
+  font-size: 12px;
+  color: var(--ink-soft);
+  padding: 30px 6px;
+  line-height: 1.6;
+}
+.donut-footnote {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+/* ---------- 3. 또래 비교 ---------- */
+.ss-placeholder-badge {
+  display: inline-block;
+  background: var(--amber-soft);
+  color: #8A5A12;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+.peer-compare-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.peer-row {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.peer-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.peer-row-label { font-size: 13.5px; font-weight: 700; color: var(--navy-800); }
+.peer-row-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy-700);
+  background: var(--teal-soft);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.peer-row-tag--muted { background: var(--line); color: var(--ink-soft); }
+.peer-bar-track {
+  position: relative;
+  height: 10px;
+  background: var(--paper);
+  border-radius: 6px;
+  overflow: visible;
+}
+.peer-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: var(--gold);
+}
+.peer-bar-avg-marker {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 16px;
+  background: var(--navy-900);
+}
+.peer-row-numbers {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-top: 8px;
+}
+.peer-diff-pos { color: var(--teal); font-weight: 700; }
+.peer-diff-neg { color: var(--red); font-weight: 700; }
+
+/* ---------- 4. 은퇴 준비 현황 ---------- */
+.retirement-card-grid { margin-bottom: 22px; }
+.need-compare-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.need-compare-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.need-compare-label { font-size: 12px; color: var(--ink-soft); }
+.need-compare-track {
+  height: 14px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.need-compare-fill { height: 100%; }
+.need-compare-value { font-size: 12.5px; font-weight: 700; color: var(--navy-800); white-space: nowrap; }
+.gap-timeline-card { margin-bottom: 22px; }
+.gap-timeline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 18px;
+}
+.gap-timeline-point {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.gap-timeline-age {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--gold);
+  color: var(--navy-900);
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gap-timeline-label {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  text-align: center;
+}
+.gap-timeline-track {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 22px;
+  min-width: 40px;
+}
+.gap-timeline-badge {
+  position: absolute;
+  top: -4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--red);
+  background: var(--card);
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.gap-timeline-line {
+  width: 100%;
+  height: 0;
+  border-top: 2px dashed var(--red);
+  margin-top: 26px;
+}
+.gap-total-value { color: var(--red); font-size: 16px; }
+.ss-footnote-note {
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+.ss-gap-note {
+  background: var(--teal-soft);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #0E6C5E;
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+
+.ss-card-list {
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--gold);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.ss-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.ss-card-row:last-child { border-bottom: none; }
+.ss-total-row { background: var(--paper); }
+.ss-row-label { font-size: 13.5px; }
+.ss-row-value-sm { font-size: 14px; font-weight: 700; color: var(--navy-800); }
+
+/* ---------- 5. 다운로드 ---------- */
+.ss-download-section { text-align: center; }
+.ss-download-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  margin: 6px 0 12px;
+}
+.ss-actions {
+  display: flex;
+  gap: 8px;
+}
+.ss-actions button {
+  flex: 1;
+  padding: 11px 6px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  .simple-summary { color: #ede6d8; }
+}
+
+@media (max-width: 620px) {
+  .donut-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .overview-card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 380px) {
+  .simple-summary { padding: 20px 14px 32px; font-size: 13.5px; }
+  .overview-card-grid { grid-template-columns: 1fr 1fr; }
+  .overview-card-value { font-size: 16px; }
+  .simple-summary-title { font-size: 17px; }
+  .ss-section-title { font-size: 14px; margin: 18px 0 8px; }
+  .need-compare-row { grid-template-columns: 54px 1fr auto; }
+  .detail-card { padding: 14px 14px 10px; }
+  .detail-row--highlight { margin: 6px -14px -10px; padding: 10px 14px 12px; }
+  .gap-timeline-age { width: 44px; height: 44px; font-size: 12.5px; }
+  .gap-timeline-label { font-size: 10px; }
+}
