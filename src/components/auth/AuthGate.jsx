@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../state/authState';
-import heroImage from '../../assets/hero-beanstalk.jpg';
+import heroImage from '../../assets/리포트 표지 디자인.png';
 import AppCopyright from '../AppCopyright';
 
 function translateAuthError(message) {
@@ -59,11 +59,10 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, n
       </div>
       <div className="auth-card">
         <div className="auth-card-bg">
-          <img src={heroImage} alt="구름 위 성으로 이어지는 콩나무" />
+          <img src={heroImage} alt="전문적인 재무진단 리포트 표지" />
         </div>
         <div className="auth-card-content">
-          <div className="auth-brand">JACK &amp; RICH</div>
-          <h1 className="auth-title">{title}</h1>
+          {title !== '잭앤리치' && <h1 className="auth-title">{title}</h1>}
 
           {noticeMessage && <p className="auth-switch-notice">{noticeMessage}</p>}
 

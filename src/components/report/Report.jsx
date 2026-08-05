@@ -3,21 +3,18 @@ import ExecutiveSummaryPage from './pages/ExecutiveSummaryPage';
 import PART1FinancialStatusPage from './pages/PART1FinancialStatusPage';
 import HouseholdDetailPage from './pages/HouseholdDetailPage';
 import CashFlowOutlookPage from './pages/CashFlowOutlookPage';
-import RetirementSimulationPage from './pages/RetirementSimulationPage';
 import ShortfallFillPage from './pages/ShortfallFillPage';
 import ConclusionPage from './pages/ConclusionPage';
 import AssetManagementOptionsPage from './pages/AssetManagementOptionsPage';
 import BackCoverPage from './pages/BackCoverPage';
 
-const TOTAL_PAGES = 10;
+const TOTAL_PAGES = 9;
 
 export default function Report({ result, onRestart, onBack, clientName }) {
   const { generatedAt, summary, indicators, aggregates, simulation, scenarioComparison, peerComparison, familyAges, savingsBreakdown, debtBreakdown } = result;
   // AI가 작성할 리포트 피드백 문구를 담을 자리. 아직 생성 API와 연결되지 않아 항상 비어 있으며,
   // 값이 없으면 각 페이지가 자체적으로 "준비 중" placeholder를 보여준다(AIFeedbackBox 참고).
   const aiFeedback = result.aiFeedback || {};
-
-  const retirementLivingCost = simulation.retirementLivingCostNow;
 
   let page = 1;
   const nextPage = () => ++page;
@@ -73,16 +70,6 @@ export default function Report({ result, onRestart, onBack, clientName }) {
       <CashFlowOutlookPage
         aggregates={aggregates}
         simulation={simulation}
-        pageNumber={nextPage()}
-        totalPages={TOTAL_PAGES}
-      />
-
-      <RetirementSimulationPage
-        simulation={simulation}
-        aggregates={aggregates}
-        retirementLivingCost={retirementLivingCost}
-        feedbackBars={aiFeedback.retirementSimulationBars}
-        feedbackPension={aiFeedback.retirementSimulationPension}
         pageNumber={nextPage()}
         totalPages={TOTAL_PAGES}
       />

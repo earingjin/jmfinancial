@@ -13,14 +13,14 @@ body {
 
 .app-shell { min-height: 100vh; position: relative; }
 
-/* ---------- 진단(마법사/로딩) 화면 배경 콩나무 삽화 ---------- */
+/* ---------- 진단(마법사/로딩) 화면 전문 리포트 배경 ---------- */
 .app-shell--diagnosis::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: url(../assets/inner-vine.png);
+  background-image: url(../assets/리포트 속지.png);
   background-repeat: no-repeat;
   background-position: center top;
   background-size: cover;
@@ -39,7 +39,7 @@ body {
   color: var(--navy-900);
   background-image:
     linear-gradient(100deg, rgba(255, 250, 239, .98) 0%, rgba(251, 232, 195, .92) 46%, rgba(246, 207, 137, .62) 70%, rgba(255, 248, 230, .16) 100%),
-    url(../assets/hero-beanstalk.jpg);
+    url(../assets/리포트 표지 디자인.png);
   background-repeat: no-repeat, no-repeat;
   background-position: center, right 13% top 12%;
   background-size: cover, 560px auto;
@@ -86,20 +86,24 @@ body {
 .wizard-progress-item:hover { background: var(--card); color: var(--navy-800); }
 .wizard-progress-item:active { background: var(--card); }
 .wizard-progress-item.is-active { border-color: var(--navy-800); color: var(--navy-800); }
-.wizard-progress-item.is-done { border-color: var(--teal); }
+.wizard-progress-item.is-done { border-color: #ffd84d; }
 .wizard-progress-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 58px;
-  height: 58px;
+  width: 36px;
+  height: 36px;
   margin-bottom: 6px;
-  overflow: hidden;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--navy-700);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
-.wizard-progress-dot img {
-  width: 100%; height: 100%; object-fit: cover; object-position: center 50%; display: block;
-}
+.wizard-progress-item.is-active .wizard-progress-dot { background: var(--navy-800); border-color: var(--navy-800); color: #fff; }
+.wizard-progress-item.is-done .wizard-progress-dot { background: #ffd84d; border-color: #ffd84d; color: var(--navy-900); }
 .wizard-progress-label { display: block; }
 
 .wizard-body {
@@ -300,7 +304,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: url(../assets/inner-vine.png);
+  background-image: url(../assets/리포트 속지.png);
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
@@ -343,7 +347,6 @@ body {
   z-index: 1;
   padding: 32px 28px;
 }
-.auth-brand { font-size: 12px; letter-spacing: .18em; color: var(--gold); font-weight: 700; text-align: center; text-shadow: 0 1px 3px rgba(255,255,255,.8); }
 .auth-title { font-size: 18px; font-weight: 800; color: var(--navy-900); text-align: center; margin: 8px 0 24px; text-shadow: 0 1px 4px rgba(255,255,255,.7); }
 .auth-mode-toggle { justify-content: center; margin-bottom: 20px; }
 .auth-mode-toggle .radio-pill { flex: 1; text-align: center; }
@@ -540,7 +543,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   }
   .wizard-progress::-webkit-scrollbar { display: none; }
   .wizard-progress-item { flex: 0 0 auto; min-width: 60px; font-size: 10.5px; padding: 6px 5px; }
-  .wizard-progress-dot { width: 46px; height: 46px; margin-bottom: 4px; border-radius: 10px; }
+  .wizard-progress-dot { width: 32px; height: 32px; margin-bottom: 4px; font-size: 13px; }
 
   .wizard-body { padding: 18px 16px; }
   .wizard-nav { gap: 10px; }
@@ -660,7 +663,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .cover-logo-text { font-size: 13px; font-weight: 600; color: var(--navy-900); }
 .cover-logo-img { height: 34px; width: auto; display: block; }
 .cover-kicker { margin-top: 34px; font-size: 15px; color: var(--ink); line-height: 1.5; }
-.cover-title { margin: 44px 0 0; font-size: 52px; font-weight: 800; line-height: 1.2; color: var(--navy-900); letter-spacing: -1px; }
+.cover-title { margin: 44px 0 0; font-size: 52px; font-weight: 800; line-height: 1.2; color: #fff; letter-spacing: -1px; }
 .cover-title span { display: block; font-size: 30px; font-weight: 800; margin-top: 6px; }
 .cover-date-badge {
   display: inline-block; width: fit-content; margin-top: 26px;
