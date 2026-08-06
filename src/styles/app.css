@@ -154,6 +154,24 @@ body {
 }
 .field-unit { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
 .field-helper { font-size: 11px; color: var(--ink-soft); }
+.field-computed-box {
+  display: flex; align-items: center; justify-content: flex-end;
+  background: rgba(201, 121, 31, 0.12);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 15px; font-weight: 700; color: var(--navy-900);
+}
+.field-navy-box {
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--navy-800); color: #fff;
+  border-radius: 10px; padding: 12px 16px;
+}
+.field-navy-label { font-size: 12px; color: #cbd5e1; }
+.field-navy-value { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; font-size: 18px; font-weight: 800; }
+.field-navy-value .unit { font-size: 12px; font-weight: 600; color: #cbd5e1; }
+
+.portal-notice { background: var(--amber-soft); border-radius: 8px; padding: 12px 16px; margin: 0 0 16px; }
+.portal-notice p { font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 8px; }
+.portal-notice a { font-size: 12.5px; font-weight: 700; color: var(--red); text-decoration: underline; }
 
 .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .radio-pill {
@@ -206,6 +224,28 @@ body {
   font-weight: 600;
   color: var(--navy-800);
   cursor: pointer;
+}
+
+.text-link-button {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 12.5px; font-weight: 700; color: var(--navy-900);
+}
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(20, 24, 33, 0.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; z-index: 1000;
+}
+.modal-panel {
+  background: #fff; border-radius: 12px; padding: 22px 26px;
+  max-width: 480px; width: 100%; max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.modal-header h4 { font-size: 15.5px; font-weight: 800; color: var(--navy-900); margin: 0; }
+.modal-close {
+  background: none; border: none; font-size: 16px; line-height: 1;
+  cursor: pointer; color: var(--ink-soft); padding: 4px;
 }
 
 .scenario-card { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }

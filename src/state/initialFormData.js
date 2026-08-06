@@ -8,41 +8,79 @@ export const initialFormData = {
     hasSpouse: false,       // 배우자 정보 입력 여부 - true일 때만 spouse.* 입력 항목이 화면에 나타남
     retirementAge: '',      // 은퇴(예정) 연령
     lifeExpectancy: '',     // 기대수명(노후 생활비 필요기간 계산 기준)
+    serviceYears: '',       // 근속년수(퇴직금 모의계산기의 "총 재직일수÷365" 항에 사용)
     assumedReturnRate: 3,   // 예상 투자/저축 수익률(연, %) - 기본값 3%
   },
 
   income: {
-    salary: { annual: '', monthly: '', months: '' },
+    salary: { annual: '', monthly: '', annualBonus: '', months: '' },
     business: { annual: '', monthly: '' }, // 사업소득(본인+배우자 합산) - regularIncomes에서 자동 합산됨
     regularIncomes: [],          // [{ type: 'business'|'other', name, annual, years }] 사업소득·기타 정기수입 통합 입력 목록
     severance: {
-      type: 'lumpsum',          // 'lumpsum' | 'pension'
+      type: 'lumpsum',          // 'lumpsum' | 'pension' | 'none'(이미 퇴직금을 수령해 해당 없음)
       lumpsum: '',
+      lumpsumAge: '',           // 퇴직금(일시금) 수령 나이
       pensionMonthly: '',
+      pensionYears: '',         // 수령 기간(년) - 입력하면 pensionMonths(수령 개월수)가 자동 계산됨
       pensionMonths: '',
-      inflationLinked: true,    // 물가연동형 여부 (false면 정액형 - 수령액이 고정, 실질가치 매년 하락)
+      calc: {                   // 퇴직금 모의계산기 입력값(퇴직금을 모르는 사용자가 lumpsum을 추정하기 위한 보조 입력)
+        threeMonthSalary: '',   // 퇴직 전 3개월 급여 총액
+        annualBonus: '',        // 연간 상여금 총액
+        annualLeavePay: '',     // 연차수당
+      },
     },
-    nationalPension: { monthly: '', months: '' },
+    nationalPension: {
+      inputMode: 'direct',      // 'direct'(직접 입력) | 'simulate'(모의계산)
+      monthly: '',
+      months: '',
+      paymentYears: '',         // 국민연금 납입기간(년) - 직접입력 모드의 참고용 기록(계산에는 쓰이지 않음)
+      simulate: {               // 모의계산 입력값 - monthly = 월평균급여×가입기간×1.5%로 자동 계산되어 반영됨
+        averageMonthlyIncome: '', // 가입기간 중 월평균급여
+        years: '',                // 가입기간(년)
+      },
+    },
     personalPension: {
       type: 'installment',     // 'lumpsum' | 'installment'
       lumpsum: '',
+      lumpsumAge: '',           // 개인연금(일시금) 수령 나이
       monthly: '',
       months: '',
-      inflationLinked: true,    // 물가연동형 여부 (false면 정액형 - 수령액이 고정, 실질가치 매년 하락)
     },
     otherIncomes: [],           // [{ name, annual, years }] 확정된 정기수입(임대수입 등) - regularIncomes 중 "기타" 항목만 자동 반영됨
   },
 
   spouse: {
-    salary: { annual: '', monthly: '', months: '' },
-    severance: { lumpsum: '', pensionMonthly: '', pensionMonths: '', inflationLinked: true },
-    nationalPension: { monthly: '', months: '' },
+    salary: { annual: '', monthly: '', annualBonus: '', months: '' },
+    severance: {
+      type: 'lumpsum',          // 'lumpsum' | 'pension' | 'none'(이미 퇴직금을 수령해 해당 없음)
+      lumpsum: '',
+      lumpsumAge: '',           // 퇴직금(일시금) 수령 나이
+      pensionMonthly: '',
+      pensionYears: '',         // 수령 기간(년) - 입력하면 pensionMonths(수령 개월수)가 자동 계산됨
+      pensionMonths: '',
+      serviceYears: '',         // 배우자 근속년수(퇴직금 모의계산기 전용 - 배우자용 "기본 정보" 섹션이 없어 여기 둔다)
+      calc: {                   // 퇴직금 모의계산기 입력값(배우자의 lumpsum을 추정하기 위한 보조 입력)
+        threeMonthSalary: '',
+        annualBonus: '',
+        annualLeavePay: '',
+      },
+    },
+    nationalPension: {
+      inputMode: 'direct',
+      monthly: '',
+      months: '',
+      paymentYears: '',
+      simulate: {
+        averageMonthlyIncome: '',
+        years: '',
+      },
+    },
     personalPension: {
       type: 'installment',
       lumpsum: '',
+      lumpsumAge: '',
       monthly: '',
       months: '',
-      inflationLinked: true,
     },
   },
 
@@ -52,7 +90,9 @@ export const initialFormData = {
     debts: [],                  // [{ repaymentType, principal, monthlyInterest, monthlyRepayment, months }]
     children: [],               // [{ educationCost(학자금), marriageSupport, otherCost }] - 목돈 지출 총액 기준
     medical: { annual: '', years: '' },
-    healthInsurance: { monthly: '', years: '' },
+    // items: [{ name, monthly }] "+ 기타 추가"로 자유롭게 추가하는 보험료 항목(국민건강보험료 등).
+    // monthly는 이 항목들의 합계로 자동 계산되어, 기존처럼 고정지출로 집계된다.
+    healthInsurance: { monthly: '', years: '', items: [] },
     otherExpenses: [],          // [{ name, annual, years }]
   },
 
@@ -90,10 +130,23 @@ export const initialFormData = {
     },
     financialAssets: {
       stocks: '', funds: '', other: '',
+      otherItems: [], // [{ name, amount }] "기타 금융자산"의 종류별 세부 항목(합계가 other에 자동 반영됨)
     },
-    pensionAssets: '',           // 연금자산(개인연금·퇴직연금·IRP 등 잔액) - 금융자산과 분리
+    // 연금자산(개인연금·퇴직연금·IRP 등 잔액) 총액 - 금융자산과 분리. 아래 pensionAssetsBreakdown 4개
+    // 항목의 합으로 자동 계산된다(변액연금·연금저축계좌·IRP는 "3. 저축"과 연동, 기타는 여기서 직접 입력).
+    pensionAssets: '',
+    pensionAssetsBreakdown: {
+      variableAnnuity: '',        // 변액연금(저축 파트와 연동)
+      pensionSavingsAccount: '',  // 연금저축계좌(저축 파트와 연동)
+      irp: '',                    // IRP개인퇴직계좌(저축 파트와 연동)
+      other: '',                  // 기타 총액 - 아래 otherItems의 합으로 자동 계산됨(직접 입력하지 않음)
+      otherItems: [],              // [{ name, amount }] "기타" 연금자산의 종류별 세부 항목
+    },
     realEstateAssets: {
+      // total은 mainProperty + otherItems 합으로 자동 계산된다(직접 입력하지 않음).
       total: '',
+      mainProperty: '',          // 주요 부동산 시세(현재 시세 기준으로 직접 입력)
+      otherItems: [],            // [{ name, amount }] 기타 부동산(추가 보유 부동산)의 시세
       reverseMortgageHouse: '',  // 주택연금 신청 대상 주택 1채의 가격
     },
     debtStatus: {
@@ -116,15 +169,22 @@ export const initialFormData = {
     savingsPlan: {
       monthly: '', annual: '',
       inputMode: 'simple',   // 'simple'(총액 한번에 입력) | 'detailed'(항목별 입력) - UI 입력 방식 선택값
-      breakdown: {           // 월 저축액 세부 항목(월 저축액 합계는 이 값들 + customItems의 합으로 자동 계산됨)
-        installment: '',     // 적금
-        isa: '',             // ISA
-        irp: '',             // IRP
-        subscription: '',    // 청약(주택청약종합저축)
-        stocks: '',          // 주식(적립식 투자)
-        parkingAccount: '',  // 파킹통장
+      // 월 저축액 세부 항목(월 저축액 합계는 이 값들의 monthly + customItems의 monthly 합으로 자동 계산됨).
+      // 저축 종류마다 앞으로 저축할 개월수·이자율이 서로 다를 수 있어(예: 적금 24개월 vs IRP 120개월)
+      // 종류별로 따로 갖는다 - 종류 전체에 하나의 개월수·이자율만 두지 않는다.
+      // "현재까지 누적된 금액"은 여기(breakdown)에 저장하지 않는다 - 종류별로 "4. 자산"의 연동 대상
+      // 필드(예: irp→assets.pensionAssetsBreakdown.irp)에 바로 저장되므로 이중 저장을 피한다.
+      breakdown: {
+        installment: { monthly: '', remainingMonths: '', interestRate: '' }, // 적금
+        isa: { monthly: '', remainingMonths: '', interestRate: '' },         // ISA
+        variableAnnuity: { monthly: '', remainingMonths: '', interestRate: '' }, // 변액연금
+        pensionSavings: { monthly: '', remainingMonths: '', interestRate: '' },  // 연금저축
+        irp: { monthly: '', remainingMonths: '', interestRate: '' },         // IRP
+        subscription: { monthly: '', remainingMonths: '', interestRate: '' }, // 청약(주택청약종합저축)
+        stocks: { monthly: '', remainingMonths: '', interestRate: '' },      // 주식(적립식 투자)
+        parkingAccount: { monthly: '', remainingMonths: '', interestRate: '' }, // 파킹통장
       },
-      customItems: [],       // [{ name, amount }] 기본 항목 외 사용자가 추가한 저축
+      customItems: [],       // [{ name, monthly, remainingMonths, interestRate, accumulated }] 기본 항목 외 사용자가 추가한 저축(자유 항목이라 자산 파트와 연동하지 않음)
       retirementMonthly: '', retirementAnnual: '',
     },
     netWorthPriorYear: '',

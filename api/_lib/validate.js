@@ -70,7 +70,12 @@ const AMOUNT_FIELDS = [
   'assets.financialAssets.funds',
   'assets.financialAssets.other',
   'assets.pensionAssets',
+  'assets.pensionAssetsBreakdown.variableAnnuity',
+  'assets.pensionAssetsBreakdown.pensionSavingsAccount',
+  'assets.pensionAssetsBreakdown.irp',
+  'assets.pensionAssetsBreakdown.other',
   'assets.realEstateAssets.total',
+  'assets.realEstateAssets.mainProperty',
   'assets.realEstateAssets.reverseMortgageHouse',
   'assets.debtStatus.totalBalance',
   'assets.debtStatus.monthlyRepayment',
@@ -80,12 +85,6 @@ const AMOUNT_FIELDS = [
   'assets.savingsPlan.annual',
   'assets.savingsPlan.retirementMonthly',
   'assets.savingsPlan.retirementAnnual',
-  'assets.savingsPlan.breakdown.installment',
-  'assets.savingsPlan.breakdown.isa',
-  'assets.savingsPlan.breakdown.irp',
-  'assets.savingsPlan.breakdown.subscription',
-  'assets.savingsPlan.breakdown.stocks',
-  'assets.savingsPlan.breakdown.parkingAccount',
   'assets.netWorthPriorYear',
   'income.salary.annual',
   'income.salary.monthly',
@@ -93,14 +92,22 @@ const AMOUNT_FIELDS = [
   'income.business.monthly',
   'income.severance.lumpsum',
   'income.severance.pensionMonthly',
+  'income.severance.calc.threeMonthSalary',
+  'income.severance.calc.annualBonus',
+  'income.severance.calc.annualLeavePay',
   'income.nationalPension.monthly',
+  'income.nationalPension.simulate.averageMonthlyIncome',
   'income.personalPension.lumpsum',
   'income.personalPension.monthly',
   'spouse.salary.annual',
   'spouse.salary.monthly',
   'spouse.severance.lumpsum',
   'spouse.severance.pensionMonthly',
+  'spouse.severance.calc.threeMonthSalary',
+  'spouse.severance.calc.annualBonus',
+  'spouse.severance.calc.annualLeavePay',
   'spouse.nationalPension.monthly',
+  'spouse.nationalPension.simulate.averageMonthlyIncome',
   'spouse.personalPension.lumpsum',
   'spouse.personalPension.monthly',
   'expense.retirementLivingCost',
@@ -110,21 +117,39 @@ const AMOUNT_FIELDS = [
   'scenarios.reverseMortgage.housePrice',
   'scenarios.realEstateConversion.cashOutAmount',
   'scenarios.additionalIncome.monthlySalary',
+  // 기대수명은 나이지만(연령대) 통계청 평균수명 참고값(예: 84.6세)이 소수 첫째자리를 가지므로
+  // COUNT_FIELDS(정수 전용)가 아니라 여기(소수 허용)에 둔다.
+  'basic.lifeExpectancy',
+  // 근속년수도 소수(예: 7.5년)를 허용해야 하므로 같은 이유로 COUNT_FIELDS가 아니라 여기에 둔다.
+  'basic.serviceYears',
+  'spouse.severance.serviceYears',
+  // 국민연금 납입기간·가입기간(년)도 소수를 허용한다(같은 이유).
+  'income.nationalPension.paymentYears',
+  'income.nationalPension.simulate.years',
+  'spouse.nationalPension.paymentYears',
+  'spouse.nationalPension.simulate.years',
+  // 퇴직연금 수령 기간(년)도 소수를 허용한다. 실제 개월수(pensionMonths)는 이 값을 정수로 반올림해
+  // 자동 계산하므로 COUNT_FIELDS 쪽 정수 제약과 충돌하지 않는다.
+  'income.severance.pensionYears',
+  'spouse.severance.pensionYears',
 ];
 
 const COUNT_FIELDS = [
   'income.salary.months',
   'income.severance.pensionMonths',
+  'income.severance.lumpsumAge',
   'income.nationalPension.months',
   'income.personalPension.months',
+  'income.personalPension.lumpsumAge',
   'spouse.salary.months',
   'spouse.severance.pensionMonths',
+  'spouse.severance.lumpsumAge',
   'spouse.nationalPension.months',
   'spouse.personalPension.months',
+  'spouse.personalPension.lumpsumAge',
   'expense.medical.years',
   'expense.healthInsurance.years',
   'basic.retirementAge',
-  'basic.lifeExpectancy',
   'scenarios.reverseMortgage.ageAtStart',
   'scenarios.realEstateConversion.ageAtConversion',
   'scenarios.additionalIncome.months',
@@ -135,8 +160,20 @@ const ARRAY_FIELDS = [
   { path: 'income.otherIncomes', fields: [{ key: 'annual', kind: 'amount' }, { key: 'years', kind: 'count' }] },
   { path: 'expense.children', fields: [{ key: 'educationCost', kind: 'amount' }, { key: 'marriageSupport', kind: 'amount' }, { key: 'otherCost', kind: 'amount' }] },
   { path: 'expense.otherExpenses', fields: [{ key: 'annual', kind: 'amount' }, { key: 'years', kind: 'count' }] },
+  { path: 'expense.healthInsurance.items', fields: [{ key: 'monthly', kind: 'amount' }] },
   { path: 'assets.liquidAssets.customItems', fields: [{ key: 'amount', kind: 'amount' }] },
-  { path: 'assets.savingsPlan.customItems', fields: [{ key: 'amount', kind: 'amount' }] },
+  { path: 'assets.financialAssets.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
+  { path: 'assets.pensionAssetsBreakdown.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
+  { path: 'assets.realEstateAssets.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
+  {
+    path: 'assets.savingsPlan.customItems',
+    fields: [
+      { key: 'monthly', kind: 'amount' },
+      { key: 'remainingMonths', kind: 'count' },
+      { key: 'interestRate', kind: 'returnRate' },
+      { key: 'accumulated', kind: 'amount' },
+    ],
+  },
   {
     path: 'assets.debtStatus.customItems',
     fields: [{ key: 'principal', kind: 'amount' }, { key: 'monthlyInterest', kind: 'amount' }, { key: 'monthlyRepayment', kind: 'amount' }, { key: 'months', kind: 'count' }],
@@ -144,6 +181,7 @@ const ARRAY_FIELDS = [
 ];
 
 const DEBT_BREAKDOWN_CATEGORIES = ['mortgage', 'depositLoan', 'businessLoan', 'buildingLoan', 'carLoan', 'studentLoan', 'otherLoan'];
+const SAVINGS_BREAKDOWN_CATEGORIES = ['installment', 'isa', 'variableAnnuity', 'pensionSavings', 'irp', 'subscription', 'stocks', 'parkingAccount'];
 
 export function validateInput(input) {
   const errors = [];
@@ -179,6 +217,12 @@ export function validateInput(input) {
     checkKindField(errors, input, `assets.debtStatus.breakdown.${cat}.monthlyInterest`, 'amount');
     checkKindField(errors, input, `assets.debtStatus.breakdown.${cat}.monthlyRepayment`, 'amount');
     checkKindField(errors, input, `assets.debtStatus.breakdown.${cat}.months`, 'count');
+  });
+
+  SAVINGS_BREAKDOWN_CATEGORIES.forEach((cat) => {
+    checkKindField(errors, input, `assets.savingsPlan.breakdown.${cat}.monthly`, 'amount');
+    checkKindField(errors, input, `assets.savingsPlan.breakdown.${cat}.remainingMonths`, 'count');
+    checkKindField(errors, input, `assets.savingsPlan.breakdown.${cat}.interestRate`, 'returnRate');
   });
 
   // ---- 필드 간 관계 검증 ----

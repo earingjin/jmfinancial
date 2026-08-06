@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
+import { formatNumber } from '../../../utils/format';
 
 /**
  * 총액을 한 번에 입력(simple)하거나, 항목 종류를 버튼(pill)으로 나열해 클릭한 종류만
@@ -212,23 +213,23 @@ export default function CategoryBreakdownField({
               {openCategories.map((c) => (
                 <tr key={c.key}>
                   <td>{c.label}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{Number(breakdown[c.key]) || 0}만원</td>
+                  <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(breakdown[c.key]) || 0)}만원</td>
                 </tr>
               ))}
               {customItems.map((item, i) => (
                 <tr key={`custom-${i}`}>
                   <td>{item.name || '(이름 미입력)'}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{Number(item.amount) || 0}만원</td>
+                  <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.amount) || 0)}만원</td>
                 </tr>
               ))}
               <tr className="total-row">
                 <td>{totalLabel}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{total || 0}만원</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatNumber(total || 0)}만원</td>
               </tr>
               {annualPath && (
                 <tr className="total-row">
                   <td>{annualLabel}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{annualTotal || 0}만원</td>
+                  <td className="num" style={{ textAlign: 'right' }}>{formatNumber(annualTotal || 0)}만원</td>
                 </tr>
               )}
             </tbody>

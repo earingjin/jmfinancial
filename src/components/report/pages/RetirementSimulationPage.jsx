@@ -16,7 +16,7 @@ function formatEok(value) {
   if (value >= 10000) {
     const eok = Math.floor(value / 10000);
     const man = Math.round(value % 10000);
-    return man > 0 ? `${eok}억 ${man.toLocaleString('ko-KR')}만원` : `${eok}억원`;
+    return man > 0 ? `${eok.toLocaleString('ko-KR')}억 ${man.toLocaleString('ko-KR')}만원` : `${eok.toLocaleString('ko-KR')}억원`;
   }
   return formatWon(value);
 }
@@ -44,7 +44,7 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
         <div className="lead">부족할 것으로 예상돼요</div>
       </div>
       <div className="shortfall-sub">
-        {retirementAge}세부터 {retirementAge + simulation.retirementYears}세까지 매년 목표 생활비(월 {retirementLivingCost}만원)를 감당하려면<br />
+        {retirementAge}세부터 {retirementAge + simulation.retirementYears}세까지 매년 목표 생활비(월 {retirementLivingCost.toLocaleString('ko-KR')}만원)를 감당하려면<br />
         은퇴시점에 준비자산 {formatEok(simulation.requiredAtRetirement)}이 필요해요
       </div>
 

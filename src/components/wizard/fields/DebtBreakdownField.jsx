@@ -1,6 +1,7 @@
 import { useState, Fragment } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
+import { formatNumber } from '../../../utils/format';
 
 const monthlyBurdenOf = (item) =>
   (!item || item.repaymentType !== 'equalPrincipal' ? Number(item?.monthlyInterest) : Number(item?.monthlyRepayment)) || 0;
@@ -270,22 +271,22 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
                 return (
                   <tr key={c.key}>
                     <td>{c.label}</td>
-                    <td className="num" style={{ textAlign: 'right' }}>{Number(item.principal) || 0}만원</td>
-                    <td className="num" style={{ textAlign: 'right' }}>{monthlyBurdenOf(item)}만원</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.principal) || 0)}만원</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{formatNumber(monthlyBurdenOf(item))}만원</td>
                   </tr>
                 );
               })}
               {customItems.map((item, i) => (
                 <tr key={`custom-${i}`}>
                   <td>{item.name || '(이름 미입력)'}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{Number(item.principal) || 0}만원</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{monthlyBurdenOf(item)}만원</td>
+                  <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.principal) || 0)}만원</td>
+                  <td className="num" style={{ textAlign: 'right' }}>{formatNumber(monthlyBurdenOf(item))}만원</td>
                 </tr>
               ))}
               <tr className="total-row">
                 <td>합계</td>
-                <td className="num" style={{ textAlign: 'right' }}>{balanceTotal || 0}만원</td>
-                <td className="num" style={{ textAlign: 'right' }}>{repaymentTotal || 0}만원</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatNumber(balanceTotal || 0)}만원</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatNumber(repaymentTotal || 0)}만원</td>
               </tr>
             </tbody>
           </table>

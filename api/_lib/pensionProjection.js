@@ -17,12 +17,13 @@ function buildComponents(person) {
 
   const components = [];
 
-  // 퇴직연금 (일시금 수령은 월소득에 포함되지 않음)
+  // 퇴직연금 (일시금 수령은 월소득에 포함되지 않음). 물가연동 여부는 사용자가 선택하지 않으므로
+  // 항상 물가연동형(일반 물가상승률)으로 가정한다.
   if (!('type' in severance) || severance.type === 'pension') {
     components.push({
       monthlyAmount: n(severance.pensionMonthly),
       months: n(severance.pensionMonths),
-      growthRate: severance.inflationLinked === false ? 0 : GENERAL_INFLATION_RATE,
+      growthRate: GENERAL_INFLATION_RATE,
     });
   }
 
@@ -33,12 +34,13 @@ function buildComponents(person) {
     growthRate: NATIONAL_PENSION_GROWTH_RATE,
   });
 
-  // 개인연금 (일시금 수령은 월소득에 포함되지 않음)
+  // 개인연금 (일시금 수령은 월소득에 포함되지 않음). 물가연동 여부는 사용자가 선택하지 않으므로
+  // 항상 물가연동형(일반 물가상승률)으로 가정한다.
   if (personalPension.type === 'installment' || !('type' in personalPension)) {
     components.push({
       monthlyAmount: n(personalPension.monthly),
       months: n(personalPension.months),
-      growthRate: personalPension.inflationLinked === false ? 0 : GENERAL_INFLATION_RATE,
+      growthRate: GENERAL_INFLATION_RATE,
     });
   }
 

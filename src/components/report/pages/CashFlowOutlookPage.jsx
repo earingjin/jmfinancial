@@ -8,7 +8,7 @@ function formatEok(value) {
   if (value >= 10000) {
     const eok = Math.floor(value / 10000);
     const man = Math.round(value % 10000);
-    return man > 0 ? `${eok}억 ${man.toLocaleString('ko-KR')}만원` : `${eok}억원`;
+    return man > 0 ? `${eok.toLocaleString('ko-KR')}억 ${man.toLocaleString('ko-KR')}만원` : `${eok.toLocaleString('ko-KR')}억원`;
   }
   return formatWon(value);
 }
