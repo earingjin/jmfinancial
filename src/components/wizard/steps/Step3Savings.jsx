@@ -20,10 +20,14 @@ const SAVINGS_CATEGORIES = [
 ];
 
 export default function Step3Savings() {
-  const { formData } = useFormData();
+  const { formData, setField } = useFormData();
   const savingsMonthly = Number(getIn(formData, 'assets.savingsPlan.monthly')) || 0;
   const retirementSavingsMonthly = Number(getIn(formData, 'assets.savingsPlan.retirementMonthly')) || 0;
-  const totalSavingsMonthly = savingsMonthly + retirementSavingsMonthly;
+  // 기본값(true): 노후준비 저축액이 위 일반 저축액에 이미 포함되어 있어 총 저축 합계에 더하지 않는다.
+  // false: 노후준비 저축을 일반 저축과 별도로 하고 있어 겹치지 않는 별개 금액이므로 더한다
+  // (aggregate.js의 monthlySavings·totalSavingsAnnual 계산과 동일한 전제를 공유한다).
+  const retirementIncluded = getIn(formData, 'assets.savingsPlan.retirementIncludedInTotal') !== false;
+  const totalSavingsMonthly = retirementIncluded ? savingsMonthly : savingsMonthly + retirementSavingsMonthly;
 
   return (
     <div className="step">
@@ -39,7 +43,6 @@ export default function Step3Savings() {
           customPath="assets.savingsPlan.customItems"
           totalPath="assets.savingsPlan.monthly"
           annualPath="assets.savingsPlan.annual"
-          modePath="assets.savingsPlan.inputMode"
           categories={SAVINGS_CATEGORIES}
         />
         <div className="field-grid" style={{ marginTop: 10 }}>
@@ -47,13 +50,30 @@ export default function Step3Savings() {
             monthlyPath="assets.savingsPlan.retirementMonthly"
             annualPath="assets.savingsPlan.retirementAnnual"
             label="노후준비 월 저축액"
+            disabled={retirementIncluded}
           />
         </div>
+        <label
+          className={`checkbox-pill is-navy ${retirementIncluded ? 'is-active' : ''}`}
+          style={{ marginTop: 8, width: 'fit-content' }}
+        >
+          <input
+            type="checkbox"
+            checked={retirementIncluded}
+            onChange={(e) => setField('assets.savingsPlan.retirementIncludedInTotal', e.target.checked)}
+          />
+          위 노후준비 저축액은 일반 저축액에 이미 포함되어 있어요
+        </label>
+        <span className="field-helper" style={{ display: 'block', marginTop: 6 }}>
+          {retirementIncluded
+            ? '체크 해제하면 노후준비 저축을 일반 저축과 별도로 하고 있는 것으로 보고, 총 저축 합계에 두 금액을 더합니다.'
+            : '일반 저축과 겹치지 않는 별도 금액으로 보고, 총 저축 합계에 두 금액을 더합니다.'}
+        </span>
 
         <table className="grade-table compact" style={{ marginTop: 16 }}>
           <tbody>
             <tr><td>일반 저축</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(savingsMonthly)}만원</td></tr>
-            <tr><td>노후준비 저축</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(retirementSavingsMonthly)}만원</td></tr>
+            <tr><td>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(retirementSavingsMonthly)}만원</td></tr>
             <tr className="total-row"><td>총 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalSavingsMonthly)}만원</td></tr>
             <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalSavingsMonthly * 12)}만원</td></tr>
           </tbody>

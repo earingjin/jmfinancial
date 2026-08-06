@@ -120,16 +120,16 @@ export const initialFormData = {
     },
     liquidAssets: {
       total: '',
-      inputMode: 'simple',   // 'simple'(총액 한번에 입력) | 'detailed'(항목별 입력) - UI 입력 방식 선택값
       breakdown: {           // 현금성 자산 세부 항목(총액은 이 값들 + customItems의 합으로 자동 계산됨)
         deposit: '',         // 예금
         savings: '',         // 적금
+        cma: '',             // CMA
         emergencyFund: '',   // 비상금
       },
       customItems: [],       // [{ name, amount }] 기본 항목 외 사용자가 추가한 현금성 자산
     },
     financialAssets: {
-      stocks: '', funds: '', other: '',
+      stocks: '', funds: '', bonds: '', other: '',
       otherItems: [], // [{ name, amount }] "기타 금융자산"의 종류별 세부 항목(합계가 other에 자동 반영됨)
     },
     // 연금자산(개인연금·퇴직연금·IRP 등 잔액) 총액 - 금융자산과 분리. 아래 pensionAssetsBreakdown 4개
@@ -168,7 +168,6 @@ export const initialFormData = {
     insurance: { monthlyPremium: '', coverageAmount: '' },
     savingsPlan: {
       monthly: '', annual: '',
-      inputMode: 'simple',   // 'simple'(총액 한번에 입력) | 'detailed'(항목별 입력) - UI 입력 방식 선택값
       // 월 저축액 세부 항목(월 저축액 합계는 이 값들의 monthly + customItems의 monthly 합으로 자동 계산됨).
       // 저축 종류마다 앞으로 저축할 개월수·이자율이 서로 다를 수 있어(예: 적금 24개월 vs IRP 120개월)
       // 종류별로 따로 갖는다 - 종류 전체에 하나의 개월수·이자율만 두지 않는다.
@@ -184,10 +183,13 @@ export const initialFormData = {
         stocks: { monthly: '', remainingMonths: '', interestRate: '' },      // 주식(적립식 투자)
         parkingAccount: { monthly: '', remainingMonths: '', interestRate: '' }, // 파킹통장
       },
-      customItems: [],       // [{ name, monthly, remainingMonths, interestRate, accumulated }] 기본 항목 외 사용자가 추가한 저축(자유 항목이라 자산 파트와 연동하지 않음)
+      customItems: [],       // [{ name, monthly, remainingMonths, interestRate }] 기본 항목 외 사용자가 추가한 저축. "현재까지
+                             // 누적된 금액"은 여기 저장하지 않고 name과 같은 이름의 assets.liquidAssets.customItems 항목과 연동된다.
       retirementMonthly: '', retirementAnnual: '',
+      // true(기본값): 노후준비 저축액이 위 일반 저축액에 이미 포함되어 있음(중복 합산하지 않음).
+      // false: 노후준비 저축을 일반 저축과 별도로 하고 있음(총 저축액 = 일반 저축액 + 노후준비 저축액).
+      retirementIncludedInTotal: true,
     },
-    netWorthPriorYear: '',
   },
 
   scenarios: {

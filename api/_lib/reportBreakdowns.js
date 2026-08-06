@@ -3,9 +3,14 @@
 // 원본 입력(input)에서 항목명·금액만 그대로 뽑아 재구성한다. 판정 기준·임계값 등 새로운
 // 판단 로직은 전혀 추가하지 않는다 - 사용자가 입력한 값을 그대로 라벨링해서 돌려줄 뿐이다.
 
+// Step3Savings.jsx의 SAVINGS_CATEGORIES(assets.savingsPlan.breakdown) 8개 항목과 반드시 동일한
+// 키 목록을 유지한다 - 여기 없는 항목만 입력한 경우 monthlySavings는 0이 아닌데 이 목록이 비어
+// 도넛차트가 "저축 상세 내역을 입력하면..." 안내문구를 잘못 보여주는 문제가 있었다.
 const SAVINGS_CATEGORY_LABELS = {
   installment: '적금',
   isa: 'ISA',
+  variableAnnuity: '변액연금',
+  pensionSavings: '연금저축',
   irp: 'IRP',
   subscription: '청약',
   stocks: '주식',
@@ -24,8 +29,10 @@ const DEBT_CATEGORY_LABELS = {
 
 const n = (v) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
 
-// 총 월 저축액(assets.savingsPlan.monthly)과 동일한 범위(기본 항목 + 추가 항목)만 포함한다.
-// 노후준비저축(retirementMonthly)은 별도로 집계되는 값이라 여기 합계에 넣지 않는다.
+// aggregate.js의 monthlySavings와 동일한 범위로 맞춘다: 노후준비저축(retirementMonthly)이 총
+// 저축액에 이미 포함되어 있으면(retirementIncludedInTotal !== false, 기본값 포함) 여기 합계에
+// 넣지 않고, 별도로 하고 있다고 명시한 경우(false)는 겹치지 않는 별개 금액이라 슬라이스로 추가한다
+// - 그래야 이 합계가 monthlySavings와 어긋나지 않는다.
 export function buildSavingsBreakdown(input) {
   const sp = input.assets?.savingsPlan || {};
   const breakdown = sp.breakdown || {};
@@ -33,10 +40,19 @@ export function buildSavingsBreakdown(input) {
     .map(([key, label]) => ({ key, label, value: n(breakdown[key]) }))
     .filter((item) => item.value > 0);
 
+  // SavingsBreakdownField.jsx의 addCustomItem()이 만드는 항목 모양은
+  // { name, monthly, remainingMonths, interestRate, accumulated }이다 - 금액은 monthly에 있다
+  // (amount는 DebtBreakdownField 쪽 커스텀 항목의 필드명이라 여기선 항상 undefined였다).
   (sp.customItems || []).forEach((item, i) => {
-    const value = n(item.amount);
+    const value = n(item.monthly);
     if (value > 0) items.push({ key: `custom-${i}`, label: item.name || '기타 저축', value });
   });
+
+  const retirementIncludedInTotal = sp.retirementIncludedInTotal !== false;
+  if (!retirementIncludedInTotal) {
+    const retirementValue = n(sp.retirementMonthly);
+    if (retirementValue > 0) items.push({ key: 'retirement', label: '노후준비저축', value: retirementValue });
+  }
 
   return items;
 }

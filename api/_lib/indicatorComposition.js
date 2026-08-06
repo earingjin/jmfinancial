@@ -27,8 +27,8 @@ const BUILDERS = {
     return {
       title: `현금성자산·투자자산 합계 ${round1(base)}만원 중 유동성 비중`,
       items: [
-        { key: 'liquid', label: '현금성자산(예금·적금·비상금 등, 즉시 인출 가능)', value: agg.liquidAssets, color: 'var(--teal)' },
-        { key: 'invested', label: '투자자산(주식·펀드 등, 환매 필요)', value: agg.financialAssetsTotal, color: 'var(--navy-600)' },
+        { key: 'liquid', label: '현금성자산(예금·적금·CMA·비상금 등, 즉시 인출 가능)', value: agg.liquidAssets, color: 'var(--teal)' },
+        { key: 'invested', label: '투자자산(주식·펀드·채권 등, 환매 필요)', value: agg.financialAssetsTotal, color: 'var(--navy-600)' },
       ],
       note: `금융자산 대부분이 ${agg.financialAssetsTotal >= agg.liquidAssets ? '즉시 현금화하기 어려운 투자자산' : '유동성자산'} 형태로 보유되어 있습니다.`,
     };

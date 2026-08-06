@@ -42,6 +42,7 @@ export function buildFinancialOverviewCards(input, aggregates) {
     'assets.liquidAssets.total',
     'assets.financialAssets.stocks',
     'assets.financialAssets.funds',
+    'assets.financialAssets.bonds',
     'assets.financialAssets.other',
     'assets.pensionAssets',
     'assets.realEstateAssets.total',
@@ -61,7 +62,7 @@ export function buildFinancialOverviewCards(input, aggregates) {
     card('monthlyDebtRepayment', '월 원리금 상환액', aggregates.monthlyDebtRepayment, ['assets.debtStatus.monthlyRepayment']),
     card('liquidAssets', '현금성자산', aggregates.liquidAssets, ['assets.liquidAssets.total']),
     card('financialAssets', '금융자산', aggregates.financialAssetsTotal, [
-      'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.other',
+      'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other',
     ]),
     card('pensionAssets', '연금자산', aggregates.pensionAssets, ['assets.pensionAssets']),
     card('realEstateAssets', '부동산자산', aggregates.realEstateTotal, ['assets.realEstateAssets.total']),
@@ -116,6 +117,24 @@ export function buildIncomeDonut(input, aggregates) {
     total: safe(chartTotal),
     isOverspending,
     overspendAmount: isOverspending ? safe(-unassignedRaw) : 0,
+    items,
+  };
+}
+
+// 지출 구성 - 저축 제외 총지출(totalExpenseMonthlyExSavings)을 구성 항목별로 그대로 쪼갠다.
+// buildIncomeDonut의 "생활지출" 조각(생활비+주거비+변동지출 합산)과 달리 여기서는 각 항목을
+// 분리해서 보여준다 - 새 금액을 만들지 않고 이미 있는 aggregates 필드를 그대로 재사용한다.
+export function buildExpenseDonut(aggregates) {
+  const items = [
+    { key: 'living', label: '생활비', value: safe(aggregates.monthlyLivingCost) },
+    { key: 'housing', label: '주거비', value: safe(aggregates.monthlyHousingCost) },
+    { key: 'insurance', label: '보장성보험료', value: safe(aggregates.monthlyInsurancePremium) },
+    { key: 'health', label: '건강보험료', value: safe(aggregates.monthlyHealthInsurance) },
+    { key: 'debtRepay', label: '원리금상환액', value: safe(aggregates.monthlyDebtRepayment) },
+    { key: 'variable', label: '변동지출(경조사 등)', value: safe(aggregates.variableMonthly) },
+  ];
+  return {
+    total: safe(aggregates.totalExpenseMonthlyExSavings),
     items,
   };
 }
@@ -219,7 +238,7 @@ export function buildFinancialOverviewDetail(input, aggregates) {
     'expense.healthInsurance.monthly', 'assets.debtStatus.monthlyRepayment',
   ]);
   const liquidMissing = allBlank(input, ['assets.liquidAssets.total']);
-  const financialPensionMissing = allBlank(input, ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.other', 'assets.pensionAssets']);
+  const financialPensionMissing = allBlank(input, ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other', 'assets.pensionAssets']);
   const realEstateDebtMissing = allBlank(input, ['assets.realEstateAssets.total', 'assets.debtStatus.totalBalance']);
 
   const salary = aggregates.salaryMonthly;
@@ -263,6 +282,7 @@ export function buildWebSummary({ input, aggregates, simulation, indicators, sav
     overviewCards: buildFinancialOverviewCards(input, aggregates),
     donuts: {
       income: buildIncomeDonut(input, aggregates),
+      expense: buildExpenseDonut(aggregates),
       assets: buildAssetDonut(aggregates),
       debt: buildDebtDonut(debtBreakdown, aggregates.totalDebt),
       savings: buildSavingsDonut(savingsBreakdown, aggregates.monthlySavings),

@@ -65,9 +65,11 @@ const AMOUNT_FIELDS = [
   'assets.liquidAssets.total',
   'assets.liquidAssets.breakdown.deposit',
   'assets.liquidAssets.breakdown.savings',
+  'assets.liquidAssets.breakdown.cma',
   'assets.liquidAssets.breakdown.emergencyFund',
   'assets.financialAssets.stocks',
   'assets.financialAssets.funds',
+  'assets.financialAssets.bonds',
   'assets.financialAssets.other',
   'assets.pensionAssets',
   'assets.pensionAssetsBreakdown.variableAnnuity',
@@ -85,7 +87,6 @@ const AMOUNT_FIELDS = [
   'assets.savingsPlan.annual',
   'assets.savingsPlan.retirementMonthly',
   'assets.savingsPlan.retirementAnnual',
-  'assets.netWorthPriorYear',
   'income.salary.annual',
   'income.salary.monthly',
   'income.business.annual',
@@ -195,6 +196,12 @@ export function validateInput(input) {
     if (!(key in input)) errors.push(`"${key}" 섹션이 누락되었습니다.`);
   }
 
+  // 노후 월 평균 생활비는 은퇴자산 시뮬레이션(필요자금 산출)의 핵심 입력값이라 필수로 강제한다.
+  // 명시적으로 입력한 0(노후 생활비를 가정하지 않음)은 유효한 값으로 그대로 허용한다.
+  if (isBlank(input.expense?.retirementLivingCost)) {
+    errors.push('노후 월 평균 생활비는 필수 입력 항목입니다.');
+  }
+
   const birthYear = Number(input.basic?.birthYear);
   if (input.basic?.birthYear !== '' && (Number.isNaN(birthYear) || birthYear < 1900 || birthYear > new Date().getFullYear())) {
     errors.push('출생년도가 유효하지 않습니다.');
@@ -227,16 +234,29 @@ export function validateInput(input) {
 
   // ---- 필드 간 관계 검증 ----
 
-  // 노후준비 저축액(월/연)은 총 저축액(월/연)의 일부여야 하므로 총 저축액보다 클 수 없다.
+  // 노후준비 저축액(월/연)이 총 저축액에 이미 포함되어 있는 경우(retirementIncludedInTotal !== false,
+  // 기본값 포함)에만 총 저축액의 일부여야 하므로 총 저축액보다 클 수 없다. 노후준비를 총 저축액과
+  // 별도로 하고 있다고 명시한 경우(false)는 서로 겹치지 않는 별개 금액이라 이 제약을 적용하지 않는다.
+  const retirementIncludedInTotal = input.assets?.savingsPlan?.retirementIncludedInTotal !== false;
   const savingsMonthly = input.assets?.savingsPlan?.monthly;
   const retirementMonthly = input.assets?.savingsPlan?.retirementMonthly;
-  if (!isBlank(savingsMonthly) && !isBlank(retirementMonthly) && Number(retirementMonthly) > Number(savingsMonthly)) {
+  if (
+    retirementIncludedInTotal &&
+    !isBlank(savingsMonthly) &&
+    !isBlank(retirementMonthly) &&
+    Number(retirementMonthly) > Number(savingsMonthly)
+  ) {
     errors.push('노후준비 월 저축액은 총 월 저축액보다 클 수 없습니다.');
   }
 
   const savingsAnnual = input.assets?.savingsPlan?.annual;
   const retirementAnnual = input.assets?.savingsPlan?.retirementAnnual;
-  if (!isBlank(savingsAnnual) && !isBlank(retirementAnnual) && Number(retirementAnnual) > Number(savingsAnnual)) {
+  if (
+    retirementIncludedInTotal &&
+    !isBlank(savingsAnnual) &&
+    !isBlank(retirementAnnual) &&
+    Number(retirementAnnual) > Number(savingsAnnual)
+  ) {
     errors.push('노후준비 연 저축액은 총 연 저축액보다 클 수 없습니다.');
   }
 

@@ -34,7 +34,15 @@ export function buildAggregates(input) {
   const monthlyInsurancePremium = n(assets.insurance?.monthlyPremium);
   const monthlyHealthInsurance = n(expense.healthInsurance?.monthly);
   const monthlyDebtRepayment = n(assets.debtStatus?.monthlyRepayment);
-  const monthlySavings = n(assets.savingsPlan?.monthly);
+  // 노후준비 저축액이 위 일반 저축액에 이미 포함되어 있으면(retirementIncludedInTotal !== false,
+  // 기본값 포함) 더하지 않고, 사용자가 별도로 하고 있다고 명시하면(false) 겹치지 않는 별개 금액이므로
+  // 더한다(사용자 승인된 계산 방식 변경).
+  const generalSavingsMonthly = n(assets.savingsPlan?.monthly);
+  const retirementSavingsMonthlyRaw = n(assets.savingsPlan?.retirementMonthly);
+  const retirementIncludedInSavings = assets.savingsPlan?.retirementIncludedInTotal !== false;
+  const monthlySavings = retirementIncludedInSavings
+    ? generalSavingsMonthly
+    : generalSavingsMonthly + retirementSavingsMonthlyRaw;
 
   const fixedExpenseMonthly =
     monthlyLivingCost + monthlyHousingCost + monthlyInsurancePremium + monthlyHealthInsurance + monthlyDebtRepayment;
@@ -49,10 +57,10 @@ export function buildAggregates(input) {
   const totalExpenseMonthlyExSavings = fixedExpenseMonthly + variableMonthly;
 
   // ---- 자산 ----
-  // 예금·적금은 현금성자산(liquidAssets)으로 집계되므로 financialAssetsTotal(투자자산)에는
-  // 포함하지 않는다 - 주식·펀드·기타처럼 즉시 인출이 어려운 투자자산만 남긴다.
+  // 예금·적금·CMA는 현금성자산(liquidAssets)으로 집계되므로 financialAssetsTotal(투자자산)에는
+  // 포함하지 않는다 - 주식·펀드·채권·기타처럼 즉시 인출이 어려운 투자자산만 남긴다.
   const fa = assets.financialAssets || {};
-  const financialAssetsTotal = n(fa.stocks) + n(fa.funds) + n(fa.other);
+  const financialAssetsTotal = n(fa.stocks) + n(fa.funds) + n(fa.bonds) + n(fa.other);
   const pensionAssets = n(assets.pensionAssets);
   const realEstateTotal = n(assets.realEstateAssets?.total);
   // 현금성자산(예금·적금·비상금 등, 비상예비금지표에도 쓰이는 값)은 총자산에도 포함된다.
@@ -63,8 +71,11 @@ export function buildAggregates(input) {
   const totalDebt = n(assets.debtStatus?.totalBalance);
 
   // ---- 저축 ----
-  const totalSavingsAnnual = pickAnnual(assets.savingsPlan?.annual, monthlySavings);
-  const retirementSavingsAnnual = pickAnnual(assets.savingsPlan?.retirementAnnual, assets.savingsPlan?.retirementMonthly);
+  const retirementSavingsAnnual = pickAnnual(assets.savingsPlan?.retirementAnnual, retirementSavingsMonthlyRaw);
+  const generalSavingsAnnual = pickAnnual(assets.savingsPlan?.annual, generalSavingsMonthly);
+  const totalSavingsAnnual = retirementIncludedInSavings
+    ? generalSavingsAnnual
+    : generalSavingsAnnual + retirementSavingsAnnual;
 
   // ---- 노후 예상 월소득 (본인 + 배우자 연금 합산, 항목별 분해) ----
   const retirementIncomeByCategory = calcRetirementIncomeByCategory(input);
@@ -107,6 +118,7 @@ export function buildAggregates(input) {
     monthlySavings,
     totalSavingsAnnual,
     retirementSavingsAnnual,
+    retirementIncludedInSavings,
     liquidAssets,
     monthlyRetirementIncome,
     nationalPensionMonthly: retirementIncomeByCategory.nationalPension,

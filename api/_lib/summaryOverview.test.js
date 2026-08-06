@@ -6,6 +6,7 @@ import {
   buildFinancialOverviewCards,
   buildFinancialOverviewDetail,
   buildIncomeDonut,
+  buildExpenseDonut,
   buildAssetDonut,
   buildDebtDonut,
   buildSavingsDonut,
@@ -96,6 +97,17 @@ describe('buildFinancialOverviewCards', () => {
     expect(pensionCard.value).toBe(0);
   });
 
+  it('does not mark financialAssets/totalAssets/netWorth missing when only bonds is filled in', () => {
+    const bondsOnly = input({ assets: { financialAssets: { stocks: '', funds: '', other: '', bonds: 40 } } });
+    const { aggregates } = calc(bondsOnly);
+    const cards = buildFinancialOverviewCards(bondsOnly, aggregates);
+    const byKey = Object.fromEntries(cards.map((c) => [c.key, c]));
+    expect(byKey.financialAssets.missing).toBe(false);
+    expect(byKey.financialAssets.value).toBe(40);
+    expect(byKey.totalAssets.missing).toBe(false);
+    expect(byKey.netWorth.missing).toBe(false);
+  });
+
   it('flags negative net worth as a risk state, not hidden or clamped', () => {
     const heavyDebt = input({ assets: { debtStatus: { totalBalance: 999999, monthlyRepayment: 40 } } });
     const { aggregates } = calc(heavyDebt);
@@ -138,6 +150,31 @@ describe('buildIncomeDonut', () => {
     const weird = input({ assets: { currentIncome: { monthly: 'not-a-number' } } });
     const { aggregates } = calc(weird);
     const donut = buildIncomeDonut(weird, aggregates);
+    donut.items.forEach((it) => expect(Number.isFinite(it.value)).toBe(true));
+    expect(Number.isFinite(donut.total)).toBe(true);
+  });
+});
+
+describe('buildExpenseDonut', () => {
+  it('splits total expense (savings excluded) into its component categories, summing back to the total', () => {
+    const { aggregates } = calc(input());
+    const donut = buildExpenseDonut(aggregates);
+    const sum = donut.items.reduce((s, it) => s + it.value, 0);
+    expect(sum).toBeCloseTo(donut.total, 6);
+    expect(donut.total).toBeCloseTo(aggregates.totalExpenseMonthlyExSavings, 6);
+  });
+
+  it('does not include savings in the total (distinct from buildIncomeDonut, which does)', () => {
+    const { aggregates } = calc(input());
+    const donut = buildExpenseDonut(aggregates);
+    expect(donut.items.find((it) => it.key === 'savings')).toBeUndefined();
+    expect(donut.total).toBeLessThan(aggregates.monthlyIncome);
+  });
+
+  it('never passes NaN/Infinity to chart items', () => {
+    const weird = input({ assets: { currentLivingCost: { monthly: 'not-a-number' } } });
+    const { aggregates } = calc(weird);
+    const donut = buildExpenseDonut(aggregates);
     donut.items.forEach((it) => expect(Number.isFinite(it.value)).toBe(true));
     expect(Number.isFinite(donut.total)).toBe(true);
   });
@@ -305,5 +342,13 @@ describe('buildFinancialOverviewDetail - grouped card (income / expense / balanc
     const { aggregates } = calc(blank);
     const detail = buildFinancialOverviewDetail(blank, aggregates);
     expect(detail.income.salaryMissing).toBe(true);
+  });
+
+  it('does not mark financialAndPension missing when only bonds is filled in', () => {
+    const bondsOnly = input({ assets: { financialAssets: { stocks: '', funds: '', other: '', bonds: 40 }, pensionAssets: '' } });
+    const { aggregates } = calc(bondsOnly);
+    const detail = buildFinancialOverviewDetail(bondsOnly, aggregates);
+    expect(detail.balance.financialAndPensionMissing).toBe(false);
+    expect(detail.balance.financialAndPension).toBe(40);
   });
 });

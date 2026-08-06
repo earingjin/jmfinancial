@@ -197,6 +197,9 @@ body {
   cursor: pointer;
 }
 .checkbox-pill.is-active { background: var(--teal-soft); border-color: var(--teal); }
+/* radio-pill/btn-primary와 같은 톤(navy)을 쓰는 단일 토글용 - 기존 checkbox-pill(카테고리 다중선택 칩)의
+   teal 톤은 그대로 두고, 이 조합 클래스가 쓰인 곳만 덮어쓴다. */
+.checkbox-pill.is-navy.is-active { background: var(--navy-800); border-color: var(--navy-800); color: #fff; }
 
 .repeatable-list { margin-bottom: 8px; }
 .repeatable-list-head { margin-bottom: 10px; }
@@ -286,6 +289,15 @@ body {
 .scenario-toggle-text span { font-size: 12px; color: var(--ink-soft); }
 .scenario-toggle-state { font-size: 12px; font-weight: 600; color: var(--navy-700); white-space: nowrap; }
 
+.wizard-required-error {
+  color: var(--red);
+  background: var(--red-soft);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-top: 14px;
+}
 .wizard-nav { display: flex; justify-content: space-between; margin-top: 20px; }
 .btn-primary, .btn-secondary {
   padding: 11px 22px;

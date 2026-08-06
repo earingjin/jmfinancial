@@ -87,10 +87,16 @@ export default function Step1Income() {
     }
   }, [selfYearsToRetirement, setField]);
 
-  // "퇴직전 급여 총액"은 은퇴 전까지의 누적 총액이 아니라, 이번 1년(연봉+상여금) 기준 총액이다.
-  const selfSalaryAnnualTotal = Math.round(selfSalaryMonthly * 12) + selfAnnualBonus;
-  const spouseSalaryAnnualTotal = Math.round(spouseSalaryMonthly * 12) + spouseAnnualBonus;
-  const householdSalaryAnnualTotal = selfSalaryAnnualTotal + spouseSalaryAnnualTotal;
+  // "퇴직전 급여 총액"(사용자 승인) = 이번 1년(연봉+상여금) 기준 총액 × 은퇴까지 남은 기간(년).
+  // 매년 급여가 동일하다고 가정하는 단순화이며, 실제 계산(aggregate.js 등)에는 쓰이지 않는
+  // 이 화면 전용 참고 표시값이다. 남은 기간을 아직 계산할 수 없으면(출생년도·은퇴연령 미입력) 0으로 둔다.
+  const selfSalaryThisYearTotal = Math.round(selfSalaryMonthly * 12) + selfAnnualBonus;
+  const spouseSalaryThisYearTotal = Math.round(spouseSalaryMonthly * 12) + spouseAnnualBonus;
+  const spouseSalaryMonths = Number(getIn(formData, 'spouse.salary.months')) || 0;
+  const spouseYearsToRetirement = spouseSalaryMonths / 12;
+  const selfSalaryLifetimeTotal = selfSalaryThisYearTotal * (selfYearsToRetirement ?? 0);
+  const spouseSalaryLifetimeTotal = spouseSalaryThisYearTotal * spouseYearsToRetirement;
+  const householdSalaryLifetimeTotal = selfSalaryLifetimeTotal + spouseSalaryLifetimeTotal;
 
   // 퇴직연금 "수령 기간(년)"을 입력하면 "수령 개월 수"가 자동으로 계산된다(직접 입력하지 않음).
   const selfPensionYears = getIn(formData, 'income.severance.pensionYears');
@@ -241,8 +247,33 @@ export default function Step1Income() {
       ? pick(getIn(formData, 'spouse.personalPension.monthly'), getIn(formData, 'spouse.personalPension.months'))
       : 0);
 
+  // "총 수입 합계" 표의 "수입 기간(년)" 열 - 본인+배우자를 합산한 행(급여·국민연금·퇴직연금·개인연금)은
+  // 두 사람의 남은 기간이 서로 다를 수 있어 각자 따로 표시한다(사용자 승인). 해당 유형을 선택하지
+  // 않은 경우(예: 퇴직금을 일시금으로 받는 경우)는 기간 개념 자체가 없어 null로 둔다.
+  const selfSeverancePensionYears = severanceType === 'pension' ? selfPensionMonths / 12 : null;
+  const spouseSeverancePensionYears = spouseSeveranceType === 'pension' ? spousePensionMonths / 12 : null;
+  const selfPersonalPensionMonthsForPeriod =
+    personalPensionType === 'installment' ? Number(getIn(formData, 'income.personalPension.months')) || 0 : null;
+  const spousePersonalPensionMonthsForPeriod =
+    spousePersonalPensionType === 'installment' ? Number(getIn(formData, 'spouse.personalPension.months')) || 0 : null;
+  const selfPersonalPensionYears = selfPersonalPensionMonthsForPeriod != null ? selfPersonalPensionMonthsForPeriod / 12 : null;
+  const spousePersonalPensionYears =
+    spousePersonalPensionMonthsForPeriod != null ? spousePersonalPensionMonthsForPeriod / 12 : null;
+
   const otherIncomes = getIn(formData, 'income.otherIncomes') || [];
   const otherIncomesMonthly = otherIncomes.reduce((s, item) => s + (Number(item.annual) || 0), 0) / 12;
+
+  // "사업소득 총액"(사용자 승인) = 급여와 같은 기준(은퇴까지 남은 기간)으로 계산한다. 사업소득은
+  // 본인·배우자 구분이 없어(위 60번째 줄 주석 참고) 본인 은퇴 시점을 기준으로 삼고, 항목별
+  // "수령 기간" 입력은 여기서 쓰지 않는다. 매년 사업소득이 동일하다고 가정하는 단순화다.
+  const businessAnnual = Number(getIn(formData, 'income.business.annual')) || 0;
+  const businessLifetimeTotal = businessAnnual * (selfYearsToRetirement ?? 0);
+
+  // "기타 수입 총액"(사용자 승인) = 항목별로 입력받은 "연간 수입 금액 × 수령 기간(년)"을 그대로 합산한다.
+  const otherIncomesLifetimeTotal = otherIncomes.reduce(
+    (s, item) => s + (Number(item.annual) || 0) * (Number(item.years) || 0),
+    0
+  );
 
   const totalMonthlyIncome =
     currentSalaryMonthly + businessMonthly + nationalPensionTotal + severanceTotal + personalPensionTotal + otherIncomesMonthly;
@@ -252,6 +283,12 @@ export default function Step1Income() {
     (spouseSeveranceType === 'lumpsum' ? Number(getIn(formData, 'spouse.severance.lumpsum')) || 0 : 0) +
     (personalPensionType === 'lumpsum' ? Number(getIn(formData, 'income.personalPension.lumpsum')) || 0 : 0) +
     (spousePersonalPensionType === 'lumpsum' ? Number(getIn(formData, 'spouse.personalPension.lumpsum')) || 0 : 0);
+
+  // "수입 기간(년)" 열 표시 형식 - null(해당 없음)이면 "-", 배우자 정보를 입력한 경우 본인·배우자를
+  // 각자 따로 표기한다(사용자 승인). 소수점은 첫째 자리까지만(개월 단위 나눗셈으로 생기는 소수 방지).
+  const formatYears = (years) => (years == null || !Number.isFinite(years) ? '-' : `${Math.round(years * 10) / 10}년`);
+  const formatPeriodRow = (selfYears, spouseYears) =>
+    hasSpouse ? `본인 ${formatYears(selfYears)} · 배우자 ${formatYears(spouseYears)}` : formatYears(selfYears);
 
   return (
     <div className="step">
@@ -321,7 +358,8 @@ export default function Step1Income() {
             <span className="field-helper">출생년도·은퇴(예정) 연령을 입력하면 자동으로 계산됩니다</span>
           </label>
         </div>
-        <TotalAmountBox label="퇴직전 급여 총액" amount={selfSalaryAnnualTotal} />
+        <TotalAmountBox label="퇴직전 급여 총액" amount={selfSalaryLifetimeTotal} />
+        <span className="field-helper">현재 소득(월급+상여금) 기준, 은퇴까지 남은 기간 동안 급여가 동일하게 유지된다고 가정한 누적 총액입니다</span>
 
         {hasSpouse && (
           <>
@@ -335,11 +373,10 @@ export default function Step1Income() {
               <NumberField path="spouse.salary.annualBonus" label="상여금" unit="만원(연)" helper="연간 상여금 총액" />
               <RemainingTermField monthsPath="spouse.salary.months" label="남은 퇴직기간" />
             </div>
-            <TotalAmountBox label="퇴직전 급여 총액" amount={spouseSalaryAnnualTotal} />
+            <TotalAmountBox label="퇴직전 급여 총액" amount={spouseSalaryLifetimeTotal} />
+            <span className="field-helper">현재 소득(월급+상여금) 기준, 은퇴까지 남은 기간 동안 급여가 동일하게 유지된다고 가정한 누적 총액입니다</span>
           </>
         )}
-
-        <TotalAmountBox label="가구 급여총액" amount={householdSalaryAnnualTotal} />
       </section>
 
       <section className="step-section">
@@ -363,6 +400,8 @@ export default function Step1Income() {
             </div>
           </label>
         </div>
+        <TotalAmountBox label="가구 급여총액" amount={householdSalaryLifetimeTotal} />
+        <span className="field-helper">본인·배우자 각자의 은퇴까지 남은 기간을 반영한 급여 누적 총액의 합입니다</span>
       </section>
 
       <section className="step-section">
@@ -654,23 +693,75 @@ export default function Step1Income() {
           businessAnnualPath="income.business.annual"
           otherIncomesPath="income.otherIncomes"
         />
+        {businessAnnual > 0 && (
+          <>
+            <TotalAmountBox
+              label="사업소득 총액"
+              amount={businessLifetimeTotal}
+              valueLabel="총액은"
+            />
+            <span className="field-helper">현재 연간 사업소득이 은퇴까지 남은 기간(본인 기준) 동안 동일하게 유지된다고 가정한 누적 총액입니다</span>
+          </>
+        )}
+        {otherIncomesLifetimeTotal > 0 && (
+          <>
+            <TotalAmountBox
+              label="기타 수입 총액"
+              amount={otherIncomesLifetimeTotal}
+              valueLabel="총액은"
+            />
+            <span className="field-helper">항목별 "연간 수입 금액 × 수령 기간"을 합산한 값입니다</span>
+          </>
+        )}
       </section>
 
       <section className="step-section">
         <h3>🧮 총 수입 합계</h3>
         <table className="grade-table compact">
           <thead>
-            <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th></tr>
+            <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th><th style={{ textAlign: 'right' }}>수입 기간</th></tr>
           </thead>
           <tbody>
-            <tr><td>급여(상여금 포함)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(currentSalaryMonthly))}만원</td></tr>
-            <tr><td>사업소득</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(businessMonthly)}만원</td></tr>
-            <tr><td>국민연금</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(nationalPensionTotal)}만원</td></tr>
-            <tr><td>퇴직연금</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(severanceTotal)}만원</td></tr>
-            <tr><td>개인연금</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(personalPensionTotal)}만원</td></tr>
-            <tr><td>기타 정기수입(연 환산)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(otherIncomesMonthly))}만원</td></tr>
-            <tr className="total-row"><td>총 월 수입 합계</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(totalMonthlyIncome))}만원</td></tr>
-            <tr className="total-row"><td>총 연 수입 합계</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(totalMonthlyIncome) * 12)}만원</td></tr>
+            <tr>
+              <td>급여(상여금 포함)</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(currentSalaryMonthly))}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfYearsToRetirement, spouseYearsToRetirement)}</td>
+            </tr>
+            <tr>
+              <td>사업소득</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(businessMonthly)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatYears(selfYearsToRetirement)}</td>
+            </tr>
+            <tr>
+              <td>국민연금</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(nationalPensionTotal)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfNationalPensionMonths / 12, spouseNationalPensionMonths / 12)}</td>
+            </tr>
+            <tr>
+              <td>퇴직연금</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(severanceTotal)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfSeverancePensionYears, spouseSeverancePensionYears)}</td>
+            </tr>
+            <tr>
+              <td>개인연금</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(personalPensionTotal)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfPersonalPensionYears, spousePersonalPensionYears)}</td>
+            </tr>
+            <tr>
+              <td>기타 정기수입(연 환산)</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(otherIncomesMonthly))}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{otherIncomes.length > 0 ? '항목별 상이' : '-'}</td>
+            </tr>
+            <tr className="total-row">
+              <td>총 월 수입 합계</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(totalMonthlyIncome))}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>-</td>
+            </tr>
+            <tr className="total-row">
+              <td>총 연 수입 합계</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(totalMonthlyIncome) * 12)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>-</td>
+            </tr>
           </tbody>
         </table>
         <span className="field-helper">

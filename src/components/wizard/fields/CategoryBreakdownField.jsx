@@ -4,11 +4,11 @@ import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
 
 /**
- * 총액을 한 번에 입력(simple)하거나, 항목 종류를 버튼(pill)으로 나열해 클릭한 종류만
- * 금액 입력창을 펼쳐서 보여주는(detailed) 방식을 사용자가 선택할 수 있는 필드.
- * detailed 모드에서는 기본 제공 종류(categories) 외에 사용자가 이름을 직접 정해 추가할 수 있는
- * 항목(customItems)도 함께 지원한다. 두 모드 모두 결과값은 totalPath(예: assets.savingsPlan.monthly)에
- * 저장되므로 기존 계산 로직(합계 금액 기준)이 그대로 동작한다.
+ * 항목 종류를 버튼(pill)으로 나열해 클릭한 종류만 금액 입력창을 펼쳐서 보여주는 필드.
+ * 기본 제공 종류(categories) 외에 사용자가 이름을 직접 정해 추가할 수 있는 항목(customItems)도
+ * 함께 지원한다. 결과값은 totalPath(예: assets.liquidAssets.total)에 저장되므로 기존 계산 로직
+ * (합계 금액 기준)이 그대로 동작한다. 총액을 한 번에 입력하는 방식은 지원하지 않는다 - 항목별 금액이
+ * 없으면 다른 필드(예: 저축 쪽의 "현재까지 누적된 금액")와 이름으로 연동할 방법이 없기 때문이다.
  * annualPath를 넘기면 총액×12(연 환산액)도 함께 자동 저장한다(월 단위 흐름에만 해당, 잔액성 항목은 생략).
  * 저축·현금성 자산 등 "기본 항목 + 자유 추가 항목" 구조가 필요한 곳에서 공통으로 재사용한다.
  */
@@ -17,7 +17,6 @@ export default function CategoryBreakdownField({
   customPath,
   totalPath,
   annualPath,
-  modePath,
   categories,
   totalLabel = '합계',
   annualLabel = '연 합계',
@@ -33,7 +32,6 @@ export default function CategoryBreakdownField({
   const customItems = getIn(formData, customPath) || [];
   const total = getIn(formData, totalPath);
   const annualTotal = annualPath ? getIn(formData, annualPath) : null;
-  const mode = getIn(formData, modePath) || 'simple';
 
   const [openKeys, setOpenKeys] = useState(() => {
     const initial = new Set();
@@ -58,12 +56,6 @@ export default function CategoryBreakdownField({
     const sum = presetSum + customSum;
     setField(totalPath, sum);
     if (annualPath) setField(annualPath, Math.round(sum * 12));
-  };
-
-  const handleTotalChange = (raw) => {
-    const value = raw === '' ? '' : Number(raw);
-    setField(totalPath, value);
-    if (annualPath) setField(annualPath, value === '' ? '' : Math.round(value * 12));
   };
 
   const handleBreakdownChange = (key, raw) => {
@@ -95,148 +87,110 @@ export default function CategoryBreakdownField({
 
   return (
     <div className="field">
-      <span className="field-label">입력 방식을 선택해 주세요</span>
-      <div className="radio-group" style={{ marginTop: 8, marginBottom: 14 }}>
-        <button
-          type="button"
-          className={`radio-pill ${mode === 'simple' ? 'is-active' : ''}`}
-          onClick={() => setField(modePath, 'simple')}
-        >
-          총액으로 한번에 입력
-        </button>
-        <button
-          type="button"
-          className={`radio-pill ${mode === 'detailed' ? 'is-active' : ''}`}
-          onClick={() => setField(modePath, 'detailed')}
-        >
-          항목별로 자세히 입력
+      <span className="field-label">{pillPrompt}</span>
+      <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
+        {categories.map((c) => (
+          <button
+            type="button"
+            key={c.key}
+            className={`checkbox-pill ${openKeys.has(c.key) ? 'is-active' : ''}`}
+            onClick={() => toggle(c.key)}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {openCategories.length > 0 && (
+        <div className="field-grid three-col">
+          {openCategories.map((c) => (
+            <label className="field" key={c.key}>
+              <span className="field-label">{c.label}</span>
+              <div className="field-input-row">
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={breakdown[c.key] ?? ''}
+                  onChange={(e) => handleBreakdownChange(c.key, e.target.value)}
+                />
+                <span className="field-unit">만원</span>
+              </div>
+            </label>
+          ))}
+        </div>
+      )}
+
+      <div className="repeatable-list" style={{ marginTop: 14 }}>
+        <div className="repeatable-list-head">
+          <span className="field-label">{customListLabel}</span>
+        </div>
+        {customItems.map((item, index) => (
+          <div className="repeatable-item" key={index}>
+            <div className="field-grid three-col">
+              <label className="field">
+                <span className="field-label">{customNameLabel}</span>
+                <input
+                  type="text"
+                  placeholder={customNamePlaceholder}
+                  value={item.name}
+                  onChange={(e) => updateCustomItem(index, 'name', e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">{customAmountLabel}</span>
+                <div className="field-input-row">
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={item.amount ?? ''}
+                    onChange={(e) => updateCustomItem(index, 'amount', e.target.value === '' ? '' : Number(e.target.value))}
+                  />
+                  <span className="field-unit">만원</span>
+                </div>
+              </label>
+            </div>
+            <button type="button" className="repeatable-remove" onClick={() => removeCustomItem(index)}>
+              이 항목 삭제
+            </button>
+          </div>
+        ))}
+        <button type="button" className="repeatable-add" onClick={addCustomItem}>
+          + {addItemLabel}
         </button>
       </div>
 
-      {mode === 'simple' ? (
-        <div className="field-grid">
-          <label className="field">
-            <span className="field-label">{totalLabel}</span>
-            <div className="field-input-row">
-              <input
-                type="number"
-                min={0}
-                inputMode="numeric"
-                value={total ?? ''}
-                onChange={(e) => handleTotalChange(e.target.value)}
-              />
-              <span className="field-unit">만원</span>
-            </div>
-          </label>
-        </div>
-      ) : (
-        <>
-          <span className="field-label">{pillPrompt}</span>
-          <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
-            {categories.map((c) => (
-              <button
-                type="button"
-                key={c.key}
-                className={`checkbox-pill ${openKeys.has(c.key) ? 'is-active' : ''}`}
-                onClick={() => toggle(c.key)}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-
-          {openCategories.length > 0 && (
-            <div className="field-grid three-col">
-              {openCategories.map((c) => (
-                <label className="field" key={c.key}>
-                  <span className="field-label">{c.label}</span>
-                  <div className="field-input-row">
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      value={breakdown[c.key] ?? ''}
-                      onChange={(e) => handleBreakdownChange(c.key, e.target.value)}
-                    />
-                    <span className="field-unit">만원</span>
-                  </div>
-                </label>
-              ))}
-            </div>
+      <table className="grade-table compact" style={{ marginTop: 16 }}>
+        <thead>
+          <tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr>
+        </thead>
+        <tbody>
+          {openCategories.map((c) => (
+            <tr key={c.key}>
+              <td>{c.label}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(breakdown[c.key]) || 0)}만원</td>
+            </tr>
+          ))}
+          {customItems.map((item, i) => (
+            <tr key={`custom-${i}`}>
+              <td>{item.name || '(이름 미입력)'}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.amount) || 0)}만원</td>
+            </tr>
+          ))}
+          <tr className="total-row">
+            <td>{totalLabel}</td>
+            <td className="num" style={{ textAlign: 'right' }}>{formatNumber(total || 0)}만원</td>
+          </tr>
+          {annualPath && (
+            <tr className="total-row">
+              <td>{annualLabel}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(annualTotal || 0)}만원</td>
+            </tr>
           )}
-
-          <div className="repeatable-list" style={{ marginTop: 14 }}>
-            <div className="repeatable-list-head">
-              <span className="field-label">{customListLabel}</span>
-            </div>
-            {customItems.map((item, index) => (
-              <div className="repeatable-item" key={index}>
-                <div className="field-grid three-col">
-                  <label className="field">
-                    <span className="field-label">{customNameLabel}</span>
-                    <input
-                      type="text"
-                      placeholder={customNamePlaceholder}
-                      value={item.name}
-                      onChange={(e) => updateCustomItem(index, 'name', e.target.value)}
-                    />
-                  </label>
-                  <label className="field">
-                    <span className="field-label">{customAmountLabel}</span>
-                    <div className="field-input-row">
-                      <input
-                        type="number"
-                        min={0}
-                        inputMode="numeric"
-                        value={item.amount ?? ''}
-                        onChange={(e) => updateCustomItem(index, 'amount', e.target.value === '' ? '' : Number(e.target.value))}
-                      />
-                      <span className="field-unit">만원</span>
-                    </div>
-                  </label>
-                </div>
-                <button type="button" className="repeatable-remove" onClick={() => removeCustomItem(index)}>
-                  이 항목 삭제
-                </button>
-              </div>
-            ))}
-            <button type="button" className="repeatable-add" onClick={addCustomItem}>
-              + {addItemLabel}
-            </button>
-          </div>
-
-          <table className="grade-table compact" style={{ marginTop: 16 }}>
-            <thead>
-              <tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr>
-            </thead>
-            <tbody>
-              {openCategories.map((c) => (
-                <tr key={c.key}>
-                  <td>{c.label}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(breakdown[c.key]) || 0)}만원</td>
-                </tr>
-              ))}
-              {customItems.map((item, i) => (
-                <tr key={`custom-${i}`}>
-                  <td>{item.name || '(이름 미입력)'}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.amount) || 0)}만원</td>
-                </tr>
-              ))}
-              <tr className="total-row">
-                <td>{totalLabel}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatNumber(total || 0)}만원</td>
-              </tr>
-              {annualPath && (
-                <tr className="total-row">
-                  <td>{annualLabel}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{formatNumber(annualTotal || 0)}만원</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          <span className="field-helper">선택·추가하신 항목 금액을 자동으로 합산한 값입니다</span>
-        </>
-      )}
+        </tbody>
+      </table>
+      <span className="field-helper">선택·추가하신 항목 금액을 자동으로 합산한 값입니다</span>
     </div>
   );
 }

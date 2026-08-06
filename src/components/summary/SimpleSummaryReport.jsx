@@ -154,6 +154,12 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
                 : '생활지출에는 주거비·변동지출(경조사 등)이 포함됩니다.'
             }
           />
+          <DonutChart
+            title="지출 구성"
+            centerLabel="월 총지출"
+            total={donuts.expense.total}
+            items={withColors(donuts.expense.items)}
+          />
           <DonutChart title="자산 구성" centerLabel="총자산" total={donuts.assets.total} items={withColors(donuts.assets.items)} />
           <DonutChart
             title="부채 구성"

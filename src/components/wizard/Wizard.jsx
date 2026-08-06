@@ -7,6 +7,9 @@ import Step5Debt from './steps/Step5Debt';
 import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
+import { getIn } from '../../state/pathUtils';
+
+const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 
 const STEPS = [
   { key: 'income', title: '수입', Component: Step1Income },
@@ -20,9 +23,31 @@ const STEPS = [
 
 export default function Wizard({ onSubmit, startAtLastStep = false }) {
   const [stepIndex, setStepIndex] = useState(startAtLastStep ? STEPS.length - 1 : 0);
+  const [showRequiredError, setShowRequiredError] = useState(false);
   const { formData } = useFormData();
-  const { Component } = STEPS[stepIndex];
+  const { Component, key: currentStepKey } = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
+
+  const retirementLivingCostMissing = !isFilled(getIn(formData, 'expense.retirementLivingCost'));
+
+  const goNext = () => {
+    if (currentStepKey === 'expense' && retirementLivingCostMissing) {
+      setShowRequiredError(true);
+      return;
+    }
+    setShowRequiredError(false);
+    setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
+  };
+
+  const submit = () => {
+    if (retirementLivingCostMissing) {
+      setShowRequiredError(true);
+      setStepIndex(STEPS.findIndex((s) => s.key === 'expense'));
+      return;
+    }
+    setShowRequiredError(false);
+    onSubmit(formData);
+  };
 
   return (
     <div className="wizard">
@@ -44,6 +69,12 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
         <Component />
       </div>
 
+      {showRequiredError && (
+        <p className="wizard-required-error">
+          "2. 지출"의 노후 월 평균 생활비는 필수 입력 항목입니다. 값을 입력한 뒤 진행해 주세요.
+        </p>
+      )}
+
       <div className="wizard-nav">
         <button
           type="button"
@@ -54,11 +85,11 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
           이전
         </button>
         {isLast ? (
-          <button type="button" className="btn-primary" onClick={() => onSubmit(formData)}>
+          <button type="button" className="btn-primary" onClick={submit}>
             진단 결과 보기
           </button>
         ) : (
-          <button type="button" className="btn-primary" onClick={() => setStepIndex((i) => Math.min(STEPS.length - 1, i + 1))}>
+          <button type="button" className="btn-primary" onClick={goNext}>
             다음
           </button>
         )}

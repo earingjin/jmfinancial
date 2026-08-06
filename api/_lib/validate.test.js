@@ -36,6 +36,29 @@ describe('validateInput - baseline', () => {
   });
 });
 
+describe('required field: expense.retirementLivingCost', () => {
+  it('rejects when blank ("")', () => {
+    const result = validateInput(makeInput({ expense: { retirementLivingCost: '' } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/노후.*생활비/);
+  });
+
+  it('rejects when missing (undefined)', () => {
+    const result = validateInput(makeInput({ expense: { retirementLivingCost: undefined } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('accepts an explicit 0 (user asserts no retirement living cost assumption)', () => {
+    const result = validateInput(makeInput({ expense: { retirementLivingCost: 0 } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('accepts a normal positive value', () => {
+    const result = validateInput(makeInput({ expense: { retirementLivingCost: 150 } }));
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe('A-5 relational validation: real estate conversion cannot exceed holdings', () => {
   it('rejects cashOutAmount greater than realEstateAssets.total with an explicit message', () => {
     const result = validateInput(
@@ -69,6 +92,48 @@ describe('relational validation: retirement savings cannot exceed total savings'
   it('rejects retirementAnnual > savingsPlan.annual (new rule)', () => {
     const result = validateInput(makeInput({ assets: { savingsPlan: { annual: 1000, retirementAnnual: 2000 } } }));
     expect(result.ok).toBe(false);
+  });
+
+  it('applies the cap when retirementIncludedInTotal is omitted (defaults to included=true)', () => {
+    const result = validateInput(
+      makeInput({ assets: { savingsPlan: { monthly: 100, retirementMonthly: 100.01, retirementIncludedInTotal: undefined } } })
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it('applies the cap when retirementIncludedInTotal is explicitly true, at the T+0.01 boundary', () => {
+    const result = validateInput(
+      makeInput({ assets: { savingsPlan: { monthly: 100, retirementMonthly: 100.01, retirementIncludedInTotal: true } } })
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it('accepts retirementMonthly exactly equal to savingsPlan.monthly (T boundary) when included', () => {
+    const result = validateInput(
+      makeInput({ assets: { savingsPlan: { monthly: 100, retirementMonthly: 100, retirementIncludedInTotal: true } } })
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('accepts retirementMonthly just under savingsPlan.monthly (T-0.01 boundary) when included', () => {
+    const result = validateInput(
+      makeInput({ assets: { savingsPlan: { monthly: 100, retirementMonthly: 99.99, retirementIncludedInTotal: true } } })
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('does NOT apply the cap when retirementIncludedInTotal is false (retirement savings kept separate)', () => {
+    const result = validateInput(
+      makeInput({ assets: { savingsPlan: { monthly: 100, retirementMonthly: 200, retirementIncludedInTotal: false } } })
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('does NOT apply the annual cap when retirementIncludedInTotal is false', () => {
+    const result = validateInput(
+      makeInput({ assets: { savingsPlan: { annual: 1000, retirementAnnual: 2000, retirementIncludedInTotal: false } } })
+    );
+    expect(result.ok).toBe(true);
   });
 });
 

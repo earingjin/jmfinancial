@@ -17,6 +17,12 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
 
   const savingsRows = savingsBreakdown || [];
   const hasSavingsBreakdown = savingsRows.length > 0;
+  const SAVINGS_CHART_COLORS = ['var(--navy-700)', 'var(--teal)', 'var(--gold)', 'var(--navy-600)', 'var(--amber)', 'var(--navy-800)', 'var(--teal-soft)', 'var(--red)'];
+  const savingsBars = savingsRows.map((item, i) => ({
+    label: item.label,
+    value: item.value,
+    color: SAVINGS_CHART_COLORS[i % SAVINGS_CHART_COLORS.length],
+  }));
 
   return (
     <PageFrame eyebrow="Household Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
@@ -86,9 +92,18 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
           {hasSavingsBreakdown && (
             <tr className="total-row"><td>저축 · 투자액 합계(월평균)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlySavings)}</td></tr>
           )}
-          <tr><td>(노후목적) 연 저축액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.retirementSavingsAnnual)}</td></tr>
+          <tr>
+            <td>
+              (노후목적) 연 저축액
+              <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}>
+                {agg.retirementIncludedInSavings ? ' (위 합계에 포함된 금액)' : ' (위 합계에 별도로 합산된 금액)'}
+              </span>
+            </td>
+            <td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.retirementSavingsAnnual)}</td>
+          </tr>
         </tbody>
       </table>
+      {hasSavingsBreakdown && <FinanceBarChart bars={savingsBars} zeroLabel="-" />}
       <div className="fine-print" style={{ marginBottom: 8 }}>
         저축 · 투자액 {formatWon(agg.monthlySavings)}은 소멸성 지출이 아닌 자산증가로 분류되어, 가계수지지표 계산 시 총지출에서 제외되고 총저축성향지표 계산에 활용됩니다.
       </div>

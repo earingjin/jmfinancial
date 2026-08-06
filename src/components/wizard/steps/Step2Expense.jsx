@@ -144,17 +144,22 @@ export default function Step2Expense() {
         <div className="field-grid" style={{ marginTop: 14 }}>
           <NumberField
             path="expense.retirementLivingCost"
-            label="노후 월 평균 생활비"
+            label="노후 월 평균 생활비 *"
             unit="만원"
-            helper="은퇴 이후 필요한 생활비 가정치로, 현재 생활비와는 별개로 은퇴자산 시뮬레이션에 사용됩니다"
+            helper="필수 입력 항목입니다. 은퇴 이후 필요한 생활비 가정치로, 현재 생활비와는 별개로 은퇴자산 시뮬레이션에 사용됩니다"
           />
         </div>
         {retirementLivingCostTotal != null ? (
-          <TotalAmountBox
-            label="노후 생활비 지출 총액"
-            amount={retirementLivingCostTotal}
-            valueLabel="지출 총액은"
-          />
+          <>
+            <TotalAmountBox
+              label="노후 생활비 지출 총액"
+              amount={retirementLivingCostTotal}
+              valueLabel="지출 총액은"
+            />
+            <span className="field-helper">
+              은퇴(예정) 연령부터 기대수명까지 약 {Math.round((retirementLivingMonths / 12) * 10) / 10}년간의 누적 지출액입니다
+            </span>
+          </>
         ) : (
           <span className="field-helper" style={{ marginTop: 8, display: 'block' }}>
             "1. 수입"에서 은퇴(예정) 연령과 기대수명을 입력하면 은퇴 후 기대수명까지의 노후 생활비 지출 총액이 계산됩니다.

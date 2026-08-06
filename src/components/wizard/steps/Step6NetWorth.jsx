@@ -1,4 +1,3 @@
-import NumberField from '../fields/NumberField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
@@ -29,13 +28,6 @@ export default function Step6NetWorth() {
           </tbody>
         </table>
         <span className="field-helper">4. 자산, 5. 부채 단계에서 입력하신 값을 기준으로 자동 계산됩니다</span>
-      </section>
-
-      <section className="step-section">
-        <h3>📅 순자산 비교</h3>
-        <div className="field-grid">
-          <NumberField path="assets.netWorthPriorYear" label="전년도(또는 기준 시점) 순자산" unit="만원" />
-        </div>
       </section>
     </div>
   );

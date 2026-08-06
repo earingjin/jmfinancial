@@ -9,10 +9,18 @@ import { formatNumber } from '../../../utils/format';
 const LIQUID_ASSET_CATEGORIES = [
   { key: 'deposit', label: '예금' },
   { key: 'savings', label: '적금' },
+  { key: 'cma', label: 'CMA' },
   { key: 'emergencyFund', label: '비상금' },
 ];
 
-// linked: true면 "3. 저축"에서 입력한 값과 연동되는 읽기 전용 항목, false면 여기서 종류별로 직접 입력하는 항목.
+const FINANCIAL_ASSET_CATEGORIES = [
+  { key: 'stocks', label: '주식' },
+  { key: 'funds', label: '펀드' },
+  { key: 'bonds', label: '채권' },
+  { key: 'other', label: '기타' },
+];
+
+// linked: true면 "3. 저축"과 값이 연동되어 양쪽 어디서나 입력·수정 가능한 항목, false면 여기서만 직접 입력하는 항목.
 const PENSION_ASSET_CATEGORIES = [
   { key: 'variableAnnuity', label: '변액연금', linked: true, savingsLabel: '변액연금' },
   { key: 'pensionSavingsAccount', label: '연금저축계좌', linked: true, savingsLabel: '연금저축' },
@@ -25,6 +33,29 @@ const PENSION_BREAKDOWN_NUMERIC_KEYS = ['variableAnnuity', 'pensionSavingsAccoun
 
 export default function Step4Assets() {
   const { formData, setField } = useFormData();
+  const [openFinancialKeys, setOpenFinancialKeys] = useState(() => {
+    const fa = getIn(formData, 'assets.financialAssets') || {};
+    const otherItems = getIn(formData, 'assets.financialAssets.otherItems') || [];
+    const initial = new Set();
+    FINANCIAL_ASSET_CATEGORIES.forEach((c) => {
+      if (c.key === 'other') {
+        if (otherItems.length > 0 || Number(fa.other) > 0) initial.add(c.key);
+      } else if (Number(fa[c.key]) > 0) {
+        initial.add(c.key);
+      }
+    });
+    return initial;
+  });
+
+  const toggleFinancialKey = (key) => {
+    setOpenFinancialKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const [openPensionKeys, setOpenPensionKeys] = useState(() => {
     const breakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
     const initial = new Set();
@@ -41,6 +72,12 @@ export default function Step4Assets() {
       else next.add(key);
       return next;
     });
+  };
+
+  // "3. 저축"의 SavingsBreakdownField.updateAccumulated(pensionBreakdown 분기)와 동일한 필드에
+  // 그대로 쓴다 - 같은 값을 공유하는 연동 항목이라 어느 쪽에서 수정해도 서로 반영된다.
+  const updatePensionBreakdown = (key, raw) => {
+    setField(`assets.pensionAssetsBreakdown.${key}`, raw === '' ? '' : Number(raw));
   };
 
   // "기타" 연금자산은 종류별(name)로 나눠 입력받고, 합계만 pensionAssetsBreakdown.other에 반영한다.
@@ -74,6 +111,7 @@ export default function Step4Assets() {
   const financialAssetsTotal =
     (Number(getIn(formData, 'assets.financialAssets.stocks')) || 0) +
     (Number(getIn(formData, 'assets.financialAssets.funds')) || 0) +
+    (Number(getIn(formData, 'assets.financialAssets.bonds')) || 0) +
     financialOtherTotal;
   const pensionAssets = Number(getIn(formData, 'assets.pensionAssets')) || 0;
 
@@ -103,7 +141,6 @@ export default function Step4Assets() {
           basePath="assets.liquidAssets.breakdown"
           customPath="assets.liquidAssets.customItems"
           totalPath="assets.liquidAssets.total"
-          modePath="assets.liquidAssets.inputMode"
           categories={LIQUID_ASSET_CATEGORIES}
           totalLabel="현금성 자산 총액"
           pillPrompt="해당하는 현금성 자산 종류를 눌러 금액을 입력해 주세요"
@@ -118,40 +155,66 @@ export default function Step4Assets() {
       <section className="step-section">
         <h3>📈 금융자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
-          예금·적금은 위 현금성 자산에서 입력해 주세요. 여기는 주식·펀드 등 투자자산입니다.
+          예금·적금·CMA는 위 현금성 자산에서 입력해 주세요. 여기는 주식·펀드·채권 등 투자자산입니다.
         </p>
-        <div className="field-grid three-col">
-          <NumberField path="assets.financialAssets.stocks" label="주식" unit="만원" />
-          <NumberField path="assets.financialAssets.funds" label="펀드" unit="만원" />
+        <p className="field-label">해당하는 금융자산 종류를 눌러 금액을 입력해 주세요</p>
+        <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
+          {FINANCIAL_ASSET_CATEGORIES.map((c) => (
+            <button
+              type="button"
+              key={c.key}
+              className={`checkbox-pill ${openFinancialKeys.has(c.key) ? 'is-active' : ''}`}
+              onClick={() => toggleFinancialKey(c.key)}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
-        <RepeatableList
-          path="assets.financialAssets.otherItems"
-          label="기타 금융자산"
-          addLabel="기타 금융자산 추가"
-          emptyItem={{ name: '', amount: '' }}
-          renderItem={(item, _i, update) => (
-            <div className="field-grid three-col">
-              <label className="field">
-                <span className="field-label">종류</span>
-                <input type="text" placeholder="예: 가상자산" value={item.name} onChange={(e) => update('name', e.target.value)} />
-              </label>
-              <label className="field">
-                <span className="field-label">금액</span>
-                <div className="field-input-row">
-                  <input type="number" value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
-                  <span className="field-unit">만원</span>
-                </div>
-              </label>
-            </div>
-          )}
-        />
+        {(openFinancialKeys.has('stocks') || openFinancialKeys.has('funds') || openFinancialKeys.has('bonds')) && (
+          <div className="field-grid three-col">
+            {openFinancialKeys.has('stocks') && <NumberField path="assets.financialAssets.stocks" label="주식" unit="만원" />}
+            {openFinancialKeys.has('funds') && <NumberField path="assets.financialAssets.funds" label="펀드" unit="만원" />}
+            {openFinancialKeys.has('bonds') && <NumberField path="assets.financialAssets.bonds" label="채권" unit="만원" />}
+          </div>
+        )}
+        {openFinancialKeys.has('other') && (
+          <RepeatableList
+            path="assets.financialAssets.otherItems"
+            label="기타 금융자산"
+            addLabel="기타 금융자산 추가"
+            emptyItem={{ name: '', amount: '' }}
+            renderItem={(item, _i, update) => (
+              <div className="field-grid three-col">
+                <label className="field">
+                  <span className="field-label">종류</span>
+                  <input type="text" placeholder="예: 가상자산" value={item.name} onChange={(e) => update('name', e.target.value)} />
+                </label>
+                <label className="field">
+                  <span className="field-label">금액</span>
+                  <div className="field-input-row">
+                    <input type="number" value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                    <span className="field-unit">만원</span>
+                  </div>
+                </label>
+              </div>
+            )}
+          />
+        )}
+        <label className="field" style={{ marginTop: 12 }}>
+          <span className="field-label">금융자산 총액</span>
+          <div className="field-input-row">
+            <input type="number" value={financialAssetsTotal || ''} readOnly />
+            <span className="field-unit">만원</span>
+          </div>
+          <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
+        </label>
       </section>
 
       <section className="step-section">
         <h3>🏦 연금자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           해당하는 연금자산 종류를 눌러 금액을 확인·입력해 주세요. 변액연금·연금저축계좌·IRP개인퇴직계좌는
-          "3. 저축"에서 입력한 값과 자동으로 연동됩니다.
+          "3. 저축"과 값이 연동되며, 여기서 직접 입력·수정할 수도 있습니다.
         </p>
         <div className="checkbox-group" style={{ marginBottom: 14 }}>
           {PENSION_ASSET_CATEGORIES.map((c) => (
@@ -170,10 +233,16 @@ export default function Step4Assets() {
             <label className="field" key={c.key}>
               <span className="field-label">{c.label}</span>
               <div className="field-input-row">
-                <input type="number" value={getIn(formData, `assets.pensionAssetsBreakdown.${c.key}`) || ''} readOnly />
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={getIn(formData, `assets.pensionAssetsBreakdown.${c.key}`) ?? ''}
+                  onChange={(e) => updatePensionBreakdown(c.key, e.target.value)}
+                />
                 <span className="field-unit">만원</span>
               </div>
-              <span className="field-helper">"3. 저축"의 "{c.savingsLabel}" 항목과 연동됩니다</span>
+              <span className="field-helper">"3. 저축"의 "{c.savingsLabel}" 항목과 연동됩니다 - 어느 쪽에서 입력해도 서로 반영됩니다</span>
             </label>
           ))}
         </div>
