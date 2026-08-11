@@ -16,7 +16,10 @@ function isBlank(value) {
 
 const KIND_RULES = {
   amount: { min: 0, allowDecimal: true, label: '금액' }, // 만원 단위 금액 - 음수·NaN·Infinity 거부, 상한 없음
-  count: { min: 0, allowDecimal: false, label: '개월/기간' }, // 개월·년·나이 등 정수 카운트
+  count: { min: 0, allowDecimal: false, label: '개월/기간' }, // 개월·년 등 정수 카운트
+  age: { min: 0, max: 120, allowDecimal: false, label: '나이' }, // 나이류 필드 전용 - 개월/기간(count)과 분리
+  // 기대수명 전용 - 통계청 평균수명 참고값(예: 84.6세)의 소수 입력은 유지하면서 상한(120)만 추가한다.
+  ageDecimal: { min: 0, max: 120, allowDecimal: true, label: '나이(소수 허용)' },
   rate: { min: 0, max: 100, allowDecimal: true, label: '비율(%)' }, // 절감률 등 0~100% 비율
   returnRate: { allowDecimal: true, label: '수익률' }, // 예상 수익률 - 하한/상한을 두지 않음(음의 수익률도 유효한 가정)
 };
@@ -43,10 +46,26 @@ function checkKindField(errors, input, path, kind) {
   }
 }
 
+// 출생년도 범위 검증 - kind 체계(amount/count/age/rate/returnRate)는 "연도 범위" 규칙에 맞지
+// 않으므로 basic.birthYear와 같은 규칙(1900~올해)을 쓰는 곳(자녀 출생년도 등)에서 공용으로 쓴다.
+function checkBirthYearField(errors, value, path) {
+  if (isBlank(value)) return;
+  const year = Number(value);
+  if (Number.isNaN(year) || year < 1900 || year > new Date().getFullYear()) {
+    errors.push(`${path} 출생년도가 유효하지 않습니다.`);
+  }
+}
+
+const MAX_ARRAY_LENGTH = 50; // 정기수입/기타수입/자녀/커스텀항목 등 반복 입력 목록의 최대 개수
+
 // 배열 필드(자녀별 항목, 반복 입력 목록 등)의 각 원소에 동일한 스키마를 적용한다.
 function checkArrayField(errors, input, arrayPath, itemFields) {
   const list = getPath(input, arrayPath);
   if (!Array.isArray(list)) return;
+  if (list.length > MAX_ARRAY_LENGTH) {
+    errors.push(`${arrayPath} 항목은 최대 ${MAX_ARRAY_LENGTH}개까지 입력할 수 있습니다.`);
+    return;
+  }
   list.forEach((_, index) => {
     itemFields.forEach(({ key, kind }) => checkKindField(errors, input, `${arrayPath}.${index}.${key}`, kind));
   });
@@ -118,9 +137,6 @@ const AMOUNT_FIELDS = [
   'scenarios.reverseMortgage.housePrice',
   'scenarios.realEstateConversion.cashOutAmount',
   'scenarios.additionalIncome.monthlySalary',
-  // 기대수명은 나이지만(연령대) 통계청 평균수명 참고값(예: 84.6세)이 소수 첫째자리를 가지므로
-  // COUNT_FIELDS(정수 전용)가 아니라 여기(소수 허용)에 둔다.
-  'basic.lifeExpectancy',
   // 근속년수도 소수(예: 7.5년)를 허용해야 하므로 같은 이유로 COUNT_FIELDS가 아니라 여기에 둔다.
   'basic.serviceYears',
   'spouse.severance.serviceYears',
@@ -150,10 +166,20 @@ const COUNT_FIELDS = [
   'spouse.personalPension.lumpsumAge',
   'expense.medical.years',
   'expense.healthInsurance.years',
+  'scenarios.additionalIncome.months',
+];
+
+const AGE_FIELDS = [
   'basic.retirementAge',
   'scenarios.reverseMortgage.ageAtStart',
   'scenarios.realEstateConversion.ageAtConversion',
-  'scenarios.additionalIncome.months',
+];
+
+const AGE_DECIMAL_FIELDS = [
+  'basic.lifeExpectancy',
+  // simulation.js의 `lifeExpectancy || retirementEndAge` 폴백에서만 쓰이는 레거시 호환 별칭.
+  // 초기 폼 데이터/입력 UI에는 없지만 같은 나이 필드이므로 lifeExpectancy와 동일한 규칙을 적용한다.
+  'basic.retirementEndAge',
 ];
 
 const ARRAY_FIELDS = [
@@ -214,10 +240,19 @@ export function validateInput(input) {
 
   AMOUNT_FIELDS.forEach((path) => checkKindField(errors, input, path, 'amount'));
   COUNT_FIELDS.forEach((path) => checkKindField(errors, input, path, 'count'));
+  AGE_FIELDS.forEach((path) => checkKindField(errors, input, path, 'age'));
+  AGE_DECIMAL_FIELDS.forEach((path) => checkKindField(errors, input, path, 'ageDecimal'));
   checkKindField(errors, input, 'basic.assumedReturnRate', 'returnRate');
   checkKindField(errors, input, 'scenarios.expenseReduction.reductionRate', 'rate');
 
   ARRAY_FIELDS.forEach(({ path, fields }) => checkArrayField(errors, input, path, fields));
+
+  // 자녀 출생년도 - checkArrayField(kind 기반)와 별도로 basic.birthYear와 동일한 연도 범위 규칙을 적용한다.
+  // MAX_ARRAY_LENGTH 초과 시에는 위 checkArrayField가 이미 별도 에러를 push했으므로 여기서는 건너뛴다.
+  const children = getPath(input, 'expense.children');
+  if (Array.isArray(children) && children.length <= MAX_ARRAY_LENGTH) {
+    children.forEach((child, index) => checkBirthYearField(errors, child?.birthYear, `expense.children.${index}.birthYear`));
+  }
 
   DEBT_BREAKDOWN_CATEGORIES.forEach((cat) => {
     checkKindField(errors, input, `assets.debtStatus.breakdown.${cat}.principal`, 'amount');

@@ -8,8 +8,9 @@ import { enrichIndicators, enrichSimulation } from './_lib/reportEnrichment.js';
 import { buildComprehensiveIssues } from './_lib/executiveSummary.js';
 import { buildSimpleSummary } from './_lib/simpleSummary.js';
 import { buildSavingsBreakdown, buildDebtBreakdown } from './_lib/reportBreakdowns.js';
-import { buildWebSummary } from './_lib/summaryOverview.js';
+import { buildWebSummary, allBlank } from './_lib/summaryOverview.js';
 import { obfuscate } from '../src/utils/obfuscate.js';
+import { requireUser } from './_lib/auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,8 +18,21 @@ export default async function handler(req, res) {
     return;
   }
 
+  const auth = await requireUser(req);
+  if (!auth.ok) {
+    res.status(auth.status).json({ error: auth.error });
+    return;
+  }
+
+  const MAX_BODY_SIZE = 200_000; // 약 200KB - 정상적인 입력 폼 데이터 대비 충분히 여유 있는 상한
+
   let input;
   try {
+    const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    if (bodyStr.length > MAX_BODY_SIZE) {
+      res.status(413).json({ error: '요청 데이터가 너무 큽니다.' });
+      return;
+    }
     input = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
   } catch {
     res.status(400).json({ error: '요청 본문이 올바른 JSON 형식이 아닙니다.' });
@@ -37,6 +51,9 @@ export default async function handler(req, res) {
     const scenarioComparison = calcScenarioComparison(input);
     // totalScore가 null(종합점수 산출 불가)이면 buildMetric이 Number.isFinite(null)=false로 감지해
     // "비교 데이터 부족" 상태를 그대로 반환한다(0점처럼 잘못 계산되지 않음 - peerComparison.js 참고).
+    // netWorth/annualIncome/financialAssetsTotal은 미입력 시 n()이 0으로 채우므로, 아래 경로가
+    // 전부 비어 있으면(=사용자가 해당 항목 자체를 입력하지 않았으면) "실제 0원"이 아니라 미입력임을
+    // peerComparison.js에 별도로 알려준다(aggregate.js의 각 합산식과 정확히 대응하는 경로만 검사).
     const peerComparison = buildPeerComparison({
       age: getCurrentAge(input),
       totalAssets: aggregates.totalAssets,
@@ -44,6 +61,16 @@ export default async function handler(req, res) {
       annualIncome: aggregates.annualIncome,
       financialAssetsTotal: aggregates.financialAssetsTotal + aggregates.liquidAssets,
       retirementScore: totalScore,
+      netWorthMissing: allBlank(input, [
+        'assets.liquidAssets.total',
+        'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other',
+        'assets.pensionAssets', 'assets.realEstateAssets.total', 'assets.debtStatus.totalBalance',
+      ]),
+      annualIncomeMissing: allBlank(input, ['assets.currentIncome.monthly', 'income.business.monthly']),
+      financialAssetsMissing: allBlank(input, [
+        'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other',
+        'assets.liquidAssets.total',
+      ]),
     });
 
     // 리포트 렌더링에 필요한 게이지 위치·권장기준 비교 문구·등급 배지·생활수준 구간 같은

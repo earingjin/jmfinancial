@@ -179,3 +179,104 @@ describe('rejects NaN / Infinity / negative amounts across numeric fields', () =
     expect(validateInput(makeInput({ assets: { currentIncome: { monthly: 'not-a-number' } } })).ok).toBe(false);
   });
 });
+
+describe('age cap: basic.retirementAge (kind "age", max 120)', () => {
+  it('rejects retirementAge at T+0.01 boundary (121)', () => {
+    const result = validateInput(makeInput({ basic: { retirementAge: 121, lifeExpectancy: 121 } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/retirementAge.*120/);
+  });
+
+  it('accepts retirementAge at the T boundary (120)', () => {
+    const result = validateInput(makeInput({ basic: { retirementAge: 120, lifeExpectancy: 120 } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('accepts retirementAge at the T-0.01 boundary (119, nearest valid integer)', () => {
+    const result = validateInput(makeInput({ basic: { retirementAge: 119, lifeExpectancy: 119 } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects a negative retirementAge (regression check on the pre-existing min:0 rule)', () => {
+    const result = validateInput(makeInput({ basic: { retirementAge: -1 } }));
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('array length cap: income.regularIncomes (MAX_ARRAY_LENGTH = 50)', () => {
+  const item = { annual: 100, years: 1 };
+
+  it('rejects 51 items (T+1 boundary)', () => {
+    const result = validateInput(makeInput({ income: { regularIncomes: Array.from({ length: 51 }, () => ({ ...item })) } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/regularIncomes.*50/);
+  });
+
+  it('accepts exactly 50 items (T boundary)', () => {
+    const result = validateInput(makeInput({ income: { regularIncomes: Array.from({ length: 50 }, () => ({ ...item })) } }));
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe('age cap: basic.retirementEndAge (legacy fallback alias, same kind as lifeExpectancy)', () => {
+  it('rejects retirementEndAge above 120', () => {
+    const result = validateInput(makeInput({ basic: { retirementEndAge: 121 } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/retirementEndAge.*120/);
+  });
+
+  it('accepts retirementEndAge at the boundary (120)', () => {
+    const result = validateInput(makeInput({ basic: { retirementEndAge: 120 } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('accepts a decimal retirementEndAge (84.6), same as lifeExpectancy', () => {
+    const result = validateInput(makeInput({ basic: { retirementEndAge: 84.6 } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects an oversized retirementEndAge even when lifeExpectancy is blank (regression: this was the bypass path)', () => {
+    const result = validateInput(makeInput({ basic: { lifeExpectancy: '', retirementEndAge: 1000000 } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/retirementEndAge.*120/);
+  });
+});
+
+describe('birth-year range validation: expense.children[].birthYear (same rule as basic.birthYear, 1900~current year)', () => {
+  const childItem = { educationCost: 0, marriageSupport: 0, otherCost: 0 };
+
+  it('rejects a non-numeric value (NaN)', () => {
+    const result = validateInput(makeInput({ expense: { children: [{ ...childItem, birthYear: 'abc' }] } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/expense\.children\.0\.birthYear/);
+  });
+
+  it('rejects 1899 (T-1 boundary)', () => {
+    const result = validateInput(makeInput({ expense: { children: [{ ...childItem, birthYear: 1899 }] } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('accepts 1900 (T boundary)', () => {
+    const result = validateInput(makeInput({ expense: { children: [{ ...childItem, birthYear: 1900 }] } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects 9999 (far above current year)', () => {
+    const result = validateInput(makeInput({ expense: { children: [{ ...childItem, birthYear: 9999 }] } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('accepts a blank birthYear (not yet entered, same convention as other fields)', () => {
+    const result = validateInput(makeInput({ expense: { children: [{ ...childItem, birthYear: '' }] } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('includes the item index in the error message when the second of two children is invalid', () => {
+    const result = validateInput(
+      makeInput({ expense: { children: [{ ...childItem, birthYear: 2000 }, { ...childItem, birthYear: 9999 }] } })
+    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/expense\.children\.1\.birthYear/);
+    expect(result.errors.join(' ')).not.toMatch(/expense\.children\.0\.birthYear/);
+  });
+});

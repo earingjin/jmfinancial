@@ -43,11 +43,23 @@ function AppContent() {
     setPhase('loading');
     setErrorMessage('');
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+
       const res = await fetch('/api/calculate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify(formData),
       });
+
+      if (res.status === 401) {
+        await signOut();
+        throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      }
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || '계산에 실패했습니다.');

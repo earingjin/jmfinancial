@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // 로컬 개발(`npm run dev`)에서 /api/calculate 서버리스 함수를 그대로 흉내내는 미들웨어.
@@ -40,6 +40,9 @@ function localApiMiddleware() {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), localApiMiddleware()],
+export default defineConfig(({ mode }) => {
+  // 로컬 dev에서 api/ 함수가 process.env로 Supabase 키를 읽을 수 있게 주입.
+  // Vercel에서는 프로젝트 환경변수가 자동으로 process.env에 들어간다.
+  Object.assign(process.env, loadEnv(mode, process.cwd(), ''));
+  return { plugins: [react(), localApiMiddleware()] };
 });

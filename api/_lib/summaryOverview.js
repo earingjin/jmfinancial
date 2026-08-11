@@ -16,7 +16,7 @@ function getPath(input, path) {
 
 // 지정한 경로들이 전부 빈 값이면(=해당 입력 구획 자체를 건드리지 않았으면) true.
 // 하나라도 채워졌다면 나머지가 비어 있어도(합산 시 n()이 0으로 처리) "입력함"으로 간주한다.
-function allBlank(input, paths) {
+export function allBlank(input, paths) {
   return paths.every((p) => isBlank(getPath(input, p)));
 }
 

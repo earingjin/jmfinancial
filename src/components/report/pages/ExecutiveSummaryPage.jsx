@@ -1,6 +1,6 @@
 import PageFrame from './PageFrame';
 import AIFeedbackBox from './AIFeedbackBox';
-import { formatWon } from '../../../utils/format';
+import { formatWon, round1 } from '../../../utils/format';
 
 // 카드별 등급(우수/양호/보통/위험) 판정 기준은 아직 정의되어 있지 않아 자리표시자("-")로 남겨둔다.
 // 실제 판정 로직이 마련되면 이 자리에 값을 채워 넣는다.
@@ -8,7 +8,7 @@ const RATING_PLACEHOLDER = '-';
 
 export default function ExecutiveSummaryPage({ simulation, aggregates: agg, familyAges, feedback, pageNumber, totalPages }) {
   const retirementAge = simulation.currentAge + simulation.yearsToRetirement;
-  const retirementEndAge = retirementAge + simulation.retirementYears;
+  const retirementEndAge = round1(retirementAge + simulation.retirementYears);
   const retirementStatus = simulation.shortfall > 0 ? '부족' : '적정';
   const fb = feedback || {};
 
@@ -82,7 +82,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
             <span className="summary-card-title">은퇴생활비 현금흐름점검</span>
             <span className="summary-card-rating">{RATING_PLACEHOLDER}</span>
           </div>
-          <div className="summary-card-row"><span>노후기간</span><span className="num">{simulation.retirementYears}년</span></div>
+          <div className="summary-card-row"><span>노후기간</span><span className="num">{round1(simulation.retirementYears)}년</span></div>
           <div className="summary-card-row total"><span>적정상태</span><span className="num">{retirementStatus}</span></div>
         </div>
         <div className="summary-card">

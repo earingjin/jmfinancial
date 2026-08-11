@@ -1,4 +1,4 @@
-import { formatWon, formatPercent, formatNumber } from '../../utils/format';
+import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
 import '../../styles/simpleSummary.css';
 
@@ -28,11 +28,12 @@ function DetailRow({ label, value, missing, bold, highlight, valueColor }) {
   );
 }
 
+// 재무건강 총점은 연령대별 공식 통계(2025년 가계금융복지조사)가 없어 이번 갱신에서 제외한다
+// (peerComparison.js의 retirementScore 자체는 하위호환을 위해 여전히 존재하지만 화면에는 표시하지 않음).
 const PEER_METRIC_DEFS = [
   { key: 'netWorth', label: '순자산', unit: 'won' },
   { key: 'annualIncome', label: '연소득', unit: 'won', peerKey: 'householdIncome' },
   { key: 'financialAssets', label: '금융자산', unit: 'won' },
-  { key: 'retirementScore', label: '재무건강 총점', unit: 'point' },
 ];
 
 function PeerMetricRow({ label, metric, unit }) {
@@ -182,8 +183,10 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
       <section aria-labelledby="ss-h-peer">
         <h2 id="ss-h-peer" className="simple-summary-title">또래와 비교한 나의 위치</h2>
         <p className="simple-summary-subtitle">같은 연령대와 비교해 현재 재무 수준을 확인해 보세요.</p>
-        {peerComparison.isPlaceholderData && (
-          <div className="ss-placeholder-badge">참고용 예시 비교 — 실제 공식 통계 연동 전까지 사용하는 자리표시 데이터입니다.</div>
+        {peerComparison.benchmarkMeta && (
+          <div className="fine-print" style={{ marginBottom: 10 }}>
+            {peerComparison.benchmarkMeta.source}({peerComparison.benchmarkMeta.agency}) {peerComparison.benchmarkMeta.ageBasis} 평균입니다. 자산·부채는 {peerComparison.benchmarkMeta.assetAndDebtAsOf} 기준, 소득은 {peerComparison.benchmarkMeta.incomeYear}년 연간 기준입니다.
+          </div>
         )}
         <div className="peer-compare-list">
           {PEER_METRIC_DEFS.map((def) => (
@@ -212,7 +215,7 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
               </div>
               <div className="overview-card">
                 <div className="overview-card-label">은퇴 후 생활 기간</div>
-                <div className="overview-card-value">{rr.retirementYears}년</div>
+                <div className="overview-card-value">{round1(rr.retirementYears)}년</div>
               </div>
               <div className="overview-card overview-card--highlight">
                 <div className="overview-card-label">은퇴 시점 필요자금</div>

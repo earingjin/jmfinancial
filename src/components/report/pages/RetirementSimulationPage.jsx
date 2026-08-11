@@ -1,7 +1,7 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import AIFeedbackBox from './AIFeedbackBox';
-import { formatWon, formatPercent } from '../../../utils/format';
+import { formatWon, formatPercent, formatNumber, round1 } from '../../../utils/format';
 
 // 국민연금 수급개시연령은 출생연도별로 법정 고정값이다(계산치가 아닌 참고 자료).
 // 정년(고정 60세)과 수급개시연령 사이의 "소득공백기간"을 함께 보여준다.
@@ -44,7 +44,7 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
         <div className="lead">부족할 것으로 예상돼요</div>
       </div>
       <div className="shortfall-sub">
-        {retirementAge}세부터 {retirementAge + simulation.retirementYears}세까지 매년 목표 생활비(월 {retirementLivingCost.toLocaleString('ko-KR')}만원)를 감당하려면<br />
+        {retirementAge}세부터 {round1(retirementAge + simulation.retirementYears)}세까지 매년 목표 생활비(월 {formatNumber(retirementLivingCost)}만원)를 감당하려면<br />
         은퇴시점에 준비자산 {formatEok(simulation.requiredAtRetirement)}이 필요해요
       </div>
 
