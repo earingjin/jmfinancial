@@ -99,6 +99,27 @@
   color: var(--ink-soft);
   margin: 0 0 16px;
 }
+.peer-age-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.peer-age-summary span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.peer-age-summary strong {
+  color: var(--navy-800);
+  font-size: 12.5px;
+}
 
 .ss-section-title {
   font-size: 15px;
@@ -149,6 +170,9 @@
   padding: 14px 14px 12px;
   min-width: 0;
 }
+.overview-card--wide {
+  grid-column: 1 / -1;
+}
 .overview-card--highlight {
   border-color: var(--gold);
   border-width: 2px;
@@ -179,6 +203,18 @@
   word-break: keep-all;
 }
 .overview-card--risk .overview-card-value { color: var(--red); }
+.overview-card-formula {
+  margin: 7px 0 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.overview-card-zero-reason {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--navy-800);
+}
 .overview-card-missing {
   font-size: 13px;
   font-weight: 600;

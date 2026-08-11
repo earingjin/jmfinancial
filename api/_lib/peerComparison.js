@@ -52,7 +52,9 @@ export function buildPeerComparison({
 
   return {
     ageBrackets,
+    userAge: Number.isFinite(age) && age > 0 ? age : null,
     userBracketKey: userBracket.key,
+    userBracketLabel: userBracket.label,
     userNetWorth: Math.max(0, netWorth),
     percentileRank: estimatePercentileRank(netWorth, userBracket.netWorth),
     focusCompare: {
