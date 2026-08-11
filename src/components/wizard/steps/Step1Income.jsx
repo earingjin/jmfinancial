@@ -376,7 +376,7 @@ export default function Step1Income() {
         {selfHasSalary ? (
           <>
             <div className="field-grid three-col">
-              <MonthlyIncomeField monthlyPath="income.salary.monthly" annualPath="income.salary.annual" label="현재 소득" />
+              <MonthlyIncomeField monthlyPath="income.salary.monthly" annualPath="income.salary.annual" label="현재 소득 (세금 제외한 실수령액)" />
               <NumberField path="income.salary.annualBonus" label="상여금" unit="만원(연)" helper="연간 상여금 총액" />
               <label className="field">
                 <span className="field-label">남은 퇴직기간</span>
@@ -405,7 +405,7 @@ export default function Step1Income() {
             {spouseHasSalary ? (
               <>
                 <div className="field-grid three-col">
-                  <MonthlyIncomeField monthlyPath="spouse.salary.monthly" annualPath="spouse.salary.annual" label="현재 소득" />
+                  <MonthlyIncomeField monthlyPath="spouse.salary.monthly" annualPath="spouse.salary.annual" label="현재 소득 (세금 제외한 실수령액)" />
                   <NumberField path="spouse.salary.annualBonus" label="상여금" unit="만원(연)" helper="연간 상여금 총액" />
                   <RemainingTermField monthsPath="spouse.salary.months" label="남은 퇴직기간" />
                 </div>
