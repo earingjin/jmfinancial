@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSavingsBreakdown } from './reportBreakdowns.js';
+import { buildSavingsBreakdown, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './reportBreakdowns.js';
 
 describe('buildSavingsBreakdown - all savingsPlan.breakdown categories are covered', () => {
   // Step3Savings.jsx's SAVINGS_CATEGORIES lists 8 breakdown keys (installment, isa,
@@ -62,6 +62,92 @@ describe('buildSavingsBreakdown - custom items use the correct amount field', ()
       },
     });
     expect(items).toEqual([]);
+  });
+});
+
+describe('buildOtherLivingExpenseItems - "현재 생활비 상세"의 기타지출 종류별 항목을 표시용으로 뽑아낸다', () => {
+  it('returns an empty array when no otherItems exist', () => {
+    expect(buildOtherLivingExpenseItems({ assets: { currentLivingCost: { breakdown: {} } } })).toEqual([]);
+  });
+
+  it('returns an empty array when currentLivingCost is entirely absent', () => {
+    expect(buildOtherLivingExpenseItems({ assets: {} })).toEqual([]);
+  });
+
+  it('lists a named item with its amount', () => {
+    const items = buildOtherLivingExpenseItems({
+      assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물 비용', amount: 10 }] } } },
+    });
+    expect(items).toEqual([{ key: 'other-living-0', label: '반려동물 비용', value: 10 }]);
+  });
+
+  it('falls back to "기타지출" when name is blank', () => {
+    const items = buildOtherLivingExpenseItems({
+      assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '', amount: 5 }] } } },
+    });
+    expect(items).toEqual([{ key: 'other-living-0', label: '기타지출', value: 5 }]);
+  });
+
+  it('omits an item with amount=0', () => {
+    const items = buildOtherLivingExpenseItems({
+      assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물 비용', amount: 0 }] } } },
+    });
+    expect(items).toEqual([]);
+  });
+
+  it('lists multiple items and never double-counts against the same total (values only, no aggregation here)', () => {
+    const items = buildOtherLivingExpenseItems({
+      assets: {
+        currentLivingCost: {
+          breakdown: { otherItems: [{ name: '반려동물 비용', amount: 10 }, { name: '구독료', amount: 3 }] },
+        },
+      },
+    });
+    expect(items).toEqual([
+      { key: 'other-living-0', label: '반려동물 비용', value: 10 },
+      { key: 'other-living-1', label: '구독료', value: 3 },
+    ]);
+  });
+});
+
+describe('buildOtherLiquidAssetItems - "현금성 자산"의 기본 항목 외 추가(customItems)를 표시용으로 뽑아낸다', () => {
+  it('returns an empty array when no customItems exist', () => {
+    expect(buildOtherLiquidAssetItems({ assets: { liquidAssets: {} } })).toEqual([]);
+  });
+
+  it('returns an empty array when liquidAssets is entirely absent', () => {
+    expect(buildOtherLiquidAssetItems({ assets: {} })).toEqual([]);
+  });
+
+  it('lists a named item with its amount', () => {
+    const items = buildOtherLiquidAssetItems({
+      assets: { liquidAssets: { customItems: [{ name: '외화예금', amount: 300 }] } },
+    });
+    expect(items).toEqual([{ key: 'other-liquid-0', label: '외화예금', value: 300 }]);
+  });
+
+  it('falls back to "기타 현금성자산" when name is blank', () => {
+    const items = buildOtherLiquidAssetItems({
+      assets: { liquidAssets: { customItems: [{ name: '', amount: 50 }] } },
+    });
+    expect(items).toEqual([{ key: 'other-liquid-0', label: '기타 현금성자산', value: 50 }]);
+  });
+
+  it('omits an item with amount=0', () => {
+    const items = buildOtherLiquidAssetItems({
+      assets: { liquidAssets: { customItems: [{ name: '외화예금', amount: 0 }] } },
+    });
+    expect(items).toEqual([]);
+  });
+
+  it('lists multiple items in order', () => {
+    const items = buildOtherLiquidAssetItems({
+      assets: { liquidAssets: { customItems: [{ name: 'ISA', amount: 100 }, { name: '파킹통장', amount: 20 }] } },
+    });
+    expect(items).toEqual([
+      { key: 'other-liquid-0', label: 'ISA', value: 100 },
+      { key: 'other-liquid-1', label: '파킹통장', value: 20 },
+    ]);
   });
 });
 

@@ -296,7 +296,7 @@ export default function Step1Income() {
       <p className="step-desc">본인의 수입 항목을 입력합니다. 해당 사항이 없으면 0으로 입력해 주세요. 배우자가 있다면 아래에서 "배우자 정보 입력"을 선택해 주세요.</p>
 
       <section className="step-section">
-        <h3>📝 기본 정보</h3>
+        <h3><span className="step-icon">📝</span> 기본 정보</h3>
         <div className="field-grid">
           <NumberField path="basic.birthYear" label="본인 출생년도" placeholder="예: 1968" />
           <NumberField path="basic.retirementAge" label="은퇴(예정) 연령" unit="세" />
@@ -340,7 +340,7 @@ export default function Step1Income() {
       </section>
 
       <section className="step-section">
-        <h3>💵 급여</h3>
+        <h3><span className="step-icon">💵</span> 급여</h3>
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <div className="field-grid three-col">
           <MonthlyIncomeField
@@ -380,7 +380,7 @@ export default function Step1Income() {
       </section>
 
       <section className="step-section">
-        <h3>📊 현재 기준 소득</h3>
+        <h3><span className="step-icon">📊</span> 현재 기준 소득</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           위 급여(월급+상여금, 본인+배우자) 합계로 자동 계산됩니다. 사업소득은 아래 "기타 정기수입"에서 별도로 합산됩니다.
         </p>
@@ -405,7 +405,7 @@ export default function Step1Income() {
       </section>
 
       <section className="step-section">
-        <h3>💼 퇴직금 · 퇴직연금</h3>
+        <h3><span className="step-icon">💼</span> 퇴직금 · 퇴직연금</h3>
         <PensionPortalNotice />
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <RadioField
@@ -518,7 +518,7 @@ export default function Step1Income() {
       </section>
 
       <section className="step-section">
-        <h3>🏛️ 국민연금</h3>
+        <h3><span className="step-icon">🏛️</span> 국민연금</h3>
         <PensionPortalNotice />
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <RadioField
@@ -619,7 +619,7 @@ export default function Step1Income() {
       </section>
 
       <section className="step-section">
-        <h3>🐷 개인연금</h3>
+        <h3><span className="step-icon">🐷</span> 개인연금</h3>
         <PensionPortalNotice />
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <RadioField
@@ -682,7 +682,7 @@ export default function Step1Income() {
       </section>
 
       <section className="step-section">
-        <h3>📈 기타 정기수입 (사업소득 포함)</h3>
+        <h3><span className="step-icon">📈</span> 기타 정기수입 (사업소득 포함)</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           사업소득은 본인·배우자 구분 없이 아래 목록에 합산해 입력해 주세요. "사업소득"으로 표시한 항목은
           총소득(가계수지비율 · 보험료비율 등) 계산에 포함되고, "기타 수입"은 참고용 정기수입으로 별도 집계됩니다.
@@ -716,7 +716,7 @@ export default function Step1Income() {
       </section>
 
       <section className="step-section">
-        <h3>🧮 총 수입 합계</h3>
+        <h3><span className="step-icon">🧮</span> 총 수입 합계</h3>
         <table className="grade-table compact">
           <thead>
             <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th><th style={{ textAlign: 'right' }}>수입 기간</th></tr>

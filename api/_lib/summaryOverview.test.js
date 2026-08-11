@@ -178,6 +178,30 @@ describe('buildExpenseDonut', () => {
     donut.items.forEach((it) => expect(Number.isFinite(it.value)).toBe(true));
     expect(Number.isFinite(donut.total)).toBe(true);
   });
+
+  it('with no otherLivingExpenseItems (default []), keeps the plain "생활비" label - backward compatible', () => {
+    const { aggregates } = calc(input());
+    const donut = buildExpenseDonut(aggregates);
+    expect(donut.items.find((it) => it.key === 'living').label).toBe('생활비');
+  });
+
+  it('splits named 기타지출 items out of the 생활비 slice without changing the total (already counted in monthlyLivingCost)', () => {
+    const { aggregates } = calc(input({ assets: { currentLivingCost: { monthly: 180 } } }));
+    const otherLivingExpenseItems = [{ key: 'other-living-0', label: '반려동물 비용', value: 10 }];
+    const donut = buildExpenseDonut(aggregates, otherLivingExpenseItems);
+
+    const livingItem = donut.items.find((it) => it.key === 'living');
+    expect(livingItem.label).toBe('생활비(기타지출 제외)');
+    expect(livingItem.value).toBe(170); // 180(monthlyLivingCost) - 10(기타지출)
+
+    expect(donut.items.find((it) => it.key === 'other-living-0')).toEqual({
+      key: 'other-living-0', label: '반려동물 비용', value: 10,
+    });
+
+    const sum = donut.items.reduce((s, it) => s + it.value, 0);
+    expect(sum).toBeCloseTo(donut.total, 6);
+    expect(donut.total).toBeCloseTo(aggregates.totalExpenseMonthlyExSavings, 6);
+  });
 });
 
 describe('buildAssetDonut', () => {
@@ -187,6 +211,30 @@ describe('buildAssetDonut', () => {
     expect(donut.total).toBe(aggregates.totalAssets);
     const sum = donut.items.reduce((s, it) => s + it.value, 0);
     expect(sum).toBeCloseTo(aggregates.totalAssets, 6);
+  });
+
+  it('with no otherLiquidAssetItems (default []), keeps the plain "현금성자산" label - backward compatible', () => {
+    const { aggregates } = calc(input());
+    const donut = buildAssetDonut(aggregates);
+    expect(donut.items.find((it) => it.key === 'liquid').label).toBe('현금성자산');
+  });
+
+  it('splits named 기타 현금성자산 items out of the 현금성자산 slice without changing the total (already counted in aggregates.liquidAssets)', () => {
+    const { aggregates } = calc(input({ assets: { liquidAssets: { total: 2000 } } }));
+    const otherLiquidAssetItems = [{ key: 'other-liquid-0', label: '외화예금', value: 300 }];
+    const donut = buildAssetDonut(aggregates, otherLiquidAssetItems);
+
+    const liquidItem = donut.items.find((it) => it.key === 'liquid');
+    expect(liquidItem.label).toBe('현금성자산(기타 제외)');
+    expect(liquidItem.value).toBe(1700); // 2000(liquidAssets) - 300(기타 현금성자산)
+
+    expect(donut.items.find((it) => it.key === 'other-liquid-0')).toEqual({
+      key: 'other-liquid-0', label: '외화예금', value: 300,
+    });
+
+    const sum = donut.items.reduce((s, it) => s + it.value, 0);
+    expect(sum).toBeCloseTo(donut.total, 6);
+    expect(donut.total).toBeCloseTo(aggregates.totalAssets, 6);
   });
 });
 

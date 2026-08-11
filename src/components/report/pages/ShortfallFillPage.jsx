@@ -1,5 +1,5 @@
 import PageFrame from './PageFrame';
-import { formatWon } from '../../../utils/format';
+import { formatWon, round1 } from '../../../utils/format';
 
 export default function ShortfallFillPage({ simulation, aggregates: agg, pageNumber, totalPages }) {
   const byPerson = agg.retirementIncomeByPerson;
@@ -16,7 +16,7 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, pageNum
       <div className="cashflow-info-heading-row" style={{ marginBottom: 16 }}>
         <h4 className="num-section-title" style={{ fontSize: 14, marginBottom: 0 }}><span className="num-badge">1</span>노후목표 생활비 대응을 위한 현금 유입 현황(가구)</h4>
         <div className="cashflow-info-box">
-          <div className="cashflow-info-row"><span>향후 노후 생활 기간</span><span className="num">{simulation.retirementYears}년</span></div>
+          <div className="cashflow-info-row"><span>향후 노후 생활 기간</span><span className="num">{round1(simulation.retirementYears)}년</span></div>
           <div className="cashflow-info-row"><span>월평균 지출비용</span><span className="num">{formatWon(simulation.retirementLivingCostNow)}</span></div>
         </div>
       </div>

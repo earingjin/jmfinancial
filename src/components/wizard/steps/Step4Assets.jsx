@@ -56,6 +56,17 @@ export default function Step4Assets() {
     });
   };
 
+  // pill을 다시 눌러 패널을 접기만 하면 입력창이 숨겨질 뿐 값은 그대로 남아 금융자산
+  // 총액에 계속 포함된다. "이 항목 삭제"는 값을 실제로 비우고 패널도 닫는다.
+  const removeFinancialItem = (key) => {
+    setField(`assets.financialAssets.${key}`, '');
+    setOpenFinancialKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
   const [openPensionKeys, setOpenPensionKeys] = useState(() => {
     const breakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
     const initial = new Set();
@@ -78,6 +89,18 @@ export default function Step4Assets() {
   // 그대로 쓴다 - 같은 값을 공유하는 연동 항목이라 어느 쪽에서 수정해도 서로 반영된다.
   const updatePensionBreakdown = (key, raw) => {
     setField(`assets.pensionAssetsBreakdown.${key}`, raw === '' ? '' : Number(raw));
+  };
+
+  // pill을 다시 눌러 패널을 접기만 하면 입력창이 숨겨질 뿐 값은 그대로 남아 연금자산
+  // 총액에 계속 포함된다. "이 항목 삭제"는 값을 실제로 비우고(연동된 "3. 저축" 쪽도 함께
+  // 비워짐 - 같은 필드를 공유하므로) 패널도 닫는다.
+  const removePensionItem = (key) => {
+    updatePensionBreakdown(key, '');
+    setOpenPensionKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
   };
 
   // "기타" 연금자산은 종류별(name)로 나눠 입력받고, 합계만 pensionAssetsBreakdown.other에 반영한다.
@@ -133,7 +156,7 @@ export default function Step4Assets() {
       <h2 className="step-title">4. 자산</h2>
 
       <section className="step-section">
-        <h3>💵 현금성 자산</h3>
+        <h3><span className="step-icon">💵</span> 현금성 자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·비상금 등 즉시 인출 가능한 자산입니다.
         </p>
@@ -153,7 +176,7 @@ export default function Step4Assets() {
       </section>
 
       <section className="step-section">
-        <h3>📈 금융자산</h3>
+        <h3><span className="step-icon">📈</span> 금융자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·CMA는 위 현금성 자산에서 입력해 주세요. 여기는 주식·펀드·채권 등 투자자산입니다.
         </p>
@@ -172,9 +195,24 @@ export default function Step4Assets() {
         </div>
         {(openFinancialKeys.has('stocks') || openFinancialKeys.has('funds') || openFinancialKeys.has('bonds')) && (
           <div className="field-grid three-col">
-            {openFinancialKeys.has('stocks') && <NumberField path="assets.financialAssets.stocks" label="주식" unit="만원" />}
-            {openFinancialKeys.has('funds') && <NumberField path="assets.financialAssets.funds" label="펀드" unit="만원" />}
-            {openFinancialKeys.has('bonds') && <NumberField path="assets.financialAssets.bonds" label="채권" unit="만원" />}
+            {FINANCIAL_ASSET_CATEGORIES.filter((c) => c.key !== 'other' && openFinancialKeys.has(c.key)).map((c) => (
+              <label className="field" key={c.key}>
+                <span className="field-label">{c.label}</span>
+                <div className="field-input-row">
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={getIn(formData, `assets.financialAssets.${c.key}`) ?? ''}
+                    onChange={(e) => setField(`assets.financialAssets.${c.key}`, e.target.value === '' ? '' : Number(e.target.value))}
+                  />
+                  <span className="field-unit">만원</span>
+                </div>
+                <button type="button" className="repeatable-remove" onClick={() => removeFinancialItem(c.key)}>
+                  이 항목 삭제
+                </button>
+              </label>
+            ))}
           </div>
         )}
         {openFinancialKeys.has('other') && (
@@ -211,7 +249,7 @@ export default function Step4Assets() {
       </section>
 
       <section className="step-section">
-        <h3>🏦 연금자산</h3>
+        <h3><span className="step-icon">🏦</span> 연금자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           해당하는 연금자산 종류를 눌러 금액을 확인·입력해 주세요. 변액연금·연금저축계좌·IRP개인퇴직계좌는
           "3. 저축"과 값이 연동되며, 여기서 직접 입력·수정할 수도 있습니다.
@@ -243,6 +281,9 @@ export default function Step4Assets() {
                 <span className="field-unit">만원</span>
               </div>
               <span className="field-helper">"3. 저축"의 "{c.savingsLabel}" 항목과 연동됩니다 - 어느 쪽에서 입력해도 서로 반영됩니다</span>
+              <button type="button" className="repeatable-remove" onClick={() => removePensionItem(c.key)}>
+                이 항목 삭제
+              </button>
             </label>
           ))}
         </div>
@@ -280,7 +321,7 @@ export default function Step4Assets() {
       </section>
 
       <section className="step-section">
-        <h3>🏠 부동산자산</h3>
+        <h3><span className="step-icon">🏠</span> 부동산자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           매입가·공시가가 아닌 현재 시세 기준으로 입력해 주세요.
         </p>
@@ -325,7 +366,7 @@ export default function Step4Assets() {
       </section>
 
       <section className="step-section">
-        <h3>🧮 자산 합계</h3>
+        <h3><span className="step-icon">🧮</span> 자산 합계</h3>
         <table className="grade-table compact">
           <thead>
             <tr><th>구분</th><th style={{ textAlign: 'right' }}>금액</th></tr>

@@ -3,12 +3,16 @@ import SectionBadge from './SectionBadge';
 import PeerComparisonSection from './PeerComparisonPage';
 import { formatWon, formatPercent } from '../../../utils/format';
 
-export default function HouseholdDetailPage({ aggregates: agg, indicators, peerComparison, debtBreakdown, pageNumber, totalPages }) {
+export default function HouseholdDetailPage({ aggregates: agg, indicators, peerComparison, debtBreakdown, otherLivingExpenseItems, otherLiquidAssetItems, pageNumber, totalPages }) {
   const householdIndicator = indicators.find((i) => i.key === 'household');
   const financialAssetIndicator = indicators.find((i) => i.key === 'financialAssetRatio');
   const fixedExpenseWithSavings = agg.fixedExpenseMonthly + agg.monthlySavings;
+  // 현금성 자산의 "기본 항목 외 추가" 종류별 항목 - 이미 위 현금성자산 합계에 포함된 값을
+  // 항목별로 풀어서 보여줄 뿐이므로 총자산 계산에는 영향이 없다.
+  const enteredLiquidItems = (otherLiquidAssetItems || []).filter((item) => Number(item.value) > 0);
   const assetRows = [
     { label: '현금성자산', value: agg.liquidAssets },
+    ...enteredLiquidItems.map((item) => ({ label: `└ ${item.label}(기타)`, value: item.value, isSub: true })),
     { label: '금융자산', value: agg.financialAssetsTotal },
     { label: '연금자산', value: agg.pensionAssets },
     { label: '부동산자산', value: agg.realEstateTotal },
@@ -27,6 +31,14 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, peerC
         <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
         <tbody>
           <tr><td>생활비(식비 · 생필품 등)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlyLivingCost)}</td></tr>
+          {/* 생활비 세부의 "기타지출" 종류별 항목 - 이미 위 생활비 합계에 포함된 값을 항목별로
+              풀어서 보여줄 뿐이므로 고정지출 합계 계산에는 영향이 없다. */}
+          {(otherLivingExpenseItems || []).map((item) => (
+            <tr key={item.key}>
+              <td style={{ paddingLeft: 20, color: 'var(--ink-soft)', fontSize: 11 }}>└ {item.label}(기타지출)</td>
+              <td className="num" style={{ textAlign: 'right', color: 'var(--ink-soft)', fontSize: 11 }}>{formatWon(item.value)}</td>
+            </tr>
+          ))}
           <tr><td>주거비(관리비 · 공과금 · 통신비)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlyHousingCost)}</td></tr>
           <tr><td>보장성보험료</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlyInsurancePremium)}</td></tr>
           <tr><td>부채상환액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlyDebtRepayment)}</td></tr>
@@ -55,8 +67,10 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, peerC
             const debt = debtRows[index];
             return (
               <tr key={debt?.key || `asset-${index}`} className={debt?.isTotal ? 'debt-total-row' : undefined}>
-                <td>{asset?.label || ''}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{asset ? formatWon(asset.value) : ''}</td>
+                <td style={asset?.isSub ? { color: 'var(--ink-soft)', fontSize: 11 } : undefined}>{asset?.label || ''}</td>
+                <td className="num" style={{ textAlign: 'right', ...(asset?.isSub ? { color: 'var(--ink-soft)', fontSize: 11 } : {}) }}>
+                  {asset ? formatWon(asset.value) : ''}
+                </td>
                 <td>{debt?.label || ''}</td>
                 <td className="num" style={{ textAlign: 'right' }}>{debt ? formatWon(debt.value) : ''}</td>
               </tr>

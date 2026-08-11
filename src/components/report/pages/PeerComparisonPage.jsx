@@ -1,4 +1,5 @@
 import SectionBadge from './SectionBadge';
+import { formatNumber } from '../../../utils/format';
 
 const MAX_BAR_HEIGHT = 150;
 
@@ -38,18 +39,18 @@ export default function PeerComparisonPage({ peerComparison }) {
           </div>
           <div className="asset-chart-with-axis">
             <div className="asset-chart-axis" aria-hidden="true">
-              {axisTicks.map((tick) => <span key={tick}>{tick.toLocaleString()}</span>)}
+              {axisTicks.map((tick) => <span key={tick}>{formatNumber(tick)}</span>)}
             </div>
             <div className="asset-chart-plot">
               {ageBrackets.map((b) => (
                 <div key={b.key} className={`asset-chart-group${b.isUserBracket ? ' is-current' : ''}`}>
                   <div className="asset-chart-bars" style={{ height: MAX_BAR_HEIGHT }}>
                     <div className="asset-chart-bar-wrap">
-                      <span className="asset-chart-value">{b.average.toLocaleString()}</span>
+                      <span className="asset-chart-value">{formatNumber(b.average)}</span>
                       <div className="asset-chart-bar asset-chart-bar--average" style={{ height: Math.max(3, (b.average / chartMax) * MAX_BAR_HEIGHT) }} />
                     </div>
                     <div className="asset-chart-bar-wrap">
-                      <span className="asset-chart-value">{b.netWorth.toLocaleString()}</span>
+                      <span className="asset-chart-value">{formatNumber(b.netWorth)}</span>
                       <div className="asset-chart-bar asset-chart-bar--net" style={{ height: Math.max(3, (b.netWorth / chartMax) * MAX_BAR_HEIGHT) }} />
                     </div>
                   </div>
@@ -74,7 +75,7 @@ export default function PeerComparisonPage({ peerComparison }) {
             ].map((item) => (
               <div key={item.label} className="asset-focus-item">
                 <div className="asset-focus-bar-area">
-                  <span className="asset-chart-value">{item.value.toLocaleString()}</span>
+                  <span className="asset-chart-value">{formatNumber(item.value)}</span>
                   <div className={`asset-chart-bar asset-chart-bar--${item.tone}`} style={{ height: Math.max(3, (item.value / chartMax) * MAX_BAR_HEIGHT) }} />
                 </div>
                 <div className="asset-chart-label">{item.label}</div>

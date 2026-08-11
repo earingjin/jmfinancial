@@ -1,4 +1,4 @@
-import { formatWon } from '../../../utils/format';
+import { formatWon, formatNumber } from '../../../utils/format';
 
 function getNiceScale(maxValue, tickCount = 4) {
   const rawStep = Math.max(maxValue, 1) / tickCount;
@@ -30,7 +30,7 @@ export default function FinanceBarChart({ bars, tickStep, zeroLabel = '0' }) {
       <div className="finance-chart-unit">(단위: 만원)</div>
       <div className="finance-chart-body">
         <div className="finance-chart-axis" aria-hidden="true">
-          {ticks.map((tick) => <span key={tick}>{tick === 0 ? zeroLabel : tick.toLocaleString('ko-KR')}</span>)}
+          {ticks.map((tick) => <span key={tick}>{tick === 0 ? zeroLabel : formatNumber(tick)}</span>)}
         </div>
         <div className="finance-chart-plot">
           <div className="finance-chart-grid" aria-hidden="true">

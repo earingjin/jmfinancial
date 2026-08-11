@@ -4,6 +4,8 @@ import { AuthProvider } from './state/AuthContext';
 import { useAuth } from './state/authState';
 import AuthGate from './components/auth/AuthGate';
 import AdminDashboard from './components/admin/AdminDashboard';
+import HomeScreen from './components/home/HomeScreen';
+import HistoryList from './components/home/HistoryList';
 import Wizard from './components/wizard/Wizard';
 import Report from './components/report/Report';
 import SimpleSummaryReport from './components/summary/SimpleSummaryReport';
@@ -34,26 +36,48 @@ async function savePlannerResult(user, formData, result) {
 
 function AppContent() {
   const { user, signOut } = useAuth();
-  const [phase, setPhase] = useState('wizard'); // 'wizard' | 'loading' | 'summary' | 'report' | 'error'
+  const [phase, setPhase] = useState('home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'error' | 'history'
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [wizardResume, setWizardResume] = useState(false);
+  // 지금 보고 있는 result가 방금 새로 진단한 것인지('new'), 과거 목록에서 열어본 것인지('history')
+  // 구분한다 - 요약 화면의 "뒤로가기"가 어디로 돌아가야 하는지를 이 값으로 분기한다.
+  const [resultSource, setResultSource] = useState('new');
+  // "7. 대응방안"에서 사용자가 실제로 켠 시나리오/직접 입력한 값(나이·기간·목표금액 등)을 리포트의
+  // 마지막 페이지(AssetManagementOptionsPage)에서 그대로 보여주기 위해 보관한다. 서버 계산 결과와
+  // 달리 이 값은 계산이 아니라 사용자가 입력한 그대로를 표시하는 용도라 formData에서 바로 가져온다.
+  const [submittedScenariosInput, setSubmittedScenariosInput] = useState(null);
 
   const handleSubmit = async (formData) => {
     setPhase('loading');
     setErrorMessage('');
+    setResultSource('new');
+    setSubmittedScenariosInput(formData?.scenarios ?? null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+
       const res = await fetch('/api/calculate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify(formData),
       });
+
+      if (res.status === 401) {
+        await signOut();
+        throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      }
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || '계산에 실패했습니다.');
       }
       const body = await res.json();
       const data = deobfuscate(body.payload);
+      if (typeof window !== 'undefined') window.__DEBUG_RESULT = data;
       setResult(data);
       setPhase('summary');
       savePlannerResult(user, formData, data);
@@ -65,6 +89,7 @@ function AppContent() {
 
   const restart = () => {
     setResult(null);
+    setResultSource('new');
     setWizardResume(false);
     setPhase('wizard');
   };
@@ -76,18 +101,54 @@ function AppContent() {
     setPhase('wizard');
   };
 
+  // 요약 화면의 "뒤로가기"는 지금 보고 있는 result가 신규 진단인지 과거 결과 조회인지에 따라
+  // 목적지가 다르다 - 신규 진단은 그대로 마법사 마지막 단계로, 과거 결과는 히스토리 목록으로.
+  const handleSummaryBack = () => {
+    if (resultSource === 'history') {
+      setPhase('history');
+    } else {
+      backToWizard();
+    }
+  };
+
   const goToReport = () => {
     window.scrollTo(0, 0);
     setPhase('report');
   };
 
+  const goHome = () => setPhase('home');
+
+  const startDiagnosis = () => {
+    setResultSource('new');
+    setWizardResume(false);
+    setPhase('wizard');
+  };
+
+  const viewHistory = () => setPhase('history');
+
+  // 히스토리 목록에서 항목을 클릭했을 때 - 새로 계산하지 않고 저장된 result_json을 그대로
+  // 요약 화면에 넘긴다(계산 API를 다시 호출하지 않음).
+  const openPastResult = (row) => {
+    setResult(row.result_json);
+    setResultSource('history');
+    setPhase('summary');
+  };
+
   const isDiagnosisPhase = phase === 'wizard' || phase === 'loading';
+  // 홈/이전 결과 화면은 배경까지는 진단 화면과 맞추지 않고, 헤더(맨 위 부분)만 진단 화면과
+  // 같은 디자인으로 통일한다.
+  const useDiagnosisHeader = isDiagnosisPhase || phase === 'home' || phase === 'history';
 
   return (
     <div className={`app-shell${isDiagnosisPhase ? ' app-shell--diagnosis' : ''}`}>
       {phase !== 'report' && phase !== 'summary' && (
-        <header className={`app-header${isDiagnosisPhase ? ' app-header--diagnosis' : ''}`}>
+        <header className={`app-header${useDiagnosisHeader ? ' app-header--diagnosis' : ''}`}>
           <div className="app-header-account">
+            {phase === 'wizard' && (
+              <button type="button" className="app-header-home-btn" onClick={goHome}>
+                홈으로
+              </button>
+            )}
             <button type="button" className="app-header-signout" onClick={signOut}>
               로그아웃
             </button>
@@ -98,6 +159,12 @@ function AppContent() {
       )}
 
       <main className={`app-main${phase === 'report' ? ' report-print-mode' : ''}`}>
+        {phase === 'home' && <HomeScreen onStart={startDiagnosis} onViewHistory={viewHistory} />}
+
+        {phase === 'history' && (
+          <HistoryList user={user} onSelect={openPastResult} onBackHome={goHome} onStart={startDiagnosis} />
+        )}
+
         <FormProvider>
           {phase === 'wizard' && <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} />}
         </FormProvider>
@@ -121,7 +188,7 @@ function AppContent() {
         {phase === 'summary' && result && (
           <SimpleSummaryReport
             result={result}
-            onBack={backToWizard}
+            onBack={handleSummaryBack}
             onDownload={goToReport}
             onShare={goToReport}
           />
@@ -133,6 +200,7 @@ function AppContent() {
             onRestart={restart}
             onBack={() => setPhase('summary')}
             clientName={user?.user_metadata?.name}
+            scenariosInput={submittedScenariosInput}
           />
         )}
       </main>

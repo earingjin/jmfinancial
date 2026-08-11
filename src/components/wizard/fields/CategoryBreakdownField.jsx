@@ -65,6 +65,19 @@ export default function CategoryBreakdownField({
     recomputeTotal(nextBreakdown, customItems);
   };
 
+  // pill을 다시 눌러 패널을 접기만 하면 입력창이 숨겨질 뿐 값은 그대로 남아 합계에 계속
+  // 포함된다. "이 항목 삭제"는 값을 실제로 비우고 합계를 재계산한 뒤 패널도 닫는다.
+  const removePresetItem = (key) => {
+    const nextBreakdown = { ...breakdown, [key]: '' };
+    setField(`${basePath}.${key}`, '');
+    recomputeTotal(nextBreakdown, customItems);
+    setOpenKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
   const addCustomItem = () => {
     const next = [...customItems, { name: '', amount: '' }];
     setField(customPath, next);
@@ -116,6 +129,9 @@ export default function CategoryBreakdownField({
                 />
                 <span className="field-unit">만원</span>
               </div>
+              <button type="button" className="repeatable-remove" onClick={() => removePresetItem(c.key)}>
+                이 항목 삭제
+              </button>
             </label>
           ))}
         </div>

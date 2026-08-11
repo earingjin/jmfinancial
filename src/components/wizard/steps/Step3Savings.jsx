@@ -34,7 +34,7 @@ export default function Step3Savings() {
       <h2 className="step-title">3. 저축</h2>
 
       <section className="step-section">
-        <h3>🌱 저축 · 노후준비</h3>
+        <h3><span className="step-icon">🌱</span> 저축 · 노후준비</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           국민연금 · 개인연금 · 저축성보험(연금보험 등)처럼 노후를 위해 정기적으로 적립하는 금액을 포함해 입력해 주세요.
         </p>

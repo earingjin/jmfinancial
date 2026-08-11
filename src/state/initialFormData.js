@@ -100,7 +100,6 @@ export const initialFormData = {
     currentIncome: { monthly: '', annual: '' },
     currentLivingCost: {
       monthly: '', annual: '',
-      inputMode: 'simple',   // 'simple'(총액 한번에 입력) | 'detailed'(항목별 입력) - UI 입력 방식 선택값
       breakdown: {           // 현재 월 생활비 세부 항목(월 생활비 합계는 이 값들의 합으로 자동 계산됨)
         rent: '',            // 월세
         maintenance: '',     // 관리비
@@ -115,7 +114,8 @@ export const initialFormData = {
         subscription: '',    // 각종 구독료
         // 원리금상환·차량할부는 여기 두지 않는다 - assets.debtStatus.monthlyRepayment(및 breakdown.carLoan)가
         // 단일 기준값이다(Step2Expense.jsx 카테고리 목록에서도 제거됨. 생활비·부채 두 곳에 중복 입력 방지).
-        other: '',           // 기타지출
+        other: '',           // 기타지출 총액 - 아래 otherItems의 합으로 자동 계산됨(직접 입력하지 않음)
+        otherItems: [],      // [{ name, amount }] "기타지출"의 종류별 세부 항목(합계가 other에 자동 반영됨)
       },
     },
     liquidAssets: {

@@ -19,7 +19,7 @@ export default function Step6NetWorth() {
       <h2 className="step-title">6. 순자산</h2>
 
       <section className="step-section">
-        <h3>⚖️ 현재 순자산</h3>
+        <h3><span className="step-icon">⚖️</span> 현재 순자산</h3>
         <table className="grade-table compact">
           <tbody>
             <tr><td>총자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalAssets)}만원</td></tr>

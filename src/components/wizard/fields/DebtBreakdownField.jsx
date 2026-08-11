@@ -138,6 +138,20 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
     recomputeTotals(nextBreakdown, customItems);
   };
 
+  // pill을 다시 눌러 패널을 접기만 하면 입력창이 숨겨질 뿐 원금·상환액은 그대로 남아 합계에
+  // 계속 포함된다. "이 항목 삭제"는 값을 실제로 비우고 합계를 재계산한 뒤 패널도 닫는다.
+  const removePresetItem = (key) => {
+    const emptyItem = { repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' };
+    const nextBreakdown = { ...breakdown, [key]: emptyItem };
+    setField(`${basePath}.${key}`, emptyItem);
+    recomputeTotals(nextBreakdown, customItems);
+    setOpenKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
   const addCustomItem = () => {
     const next = [...customItems, { name: '', repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' }];
     setField(customPath, next);
@@ -231,6 +245,9 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
               <Fragment key={c.key}>
                 <p className="field-label" style={{ marginTop: 14, marginBottom: 8 }}>{c.label}</p>
                 <LoanFields item={item} onChange={(field, value) => update(c.key, field, value)} />
+                <button type="button" className="repeatable-remove" onClick={() => removePresetItem(c.key)}>
+                  이 항목 삭제
+                </button>
               </Fragment>
             );
           })}

@@ -116,7 +116,7 @@ export default function Step2Expense() {
       <h2 className="step-title">2. 지출</h2>
 
       <section className="step-section">
-        <h3>🧾 현재 생활비 상세</h3>
+        <h3><span className="step-icon">🧾</span> 현재 생활비 상세</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           대출 원리금상환액(차량대출 포함)은 여기가 아닌 "5. 부채" 단계에서 입력해 주세요. 두 곳에 중복으로 입력하면 총지출이 실제보다 크게 계산됩니다.
         </p>
@@ -124,7 +124,6 @@ export default function Step2Expense() {
           basePath="assets.currentLivingCost.breakdown"
           totalPath="assets.currentLivingCost.monthly"
           annualPath="assets.currentLivingCost.annual"
-          modePath="assets.currentLivingCost.inputMode"
           categories={CURRENT_LIVING_COST_CATEGORIES}
           totalLabel="현재 기준 월 생활비 합계"
           annualLabel="현재 기준 연 생활비 합계"
@@ -132,7 +131,7 @@ export default function Step2Expense() {
       </section>
 
       <section className="step-section">
-        <h3>🏖️ 노후 생활비</h3>
+        <h3><span className="step-icon">🏖️</span> 노후 생활비</h3>
         <p className="field-helper" style={{ marginBottom: 4 }}>
           국민연금연구원 조사 2024년 기준 적정 노후 생활비 자료입니다.
           <br />
@@ -169,7 +168,7 @@ export default function Step2Expense() {
       </section>
 
       <section className="step-section">
-        <h3>🛡️ 보장성 보험</h3>
+        <h3><span className="step-icon">🛡️</span> 보장성 보험</h3>
         <div className="field-grid">
           <NumberField path="assets.insurance.monthlyPremium" label="보장성보험 월 보험료" unit="만원" helper="실손보험 등" />
           <NumberField path="assets.insurance.coverageAmount" label="주요 보장금액" unit="만원" />
@@ -198,7 +197,7 @@ export default function Step2Expense() {
       </section>
 
       <section className="step-section">
-        <h3>🎓 자녀 학자금 · 결혼지원 · 기타 (목돈 지출)</h3>
+        <h3><span className="step-icon">🎓</span> 자녀 학자금 · 결혼지원 · 기타 (목돈 지출)</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           한 번에 목돈으로 나가는 총액 기준으로 입력해 주세요.
         </p>
@@ -237,7 +236,7 @@ export default function Step2Expense() {
       </section>
 
       <section className="step-section">
-        <h3>💸 기타 지출</h3>
+        <h3><span className="step-icon">💸</span> 기타 지출</h3>
         <RepeatableList
           path="expense.otherExpenses"
           label="경조사비 등 추가로 예상되는 지출"
@@ -269,7 +268,7 @@ export default function Step2Expense() {
       </section>
 
       <section className="step-section">
-        <h3>🧮 총 지출 합계</h3>
+        <h3><span className="step-icon">🧮</span> 총 지출 합계</h3>
         <table className="grade-table compact">
           <thead>
             <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th></tr>

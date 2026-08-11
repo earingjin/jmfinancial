@@ -1,5 +1,11 @@
 * { box-sizing: border-box; }
 
+/* 앵커(#id) 이동 시 부드럽게 스크롤되도록 - 요약페이지 섹션 내비게이션에서 사용. */
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
 body {
   margin: 0;
   background: var(--paper);
@@ -53,6 +59,73 @@ body {
 .app-brand-sub { font-size: 20px; font-weight: 800; margin-top: 6px; }
 
 .app-main { max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* ---------- 홈 랜딩 화면 / 이전 결과 목록 ---------- */
+/* 위저드 카드가 놓이는 .app-main과 같은 max-width(880px)를 그대로 써서 화면 전환 시
+   본문 폭이 갑자기 바뀌지 않게 한다. */
+.home-card {
+  max-width: 880px;
+  margin: 40px auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 48px 40px;
+  text-align: center;
+}
+.home-title { font-size: 24px; font-weight: 800; color: var(--navy-900); margin: 0 0 12px; }
+.home-subtitle { font-size: 16px; font-weight: 700; color: var(--navy-800); margin: 0 0 8px; }
+.home-desc { font-size: 14px; color: var(--ink-soft); margin: 0 0 32px; line-height: 1.6; }
+.home-actions { display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto; }
+.home-actions .btn-primary, .home-actions .btn-secondary { width: 100%; padding: 14px; font-size: 15px; }
+
+.history-card { text-align: left; }
+.history-back-btn {
+  background: none; border: none; padding: 0; margin-bottom: 18px;
+  font-size: 13px; font-weight: 600; color: var(--ink-soft); cursor: pointer;
+}
+.history-back-btn:hover { color: var(--navy-700); }
+.history-title { text-align: left; font-size: 20px; margin-bottom: 20px; }
+.history-empty { text-align: center; padding: 40px 0; color: var(--ink-soft); }
+.history-empty p { margin: 0 0 16px; }
+.history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.history-row { display: flex; align-items: center; gap: 8px; }
+.history-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.history-item:hover { border-color: var(--gold); }
+.history-item-date { font-weight: 700; color: var(--navy-900); }
+.history-item-sub { color: var(--ink-soft); font-size: 13px; white-space: nowrap; }
+.history-delete-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.history-delete-btn:hover { border-color: var(--red); color: var(--red); }
+.history-delete-btn:disabled { opacity: .5; cursor: not-allowed; }
+.history-delete-error { color: var(--red); font-size: 13px; margin: -8px 0 14px; }
+
+@media (max-width: 480px) {
+  .home-card { padding: 36px 22px; }
+}
+
 .app-copyright {
   padding: 0 20px 18px; color: var(--ink-soft); font-size: 9px;
   line-height: 1.4; text-align: center;
@@ -122,6 +195,17 @@ body {
   font-size: 15px; font-weight: 800; color: var(--navy-900); margin: 0 0 14px;
   padding-left: 12px; border-left: 3px solid var(--gold);
 }
+/* 이모지는 폰트/OS마다 실제 렌더링 크기·베이스라인이 달라 옆 텍스트와 줄이 어긋나 보이기
+   쉽다. 별도 span으로 감싸 크기·수직 정렬을 고정해서 어느 이모지가 와도 줄이 흐트러지지
+   않게 한다(이모지 자체는 그대로 유지). */
+.step-icon {
+  display: inline-block;
+  width: 1.15em;
+  font-size: 0.95em;
+  line-height: 1;
+  vertical-align: -0.1em;
+  text-align: center;
+}
 
 .field-subgroup-label {
   font-size: 12px; font-weight: 800; color: var(--navy-700);
@@ -156,22 +240,29 @@ body {
 .field-helper { font-size: 11px; color: var(--ink-soft); }
 .field-computed-box {
   display: flex; align-items: center; justify-content: flex-end;
-  background: rgba(201, 121, 31, 0.12);
+  /* 계산된 값 표시용 중립 배경 - 브랜드 버튼/경고와 같은 오렌지 계열(gold)을 쓰면
+     "강조·경고"처럼 보이므로, 색이 없는 잉크 톤 틴트로 분리한다. */
+  background: rgba(46, 36, 25, 0.06);
   border-radius: 8px; padding: 10px 14px;
   font-size: 15px; font-weight: 700; color: var(--navy-900);
 }
 .field-navy-box {
   display: flex; flex-direction: column; gap: 6px;
-  background: var(--navy-800); color: #fff;
+  /* 총 수입·총 지출 같은 "계산된 값" 표시 박스는 순수 정보이므로, 버튼/경고와 같은
+     오렌지(--navy-800)가 아니라 한 단계 더 어두운 중립 톤(--navy-900)을 쓴다. */
+  background: #f6ead7;
+  border: 1px solid #e3cfad;
+  color: #5b3a24;
   border-radius: 10px; padding: 12px 16px;
 }
-.field-navy-label { font-size: 12px; color: #cbd5e1; }
+.field-navy-label { font-size: 12px; color: var(--ink-soft); }
 .field-navy-value { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; font-size: 18px; font-weight: 800; }
-.field-navy-value .unit { font-size: 12px; font-weight: 600; color: #cbd5e1; }
+.field-navy-value .unit { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
 
-.portal-notice { background: var(--amber-soft); border-radius: 8px; padding: 12px 16px; margin: 0 0 16px; }
+/* 통합연금포털 안내는 경고가 아니라 순수 정보 배너이므로 amber(주의색) 대신 중립 카드 톤을 쓴다. */
+.portal-notice { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin: 0 0 16px; }
 .portal-notice p { font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 8px; }
-.portal-notice a { font-size: 12.5px; font-weight: 700; color: var(--red); text-decoration: underline; }
+.portal-notice a { font-size: 12.5px; font-weight: 700; color: var(--navy-800); text-decoration: underline; }
 
 .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .radio-pill {
@@ -424,11 +515,17 @@ body {
 .auth-notice { color: #0e6c5e; font-size: 12.5px; margin: 0; background: var(--teal-soft); padding: 10px 12px; border-radius: 8px; line-height: 1.5; }
 .auth-submit { width: 100%; margin-top: 6px; padding: 13px; font-size: 15px; }
 
-.app-header-account { display: flex; justify-content: flex-end; }
+.app-header-account { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
 .app-header-signout {
   background: none; border: none; color: #f0deb8; font-size: 12px; cursor: pointer; padding: 4px 0;
 }
 .app-header-signout:hover { color: #fff; }
+.app-header-home-btn {
+  background: none; border: none; color: #f0deb8; font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 0;
+}
+.app-header-home-btn:hover { color: #fff; }
+.app-header--diagnosis .app-header-home-btn { color: var(--navy-700); font-weight: 700; }
+.app-header--diagnosis .app-header-home-btn:hover { color: var(--navy-900); }
 
 /* ---------- 관리자 대시보드 ---------- */
 .admin-dashboard { max-width: 880px; margin: 0 auto; padding: 24px 20px 60px; }
@@ -925,7 +1022,8 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .lifecycle-legend span { display: flex; align-items: center; gap: 6px; }
 
 /* ---------- 자산관리 플래너 안내 박스 (레포트_가이드_2.pdf 2p) ---------- */
-.notice-box { background: var(--amber-soft); border-radius: 8px; padding: 12px 16px; margin: 0 0 20px; }
+/* 경고가 아니라 안내/팁 박스이므로 amber(주의색) 대신 중립 카드 톤을 쓴다. */
+.notice-box { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin: 0 0 20px; }
 .notice-box-title { font-size: 12.5px; font-weight: 800; color: var(--navy-900); margin-bottom: 6px; }
 .notice-box ul { margin: 0; padding-left: 18px; }
 .notice-box li { font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; }
@@ -1024,6 +1122,8 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .option-card-row:first-of-type { border-top: none; }
 .option-card-row .num { font-weight: 700; color: var(--navy-900); }
 .option-card-list { margin: 10px 0 0; padding-left: 18px; font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; }
+.option-card-row--notice { justify-content: flex-start; border-top: none; padding: 6px 0 0; }
+.option-card-not-applied { font-size: 12px; color: var(--ink-soft); font-style: italic; }
 
 /* ---------- 은퇴자금 달성률 (표 + 도넛) ---------- */
 .retirement-achievement-layout { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 20px; align-items: center; }

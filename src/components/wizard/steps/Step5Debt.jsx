@@ -16,7 +16,7 @@ export default function Step5Debt() {
       <h2 className="step-title">5. 부채</h2>
 
       <section className="step-section">
-        <h3>💳 부채 상태</h3>
+        <h3><span className="step-icon">💳</span> 부채 상태</h3>
         <DebtBreakdownField
           basePath="assets.debtStatus.breakdown"
           customPath="assets.debtStatus.customItems"
