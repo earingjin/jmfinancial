@@ -159,7 +159,13 @@ function AppContent() {
       )}
 
       <main className={`app-main${phase === 'report' ? ' report-print-mode' : ''}`}>
-        {phase === 'home' && <HomeScreen onStart={startDiagnosis} onViewHistory={viewHistory} />}
+        {phase === 'home' && (
+          <HomeScreen
+            userName={user?.user_metadata?.name}
+            onStart={startDiagnosis}
+            onViewHistory={viewHistory}
+          />
+        )}
 
         {phase === 'history' && (
           <HistoryList user={user} onSelect={openPastResult} onBackHome={goHome} onStart={startDiagnosis} />

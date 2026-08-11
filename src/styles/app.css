@@ -63,18 +63,34 @@ body {
 /* ---------- 홈 랜딩 화면 / 이전 결과 목록 ---------- */
 /* 위저드 카드가 놓이는 .app-main과 같은 max-width(880px)를 그대로 써서 화면 전환 시
    본문 폭이 갑자기 바뀌지 않게 한다. */
-.home-card {
+.home-screen {
   max-width: 880px;
   margin: 40px auto;
-  background: var(--card);
+  text-align: center;
+}
+.home-card {
+  margin: 22px auto 0;
+  background-color: var(--card);
+  background-image: url('../assets/리포트 속지.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 48px 40px;
   text-align: center;
 }
-.home-title { font-size: 24px; font-weight: 800; color: var(--navy-900); margin: 0 0 12px; }
+.home-title { font-size: 24px; font-weight: 800; color: var(--navy-900); margin: 0; }
+.home-title span { display: block; }
 .home-subtitle { font-size: 16px; font-weight: 700; color: var(--navy-800); margin: 0 0 8px; }
-.home-desc { font-size: 14px; color: var(--ink-soft); margin: 0 0 32px; line-height: 1.6; }
+.home-desc { font-size: 14px; color: var(--ink-soft); margin: 0 0 22px; line-height: 1.6; }
+.home-visual {
+  display: block;
+  width: min(100%, 440px);
+  height: auto;
+  margin: 0 auto 28px;
+  border-radius: 14px;
+}
 .home-actions { display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto; }
 .home-actions .btn-primary, .home-actions .btn-secondary { width: 100%; padding: 14px; font-size: 15px; }
 
