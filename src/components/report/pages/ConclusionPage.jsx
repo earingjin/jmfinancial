@@ -10,7 +10,7 @@ const SCENARIO_LABELS = {
   additionalIncome: '④ 추가 수입원 모색',
 };
 
-export default function ConclusionPage({ summary, simulation, scenarioComparison, indicators, goalFeedback, feedback, pageNumber, totalPages }) {
+export default function ConclusionPage({ summary, simulation, scenarioComparison, indicators, goalFeedback, feedback, showResponseContent = true, pageNumber, totalPages }) {
   const { totalScore, grade, notCalculable } = summary;
   const { shortfall, readyAssetsAtRetirement } = simulation;
   const { totalGoalAmount, preparedAmount } = simulation.lifeGoals;
@@ -26,27 +26,27 @@ export default function ConclusionPage({ summary, simulation, scenarioComparison
 
   return (
     <PageFrame eyebrow="Conclusion" pageNumber={pageNumber} totalPages={totalPages}>
-      <SectionBadge number="8" label="종합의견 및 대응" />
+      <SectionBadge number="3" label={showResponseContent ? '종합의견 및 대응' : '종합의견'} />
       <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 0 }}>
         {notCalculable
-          ? '일부 지표를 산출할 수 없어 종합 재무건전성 점수를 계산할 수 없습니다. 아래 방안은 산출 가능한 지표를 기준으로 참고해 주세요.'
-          : <>귀하는 현재 재무건전성(FHS {totalScore}점, {grade.letter}등급) 측면에서 {grade.label} 수준이며, 아래 방안을 검토해보시길 권해드립니다.</>}
+          ? `일부 지표를 산출할 수 없어 종합 재무건전성 점수를 계산할 수 없습니다.${showResponseContent ? ' 아래 방안은 산출 가능한 지표를 기준으로 참고해 주세요.' : ''}`
+          : <>귀하는 현재 재무건전성(FHS {totalScore}점, {grade.letter}등급) 측면에서 {grade.label} 수준입니다.{showResponseContent && ' 아래 방안을 검토해보시길 권해드립니다.'}</>}
       </p>
 
       <table className="grade-table">
-        <thead><tr><th>재무목표</th><th>필요자금</th><th>준비 가능 자산</th><th>대응 방안</th></tr></thead>
+        <thead><tr><th>재무목표</th><th>필요자금</th><th>준비 가능 자산</th>{showResponseContent && <th>대응 방안</th>}</tr></thead>
         <tbody>
           <tr>
             <td>노후생활비 부족분</td>
             <td className="num">{formatWon(shortfall)}</td>
             <td className="num">{formatWon(readyAssetsAtRetirement)}</td>
-            <td>IRP · 연금저축 추가납입</td>
+            {showResponseContent && <td>IRP · 연금저축 추가납입</td>}
           </tr>
           <tr>
             <td>생애지출(자녀 교육 · 결혼자금)</td>
             <td className="num">{formatWon(totalGoalAmount)}</td>
             <td className="num">{formatWon(preparedAmount)}</td>
-            <td>별도 목적자금 계획 필요</td>
+            {showResponseContent && <td>별도 목적자금 계획 필요</td>}
           </tr>
         </tbody>
       </table>
@@ -58,6 +58,7 @@ export default function ConclusionPage({ summary, simulation, scenarioComparison
         <AIFeedbackBox text={goalFeedback} />
       </div>
 
+      {showResponseContent && <>
       <h3 className="card-title" style={{ margin: '24px 0 10px' }}>대응 옵션</h3>
       <table className="grade-table">
         <thead><tr><th>대응 옵션</th><th>내용</th><th>고려사항</th></tr></thead>
@@ -95,8 +96,9 @@ export default function ConclusionPage({ summary, simulation, scenarioComparison
         유의사항: 특정 비율 추천은 지양하며, 위 옵션은 비교 참고용입니다. 본 진단은 입력하신 정보를 기준으로 자동
         산출되며, 실제 재무상담 시에는 전문가와 상의해 정확한 개별 데이터를 확인하시기 바랍니다.
       </div>
+      </>}
 
-      {applied && (
+      {showResponseContent && applied && (
         <>
           <h3 className="card-title" style={{ margin: '24px 0 10px' }}>대응방안 적용 전 / 후 비교</h3>
           <table className="grade-table">

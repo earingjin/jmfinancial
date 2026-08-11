@@ -3,6 +3,7 @@ import NumberField from '../fields/NumberField';
 import RepeatableList from '../fields/RepeatableList';
 import ExpenseBreakdownField from '../fields/ExpenseBreakdownField';
 import TotalAmountBox from '../fields/TotalAmountBox';
+import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
@@ -78,6 +79,15 @@ export default function Step2Expense() {
   const { formData, setField } = useFormData();
   const monthlyLivingCost = Number(getIn(formData, 'assets.currentLivingCost.monthly')) || 0;
   const insurancePremium = Number(getIn(formData, 'assets.insurance.monthlyPremium')) || 0;
+  const hasInsurance = getIn(formData, 'assets.insurance.hasInsurance') !== false;
+
+  const setHasInsurance = (value) => {
+    setField('assets.insurance.hasInsurance', value);
+    if (!value) {
+      setField('assets.insurance.monthlyPremium', 0);
+      setField('assets.insurance.coverageAmount', 0);
+    }
+  };
 
   // "월 국민건강보험료" 단일 입력칸을 "+ 기타 추가" 반복 목록으로 바꾸고, 합계를 그대로
   // expense.healthInsurance.monthly에 반영한다 - 고정지출 집계 로직(aggregate.js)은 그대로 이 값을 쓴다.
@@ -89,14 +99,6 @@ export default function Step2Expense() {
   }, [healthInsurance, setField]);
 
   const totalMonthlyExpense = monthlyLivingCost + insurancePremium + healthInsurance;
-
-  const children = getIn(formData, 'expense.children') || [];
-  const childrenLumpSum = children.reduce(
-    (s, c) => s + (Number(c.educationCost) || 0) + (Number(c.marriageSupport) || 0) + (Number(c.otherCost) || 0),
-    0
-  );
-  const otherExpenses = getIn(formData, 'expense.otherExpenses') || [];
-  const otherExpensesAnnual = otherExpenses.reduce((s, item) => s + (Number(item.annual) || 0), 0);
 
   // "노후 생활비 지출 총액" = 노후 월 평균 생활비 × 노후 생활 개월수(기대수명-은퇴연령). "1. 수입"의
   // "예상 노후 생활" 기간과 동일한 기준(basic.retirementAge~basic.lifeExpectancy)을 재사용한다.
@@ -169,10 +171,11 @@ export default function Step2Expense() {
 
       <section className="step-section">
         <h3><span className="step-icon">🛡️</span> 보장성 보험</h3>
-        <div className="field-grid">
+        <PresenceField label="보장성 보험 여부" present={hasInsurance} onChange={setHasInsurance} presentLabel="보험 있음" absentLabel="보험 없음" />
+        {hasInsurance ? <div className="field-grid">
           <NumberField path="assets.insurance.monthlyPremium" label="보장성보험 월 보험료" unit="만원" helper="실손보험 등" />
           <NumberField path="assets.insurance.coverageAmount" label="주요 보장금액" unit="만원" />
-        </div>
+        </div> : <p className="field-helper">보장성 보험 없음으로 선택했습니다. 보험료와 보장금액은 0원으로 반영됩니다.</p>}
         <RepeatableList
           path="expense.healthInsurance.items"
           label="기타 보험료(국민건강보험료 등)"
@@ -282,24 +285,8 @@ export default function Step2Expense() {
           </tbody>
         </table>
         <span className="field-helper">
-          노후 생활비, 자녀 목돈 지출, 기타 지출은 발생 시점·주기가 달라 위 합계에 포함되지 않고 아래에 참고용으로 표시됩니다.
+          노후 생활비, 자녀 목돈 지출, 기타 지출은 발생 시점·주기가 달라 위 합계에 포함되지 않습니다.
         </span>
-        <div className="field-grid" style={{ marginTop: 10 }}>
-          <label className="field">
-            <span className="field-label">자녀 학자금 등 목돈 지출 합계(참고용)</span>
-            <div className="field-input-row">
-              <input type="number" value={childrenLumpSum} readOnly />
-              <span className="field-unit">만원</span>
-            </div>
-          </label>
-          <label className="field">
-            <span className="field-label">기타 지출 합계(연, 참고용)</span>
-            <div className="field-input-row">
-              <input type="number" value={otherExpensesAnnual} readOnly />
-              <span className="field-unit">만원</span>
-            </div>
-          </label>
-        </div>
       </section>
     </div>
   );

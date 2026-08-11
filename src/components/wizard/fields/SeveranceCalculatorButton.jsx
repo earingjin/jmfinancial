@@ -102,7 +102,12 @@ export default function SeveranceCalculatorButton({
                 <NumberField path={`${calcBasePath}.annualBonus`} label="연간 상여금 총액" unit="만원" />
                 <NumberField path={`${calcBasePath}.annualLeavePay`} label="연차수당" unit="만원" />
                 {!serviceYearsFromBasicInfo && (
-                  <NumberField path={serviceYearsPath} label="근속년수" unit="년" />
+                  <NumberField
+                    path={serviceYearsPath}
+                    label="근속년수"
+                    unit="년"
+                    helper="현재 직장의 입사일부터 퇴직(예정)일까지의 전체 재직기간을 입력해 주세요."
+                  />
                 )}
               </div>
               {serviceYearsFromBasicInfo && (

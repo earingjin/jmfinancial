@@ -10,6 +10,7 @@ import { useFormData } from '../../state/formState';
 import { getIn } from '../../state/pathUtils';
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
+const SHOW_SCENARIO_STEP = false;
 
 const STEPS = [
   { key: 'income', title: '수입', Component: Step1Income },
@@ -18,7 +19,7 @@ const STEPS = [
   { key: 'assets', title: '자산', Component: Step4Assets },
   { key: 'debt', title: '부채', Component: Step5Debt },
   { key: 'netWorth', title: '순자산', Component: Step6NetWorth },
-  { key: 'scenarios', title: '대응방안', Component: Step7Scenarios },
+  ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios }] : []),
 ];
 
 export default function Wizard({ onSubmit, startAtLastStep = false }) {
@@ -28,9 +29,18 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
   const { Component, key: currentStepKey } = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
 
+  const requiredBasicPaths = ['basic.birthYear', 'basic.retirementAge', 'basic.lifeExpectancy', 'basic.serviceYears'];
+  const basicInfoMissing = requiredBasicPaths.some((path) => !isFilled(getIn(formData, path)));
   const retirementLivingCostMissing = !isFilled(getIn(formData, 'expense.retirementLivingCost'));
+  const requiredErrorMessage = basicInfoMissing
+    ? '"1. 수입"의 기본 정보는 모두 필수 입력 항목입니다. 출생년도, 은퇴연령, 기대수명, 근속년수를 입력해 주세요.'
+    : '"2. 지출"의 노후 월 평균 생활비는 필수 입력 항목입니다. 값을 입력한 뒤 진행해 주세요.';
 
   const goNext = () => {
+    if (currentStepKey === 'income' && basicInfoMissing) {
+      setShowRequiredError(true);
+      return;
+    }
     if (currentStepKey === 'expense' && retirementLivingCostMissing) {
       setShowRequiredError(true);
       return;
@@ -40,6 +50,11 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
   };
 
   const submit = () => {
+    if (basicInfoMissing) {
+      setShowRequiredError(true);
+      setStepIndex(STEPS.findIndex((s) => s.key === 'income'));
+      return;
+    }
     if (retirementLivingCostMissing) {
       setShowRequiredError(true);
       setStepIndex(STEPS.findIndex((s) => s.key === 'expense'));
@@ -70,9 +85,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
       </div>
 
       {showRequiredError && (
-        <p className="wizard-required-error">
-          "2. 지출"의 노후 월 평균 생활비는 필수 입력 항목입니다. 값을 입력한 뒤 진행해 주세요.
-        </p>
+        <p className="wizard-required-error">{requiredErrorMessage}</p>
       )}
 
       <div className="wizard-nav">

@@ -1,7 +1,7 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 
-export default function RadioField({ path, label, options, helper }) {
+export default function RadioField({ path, label, options, helper, onChange }) {
   const { formData, setField } = useFormData();
   const value = getIn(formData, path);
 
@@ -14,7 +14,10 @@ export default function RadioField({ path, label, options, helper }) {
             type="button"
             key={opt.value}
             className={`radio-pill ${value === opt.value ? 'is-active' : ''}`}
-            onClick={() => setField(path, opt.value)}
+            onClick={() => {
+              setField(path, opt.value);
+              onChange?.(opt.value);
+            }}
           >
             {opt.label}
           </button>

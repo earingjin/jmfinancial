@@ -223,6 +223,16 @@ export function validateInput(input) {
     if (!(key in input)) errors.push(`"${key}" 섹션이 누락되었습니다.`);
   }
 
+  const requiredBasicFields = [
+    ['birthYear', '출생년도'],
+    ['retirementAge', '은퇴(예정) 연령'],
+    ['lifeExpectancy', '기대수명'],
+    ['serviceYears', '근속년수'],
+  ];
+  requiredBasicFields.forEach(([key, label]) => {
+    if (isBlank(input.basic?.[key])) errors.push(`${label}은(는) 필수 입력 항목입니다.`);
+  });
+
   // 노후 월 평균 생활비는 은퇴자산 시뮬레이션(필요자금 산출)의 핵심 입력값이라 필수로 강제한다.
   // 명시적으로 입력한 0(노후 생활비를 가정하지 않음)은 유효한 값으로 그대로 허용한다.
   if (isBlank(input.expense?.retirementLivingCost)) {

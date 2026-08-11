@@ -300,6 +300,17 @@ export function buildFinancialOverviewDetail(input, aggregates) {
   const realEstateDebtMissing = allBlank(input, ['assets.realEstateAssets.total', 'assets.debtStatus.totalBalance']);
 
   const salary = aggregates.salaryMonthly;
+  const salaryItems = [
+    { key: 'self-salary', label: '본인 월급', value: n(input.income?.salary?.monthly) },
+    { key: 'self-bonus', label: '본인 상여금(월 환산)', value: n(input.income?.salary?.annualBonus) / 12 },
+    { key: 'spouse-salary', label: '배우자 월급', value: n(input.spouse?.salary?.monthly) },
+    { key: 'spouse-bonus', label: '배우자 상여금(월 환산)', value: n(input.spouse?.salary?.annualBonus) / 12 },
+  ].filter((item) => item.value > 0);
+  const explainedSalary = salaryItems.reduce((sum, item) => sum + item.value, 0);
+  const unexplainedSalary = salary - explainedSalary;
+  if (unexplainedSalary > 0.001) {
+    salaryItems.push({ key: 'legacy-salary', label: salaryItems.length ? '기타 급여' : '급여', value: unexplainedSalary });
+  }
   const businessAndOther = aggregates.businessMonthly + aggregates.otherIncomeMonthly;
   const monthlyTotal = salary + businessAndOther;
 
@@ -312,7 +323,7 @@ export function buildFinancialOverviewDetail(input, aggregates) {
 
   return {
     income: {
-      salary, salaryMissing,
+      salary, salaryItems, salaryMissing,
       businessAndOther, businessAndOtherMissing: businessOtherMissing,
       monthlyTotal, annualTotal: monthlyTotal * 12,
     },

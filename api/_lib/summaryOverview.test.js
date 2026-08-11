@@ -387,6 +387,24 @@ describe('buildFinancialOverviewDetail - grouped card (income / expense / balanc
     expect(detail.income.annualTotal).toBeCloseTo(detail.income.monthlyTotal * 12, 6);
   });
 
+  it('splits salary into self/spouse wages and monthly-converted bonuses', () => {
+    const scoped = input({
+      income: { salary: { monthly: 300, annualBonus: 600 } },
+      spouse: { salary: { monthly: 100, annualBonus: 240 } },
+      assets: { currentIncome: { monthly: 470 } },
+    });
+    const { aggregates } = calc(scoped);
+    const detail = buildFinancialOverviewDetail(scoped, aggregates);
+
+    expect(detail.income.salaryItems).toEqual([
+      { key: 'self-salary', label: '본인 월급', value: 300 },
+      { key: 'self-bonus', label: '본인 상여금(월 환산)', value: 50 },
+      { key: 'spouse-salary', label: '배우자 월급', value: 100 },
+      { key: 'spouse-bonus', label: '배우자 상여금(월 환산)', value: 20 },
+    ]);
+    expect(detail.income.salaryItems.reduce((sum, item) => sum + item.value, 0)).toBe(detail.income.salary);
+  });
+
   it('groups expense into living/housing/insurance vs savings, fixedTotal is their sum', () => {
     const scoped = input();
     const { aggregates } = calc(scoped);

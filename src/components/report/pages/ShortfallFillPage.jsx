@@ -11,7 +11,7 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, pageNum
 
   return (
     <PageFrame eyebrow="Retirement Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
-      <h3 className="num-section-title"><span className="num-badge">2</span>PART2_은퇴자산</h3>
+      <h3 className="num-section-title no-number-badge">PART2_은퇴자산</h3>
 
       <div className="cashflow-info-heading-row" style={{ marginBottom: 16 }}>
         <h4 className="num-section-title" style={{ fontSize: 14, marginBottom: 0 }}><span className="num-badge">1</span>노후목표 생활비 대응을 위한 현금 유입 현황(가구)</h4>

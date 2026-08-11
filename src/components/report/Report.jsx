@@ -8,7 +8,8 @@ import ConclusionPage from './pages/ConclusionPage';
 import AssetManagementOptionsPage from './pages/AssetManagementOptionsPage';
 import BackCoverPage from './pages/BackCoverPage';
 
-const TOTAL_PAGES = 9;
+const SHOW_RESPONSE_CONTENT = false;
+const TOTAL_PAGES = SHOW_RESPONSE_CONTENT ? 9 : 8;
 
 export default function Report({ result, onRestart, onBack, clientName, scenariosInput }) {
   const {
@@ -93,16 +94,17 @@ export default function Report({ result, onRestart, onBack, clientName, scenario
         indicators={indicators}
         goalFeedback={aiFeedback.financialGoals}
         feedback={aiFeedback.conclusion}
+        showResponseContent={SHOW_RESPONSE_CONTENT}
         pageNumber={nextPage()}
         totalPages={TOTAL_PAGES}
       />
 
-      <AssetManagementOptionsPage
+      {SHOW_RESPONSE_CONTENT && <AssetManagementOptionsPage
         scenariosInput={scenariosInput}
         scenarioComparison={scenarioComparison}
         pageNumber={nextPage()}
         totalPages={TOTAL_PAGES}
-      />
+      />}
 
       <BackCoverPage generatedAt={generatedAt} />
     </div>

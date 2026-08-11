@@ -13,7 +13,7 @@ export const initialFormData = {
   },
 
   income: {
-    salary: { annual: '', monthly: '', annualBonus: '', months: '' },
+    salary: { hasSalary: true, annual: '', monthly: '', annualBonus: '', months: '' },
     business: { annual: '', monthly: '' }, // 사업소득(본인+배우자 합산) - regularIncomes에서 자동 합산됨
     regularIncomes: [],          // [{ type: 'business'|'other', name, annual, years }] 사업소득·기타 정기수입 통합 입력 목록
     severance: {
@@ -50,7 +50,7 @@ export const initialFormData = {
   },
 
   spouse: {
-    salary: { annual: '', monthly: '', annualBonus: '', months: '' },
+    salary: { hasSalary: true, annual: '', monthly: '', annualBonus: '', months: '' },
     severance: {
       type: 'lumpsum',          // 'lumpsum' | 'pension' | 'none'(이미 퇴직금을 수령해 해당 없음)
       lumpsum: '',
@@ -119,6 +119,7 @@ export const initialFormData = {
       },
     },
     liquidAssets: {
+      hasAssets: true,
       total: '',
       breakdown: {           // 현금성 자산 세부 항목(총액은 이 값들 + customItems의 합으로 자동 계산됨)
         deposit: '',         // 예금
@@ -129,12 +130,14 @@ export const initialFormData = {
       customItems: [],       // [{ name, amount }] 기본 항목 외 사용자가 추가한 현금성 자산
     },
     financialAssets: {
+      hasAssets: true,
       stocks: '', funds: '', bonds: '', other: '',
       otherItems: [], // [{ name, amount }] "기타 금융자산"의 종류별 세부 항목(합계가 other에 자동 반영됨)
     },
     // 연금자산(개인연금·퇴직연금·IRP 등 잔액) 총액 - 금융자산과 분리. 아래 pensionAssetsBreakdown 4개
     // 항목의 합으로 자동 계산된다(변액연금·연금저축계좌·IRP는 "3. 저축"과 연동, 기타는 여기서 직접 입력).
     pensionAssets: '',
+    hasPensionAssets: true,
     pensionAssetsBreakdown: {
       variableAnnuity: '',        // 변액연금(저축 파트와 연동)
       pensionSavingsAccount: '',  // 연금저축계좌(저축 파트와 연동)
@@ -143,6 +146,7 @@ export const initialFormData = {
       otherItems: [],              // [{ name, amount }] "기타" 연금자산의 종류별 세부 항목
     },
     realEstateAssets: {
+      hasAssets: true,
       // total은 mainProperty + otherItems 합으로 자동 계산된다(직접 입력하지 않음).
       total: '',
       mainProperty: '',          // 주요 부동산 시세(현재 시세 기준으로 직접 입력)
@@ -150,6 +154,7 @@ export const initialFormData = {
       reverseMortgageHouse: '',  // 주택연금 신청 대상 주택 1채의 가격
     },
     debtStatus: {
+      hasDebt: true,
       totalBalance: '', monthlyRepayment: '',
       inputMode: 'simple',   // 'simple'(총액 한번에 입력) | 'detailed'(대출별 입력) - UI 입력 방식 선택값
       // 대출 종류별 상세(총 부채잔액/월 상환액은 이 값들의 합으로 자동 계산됨)
@@ -165,8 +170,9 @@ export const initialFormData = {
       },
       customItems: [],     // [{ name, repaymentType, principal, monthlyInterest, monthlyRepayment, months }] 기본 항목 외 사용자가 추가한 대출
     },
-    insurance: { monthlyPremium: '', coverageAmount: '' },
+    insurance: { hasInsurance: true, monthlyPremium: '', coverageAmount: '' },
     savingsPlan: {
+      hasSavings: true,
       monthly: '', annual: '',
       // 월 저축액 세부 항목(월 저축액 합계는 이 값들의 monthly + customItems의 monthly 합으로 자동 계산됨).
       // 저축 종류마다 앞으로 저축할 개월수·이자율이 서로 다를 수 있어(예: 적금 24개월 vs IRP 120개월)

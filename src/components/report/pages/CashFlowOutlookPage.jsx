@@ -47,7 +47,7 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, pageN
 
   return (
     <PageFrame eyebrow="Retirement Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
-      <SectionBadge number="1" label="현금흐름" />
+      <SectionBadge number="3" label="현금흐름" />
       <p className="intro-text" style={{ marginBottom: 14 }}>
         현금흐름은 우리 가정에 들어오고 나가는 돈을 나타냅니다. 안정적인 미래 현금흐름을 위해서는 현재 삶을 위한
         생활비와 미래 삶을 위한 저축에 대한 적정 밸런스가 필요합니다. 현재 생활비 수준과 돈을 사용하는 습관이
@@ -91,7 +91,7 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, pageN
       </div>
 
       <div style={{ marginTop: 22 }}>
-        <SectionBadge number="2" label="은퇴자산 종합분석결과" />
+        <SectionBadge number="4" label="은퇴자산 종합분석결과" />
       </div>
 
       <h3 className="card-title" style={{ marginBottom: 8 }}>■ 은퇴부족자금</h3>

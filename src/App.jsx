@@ -195,6 +195,7 @@ function AppContent() {
           <SimpleSummaryReport
             result={result}
             onBack={handleSummaryBack}
+            onHome={goHome}
             onDownload={goToReport}
             onShare={goToReport}
           />

@@ -14,7 +14,7 @@ export default function BackCoverPage({ generatedAt }) {
           <img className="cover-logo-img" src={jmCareerLogo} alt="제이엠커리어" />
         </div>
 
-        <h2 className="backcover-title">하늘까지 자라는<br />거대한 성장</h2>
+        <h2 className="backcover-title"></h2>
 
         <div className="cover-spacer" />
 
