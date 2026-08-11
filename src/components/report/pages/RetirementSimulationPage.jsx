@@ -61,8 +61,8 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
       <div className="bar-legend" style={{ margin: '4px auto 0' }}>
         <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--navy-700)' }} />자체 준비자산 <span className="val num">{formatEok(simulation.readyAssetsAtRetirement)}</span></div>
         <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--red)' }} />필요 준비자산 <span className="val num">{formatEok(simulation.requiredAtRetirement)}</span></div>
-        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--teal)' }} />부족금액 <span className="val num" style={{ color: 'var(--teal)' }}>{formatEok(simulation.shortfall)}</span></div>
-        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'transparent' }} />준비율 <span className="val num" style={{ color: 'var(--teal)' }}>{formatPercent(simulation.preparationRate)}</span></div>
+        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--red)' }} />부족금액 <span className="val num" style={{ color: 'var(--red)' }}>{formatEok(simulation.shortfall)}</span></div>
+        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'transparent' }} />준비율 <span className="val num" style={{ color: 'var(--navy-800)' }}>{formatPercent(simulation.preparationRate)}</span></div>
       </div>
 
       <div style={{ margin: '14px 0' }}>

@@ -139,9 +139,19 @@ export function buildIncomeDonut(input, aggregates) {
 // 지출 구성 - 저축 제외 총지출(totalExpenseMonthlyExSavings)을 구성 항목별로 그대로 쪼갠다.
 // buildIncomeDonut의 "생활지출" 조각(생활비+주거비+변동지출 합산)과 달리 여기서는 각 항목을
 // 분리해서 보여준다 - 새 금액을 만들지 않고 이미 있는 aggregates 필드를 그대로 재사용한다.
-export function buildExpenseDonut(aggregates) {
+// otherLivingExpenseItems(현재 생활비 상세의 "기타지출" 종류별 항목)가 있으면 "생활비" 조각을
+// 그 항목들만큼 떼어내 별도 조각으로 보여준다 - 이미 monthlyLivingCost에 포함된 값이므로
+// 새로 더하지 않고 나눠서 표시만 한다(총합은 그대로 유지됨).
+export function buildExpenseDonut(aggregates, otherLivingExpenseItems = []) {
+  const otherLivingTotal = otherLivingExpenseItems.reduce((s, it) => s + (Number(it.value) || 0), 0);
+  const hasOtherLivingItems = otherLivingExpenseItems.length > 0;
   const items = [
-    { key: 'living', label: '생활비', value: safe(aggregates.monthlyLivingCost) },
+    {
+      key: 'living',
+      label: hasOtherLivingItems ? '생활비(기타지출 제외)' : '생활비',
+      value: safe(aggregates.monthlyLivingCost - otherLivingTotal),
+    },
+    ...otherLivingExpenseItems.map((it) => ({ key: it.key, label: it.label, value: safe(it.value) })),
     { key: 'housing', label: '주거비', value: safe(aggregates.monthlyHousingCost) },
     { key: 'insurance', label: '보장성보험료', value: safe(aggregates.monthlyInsurancePremium) },
     { key: 'health', label: '건강보험료', value: safe(aggregates.monthlyHealthInsurance) },
@@ -154,11 +164,21 @@ export function buildExpenseDonut(aggregates) {
   };
 }
 
-export function buildAssetDonut(aggregates) {
+// otherLiquidAssetItems(현금성 자산의 "기본 항목 외 추가" 커스텀 항목)가 있으면 "현금성자산"
+// 조각을 그 항목들만큼 떼어내 별도 조각으로 보여준다 - 이미 aggregates.liquidAssets에 포함된
+// 값이므로 새로 더하지 않고 나눠서 표시만 한다(총합은 그대로 유지됨, buildExpenseDonut과 동일한 패턴).
+export function buildAssetDonut(aggregates, otherLiquidAssetItems = []) {
+  const otherLiquidTotal = otherLiquidAssetItems.reduce((s, it) => s + (Number(it.value) || 0), 0);
+  const hasOtherLiquidItems = otherLiquidAssetItems.length > 0;
   return {
     total: safe(aggregates.totalAssets),
     items: [
-      { key: 'liquid', label: '현금성자산', value: safe(aggregates.liquidAssets) },
+      {
+        key: 'liquid',
+        label: hasOtherLiquidItems ? '현금성자산(기타 제외)' : '현금성자산',
+        value: safe(aggregates.liquidAssets - otherLiquidTotal),
+      },
+      ...otherLiquidAssetItems.map((it) => ({ key: it.key, label: it.label, value: safe(it.value) })),
       { key: 'financial', label: '투자 금융자산', value: safe(aggregates.financialAssetsTotal) },
       { key: 'pension', label: '연금자산', value: safe(aggregates.pensionAssets) },
       { key: 'realEstate', label: '부동산자산', value: safe(aggregates.realEstateTotal) },
@@ -291,14 +311,17 @@ export function buildFinancialOverviewDetail(input, aggregates) {
 // 4. 전체 조립
 // ---------------------------------------------------------------------------
 
-export function buildWebSummary({ input, aggregates, simulation, indicators, savingsBreakdown, debtBreakdown }) {
+export function buildWebSummary({
+  input, aggregates, simulation, indicators, savingsBreakdown, debtBreakdown,
+  otherLivingExpenseItems, otherLiquidAssetItems,
+}) {
   return {
     overviewDetail: buildFinancialOverviewDetail(input, aggregates),
     overviewCards: buildFinancialOverviewCards(input, aggregates),
     donuts: {
       income: buildIncomeDonut(input, aggregates),
-      expense: buildExpenseDonut(aggregates),
-      assets: buildAssetDonut(aggregates),
+      expense: buildExpenseDonut(aggregates, otherLivingExpenseItems),
+      assets: buildAssetDonut(aggregates, otherLiquidAssetItems),
       debt: buildDebtDonut(debtBreakdown, aggregates.totalDebt),
       savings: buildSavingsDonut(savingsBreakdown, aggregates.monthlySavings),
     },

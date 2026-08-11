@@ -11,7 +11,10 @@ import BackCoverPage from './pages/BackCoverPage';
 const TOTAL_PAGES = 9;
 
 export default function Report({ result, onRestart, onBack, clientName, scenariosInput }) {
-  const { generatedAt, summary, indicators, aggregates, simulation, scenarioComparison, peerComparison, familyAges, savingsBreakdown, debtBreakdown } = result;
+  const {
+    generatedAt, summary, indicators, aggregates, simulation, scenarioComparison, peerComparison, familyAges,
+    savingsBreakdown, debtBreakdown, otherLivingExpenseItems, otherLiquidAssetItems,
+  } = result;
   // AI가 작성할 리포트 피드백 문구를 담을 자리. 아직 생성 API와 연결되지 않아 항상 비어 있으며,
   // 값이 없으면 각 페이지가 자체적으로 "준비 중" placeholder를 보여준다(AIFeedbackBox 참고).
   const aiFeedback = result.aiFeedback || {};
@@ -63,6 +66,8 @@ export default function Report({ result, onRestart, onBack, clientName, scenario
         indicators={indicators}
         peerComparison={peerComparison}
         debtBreakdown={debtBreakdown}
+        otherLivingExpenseItems={otherLivingExpenseItems}
+        otherLiquidAssetItems={otherLiquidAssetItems}
         pageNumber={nextPage()}
         totalPages={TOTAL_PAGES}
       />

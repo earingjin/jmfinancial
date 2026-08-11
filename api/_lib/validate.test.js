@@ -218,6 +218,67 @@ describe('array length cap: income.regularIncomes (MAX_ARRAY_LENGTH = 50)', () =
   });
 });
 
+// "현재 생활비 상세"의 "기타지출"이 단일 금액에서 종류별(name+amount) 반복 목록으로
+// 바뀌면서 새로 생긴 배열 경로. 다른 otherItems 배열과 동일하게 amount는 음수·NaN·
+// Infinity를 거부해야 한다(financialAssets.otherItems 등과 동일한 검증 규칙).
+describe('array field: assets.currentLivingCost.breakdown.otherItems (amount kind)', () => {
+  it('accepts a normal positive amount', () => {
+    const result = validateInput(
+      makeInput({ assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물', amount: 10 }] } } } })
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects a negative amount (T-0.01 below the 0 floor)', () => {
+    const result = validateInput(
+      makeInput({ assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물', amount: -0.01 }] } } } })
+    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/otherItems\.0\.amount.*0 이상/);
+  });
+
+  it('accepts exactly 0 (T boundary)', () => {
+    const result = validateInput(
+      makeInput({ assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물', amount: 0 }] } } } })
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects NaN amount', () => {
+    const result = validateInput(
+      makeInput({ assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물', amount: NaN }] } } } })
+    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/otherItems\.0\.amount.*유효한 숫자/);
+  });
+
+  it('rejects Infinity amount', () => {
+    const result = validateInput(
+      makeInput({ assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물', amount: Infinity }] } } } })
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects 51 items (T+1 boundary, MAX_ARRAY_LENGTH = 50)', () => {
+    const result = validateInput(
+      makeInput({
+        assets: { currentLivingCost: { breakdown: { otherItems: Array.from({ length: 51 }, () => ({ name: '항목', amount: 1 })) } } },
+      })
+    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/otherItems.*50/);
+  });
+
+  it('accepts exactly 50 items (T boundary)', () => {
+    const result = validateInput(
+      makeInput({
+        assets: { currentLivingCost: { breakdown: { otherItems: Array.from({ length: 50 }, () => ({ name: '항목', amount: 1 })) } } },
+      })
+    );
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe('age cap: basic.retirementEndAge (legacy fallback alias, same kind as lifeExpectancy)', () => {
   it('rejects retirementEndAge above 120', () => {
     const result = validateInput(makeInput({ basic: { retirementEndAge: 121 } }));

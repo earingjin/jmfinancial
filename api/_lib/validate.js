@@ -189,6 +189,7 @@ const ARRAY_FIELDS = [
   { path: 'expense.otherExpenses', fields: [{ key: 'annual', kind: 'amount' }, { key: 'years', kind: 'count' }] },
   { path: 'expense.healthInsurance.items', fields: [{ key: 'monthly', kind: 'amount' }] },
   { path: 'assets.liquidAssets.customItems', fields: [{ key: 'amount', kind: 'amount' }] },
+  { path: 'assets.currentLivingCost.breakdown.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
   { path: 'assets.financialAssets.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
   { path: 'assets.pensionAssetsBreakdown.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
   { path: 'assets.realEstateAssets.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },

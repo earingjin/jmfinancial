@@ -84,7 +84,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
             <span className="summary-card-rating">{RATING_PLACEHOLDER}</span>
           </div>
           <div className="summary-card-row"><span>노후기간</span><span className="num">{round1(simulation.retirementYears)}년</span></div>
-          <div className="summary-card-row total"><span>적정상태</span><span className="num">{retirementStatus}</span></div>
+          <div className="summary-card-row total"><span>적정상태</span><span className="num" style={{ color: simulation.shortfall > 0 ? 'var(--red)' : 'var(--teal)' }}>{retirementStatus}</span></div>
         </div>
         <div className="summary-card">
           <div className="summary-card-title-row">

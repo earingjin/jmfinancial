@@ -64,7 +64,9 @@ function PeerMetricRow({ label, metric, unit }) {
       </div>
       <div className="peer-bar-track" role="img" aria-label={`${label} 내 값 ${formatValue(value)}, 또래 평균 ${formatValue(average)}`}>
         <div className="peer-bar-fill" style={{ width: `${userPct}%` }} />
-        <div className="peer-bar-avg-marker" style={{ left: `${avgPct}%` }} title="또래 평균 위치" />
+        <div className="peer-bar-avg-marker" style={{ left: `${avgPct}%` }}>
+          <span className="peer-bar-avg-label">평균 {formatValue(average)}</span>
+        </div>
       </div>
       <div className="peer-row-numbers">
         <span>내 값 <b>{formatValue(value)}</b></span>
@@ -76,7 +78,7 @@ function PeerMetricRow({ label, metric, unit }) {
 }
 
 export default function SimpleSummaryReport({ result, onBack, onDownload, onShare }) {
-  const { generatedAt, peerComparison, webSummary } = result;
+  const { generatedAt, peerComparison, webSummary, summary } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
 
@@ -90,7 +92,57 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
           ← 뒤로가기
         </button>
       </div>
+
+      {/* 페이지가 6개 섹션으로 길게 이어지는데 이동 수단이 없어, 스크롤 중에도 원하는
+          섹션으로 바로 이동할 수 있는 상단 고정 내비게이션을 추가한다. */}
+      <nav className="ss-section-nav" aria-label="섹션 바로가기">
+        <a href="#ss-h-hero">종합결과</a>
+        <a href="#ss-h-overview">재무현황</a>
+        <a href="#ss-h-composition">재무구성</a>
+        <a href="#ss-h-peer">또래비교</a>
+        <a href="#ss-h-retirement">은퇴준비</a>
+        <a href="#ss-h-download">다운로드</a>
+      </nav>
+
       <div className="simple-summary-date">최근 설계일 {formatDesignDate(generatedAt)}</div>
+
+      {/* 0. 종합 결과 (히어로) - result.summary는 이미 서버에서 계산돼 내려오지만
+          지금까지 어떤 화면에도 노출되지 않던 값이라 여기서 처음 표시한다. */}
+      <section aria-labelledby="ss-h-hero">
+        <h2 id="ss-h-hero" className="simple-summary-title">종합 결과</h2>
+        <div className="fhs-hero">
+          {summary.notCalculable ? (
+            <div className="fhs-hero-text">종합점수를 산출할 수 없어요. 필수 입력값을 채워주시면 확인할 수 있어요.</div>
+          ) : (
+            <>
+              <div className="fhs-grade-badge">{summary.grade.letter}</div>
+              <div className="fhs-score">{summary.totalScore}<span className="max">/100</span></div>
+              <div className="fhs-hero-text">
+                <div>종합등급 {summary.grade.label}</div>
+                <div className="ss-hero-stats">
+                  <span>
+                    순자산{' '}
+                    <b style={{ color: od.balance.netWorth < 0 ? 'var(--red)' : '#fff' }}>{formatWon(od.balance.netWorth)}</b>
+                  </span>
+                  <span>
+                    은퇴 준비{' '}
+                    {rr.notCalculable ? (
+                      '계산 불가'
+                    ) : rr.shortfall > 0 ? (
+                      <b style={{ color: 'var(--red)' }}>부족 {formatWon(rr.shortfall)}</b>
+                    ) : (
+                      <b style={{ color: 'var(--teal)' }}>적정</b>
+                    )}
+                  </span>
+                </div>
+                {!rr.notCalculable && rr.shortfall > 0 && (
+                  <div className="ss-hero-encourage">괜찮아요, 지금부터 준비하면 충분히 대응할 수 있어요.</div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
 
       {/* 1. 나의 재무 현황 */}
       <section aria-labelledby="ss-h-overview">
@@ -154,6 +206,7 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
                 ? `⚠ 지출·저축이 소득을 초과해 매월 약 ${formatWon(donuts.income.overspendAmount)} 초과지출 상태입니다.`
                 : '생활지출에는 주거비·변동지출(경조사 등)이 포함됩니다.'
             }
+            footnoteTone={donuts.income.isOverspending ? 'warning' : undefined}
           />
           <DonutChart
             title="지출 구성"
@@ -244,7 +297,7 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
               {[
                 { label: '필요자금', value: rr.requiredAtRetirement, color: 'var(--red)' },
                 { label: '준비자산', value: rr.readyAssetsAtRetirement, color: 'var(--navy-700)' },
-                { label: '부족자금', value: rr.shortfall, color: 'var(--amber)' },
+                { label: '부족자금', value: rr.shortfall, color: 'var(--red)' },
               ].map((bar) => (
                 <div className="need-compare-row" key={bar.label}>
                   <span className="need-compare-label">{bar.label}</span>
@@ -255,6 +308,17 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
                 </div>
               ))}
             </div>
+
+            {rr.shortfall > 0 && (
+              <div className="ss-improve-cta">
+                <p className="ss-improve-cta-text">
+                  지금부터 저축·투자 계획을 조정하면 부족자금을 줄여나갈 수 있어요. 상세 리포트에서 구체적인 개선 방향을 확인해 보세요.
+                </p>
+                <button type="button" className="btn-secondary ss-improve-cta-btn" onClick={onDownload}>
+                  개선 방향 확인하기 →
+                </button>
+              </div>
+            )}
 
             <h3 className="ss-section-title">은퇴시점 필요자금 · 소득공백기간</h3>
             {rr.incomeGap.notCalculable ? (
