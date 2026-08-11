@@ -1024,6 +1024,8 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .option-card-row:first-of-type { border-top: none; }
 .option-card-row .num { font-weight: 700; color: var(--navy-900); }
 .option-card-list { margin: 10px 0 0; padding-left: 18px; font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; }
+.option-card-row--notice { justify-content: flex-start; border-top: none; padding: 6px 0 0; }
+.option-card-not-applied { font-size: 12px; color: var(--ink-soft); font-style: italic; }
 
 /* ---------- 은퇴자금 달성률 (표 + 도넛) ---------- */
 .retirement-achievement-layout { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 20px; align-items: center; }

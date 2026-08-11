@@ -38,10 +38,15 @@ function AppContent() {
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [wizardResume, setWizardResume] = useState(false);
+  // "7. 대응방안"에서 사용자가 실제로 켠 시나리오/직접 입력한 값(나이·기간·목표금액 등)을 리포트의
+  // 마지막 페이지(AssetManagementOptionsPage)에서 그대로 보여주기 위해 보관한다. 서버 계산 결과와
+  // 달리 이 값은 계산이 아니라 사용자가 입력한 그대로를 표시하는 용도라 formData에서 바로 가져온다.
+  const [submittedScenariosInput, setSubmittedScenariosInput] = useState(null);
 
   const handleSubmit = async (formData) => {
     setPhase('loading');
     setErrorMessage('');
+    setSubmittedScenariosInput(formData?.scenarios ?? null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
@@ -66,6 +71,7 @@ function AppContent() {
       }
       const body = await res.json();
       const data = deobfuscate(body.payload);
+      if (typeof window !== 'undefined') window.__DEBUG_RESULT = data;
       setResult(data);
       setPhase('summary');
       savePlannerResult(user, formData, data);
@@ -145,6 +151,7 @@ function AppContent() {
             onRestart={restart}
             onBack={() => setPhase('summary')}
             clientName={user?.user_metadata?.name}
+            scenariosInput={submittedScenariosInput}
           />
         )}
       </main>

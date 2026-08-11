@@ -20,6 +20,21 @@ export function allBlank(input, paths) {
   return paths.every((p) => isBlank(getPath(input, p)));
 }
 
+// allBlank의 확장판 - "합계/총액" 자동계산 필드(예: assets.liquidAssets.total)는 위저드가
+// 해당 스텝을 화면에 띄우기만 해도 각 스텝 컴포넌트의 useEffect가 0으로 채워 넣기 때문에,
+// 이 값만으로는 "실제로 입력했는지"를 구분할 수 없다(0을 입력한 것과 동일하게 보임). 그래서
+// "미입력 여부" 판정은 사용자가 실제로 타이핑하는 세부 입력 칸(leaf 필드)과, 항목을 추가하면
+// 생기는 배열(customItems 등)만 기준으로 삼는다. leafPaths·arrayPaths가 전부 비어 있을 때만
+// true(=미입력)를 반환한다.
+export function allBlankLeaf(input, leafPaths, arrayPaths = []) {
+  const leafBlank = leafPaths.every((p) => isBlank(getPath(input, p)));
+  const arraysBlank = arrayPaths.every((p) => {
+    const list = getPath(input, p);
+    return !Array.isArray(list) || list.length === 0;
+  });
+  return leafBlank && arraysBlank;
+}
+
 // 차트에 절대 음수/NaN/Infinity가 들어가지 않도록 방어한다.
 function safe(v) {
   return Number.isFinite(v) && v > 0 ? v : 0;

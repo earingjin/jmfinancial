@@ -37,7 +37,8 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
             <td>-</td>
             <td>-</td>
           </tr>
-          {Array.from({ length: 3 }, (_, i) => familyAges.children[i]).map((child, i) => (
+          {/* 자녀를 입력하지 않았으면 빈 "자녀1/2/3" 행을 만들지 않는다 - 실제로 입력된 자녀 수만큼만 표시 */}
+          {familyAges.children.map((child, i) => (
             <tr key={i}>
               <td>자녀{i + 1}</td>
               <td className="num">{child?.age != null ? `${child.age}세` : '-'}</td>

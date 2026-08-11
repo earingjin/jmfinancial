@@ -8,7 +8,7 @@ import { enrichIndicators, enrichSimulation } from './_lib/reportEnrichment.js';
 import { buildComprehensiveIssues } from './_lib/executiveSummary.js';
 import { buildSimpleSummary } from './_lib/simpleSummary.js';
 import { buildSavingsBreakdown, buildDebtBreakdown } from './_lib/reportBreakdowns.js';
-import { buildWebSummary, allBlank } from './_lib/summaryOverview.js';
+import { buildWebSummary, allBlankLeaf } from './_lib/summaryOverview.js';
 import { obfuscate } from '../src/utils/obfuscate.js';
 import { requireUser } from './_lib/auth.js';
 
@@ -54,6 +54,47 @@ export default async function handler(req, res) {
     // netWorth/annualIncome/financialAssetsTotal은 미입력 시 n()이 0으로 채우므로, 아래 경로가
     // 전부 비어 있으면(=사용자가 해당 항목 자체를 입력하지 않았으면) "실제 0원"이 아니라 미입력임을
     // peerComparison.js에 별도로 알려준다(aggregate.js의 각 합산식과 정확히 대응하는 경로만 검사).
+    // 아래 "미입력 판정"용 leaf 경로는 화면에 실제 입력칸으로 존재하는 필드만 모은 것이다.
+    // assets.liquidAssets.total / assets.debtStatus.totalBalance 같은 "합계" 필드는 해당 스텝
+    // 화면을 열기만 해도 0으로 자동 채워지므로(각 스텝의 합계 계산 useEffect) 판정 기준에서 제외한다.
+    const DEBT_CATEGORIES = ['mortgage', 'depositLoan', 'businessLoan', 'buildingLoan', 'carLoan', 'studentLoan', 'otherLoan'];
+    const debtBreakdownLeafPaths = DEBT_CATEGORIES.flatMap((cat) => [
+      `assets.debtStatus.breakdown.${cat}.principal`,
+      `assets.debtStatus.breakdown.${cat}.monthlyInterest`,
+      `assets.debtStatus.breakdown.${cat}.monthlyRepayment`,
+      `assets.debtStatus.breakdown.${cat}.months`,
+    ]);
+
+    const netWorthMissing = allBlankLeaf(
+      input,
+      [
+        'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
+        'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.emergencyFund',
+        'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds',
+        'assets.pensionAssetsBreakdown.variableAnnuity', 'assets.pensionAssetsBreakdown.pensionSavingsAccount', 'assets.pensionAssetsBreakdown.irp',
+        'assets.realEstateAssets.mainProperty',
+        ...debtBreakdownLeafPaths,
+      ],
+      [
+        'assets.liquidAssets.customItems', 'assets.financialAssets.otherItems',
+        'assets.pensionAssetsBreakdown.otherItems', 'assets.realEstateAssets.otherItems',
+        'assets.debtStatus.customItems',
+      ]
+    );
+    const annualIncomeMissing = allBlankLeaf(input, [
+      'income.salary.monthly', 'income.salary.annualBonus', 'income.business.monthly',
+      'spouse.salary.monthly', 'spouse.salary.annualBonus',
+    ], ['income.regularIncomes']);
+    const financialAssetsMissing = allBlankLeaf(
+      input,
+      [
+        'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds',
+        'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
+        'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.emergencyFund',
+      ],
+      ['assets.financialAssets.otherItems', 'assets.liquidAssets.customItems']
+    );
+
     const peerComparison = buildPeerComparison({
       age: getCurrentAge(input),
       totalAssets: aggregates.totalAssets,
@@ -61,16 +102,9 @@ export default async function handler(req, res) {
       annualIncome: aggregates.annualIncome,
       financialAssetsTotal: aggregates.financialAssetsTotal + aggregates.liquidAssets,
       retirementScore: totalScore,
-      netWorthMissing: allBlank(input, [
-        'assets.liquidAssets.total',
-        'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other',
-        'assets.pensionAssets', 'assets.realEstateAssets.total', 'assets.debtStatus.totalBalance',
-      ]),
-      annualIncomeMissing: allBlank(input, ['assets.currentIncome.monthly', 'income.business.monthly']),
-      financialAssetsMissing: allBlank(input, [
-        'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other',
-        'assets.liquidAssets.total',
-      ]),
+      netWorthMissing,
+      annualIncomeMissing,
+      financialAssetsMissing,
     });
 
     // 리포트 렌더링에 필요한 게이지 위치·권장기준 비교 문구·등급 배지·생활수준 구간 같은
