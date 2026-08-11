@@ -60,6 +60,12 @@ export default function ExpenseBreakdownField({
     recomputeTotal(nextBreakdown);
   };
 
+  const handleTotalChange = (raw) => {
+    const value = raw === '' ? '' : Number(raw);
+    setField(totalPath, value);
+    if (annualPath) setField(annualPath, value === '' ? '' : Math.round(value * 12));
+  };
+
   // pill을 다시 눌러 패널을 접기만 하면 입력창이 숨겨질 뿐 값은 그대로 남아 합계에 계속
   // 포함된다. "이 항목 삭제"는 값을 실제로 비우고 합계를 재계산한 뒤 패널도 닫는다.
   const removePresetItem = (key) => {
@@ -91,6 +97,20 @@ export default function ExpenseBreakdownField({
 
   return (
     <div className="field">
+      <label className="field" style={{ marginBottom: 16 }}>
+        <span className="field-label">현재 월 생활비</span>
+        <div className="field-input-row">
+          <input
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={total ?? ''}
+            onChange={(e) => handleTotalChange(e.target.value)}
+          />
+          <span className="field-unit">만원</span>
+        </div>
+        <span className="field-helper">세부 항목 버튼을 선택하지 않고 월 생활비 총액만 입력할 수 있습니다</span>
+      </label>
       <span className="field-label">해당하는 항목을 눌러 금액을 입력해 주세요</span>
       <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
         {categories.map((c) => (

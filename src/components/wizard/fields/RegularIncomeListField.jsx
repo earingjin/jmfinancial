@@ -73,7 +73,7 @@ export default function RegularIncomeListField({ path, businessMonthlyPath, busi
               </div>
             </label>
             <label className="field">
-              <span className="field-label">수령 기간</span>
+              <span className="field-label">현재부터 유지기간</span>
               <div className="field-input-row">
                 <input
                   type="number"
