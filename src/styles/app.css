@@ -94,7 +94,10 @@ body {
 .home-actions { display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto; }
 .home-actions .btn-primary, .home-actions .btn-secondary { width: 100%; padding: 14px; font-size: 15px; }
 
-.history-card { text-align: left; }
+.history-card {
+  background-image: none;
+  text-align: left;
+}
 .history-back-btn {
   background: none; border: none; padding: 0; margin-bottom: 18px;
   font-size: 13px; font-weight: 600; color: var(--ink-soft); cursor: pointer;

@@ -51,13 +51,20 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
     if (!window.confirm('이 진단 결과를 삭제하시겠습니까? 삭제하면 되돌릴 수 없습니다.')) return;
     setDeleteError('');
     setDeletingId(id);
-    const { error } = await supabase.from('planner_results').delete().eq('id', id);
+    setRows((prev) => prev.filter((row) => row.id !== id));
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = session
+      ? await fetch(`/api/delete-result?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+      : null;
     setDeletingId(null);
-    if (error) {
-      setDeleteError('삭제하지 못했습니다. ' + error.message);
+    if (!response?.ok) {
+      const body = response ? await response.json().catch(() => ({})) : {};
+      setDeleteError(body.error || '로그인 세션을 확인할 수 없어 서버에서 삭제하지 못했습니다.');
       return;
     }
-    setRows((prev) => prev.filter((r) => r.id !== id));
   };
 
   if (status === 'loading') {

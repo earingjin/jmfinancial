@@ -236,6 +236,10 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
       <section aria-labelledby="ss-h-peer">
         <h2 id="ss-h-peer" className="simple-summary-title">또래와 비교한 나의 위치</h2>
         <p className="simple-summary-subtitle">같은 연령대와 비교해 현재 재무 수준을 확인해 보세요.</p>
+        <div className="peer-age-summary" aria-label="또래 비교 연령 기준">
+          <span>내 연령 <strong>{peerComparison.userAge != null ? `${peerComparison.userAge}세` : '미입력'}</strong></span>
+          <span>비교 또래 연령군 <strong>{peerComparison.userBracketLabel}</strong></span>
+        </div>
         {peerComparison.benchmarkMeta && (
           <div className="fine-print" style={{ marginBottom: 10 }}>
             {peerComparison.benchmarkMeta.source}({peerComparison.benchmarkMeta.agency}) {peerComparison.benchmarkMeta.ageBasis} 평균입니다. 자산·부채는 {peerComparison.benchmarkMeta.assetAndDebtAsOf} 기준, 소득은 {peerComparison.benchmarkMeta.incomeYear}년 연간 기준입니다.
@@ -282,13 +286,19 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
                 <div className="overview-card-label">예상 부족자금</div>
                 <div className="overview-card-value">{formatWon(rr.shortfall)}</div>
               </div>
-              <div className="overview-card">
+              <div className="overview-card overview-card--wide">
                 <div className="overview-card-label">현재 노후소득보장률</div>
                 <div className="overview-card-value">
                   {rr.retirementIncomeIndicator?.notCalculable
                     ? <span className="overview-card-missing">산출 불가</span>
                     : formatPercent(rr.retirementIncomeIndicator?.value)}
                 </div>
+                <p className="overview-card-formula">월 예상 노후소득 ÷ 은퇴 후 월 필요생활비 × 100</p>
+                {!rr.retirementIncomeIndicator?.notCalculable && rr.retirementIncomeIndicator?.value === 0 && (
+                  <p className="overview-card-zero-reason">
+                    {rr.retirementIncomeZeroReason || '월 수령 방식으로 입력된 노후 연금액이 없어 0%입니다.'}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -308,17 +318,6 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
                 </div>
               ))}
             </div>
-
-            {rr.shortfall > 0 && (
-              <div className="ss-improve-cta">
-                <p className="ss-improve-cta-text">
-                  지금부터 저축·투자 계획을 조정하면 부족자금을 줄여나갈 수 있어요. 상세 리포트에서 구체적인 개선 방향을 확인해 보세요.
-                </p>
-                <button type="button" className="btn-secondary ss-improve-cta-btn" onClick={onDownload}>
-                  개선 방향 확인하기 →
-                </button>
-              </div>
-            )}
 
             <h3 className="ss-section-title">은퇴시점 필요자금 · 소득공백기간</h3>
             {rr.incomeGap.notCalculable ? (

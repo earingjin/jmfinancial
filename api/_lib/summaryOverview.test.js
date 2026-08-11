@@ -185,13 +185,13 @@ describe('buildExpenseDonut', () => {
     expect(donut.items.find((it) => it.key === 'living').label).toBe('생활비');
   });
 
-  it('splits named 기타지출 items out of the 생활비 slice without changing the total (already counted in monthlyLivingCost)', () => {
+  it('splits entered living-expense items out of the unclassified living-cost slice without changing the total', () => {
     const { aggregates } = calc(input({ assets: { currentLivingCost: { monthly: 180 } } }));
     const otherLivingExpenseItems = [{ key: 'other-living-0', label: '반려동물 비용', value: 10 }];
     const donut = buildExpenseDonut(aggregates, otherLivingExpenseItems);
 
     const livingItem = donut.items.find((it) => it.key === 'living');
-    expect(livingItem.label).toBe('생활비(기타지출 제외)');
+    expect(livingItem.label).toBe('생활비(미분류)');
     expect(livingItem.value).toBe(170); // 180(monthlyLivingCost) - 10(기타지출)
 
     expect(donut.items.find((it) => it.key === 'other-living-0')).toEqual({
@@ -201,6 +201,20 @@ describe('buildExpenseDonut', () => {
     const sum = donut.items.reduce((s, it) => s + it.value, 0);
     expect(sum).toBeCloseTo(donut.total, 6);
     expect(donut.total).toBeCloseTo(aggregates.totalExpenseMonthlyExSavings, 6);
+  });
+
+  it('shows each entered living-expense category without a lumped living-cost slice when fully classified', () => {
+    const { aggregates } = calc(input({ assets: { currentLivingCost: { monthly: 150 } } }));
+    const livingExpenseItems = [
+      { key: 'living-rent', label: '월세', value: 80 },
+      { key: 'living-food', label: '식비', value: 50 },
+      { key: 'living-communication', label: '통신비', value: 20 },
+    ];
+    const donut = buildExpenseDonut(aggregates, livingExpenseItems);
+
+    expect(donut.items.find((it) => it.key === 'living')).toBeUndefined();
+    expect(donut.items).toEqual(expect.arrayContaining(livingExpenseItems));
+    expect(donut.items.reduce((sum, item) => sum + item.value, 0)).toBeCloseTo(donut.total, 6);
   });
 });
 
@@ -327,6 +341,20 @@ describe('buildRetirementReadiness', () => {
     const { aggregates, simulation, indicators } = calc(noLivingCost);
     const readiness = buildRetirementReadiness({ input: noLivingCost, simulation, indicators, aggregates });
     expect(readiness.retirementIncomeIndicator.notCalculable).toBe(true);
+  });
+
+  it('explains a 0% retirement-income rate when a monthly amount has no receiving period', () => {
+    const scoped = input({
+      income: {
+        nationalPension: { monthly: 90, months: 0 },
+        personalPension: { type: 'installment', monthly: 15, months: 0 },
+      },
+    });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
+
+    expect(readiness.retirementIncomeIndicator.value).toBe(0);
+    expect(readiness.retirementIncomeZeroReason).toContain('수령 기간');
   });
 
   it('computes the total funding needed to bridge the income gap (annual living cost x gap years)', () => {

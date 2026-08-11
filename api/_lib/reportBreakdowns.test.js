@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSavingsBreakdown, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './reportBreakdowns.js';
+import { buildSavingsBreakdown, buildLivingExpenseItems, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './reportBreakdowns.js';
 
 describe('buildSavingsBreakdown - all savingsPlan.breakdown categories are covered', () => {
   // Step3Savings.jsx's SAVINGS_CATEGORIES lists 8 breakdown keys (installment, isa,
@@ -20,6 +20,29 @@ describe('buildSavingsBreakdown - all savingsPlan.breakdown categories are cover
       assets: { savingsPlan: { breakdown: { pensionSavings: 25 }, customItems: [] } },
     });
     expect(items.reduce((s, it) => s + it.value, 0)).toBe(25);
+  });
+
+  it('reads monthly from the current object-shaped preset savings data', () => {
+    const items = buildSavingsBreakdown({
+      assets: {
+        savingsPlan: {
+          breakdown: {
+            installment: { monthly: 100, remainingMonths: 24, interestRate: 1 },
+          },
+          customItems: [],
+        },
+      },
+    });
+
+    expect(items).toContainEqual({ key: 'installment', label: '적금', value: 100 });
+  });
+
+  it('continues to support legacy number-shaped preset savings data', () => {
+    const items = buildSavingsBreakdown({
+      assets: { savingsPlan: { breakdown: { installment: 100 }, customItems: [] } },
+    });
+
+    expect(items).toContainEqual({ key: 'installment', label: '적금', value: 100 });
   });
 });
 
@@ -106,6 +129,31 @@ describe('buildOtherLivingExpenseItems - "현재 생활비 상세"의 기타지�
     expect(items).toEqual([
       { key: 'other-living-0', label: '반려동물 비용', value: 10 },
       { key: 'other-living-1', label: '구독료', value: 3 },
+    ]);
+  });
+});
+
+describe('buildLivingExpenseItems', () => {
+  it('returns every entered living-expense category and named other item', () => {
+    const items = buildLivingExpenseItems({
+      assets: {
+        currentLivingCost: {
+          breakdown: {
+            rent: 50,
+            food: 40,
+            communication: 10,
+            other: 5,
+            otherItems: [{ name: '반려동물 비용', amount: 5 }],
+          },
+        },
+      },
+    });
+
+    expect(items).toEqual([
+      { key: 'living-rent', label: '월세', value: 50 },
+      { key: 'living-food', label: '식비', value: 40 },
+      { key: 'living-communication', label: '통신비', value: 10 },
+      { key: 'other-living-0', label: '반려동물 비용', value: 5 },
     ]);
   });
 });

@@ -7,7 +7,7 @@ import { buildFamilyAges, getCurrentAge } from './_lib/aggregate.js';
 import { enrichIndicators, enrichSimulation } from './_lib/reportEnrichment.js';
 import { buildComprehensiveIssues } from './_lib/executiveSummary.js';
 import { buildSimpleSummary } from './_lib/simpleSummary.js';
-import { buildSavingsBreakdown, buildDebtBreakdown, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './_lib/reportBreakdowns.js';
+import { buildSavingsBreakdown, buildDebtBreakdown, buildLivingExpenseItems, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './_lib/reportBreakdowns.js';
 import { buildWebSummary, allBlankLeaf } from './_lib/summaryOverview.js';
 import { obfuscate } from '../src/utils/obfuscate.js';
 import { requireUser } from './_lib/auth.js';
@@ -125,12 +125,13 @@ export default async function handler(req, res) {
     // (monthlyLivingCost/liquidAssets.total)에 포함되어 있으므로 여기서 다시 더하지 않는다.
     // 요약/리포트 화면에 항목명을 보여주기 위한 표시용 목록일 뿐이다(reportBreakdowns.js 참고).
     const otherLivingExpenseItems = buildOtherLivingExpenseItems(input);
+    const livingExpenseItems = buildLivingExpenseItems(input);
     const otherLiquidAssetItems = buildOtherLiquidAssetItems(input);
     // 다운로드 전 웹 요약 화면(SimpleSummaryReport.jsx) 전용 파생값. 기존 필드(indicators/aggregates/
     // simulation/...)는 전혀 바뀌지 않으므로 PDF 리포트 렌더링에는 영향이 없다(하위호환 유지).
     const webSummary = buildWebSummary({
       input, aggregates, simulation: enrichedSimulation, indicators: enriched.indicators,
-      savingsBreakdown, debtBreakdown, otherLivingExpenseItems, otherLiquidAssetItems,
+      savingsBreakdown, debtBreakdown, livingExpenseItems, otherLiquidAssetItems,
     });
 
     // 응답을 평문 JSON으로 그대로 내려보내지 않고 스크램블한다. F12 → Network 탭에서
@@ -163,6 +164,7 @@ export default async function handler(req, res) {
       savingsBreakdown,
       debtBreakdown,
       otherLivingExpenseItems,
+      livingExpenseItems,
       otherLiquidAssetItems,
       webSummary,
     });

@@ -27,7 +27,24 @@ const DEBT_CATEGORY_LABELS = {
   otherLoan: '기타대출',
 };
 
+const LIVING_EXPENSE_CATEGORY_LABELS = {
+  rent: '월세',
+  maintenance: '관리비',
+  utilities: '공과금',
+  fuel: '유류비',
+  carInsurance: '차 보험료',
+  clothing: '의류비',
+  fourInsurances: '4대보험',
+  food: '식비',
+  communication: '통신비',
+  medical: '의료비',
+  subscription: '각종 구독료',
+};
+
 const n = (v) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
+const savingsMonthly = (item) => (
+  item && typeof item === 'object' ? n(item.monthly) : n(item)
+);
 
 // aggregate.js의 monthlySavings와 동일한 범위로 맞춘다: 노후준비저축(retirementMonthly)이 총
 // 저축액에 이미 포함되어 있으면(retirementIncludedInTotal !== false, 기본값 포함) 여기 합계에
@@ -37,7 +54,7 @@ export function buildSavingsBreakdown(input) {
   const sp = input.assets?.savingsPlan || {};
   const breakdown = sp.breakdown || {};
   const items = Object.entries(SAVINGS_CATEGORY_LABELS)
-    .map(([key, label]) => ({ key, label, value: n(breakdown[key]) }))
+    .map(([key, label]) => ({ key, label, value: savingsMonthly(breakdown[key]) }))
     .filter((item) => item.value > 0);
 
   // SavingsBreakdownField.jsx의 addCustomItem()이 만드는 항목 모양은
@@ -65,6 +82,15 @@ export function buildOtherLivingExpenseItems(input) {
   return otherItems
     .map((item, i) => ({ key: `other-living-${i}`, label: item.name || '기타지출', value: n(item.amount) }))
     .filter((item) => item.value > 0);
+}
+
+export function buildLivingExpenseItems(input) {
+  const breakdown = input.assets?.currentLivingCost?.breakdown || {};
+  const items = Object.entries(LIVING_EXPENSE_CATEGORY_LABELS)
+    .map(([key, label]) => ({ key: `living-${key}`, label, value: n(breakdown[key]) }))
+    .filter((item) => item.value > 0);
+
+  return [...items, ...buildOtherLivingExpenseItems(input)];
 }
 
 // "현금성 자산"의 "기본 항목 외 추가" 커스텀 항목(CategoryBreakdownField의 customItems) - 종류별

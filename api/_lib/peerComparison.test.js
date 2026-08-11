@@ -39,6 +39,8 @@ describe('buildPeerComparison - wording must never assert a confident percentile
 describe('buildPeerComparison - age-bracket-based peer averages (2025 가계금융복지조사)', () => {
   it('40~49세 구간(age=41)에서는 해당 구간의 순자산/연소득/금융자산 평균을 사용한다', () => {
     const result = buildPeerComparison({ age: 41, totalAssets: 40000, totalDebt: 5000, annualIncome: 12000, financialAssetsTotal: 5000, retirementScore: 75 });
+    expect(result.userAge).toBe(41);
+    expect(result.userBracketLabel).toBe('40~49세');
     expect(result.netWorth.average).toBe(48389);
     expect(result.householdIncome.average).toBe(9333);
     expect(result.financialAssets.average).toBe(16401);

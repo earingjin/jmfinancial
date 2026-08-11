@@ -142,16 +142,16 @@ export function buildIncomeDonut(input, aggregates) {
 // otherLivingExpenseItems(현재 생활비 상세의 "기타지출" 종류별 항목)가 있으면 "생활비" 조각을
 // 그 항목들만큼 떼어내 별도 조각으로 보여준다 - 이미 monthlyLivingCost에 포함된 값이므로
 // 새로 더하지 않고 나눠서 표시만 한다(총합은 그대로 유지됨).
-export function buildExpenseDonut(aggregates, otherLivingExpenseItems = []) {
-  const otherLivingTotal = otherLivingExpenseItems.reduce((s, it) => s + (Number(it.value) || 0), 0);
-  const hasOtherLivingItems = otherLivingExpenseItems.length > 0;
+export function buildExpenseDonut(aggregates, livingExpenseItems = []) {
+  const detailedLivingTotal = livingExpenseItems.reduce((s, it) => s + (Number(it.value) || 0), 0);
+  const unclassifiedLiving = Math.max(0, safe(aggregates.monthlyLivingCost - detailedLivingTotal));
   const items = [
-    {
+    ...(unclassifiedLiving > 0 ? [{
       key: 'living',
-      label: hasOtherLivingItems ? '생활비(기타지출 제외)' : '생활비',
-      value: safe(aggregates.monthlyLivingCost - otherLivingTotal),
-    },
-    ...otherLivingExpenseItems.map((it) => ({ key: it.key, label: it.label, value: safe(it.value) })),
+      label: livingExpenseItems.length > 0 ? '생활비(미분류)' : '생활비',
+      value: unclassifiedLiving,
+    }] : []),
+    ...livingExpenseItems.map((it) => ({ key: it.key, label: it.label, value: safe(it.value) })),
     { key: 'housing', label: '주거비', value: safe(aggregates.monthlyHousingCost) },
     { key: 'insurance', label: '보장성보험료', value: safe(aggregates.monthlyInsurancePremium) },
     { key: 'health', label: '건강보험료', value: safe(aggregates.monthlyHealthInsurance) },
@@ -226,6 +226,28 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
 
   const pensionMonthlyTotal = aggregates.nationalPensionMonthly + aggregates.severancePensionMonthly + aggregates.personalPensionMonthly;
   const monthlyShortfall = Math.max(0, simulation.retirementLivingCostNow - pensionMonthlyTotal);
+  const retirementIncomeIndicator = indicators.find((i) => i.key === 'retirementIncome') || null;
+  let retirementIncomeZeroReason = null;
+
+  if (!retirementIncomeIndicator?.notCalculable && retirementIncomeIndicator?.value === 0) {
+    const pensionOwners = [input.income || {}, input.spouse || {}];
+    const hasMonthlyAmountWithoutPeriod = pensionOwners.some((owner) => (
+      (n(owner.nationalPension?.monthly) > 0 && n(owner.nationalPension?.months) <= 0)
+      || (n(owner.severance?.pensionMonthly) > 0 && n(owner.severance?.pensionMonths) <= 0)
+      || (n(owner.personalPension?.monthly) > 0 && n(owner.personalPension?.months) <= 0)
+    ));
+    const hasLumpSumSelection = pensionOwners.some((owner) => (
+      owner.severance?.type === 'lumpsum' || owner.personalPension?.type === 'lumpsum'
+    ));
+
+    if (hasMonthlyAmountWithoutPeriod) {
+      retirementIncomeZeroReason = '연금 월 수령액은 입력했지만 수령 기간이 없거나 0개월이라 예상 노후소득에 포함되지 않았습니다.';
+    } else if (hasLumpSumSelection) {
+      retirementIncomeZeroReason = '퇴직금 또는 개인연금을 일시금으로 선택해 월 예상 노후소득에 포함되는 연금액이 없습니다.';
+    } else {
+      retirementIncomeZeroReason = '월 수령 방식으로 입력된 국민연금·퇴직연금·개인연금 금액이 없어 0%입니다.';
+    }
+  }
 
   return {
     notCalculable,
@@ -253,7 +275,8 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
       personalPensionMonthly: aggregates.personalPensionMonthly,
       shortfallMonthly: monthlyShortfall,
     },
-    retirementIncomeIndicator: indicators.find((i) => i.key === 'retirementIncome') || null,
+    retirementIncomeIndicator,
+    retirementIncomeZeroReason,
   };
 }
 
@@ -313,14 +336,14 @@ export function buildFinancialOverviewDetail(input, aggregates) {
 
 export function buildWebSummary({
   input, aggregates, simulation, indicators, savingsBreakdown, debtBreakdown,
-  otherLivingExpenseItems, otherLiquidAssetItems,
+  livingExpenseItems, otherLiquidAssetItems,
 }) {
   return {
     overviewDetail: buildFinancialOverviewDetail(input, aggregates),
     overviewCards: buildFinancialOverviewCards(input, aggregates),
     donuts: {
       income: buildIncomeDonut(input, aggregates),
-      expense: buildExpenseDonut(aggregates, otherLivingExpenseItems),
+      expense: buildExpenseDonut(aggregates, livingExpenseItems),
       assets: buildAssetDonut(aggregates, otherLiquidAssetItems),
       debt: buildDebtDonut(debtBreakdown, aggregates.totalDebt),
       savings: buildSavingsDonut(savingsBreakdown, aggregates.monthlySavings),
