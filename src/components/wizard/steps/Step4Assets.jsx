@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import NumberField from '../fields/NumberField';
 import CategoryBreakdownField from '../fields/CategoryBreakdownField';
 import RepeatableList from '../fields/RepeatableList';
+import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
@@ -33,6 +34,39 @@ const PENSION_BREAKDOWN_NUMERIC_KEYS = ['variableAnnuity', 'pensionSavingsAccoun
 
 export default function Step4Assets() {
   const { formData, setField } = useFormData();
+  const hasLiquidAssets = getIn(formData, 'assets.liquidAssets.hasAssets') !== false;
+  const hasFinancialAssets = getIn(formData, 'assets.financialAssets.hasAssets') !== false;
+  const hasPensionAssets = getIn(formData, 'assets.hasPensionAssets') !== false;
+  const hasRealEstateAssets = getIn(formData, 'assets.realEstateAssets.hasAssets') !== false;
+
+  const setAssetPresence = (path, value, clear) => {
+    setField(path, value);
+    if (!value) clear();
+  };
+
+  const clearLiquidAssets = () => {
+    LIQUID_ASSET_CATEGORIES.forEach(({ key }) => setField(`assets.liquidAssets.breakdown.${key}`, ''));
+    setField('assets.liquidAssets.customItems', []);
+    setField('assets.liquidAssets.total', 0);
+  };
+
+  const clearFinancialAssets = () => {
+    FINANCIAL_ASSET_CATEGORIES.forEach(({ key }) => setField(`assets.financialAssets.${key}`, ''));
+    setField('assets.financialAssets.otherItems', []);
+  };
+
+  const clearPensionAssets = () => {
+    PENSION_ASSET_CATEGORIES.forEach(({ key }) => setField(`assets.pensionAssetsBreakdown.${key}`, ''));
+    setField('assets.pensionAssetsBreakdown.otherItems', []);
+    setField('assets.pensionAssets', 0);
+  };
+
+  const clearRealEstateAssets = () => {
+    setField('assets.realEstateAssets.mainProperty', '');
+    setField('assets.realEstateAssets.reverseMortgageHouse', '');
+    setField('assets.realEstateAssets.otherItems', []);
+    setField('assets.realEstateAssets.total', 0);
+  };
   const [openFinancialKeys, setOpenFinancialKeys] = useState(() => {
     const fa = getIn(formData, 'assets.financialAssets') || {};
     const otherItems = getIn(formData, 'assets.financialAssets.otherItems') || [];
@@ -160,7 +194,8 @@ export default function Step4Assets() {
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·비상금 등 즉시 인출 가능한 자산입니다.
         </p>
-        <CategoryBreakdownField
+        <PresenceField label="현금성 자산 여부" present={hasLiquidAssets} onChange={(value) => setAssetPresence('assets.liquidAssets.hasAssets', value, clearLiquidAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
+        {hasLiquidAssets ? <CategoryBreakdownField
           basePath="assets.liquidAssets.breakdown"
           customPath="assets.liquidAssets.customItems"
           totalPath="assets.liquidAssets.total"
@@ -172,7 +207,7 @@ export default function Step4Assets() {
           customNamePlaceholder="예: 외화예금"
           customAmountLabel="금액"
           addItemLabel="현금성 자산 항목 추가"
-        />
+        /> : <p className="field-helper">현금성 자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">
@@ -180,6 +215,8 @@ export default function Step4Assets() {
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·CMA는 위 현금성 자산에서 입력해 주세요. 여기는 주식·펀드·채권 등 투자자산입니다.
         </p>
+        <PresenceField label="금융자산 여부" present={hasFinancialAssets} onChange={(value) => setAssetPresence('assets.financialAssets.hasAssets', value, clearFinancialAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
+        {hasFinancialAssets ? <>
         <p className="field-label">해당하는 금융자산 종류를 눌러 금액을 입력해 주세요</p>
         <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
           {FINANCIAL_ASSET_CATEGORIES.map((c) => (
@@ -246,6 +283,7 @@ export default function Step4Assets() {
           </div>
           <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
         </label>
+        </> : <p className="field-helper">금융자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">
@@ -254,6 +292,8 @@ export default function Step4Assets() {
           해당하는 연금자산 종류를 눌러 금액을 확인·입력해 주세요. 변액연금·연금저축계좌·IRP개인퇴직계좌는
           "3. 저축"과 값이 연동되며, 여기서 직접 입력·수정할 수도 있습니다.
         </p>
+        <PresenceField label="연금자산 여부" present={hasPensionAssets} onChange={(value) => setAssetPresence('assets.hasPensionAssets', value, clearPensionAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
+        {hasPensionAssets ? <>
         <div className="checkbox-group" style={{ marginBottom: 14 }}>
           {PENSION_ASSET_CATEGORIES.map((c) => (
             <button
@@ -318,6 +358,7 @@ export default function Step4Assets() {
           </div>
           <span className="field-helper">위 4개 항목의 합으로 자동 계산됩니다. 금융자산비중지표 계산 시 금융자산과 별도로 취급됩니다.</span>
         </label>
+        </> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">
@@ -325,6 +366,8 @@ export default function Step4Assets() {
         <p className="field-helper" style={{ marginBottom: 10 }}>
           매입가·공시가가 아닌 현재 시세 기준으로 입력해 주세요.
         </p>
+        <PresenceField label="부동산자산 여부" present={hasRealEstateAssets} onChange={(value) => setAssetPresence('assets.realEstateAssets.hasAssets', value, clearRealEstateAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
+        {hasRealEstateAssets ? <>
         <div className="field-grid three-col">
           <NumberField path="assets.realEstateAssets.mainProperty" label="부동산 시세" unit="만원" helper="주요 보유 부동산 1건" />
           <NumberField
@@ -363,6 +406,7 @@ export default function Step4Assets() {
           </div>
           <span className="field-helper">부동산 시세와 기타 부동산 시세의 합으로 자동 계산됩니다</span>
         </label>
+        </> : <p className="field-helper">부동산자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">

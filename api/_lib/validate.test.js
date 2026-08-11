@@ -12,7 +12,7 @@ function deepMerge(base, override) {
 }
 
 const VALID = {
-  basic: { birthYear: 1985, retirementAge: 65, lifeExpectancy: 90 },
+  basic: { birthYear: 1985, retirementAge: 65, lifeExpectancy: 90, serviceYears: 20 },
   income: {},
   spouse: {},
   expense: { retirementLivingCost: 200 },
@@ -56,6 +56,14 @@ describe('required field: expense.retirementLivingCost', () => {
   it('accepts a normal positive value', () => {
     const result = validateInput(makeInput({ expense: { retirementLivingCost: 150 } }));
     expect(result.ok).toBe(true);
+  });
+});
+
+describe('required fields: basic information', () => {
+  it.each(['birthYear', 'retirementAge', 'lifeExpectancy', 'serviceYears'])('rejects blank basic.%s', (key) => {
+    const result = validateInput(makeInput({ basic: { [key]: '' } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/필수 입력/);
   });
 });
 

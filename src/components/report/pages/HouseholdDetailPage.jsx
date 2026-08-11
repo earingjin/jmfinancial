@@ -25,8 +25,8 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, peerC
 
   return (
     <PageFrame eyebrow="Household Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
-      <SectionBadge number="3" label="자산현황_세부내역" />
-      <h3 className="card-title" style={{ marginBottom: 6 }}>② 지출 현황 — 고정지출 (5개 항목, 월평균, 만원)</h3>
+      <SectionBadge number="1" label="자산현황_세부내역" />
+      <h3 className="card-title" style={{ marginBottom: 6 }}>① 지출 현황 — 고정지출 (5개 항목, 월평균, 만원)</h3>
       <table className="grade-table compact">
         <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
         <tbody>
@@ -58,7 +58,7 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, peerC
         )}
       </div>
 
-      <h3 className="card-title" style={{ marginBottom: 6 }}>③ 자산 · 부채 현황 (만원)</h3>
+      <h3 className="card-title" style={{ marginBottom: 6 }}>② 자산 · 부채 현황 (만원)</h3>
       <table className="grade-table compact">
         <thead><tr><th>자산</th><th style={{ textAlign: 'right' }}>금액</th><th>부채</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
         <tbody>

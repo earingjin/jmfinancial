@@ -16,6 +16,52 @@ function formatDesignDate(iso) {
   return `${yy}.${mm}.${dd}`;
 }
 
+function formatLargeWon(value) {
+  const amount = Math.round(Number(value) || 0);
+  if (amount < 10000) return formatWon(amount);
+  const eok = Math.floor(amount / 10000);
+  const manwon = amount % 10000;
+  return manwon > 0 ? `${eok}억 ${manwon.toLocaleString('ko-KR')}만원` : `${eok}억원`;
+}
+
+function getRetirementStatus(readiness) {
+  if (readiness.notCalculable) {
+    return {
+      icon: '🤔',
+      titleLines: ['은퇴 준비 상태를 확인하려면 정보가 조금 더 필요합니다.'],
+      detailLines: [readiness.reason],
+    };
+  }
+
+  const years = round1(readiness.retirementYears);
+  if (readiness.shortfall <= 0) {
+    return {
+      icon: '😊',
+      titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 안정적인 상태입니다.'],
+      detailLines: ['예상 준비자금이 필요한 자금을 충족합니다.', '현재 계획을 꾸준히 유지하는 것이 중요합니다.'],
+    };
+  }
+  if (readiness.preparationRate >= 80) {
+    return {
+      icon: '🙂',
+      titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 일부 보완이 필요한 상태입니다.'],
+      detailLines: [`예상 준비자금이 필요자금보다 ${formatLargeWon(readiness.shortfall)} 부족합니다.`, '지금부터 저축과 노후소득 계획을 조정하면 개선할 수 있습니다.'],
+    };
+  }
+  if (readiness.preparationRate >= 50) {
+    return {
+      icon: '😥',
+      titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 부족한 상태입니다.'],
+      detailLines: [`예상 준비자금이 필요자금보다 ${formatLargeWon(readiness.shortfall)} 부족합니다.`, '지금부터 저축과 노후소득 계획을 함께 점검할 필요가 있습니다.'],
+    };
+  }
+  return {
+    icon: '😰',
+    titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 많이 부족한 상태입니다.'],
+    detailLines: [`예상 준비자금이 필요자금보다 ${formatLargeWon(readiness.shortfall)} 부족합니다.`, '우선순위를 정해 저축과 노후소득 계획을 조정할 필요가 있습니다.'],
+  };
+}
+
 // 상세내역 카드의 한 줄. 입력 누락(missing)이면 "입력 필요"를, 아니면 0이라도 그대로 보여준다.
 function DetailRow({ label, value, missing, bold, highlight, valueColor }) {
   return (
@@ -77,10 +123,16 @@ function PeerMetricRow({ label, metric, unit }) {
   );
 }
 
-export default function SimpleSummaryReport({ result, onBack, onDownload, onShare }) {
-  const { generatedAt, peerComparison, webSummary, summary } = result;
+export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare }) {
+  const { generatedAt, peerComparison, webSummary } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
+  const storedPeerAge = peerComparison.userAge ?? result.simulation?.currentAge;
+  const peerUserAge = Number.isFinite(storedPeerAge) && storedPeerAge > 0 ? storedPeerAge : null;
+  const peerBracketLabel = peerComparison.userBracketLabel
+    || peerComparison.ageBrackets?.find((bracket) => bracket.isUserBracket)?.label
+    || '확인 불가';
+  const retirementStatus = getRetirementStatus(rr);
 
   const requiredBarMax = Math.max(rr.requiredAtRetirement || 0, rr.readyAssetsAtRetirement || 0, rr.shortfall || 0, 1);
   const pensionMonthlyTotal = rr.monthlyIncomeCompare.nationalPensionMonthly + rr.monthlyIncomeCompare.severancePensionMonthly + rr.monthlyIncomeCompare.personalPensionMonthly;
@@ -88,6 +140,9 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
   return (
     <div className="simple-summary">
       <div className="simple-summary-topbar">
+        <button type="button" className="ss-back-btn" onClick={onHome}>
+          홈으로
+        </button>
         <button type="button" className="ss-back-btn" onClick={onBack}>
           ← 뒤로가기
         </button>
@@ -111,37 +166,28 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
       <section aria-labelledby="ss-h-hero">
         <h2 id="ss-h-hero" className="simple-summary-title">종합 결과</h2>
         <div className="fhs-hero">
-          {summary.notCalculable ? (
-            <div className="fhs-hero-text">종합점수를 산출할 수 없어요. 필수 입력값을 채워주시면 확인할 수 있어요.</div>
-          ) : (
-            <>
-              <div className="fhs-grade-badge">{summary.grade.letter}</div>
-              <div className="fhs-score">{summary.totalScore}<span className="max">/100</span></div>
-              <div className="fhs-hero-text">
-                <div>종합등급 {summary.grade.label}</div>
-                <div className="ss-hero-stats">
-                  <span>
-                    순자산{' '}
-                    <b style={{ color: od.balance.netWorth < 0 ? 'var(--red)' : '#fff' }}>{formatWon(od.balance.netWorth)}</b>
-                  </span>
-                  <span>
-                    은퇴 준비{' '}
-                    {rr.notCalculable ? (
-                      '계산 불가'
-                    ) : rr.shortfall > 0 ? (
-                      <b style={{ color: 'var(--red)' }}>부족 {formatWon(rr.shortfall)}</b>
-                    ) : (
-                      <b style={{ color: 'var(--teal)' }}>적정</b>
-                    )}
-                  </span>
-                </div>
-                {!rr.notCalculable && rr.shortfall > 0 && (
-                  <div className="ss-hero-encourage">괜찮아요, 지금부터 준비하면 충분히 대응할 수 있어요.</div>
-                )}
-              </div>
-            </>
-          )}
+          <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
+          <div className="fhs-hero-text ss-status-copy">
+            <div className="ss-status-title">
+              {retirementStatus.titleLines.map((line) => <span key={line}>{line}</span>)}
+            </div>
+            <div className="ss-status-detail">
+              {retirementStatus.detailLines.map((line) => <span key={line}>{line}</span>)}
+            </div>
+          </div>
         </div>
+        {!rr.notCalculable && (
+          <div className="ss-status-facts">
+            <div>
+              <span>향후 노후 생활 기간</span>
+              <strong>{round1(rr.retirementYears)}년</strong>
+            </div>
+            <div>
+              <span>월평균 지출비용</span>
+              <strong>{formatNumber(rr.monthlyIncomeCompare.livingCostMonthly)}만원</strong>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* 1. 나의 재무 현황 */}
@@ -157,7 +203,13 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
 
           <div className="detail-group">
             <div className="detail-group-head">수입 <span className="detail-group-tag">월평균</span></div>
-            <DetailRow label="급여" value={formatWon(od.income.salary)} missing={od.income.salaryMissing} />
+            {od.income.salaryItems?.length ? (
+              od.income.salaryItems.map((item) => (
+                <DetailRow key={item.key} label={item.label} value={formatWon(item.value)} />
+              ))
+            ) : (
+              <DetailRow label="급여" value={formatWon(od.income.salary)} missing={od.income.salaryMissing} />
+            )}
             <DetailRow label="사업·기타소득" value={formatWon(od.income.businessAndOther)} missing={od.income.businessAndOtherMissing} />
             <DetailRow
               label="합계" bold
@@ -237,8 +289,8 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
         <h2 id="ss-h-peer" className="simple-summary-title">또래와 비교한 나의 위치</h2>
         <p className="simple-summary-subtitle">같은 연령대와 비교해 현재 재무 수준을 확인해 보세요.</p>
         <div className="peer-age-summary" aria-label="또래 비교 연령 기준">
-          <span>내 연령 <strong>{peerComparison.userAge != null ? `${peerComparison.userAge}세` : '미입력'}</strong></span>
-          <span>비교 또래 연령군 <strong>{peerComparison.userBracketLabel}</strong></span>
+          <span>내 연령 <strong>{peerUserAge != null ? `${peerUserAge}세` : '미입력'}</strong></span>
+          <span>비교 또래 연령군 <strong>{peerBracketLabel}</strong></span>
         </div>
         {peerComparison.benchmarkMeta && (
           <div className="fine-print" style={{ marginBottom: 10 }}>
@@ -397,9 +449,9 @@ export default function SimpleSummaryReport({ result, onBack, onDownload, onShar
       {/* 5. 상세 리포트 다운로드 */}
       <section className="ss-download-section" aria-labelledby="ss-h-download">
         <h2 id="ss-h-download" className="simple-summary-title">더 자세한 분석이 필요하신가요?</h2>
-        <p className="simple-summary-subtitle">상세 재무지표와 은퇴 시뮬레이션, 개선 방향을 전체 리포트에서 확인할 수 있습니다.</p>
-        <button type="button" className="btn-primary ss-download-btn" onClick={onDownload}>
-          상세 리포트 다운로드
+        <p className="simple-summary-subtitle">상세 리포트는 더 나은 분석을 위해 현재 개선 중입니다.</p>
+        <button type="button" className="btn-primary ss-download-btn" onClick={onDownload} disabled aria-disabled="true" title="현재 개선 중인 기능입니다">
+          상세 리포트 다운로드 (개선 중)
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>

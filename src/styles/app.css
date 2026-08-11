@@ -1013,6 +1013,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   background: var(--gold); color: #fff; font-size: 13.5px; font-weight: 800;
   padding: 4px 16px 4px 4px; border-radius: 999px; margin: 0 0 14px;
 }
+.num-section-title.no-number-badge { padding-left: 16px; }
 .num-badge {
   display: inline-flex; align-items: center; justify-content: center; width: 21px; height: 21px;
   border-radius: 50%; background: #fff; color: var(--gold); font-size: 12px; font-weight: 800; flex: 0 0 auto;

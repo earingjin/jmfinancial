@@ -26,7 +26,7 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
 
   return (
     <PageFrame eyebrow="Household Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
-      <SectionBadge number="2" label="PART1_재무현황" />
+      <SectionBadge label="PART1_재무현황" />
 
       <h3 className="card-title" style={{ marginBottom: 10 }}>■ 요약 재무현황</h3>
       <div className="finance-summary-grid">

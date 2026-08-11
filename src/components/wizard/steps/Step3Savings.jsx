@@ -1,5 +1,6 @@
 import AutoAnnualField from '../fields/AutoAnnualField';
 import SavingsBreakdownField from '../fields/SavingsBreakdownField';
+import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
@@ -27,7 +28,40 @@ export default function Step3Savings() {
   // false: 노후준비 저축을 일반 저축과 별도로 하고 있어 겹치지 않는 별개 금액이므로 더한다
   // (aggregate.js의 monthlySavings·totalSavingsAnnual 계산과 동일한 전제를 공유한다).
   const retirementIncluded = getIn(formData, 'assets.savingsPlan.retirementIncludedInTotal') !== false;
+  const hasSavings = getIn(formData, 'assets.savingsPlan.hasSavings') !== false;
   const totalSavingsMonthly = retirementIncluded ? savingsMonthly : savingsMonthly + retirementSavingsMonthly;
+
+  const setHasSavings = (value) => {
+    setField('assets.savingsPlan.hasSavings', value);
+    if (!value) {
+      const emptyItem = { monthly: '', remainingMonths: '', interestRate: '' };
+      SAVINGS_CATEGORIES.forEach(({ key, assetLink }) => {
+        setField(`assets.savingsPlan.breakdown.${key}`, emptyItem);
+        if (assetLink?.type === 'direct') setField(assetLink.path, '');
+        if (assetLink?.type === 'liquidBreakdown') setField(`assets.liquidAssets.breakdown.${assetLink.field}`, '');
+        if (assetLink?.type === 'pensionBreakdown') setField(`assets.pensionAssetsBreakdown.${assetLink.field}`, '');
+      });
+      const linkedNames = new Set([
+        ...SAVINGS_CATEGORIES.filter((item) => item.assetLink?.type === 'liquidCustomItem').map((item) => item.assetLink.name),
+        ...(getIn(formData, 'assets.savingsPlan.customItems') || []).map((item) => item.name),
+      ]);
+      const remainingLiquidItems = (getIn(formData, 'assets.liquidAssets.customItems') || []).filter((item) => !linkedNames.has(item.name));
+      setField('assets.liquidAssets.customItems', remainingLiquidItems);
+      const liquidBreakdown = getIn(formData, 'assets.liquidAssets.breakdown') || {};
+      const remainingLiquidTotal = ['deposit', 'cma', 'emergencyFund'].reduce(
+        (sum, key) => sum + (Number(liquidBreakdown[key]) || 0),
+        0
+      ) + remainingLiquidItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      setField('assets.liquidAssets.total', remainingLiquidTotal);
+      const pensionBreakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
+      setField('assets.pensionAssets', Number(pensionBreakdown.other) || 0);
+      setField('assets.savingsPlan.customItems', []);
+      setField('assets.savingsPlan.monthly', 0);
+      setField('assets.savingsPlan.annual', 0);
+      setField('assets.savingsPlan.retirementMonthly', 0);
+      setField('assets.savingsPlan.retirementAnnual', 0);
+    }
+  };
 
   return (
     <div className="step">
@@ -38,6 +72,8 @@ export default function Step3Savings() {
         <p className="field-helper" style={{ marginBottom: 10 }}>
           국민연금 · 개인연금 · 저축성보험(연금보험 등)처럼 노후를 위해 정기적으로 적립하는 금액을 포함해 입력해 주세요.
         </p>
+        <PresenceField label="저축 여부" present={hasSavings} onChange={setHasSavings} presentLabel="저축 있음" absentLabel="저축 없음" />
+        {hasSavings ? <>
         <SavingsBreakdownField
           basePath="assets.savingsPlan.breakdown"
           customPath="assets.savingsPlan.customItems"
@@ -78,6 +114,7 @@ export default function Step3Savings() {
             <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalSavingsMonthly * 12)}만원</td></tr>
           </tbody>
         </table>
+        </> : <p className="field-helper">저축 없음으로 선택했습니다. 저축 금액은 진단 계산에서 제외됩니다.</p>}
       </section>
     </div>
   );

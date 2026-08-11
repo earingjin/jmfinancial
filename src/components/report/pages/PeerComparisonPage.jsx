@@ -20,7 +20,7 @@ export default function PeerComparisonPage({ peerComparison }) {
 
   return (
     <div style={{ marginTop: 22 }}>
-      <SectionBadge number="3" label="또래자산비교" />
+      <SectionBadge number="2" label="또래자산비교" />
       <p className="intro-text" style={{ marginBottom: 10 }}>
         현금흐름은 우리 가정에 들어오고 나가는 돈을 나타냅니다. 안정적인 미래 현금을 위해서는 현재 삶을 위한
         생활비와 저축에 대한 적정 밸런스가 필요합니다. 현재 생활비 수준과 돈을 사용하는 습관이 미래 노후
