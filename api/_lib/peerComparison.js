@@ -101,9 +101,9 @@ function buildMetric(value, average, opts = {}) {
   };
 }
 
-// 사용자 승인된 표시 규칙: 또래 평균 이상이면 '높음', 미달이면 '낮음' (연속적/상호배타적 이분법).
+// 사용자 승인된 표시 규칙: 또래 가구 평균 이상이면 '높음', 미달이면 '낮음' (연속적/상호배타적 이분법).
 function binaryPercentileLabel(rawDiffRatio) {
-  return rawDiffRatio >= 0 ? '또래 평균보다 높음' : '또래 평균보다 낮음';
+  return rawDiffRatio >= 0 ? '또래 가구 평균보다 높음' : '또래 가구 평균보다 낮음';
 }
 
 // 실제 분포(가계금융복지조사 등) 데이터 없이 평균 대비 비율만으로 판단하므로, "상위 20%"처럼
@@ -111,9 +111,9 @@ function binaryPercentileLabel(rawDiffRatio) {
 // (재무건강 총점 전용 - 연령대별 공식 통계가 없어 기존 3단계 판정을 그대로 유지한다.)
 function estimatePercentileLabel(rawDiffRatio) {
   const ratio = rawDiffRatio + 1;
-  if (ratio >= 1.1) return '또래 평균보다 높음';
-  if (ratio >= 0.9) return '또래 평균과 비슷함';
-  return '또래 평균보다 낮음';
+  if (ratio >= 1.1) return '또래 가구 평균보다 높음';
+  if (ratio >= 0.9) return '또래 가구 평균과 비슷함';
+  return '또래 가구 평균보다 낮음';
 }
 
 function round1(v) {
