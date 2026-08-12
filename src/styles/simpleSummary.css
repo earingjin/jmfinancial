@@ -312,6 +312,54 @@
 }
 .detail-row--highlight .detail-row-value { color: #0E6C5E; font-size: 16px; }
 
+/* 은퇴 필요자금의 핵심 산식만 필요할 때 펼쳐 보는 간단한 설명 */
+.retirement-calculation {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  overflow: hidden;
+}
+.retirement-calculation--hero { margin: -4px 0 22px; }
+.retirement-calculation summary {
+  padding: 13px 18px;
+  color: var(--navy-800);
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.retirement-calculation-body {
+  padding: 2px 18px 15px;
+  border-top: 1px solid var(--line);
+}
+.retirement-calculation-body p {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.retirement-calculation-body p span { color: var(--ink-soft); }
+.retirement-calculation-body p strong {
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.retirement-calculation-body .retirement-calculation-result strong { color: var(--red); }
+.retirement-calculation-body small {
+  display: block;
+  margin-top: 10px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .retirement-calculation-body p { flex-direction: column; gap: 4px; }
+  .retirement-calculation-body p strong { text-align: left; }
+}
+
 /* ---------- 2. 도넛 차트 ---------- */
 .donut-grid {
   display: grid;
@@ -522,6 +570,36 @@
 }
 .need-compare-fill { height: 100%; }
 .need-compare-value { font-size: 12.5px; font-weight: 700; color: var(--navy-800); white-space: nowrap; }
+.need-compare-item {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.need-compare-item:last-child { border-bottom: none; }
+.need-breakdown { margin: 7px 0 0 74px; }
+.need-breakdown summary {
+  width: fit-content;
+  color: var(--navy-700);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.need-breakdown-list {
+  margin-top: 8px;
+  padding: 8px 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.need-breakdown-list .detail-row { font-size: 12.5px; }
+.need-breakdown-list .detail-row-label { padding-right: 16px; }
+.need-breakdown-note,
+.need-compare-assumptions {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+.need-compare-assumptions { margin: -10px 0 22px; }
 
 /* 부족자금을 보여준 직후, "그럼 어떻게 개선하지?"로 바로 이어지는 동선을 만든다
    (지금까지는 페이지 맨 끝의 다운로드 버튼까지 스크롤해야만 다음 행동을 찾을 수 있었음). */
@@ -685,6 +763,9 @@
   .simple-summary-title { font-size: 17px; }
   .ss-section-title { font-size: 14px; margin: 18px 0 8px; }
   .need-compare-row { grid-template-columns: 54px 1fr auto; }
+  .need-breakdown { margin-left: 64px; }
+  .need-breakdown-list .detail-row { align-items: flex-start; gap: 10px; }
+  .need-breakdown-list .detail-row-label { max-width: 66%; }
   .detail-card { padding: 14px 14px 10px; }
   .detail-row--highlight { margin: 6px -14px -10px; padding: 10px 14px 12px; }
   .gap-timeline-age { width: 44px; height: 44px; font-size: 12.5px; }

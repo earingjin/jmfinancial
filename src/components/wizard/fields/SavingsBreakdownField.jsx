@@ -2,6 +2,7 @@ import { useState, Fragment } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
+import FormattedNumberInput from './FormattedNumberInput';
 
 // Step4Assets.jsx의 LIQUID_ASSET_CATEGORIES(assets.liquidAssets.breakdown)와 반드시 동일한 키
 // 목록을 유지한다 - 여기 없는 항목이 있으면 저축 쪽에서 다른 항목을 수정할 때마다 그 항목 금액이
@@ -44,7 +45,7 @@ function SavingsItemFields({ item, onChange, accumulated }) {
       <label className="field">
         <span className="field-label">월 저축액</span>
         <div className="field-input-row">
-          <input
+          <FormattedNumberInput
             type="number"
             min={0}
             inputMode="numeric"
@@ -57,7 +58,7 @@ function SavingsItemFields({ item, onChange, accumulated }) {
       <label className="field">
         <span className="field-label">앞으로 저축할 개월수</span>
         <div className="field-input-row">
-          <input
+          <FormattedNumberInput
             type="number"
             min={0}
             inputMode="numeric"
@@ -68,9 +69,9 @@ function SavingsItemFields({ item, onChange, accumulated }) {
         </div>
       </label>
       <label className="field">
-        <span className="field-label">이자율</span>
+        <span className="field-label">수익률(이자율, 배당율)</span>
         <div className="field-input-row">
-          <input
+          <FormattedNumberInput
             type="number"
             inputMode="numeric"
             value={item.interestRate ?? ''}
@@ -82,7 +83,7 @@ function SavingsItemFields({ item, onChange, accumulated }) {
       <label className="field">
         <span className="field-label">현재까지 누적된 금액</span>
         <div className="field-input-row">
-          <input
+          <FormattedNumberInput
             type="number"
             min={0}
             inputMode="numeric"

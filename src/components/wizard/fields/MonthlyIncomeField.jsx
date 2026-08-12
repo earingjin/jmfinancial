@@ -1,6 +1,7 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
+import FormattedNumberInput from './FormattedNumberInput';
 
 /**
  * 월 수입을 입력받고, 옆에 자동 환산된 연 수입을 보여주는 필드.
@@ -23,7 +24,7 @@ export default function MonthlyIncomeField({ monthlyPath, annualPath, label, hel
     <label className="field">
       <span className="field-label">{label}</span>
       <div className="field-input-row">
-        <input
+        <FormattedNumberInput
           type="number"
           min={0}
           inputMode="numeric"

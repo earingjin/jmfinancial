@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
+import FormattedNumberInput from './FormattedNumberInput';
 
 /**
  * 항목 종류를 버튼(pill)으로 나열해 클릭한 종류만 금액 입력창을 펼쳐서 보여주는 필드.
@@ -20,7 +21,7 @@ export default function CategoryBreakdownField({
   categories,
   totalLabel = '합계',
   annualLabel = '연 합계',
-  pillPrompt = '해당하는 항목을 눌러 금액을 입력해 주세요',
+  pillPrompt = '해당하는 항목을 누르면 상세한 지출항목을 입력할 수 있습니다.',
   customListLabel = '기본 항목 외 추가',
   customNameLabel = '이름',
   customNamePlaceholder = '예: 기타',
@@ -120,7 +121,7 @@ export default function CategoryBreakdownField({
             <label className="field" key={c.key}>
               <span className="field-label">{c.label}</span>
               <div className="field-input-row">
-                <input
+                <FormattedNumberInput
                   type="number"
                   min={0}
                   inputMode="numeric"
@@ -156,7 +157,7 @@ export default function CategoryBreakdownField({
               <label className="field">
                 <span className="field-label">{customAmountLabel}</span>
                 <div className="field-input-row">
-                  <input
+                  <FormattedNumberInput
                     type="number"
                     min={0}
                     inputMode="numeric"

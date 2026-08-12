@@ -1,10 +1,11 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
+import FormattedNumberInput from './FormattedNumberInput';
 
 /**
  * 숫자 입력 필드. path는 "income.salary.monthly" 형태의 점 표기.
  */
-export default function NumberField({ path, label, unit, helper, placeholder, min = 0, required = false }) {
+export default function NumberField({ path, label, unit, helper, placeholder, min = 0, required = false, disabled = false }) {
   const { formData, setField } = useFormData();
   const value = getIn(formData, path);
 
@@ -12,12 +13,12 @@ export default function NumberField({ path, label, unit, helper, placeholder, mi
     <label className="field">
       <span className="field-label">{label}</span>
       <div className="field-input-row">
-        <input
-          type="number"
+        <FormattedNumberInput
           min={min}
           inputMode="numeric"
           placeholder={placeholder}
           required={required}
+          disabled={disabled}
           aria-required={required}
           value={value ?? ''}
           onChange={(e) => setField(path, e.target.value === '' ? '' : Number(e.target.value))}

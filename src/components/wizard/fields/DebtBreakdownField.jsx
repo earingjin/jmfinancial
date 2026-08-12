@@ -2,6 +2,7 @@ import { useState, Fragment } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
+import FormattedNumberInput from './FormattedNumberInput';
 
 const monthlyBurdenOf = (item) =>
   (!item || item.repaymentType !== 'equalPrincipal' ? Number(item?.monthlyInterest) : Number(item?.monthlyRepayment)) || 0;
@@ -30,7 +31,7 @@ function LoanFields({ item, onChange }) {
         <label className="field">
           <span className="field-label">대출 원금</span>
           <div className="field-input-row">
-            <input
+            <FormattedNumberInput
               type="number"
               min={0}
               inputMode="numeric"
@@ -44,7 +45,7 @@ function LoanFields({ item, onChange }) {
           <label className="field">
             <span className="field-label">월 이자 금액</span>
             <div className="field-input-row">
-              <input
+              <FormattedNumberInput
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -58,7 +59,7 @@ function LoanFields({ item, onChange }) {
           <label className="field">
             <span className="field-label">월 상환 금액</span>
             <div className="field-input-row">
-              <input
+              <FormattedNumberInput
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -72,7 +73,7 @@ function LoanFields({ item, onChange }) {
         <label className="field">
           <span className="field-label">상환 기간</span>
           <div className="field-input-row">
-            <input
+            <FormattedNumberInput
               type="number"
               min={0}
               inputMode="numeric"
@@ -199,7 +200,7 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
           <label className="field">
             <span className="field-label">총 부채잔액 합계</span>
             <div className="field-input-row">
-              <input
+              <FormattedNumberInput
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -212,7 +213,7 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
           <label className="field">
             <span className="field-label">매월 납입 원리금 상환액 합계</span>
             <div className="field-input-row">
-              <input
+              <FormattedNumberInput
                 type="number"
                 min={0}
                 inputMode="numeric"

@@ -136,6 +136,14 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
 
   const requiredBarMax = Math.max(rr.requiredAtRetirement || 0, rr.readyAssetsAtRetirement || 0, rr.shortfall || 0, 1);
   const pensionMonthlyTotal = rr.monthlyIncomeCompare.nationalPensionMonthly + rr.monthlyIncomeCompare.severancePensionMonthly + rr.monthlyIncomeCompare.personalPensionMonthly;
+  // 이전에 저장된 결과에도 계산 근거가 보이도록 기존 필드에서 안전하게 역산한다.
+  const retirementMonths = rr.retirementYears * 12;
+  const livingCostNow = rr.retirementLivingCostNow ?? rr.monthlyIncomeCompare.livingCostMonthly;
+  const livingCostAtRetirement = rr.retirementLivingCostAtRetirement
+    ?? (retirementMonths > 0 ? rr.requiredAtRetirement / retirementMonths : livingCostNow);
+  const hasPreparationBreakdown = Number.isFinite(rr.currentReadyAssets) && Number.isFinite(rr.assumedReturnRate);
+  const baseLivingCost = Math.round(livingCostNow * retirementMonths);
+  const inflationIncrease = Math.max(0, rr.requiredAtRetirement - baseLivingCost);
 
   return (
     <div className="simple-summary">
@@ -187,6 +195,36 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               <strong>{formatNumber(rr.monthlyIncomeCompare.livingCostMonthly)}만원</strong>
             </div>
           </div>
+        )}
+        {!rr.notCalculable && (
+          <details className="retirement-calculation retirement-calculation--hero">
+            <summary>왜 이 금액이 나왔나요?</summary>
+            <div className="retirement-calculation-body">
+              <p>
+                <span>① 은퇴 시점 월 생활비</span>
+                <strong>
+                  현재 {formatWon(livingCostNow)} → 물가 {rr.inflationRate != null ? `${formatPercent(rr.inflationRate)} ` : ''}반영 후 {formatWon(livingCostAtRetirement)}
+                </strong>
+              </p>
+              <p>
+                <span>② 은퇴생활 필요자금</span>
+                <strong>
+                  월 {formatNumber(livingCostAtRetirement)}만원 × {formatNumber(retirementMonths)}개월 = {formatWon(rr.requiredAtRetirement)}
+                </strong>
+              </p>
+              <p className="retirement-calculation-result">
+                <span>③ 최종 부족자금</span>
+                <strong>
+                  필요자금 {formatWon(rr.requiredAtRetirement)} − 준비자산 {formatWon(rr.readyAssetsAtRetirement)} = {formatWon(rr.shortfall)}
+                </strong>
+              </p>
+              <small>
+                {hasPreparationBreakdown
+                  ? `준비자산은 현재 자산 ${formatWon(rr.currentReadyAssets)}과 앞으로의 저축을 은퇴까지 연 ${formatPercent(rr.assumedReturnRate)}로 운용한다고 가정한 금액입니다.`
+                  : '준비자산은 현재 금융·현금·연금자산과 은퇴 전까지의 추가 저축을 반영한 예상 금액입니다.'}
+              </small>
+            </div>
+          </details>
         )}
       </section>
 
@@ -357,19 +395,69 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
             <h3 className="ss-section-title">필요자금 비교</h3>
             <div className="need-compare-bars">
               {[
-                { label: '필요자금', value: rr.requiredAtRetirement, color: 'var(--red)' },
-                { label: '준비자산', value: rr.readyAssetsAtRetirement, color: 'var(--navy-700)' },
-                { label: '부족자금', value: rr.shortfall, color: 'var(--red)' },
+                { key: 'required', label: '필요자금', value: rr.requiredAtRetirement, color: 'var(--red)' },
+                { key: 'ready', label: '준비자산', value: rr.readyAssetsAtRetirement, color: 'var(--navy-700)' },
+                { key: 'shortfall', label: '부족자금', value: rr.shortfall, color: 'var(--red)' },
               ].map((bar) => (
-                <div className="need-compare-row" key={bar.label}>
-                  <span className="need-compare-label">{bar.label}</span>
-                  <div className="need-compare-track">
-                    <div className="need-compare-fill" style={{ width: `${Math.min(100, (bar.value / requiredBarMax) * 100)}%`, background: bar.color }} />
+                <div className="need-compare-item" key={bar.key}>
+                  <div className="need-compare-row">
+                    <span className="need-compare-label">{bar.label}</span>
+                    <div className="need-compare-track">
+                      <div className="need-compare-fill" style={{ width: `${Math.min(100, (bar.value / requiredBarMax) * 100)}%`, background: bar.color }} />
+                    </div>
+                    <span className="need-compare-value">{formatWon(bar.value)}</span>
                   </div>
-                  <span className="need-compare-value">{formatWon(bar.value)}</span>
+                  <details className="need-breakdown">
+                    <summary>{bar.label} 내역 보기</summary>
+                    {bar.key === 'required' && (
+                      <div className="need-breakdown-list">
+                        <DetailRow
+                          label={`현재 기준 생활비 (월 ${formatNumber(livingCostNow)}만원 × ${formatNumber(retirementMonths)}개월)`}
+                          value={formatWon(baseLivingCost)}
+                        />
+                        <DetailRow
+                          label={`은퇴까지 ${formatNumber(rr.yearsToRetirement)}년간 물가상승분${rr.inflationRate != null ? ` (연 ${formatPercent(rr.inflationRate)})` : ''}`}
+                          value={`+${formatWon(inflationIncrease)}`}
+                        />
+                        <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} bold />
+                      </div>
+                    )}
+                    {bar.key === 'ready' && (
+                      <div className="need-breakdown-list">
+                        {hasPreparationBreakdown ? (
+                          <>
+                            <DetailRow
+                              label={`현재 보유자산 ${formatWon(rr.currentReadyAssets)}의 은퇴 시점 예상금액`}
+                              value={formatWon(rr.currentAssetsAtRetirement)}
+                            />
+                            <DetailRow label="은퇴 전까지 추가 저축의 예상금액" value={formatWon(rr.futureSavingsAtRetirement)} />
+                            <DetailRow label="은퇴 시점 예상 준비자산" value={formatWon(rr.readyAssetsAtRetirement)} bold />
+                            <p className="need-breakdown-note">예상 운용수익률 연 {formatPercent(rr.assumedReturnRate)}를 적용했습니다.</p>
+                          </>
+                        ) : (
+                          <>
+                            <DetailRow label="은퇴 시점 예상 준비자산" value={formatWon(rr.readyAssetsAtRetirement)} bold />
+                            <p className="need-breakdown-note">현재 금융·현금·연금자산과 은퇴 전까지의 추가 저축을 반영한 금액입니다.</p>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {bar.key === 'shortfall' && (
+                      <div className="need-breakdown-list">
+                        <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} />
+                        <DetailRow label="은퇴 시점 예상 준비자산" value={`−${formatWon(rr.readyAssetsAtRetirement)}`} />
+                        <DetailRow label="예상 부족자금" value={formatWon(rr.shortfall)} bold />
+                      </div>
+                    )}
+                  </details>
                 </div>
               ))}
             </div>
+            <p className="need-compare-assumptions">
+              계산 가정: 은퇴까지 {formatNumber(rr.yearsToRetirement)}년 · 은퇴 후 {formatNumber(rr.retirementYears)}년({formatNumber(retirementMonths)}개월)
+              {rr.inflationRate != null ? ` · 물가상승률 연 ${formatPercent(rr.inflationRate)}` : ''}
+              {rr.assumedReturnRate != null ? ` · 예상 운용수익률 연 ${formatPercent(rr.assumedReturnRate)}` : ''}
+            </p>
 
             <h3 className="ss-section-title">은퇴시점 필요자금 · 소득공백기간</h3>
             {rr.incomeGap.notCalculable ? (
@@ -451,7 +539,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         <h2 id="ss-h-download" className="simple-summary-title">더 자세한 분석이 필요하신가요?</h2>
         <p className="simple-summary-subtitle">상세 리포트는 더 나은 분석을 위해 현재 개선 중입니다.</p>
         <button type="button" className="btn-primary ss-download-btn" onClick={onDownload} disabled aria-disabled="true" title="현재 개선 중인 기능입니다">
-          상세 리포트 다운로드 (개선 중)
+          상세 리포트 다운로드 (점검중입니다.)
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>
