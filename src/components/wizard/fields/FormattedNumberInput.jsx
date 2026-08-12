@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 
-function formatNumericText(value, integerOnly = false) {
+function formatNumericText(value, integerOnly = false, useGrouping = true) {
   if (value === '' || value == null) return '';
 
   const rawValue = String(value).replace(/,/g, '');
@@ -8,7 +8,9 @@ function formatNumericText(value, integerOnly = false) {
   const sign = raw.startsWith('-') ? '-' : '';
   const unsigned = sign ? raw.slice(1) : raw;
   const [integer = '', ...fractionParts] = unsigned.split('.');
-  const groupedInteger = (integer || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const groupedInteger = useGrouping
+    ? (integer || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    : (integer || '0');
   const fraction = fractionParts.length > 0 ? `.${fractionParts.join('')}` : '';
 
   return `${sign}${groupedInteger}${fraction}`;
@@ -19,7 +21,7 @@ function formatNumericText(value, integerOnly = false) {
  * the same onChange contract as a native number input (target.value is plain).
  */
 const FormattedNumberInput = forwardRef(function FormattedNumberInput(
-  { value, onChange, min, max, inputMode = 'decimal', integerOnly = false, ...props },
+  { value, onChange, min, max, inputMode = 'decimal', integerOnly = false, useGrouping = true, ...props },
   ref,
 ) {
   const handleChange = (event) => {
@@ -45,7 +47,7 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
       ref={ref}
       type="text"
       inputMode={inputMode}
-      value={formatNumericText(value, integerOnly)}
+      value={formatNumericText(value, integerOnly, useGrouping)}
       onChange={handleChange}
       data-min={min}
       data-max={max}
