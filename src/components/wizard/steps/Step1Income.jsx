@@ -376,7 +376,7 @@ export default function Step1Income() {
       <section className="step-section">
         <h3><span className="step-icon">📝</span> 기본 정보</h3>
         <div className="field-grid">
-          <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required integerOnly />
+          <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required integerOnly useGrouping={false} />
           <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" required />
           <NumberField
             path="basic.lifeExpectancy"
@@ -426,6 +426,7 @@ export default function Step1Income() {
               helper="배우자 국민연금 수령 개시 연령과 수령 기간 계산에 사용됩니다."
               required
               integerOnly
+              useGrouping={false}
             />
           </div>
         )}
