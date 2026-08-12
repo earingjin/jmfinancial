@@ -24,8 +24,8 @@ export default function Step3Savings() {
   const { formData, setField } = useFormData();
   const savingsMonthly = Number(getIn(formData, 'assets.savingsPlan.monthly')) || 0;
   const retirementSavingsMonthly = Number(getIn(formData, 'assets.savingsPlan.retirementMonthly')) || 0;
-  // 기본값(true): 노후준비 저축액이 위 일반 저축액에 이미 포함되어 있어 총 저축 합계에 더하지 않는다.
-  // false: 노후준비 저축을 일반 저축과 별도로 하고 있어 겹치지 않는 별개 금액이므로 더한다
+  // true: 사용자가 포함 버튼을 직접 선택한 경우 총 저축 합계에 중복으로 더하지 않는다.
+  // false(새 진단 기본값): 버튼을 미리 선택하지 않고 별개 금액으로 더한다
   // (aggregate.js의 monthlySavings·totalSavingsAnnual 계산과 동일한 전제를 공유한다).
   const retirementIncluded = getIn(formData, 'assets.savingsPlan.retirementIncludedInTotal') !== false;
   const hasSavings = getIn(formData, 'assets.savingsPlan.hasSavings') !== false;

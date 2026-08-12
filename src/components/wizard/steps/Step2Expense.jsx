@@ -7,6 +7,7 @@ import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
+import FormattedNumberInput from '../fields/FormattedNumberInput';
 
 // 국민연금연구원 조사 2024년 기준 적정 노후생활비(단위: 천원, 외부 공식 자료 - 계산에는 쓰이지 않는 참고용 표).
 const RETIREMENT_COST_GUIDE_ROWS = [
@@ -190,7 +191,7 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">월 보험료</span>
                 <div className="field-input-row">
-                  <input type="number" value={item.monthly} onChange={(e) => update('monthly', Number(e.target.value))} />
+                  <FormattedNumberInput value={item.monthly} onChange={(e) => update('monthly', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
@@ -202,7 +203,7 @@ export default function Step2Expense() {
       <section className="step-section">
         <h3><span className="step-icon">🎓</span> 자녀 학자금 · 결혼지원 · 기타 (목돈 지출)</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
-          한 번에 목돈으로 나가는 총액 기준으로 입력해 주세요.
+          향후 목돈 지출 예정인 항목을 입력해주세요.
         </p>
         <RepeatableList
           path="expense.children"
@@ -215,21 +216,21 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">학자금</span>
                 <div className="field-input-row">
-                  <input type="number" value={item.educationCost} onChange={(e) => update('educationCost', Number(e.target.value))} />
+                  <FormattedNumberInput value={item.educationCost} onChange={(e) => update('educationCost', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
               <label className="field">
                 <span className="field-label">결혼지원비</span>
                 <div className="field-input-row">
-                  <input type="number" value={item.marriageSupport} onChange={(e) => update('marriageSupport', Number(e.target.value))} />
+                  <FormattedNumberInput value={item.marriageSupport} onChange={(e) => update('marriageSupport', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
               <label className="field">
                 <span className="field-label">기타</span>
                 <div className="field-input-row">
-                  <input type="number" value={item.otherCost} onChange={(e) => update('otherCost', Number(e.target.value))} />
+                  <FormattedNumberInput value={item.otherCost} onChange={(e) => update('otherCost', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
@@ -254,14 +255,14 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">연간 지출 금액</span>
                 <div className="field-input-row">
-                  <input type="number" value={item.annual} onChange={(e) => update('annual', Number(e.target.value))} />
+                  <FormattedNumberInput value={item.annual} onChange={(e) => update('annual', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
               <label className="field">
                 <span className="field-label">지출 기간</span>
                 <div className="field-input-row">
-                  <input type="number" value={item.years} onChange={(e) => update('years', Number(e.target.value))} />
+                  <FormattedNumberInput value={item.years} onChange={(e) => update('years', Number(e.target.value))} />
                   <span className="field-unit">년</span>
                 </div>
               </label>

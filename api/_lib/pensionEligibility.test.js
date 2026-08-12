@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { findNationalPensionCohort, getNationalPensionStartAge, NATIONAL_PENSION_COHORTS } from './pensionEligibility.js';
 
-describe('pensionEligibility - shared official cohort table (must match the page-17 PDF table exactly)', () => {
-  it('exposes the same 4 cohorts already shown on the PDF report (17페이지)', () => {
+describe('pensionEligibility - shared official cohort table', () => {
+  it('exposes all birth-year cohorts used by the form and report', () => {
     expect(NATIONAL_PENSION_COHORTS).toEqual([
+      { range: '1953~1956년', from: 1953, to: 1956, retireAge: 60, pensionAge: 61, gapYears: 1 },
       { range: '1957~1960년', from: 1957, to: 1960, retireAge: 60, pensionAge: 62, gapYears: 2 },
       { range: '1961~1964년', from: 1961, to: 1964, retireAge: 60, pensionAge: 63, gapYears: 3 },
       { range: '1965~1968년', from: 1965, to: 1968, retireAge: 60, pensionAge: 64, gapYears: 4 },
@@ -12,6 +13,7 @@ describe('pensionEligibility - shared official cohort table (must match the page
   });
 
   it.each([
+    [1953, 61], [1956, 61],
     [1957, 62], [1960, 62],
     [1961, 63], [1964, 63],
     [1965, 64], [1968, 64],

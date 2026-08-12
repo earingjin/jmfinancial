@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
+import FormattedNumberInput from './FormattedNumberInput';
 import RepeatableList from './RepeatableList';
 
 /**
@@ -100,7 +101,7 @@ export default function ExpenseBreakdownField({
       <label className="field" style={{ marginBottom: 16 }}>
         <span className="field-label">현재 월 생활비</span>
         <div className="field-input-row">
-          <input
+          <FormattedNumberInput
             type="number"
             min={0}
             inputMode="numeric"
@@ -131,7 +132,7 @@ export default function ExpenseBreakdownField({
             <label className="field" key={c.key}>
               <span className="field-label">{c.label}</span>
               <div className="field-input-row">
-                <input
+                <FormattedNumberInput
                   type="number"
                   min={0}
                   inputMode="numeric"
@@ -163,7 +164,7 @@ export default function ExpenseBreakdownField({
               <label className="field">
                 <span className="field-label">금액</span>
                 <div className="field-input-row">
-                  <input type="number" value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                  <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>

@@ -1,5 +1,6 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
+import FormattedNumberInput from './FormattedNumberInput';
 
 /**
  * 월 금액을 입력받고, 연 금액(월×12)을 자동으로 계산해 annualPath에 함께 저장하는 필드.
@@ -21,7 +22,7 @@ export default function AutoAnnualField({ monthlyPath, annualPath, label, unit =
     <label className="field">
       <span className="field-label">{label}</span>
       <div className="field-input-row">
-        <input
+        <FormattedNumberInput
           type="number"
           min={0}
           inputMode="numeric"

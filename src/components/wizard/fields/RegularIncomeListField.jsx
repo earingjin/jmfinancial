@@ -1,5 +1,6 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
+import FormattedNumberInput from './FormattedNumberInput';
 
 /**
  * 사업소득과 기타 정기수입(임대수입 등)을 본인·배우자 구분 없이 하나의 목록에서 입력받는 필드.
@@ -64,7 +65,7 @@ export default function RegularIncomeListField({ path, businessMonthlyPath, busi
             <label className="field">
               <span className="field-label">연간 수입 금액</span>
               <div className="field-input-row">
-                <input
+                <FormattedNumberInput
                   type="number"
                   value={item.annual}
                   onChange={(e) => updateItem(index, 'annual', e.target.value === '' ? '' : Number(e.target.value))}
@@ -73,9 +74,9 @@ export default function RegularIncomeListField({ path, businessMonthlyPath, busi
               </div>
             </label>
             <label className="field">
-              <span className="field-label">현재부터 유지기간</span>
+              <span className="field-label">월수입 흐름 향후 유지예상 기간</span>
               <div className="field-input-row">
-                <input
+                <FormattedNumberInput
                   type="number"
                   value={item.years}
                   onChange={(e) => updateItem(index, 'years', e.target.value === '' ? '' : Number(e.target.value))}

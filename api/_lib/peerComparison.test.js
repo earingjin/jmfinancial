@@ -30,7 +30,7 @@ describe('buildPeerComparison - wording must never assert a confident percentile
 
   it('still computes a normal comparison label for a finite value', () => {
     const result = buildPeerComparison(BASE_ARGS);
-    expect(['또래 평균보다 높음', '또래 평균과 비슷함', '또래 평균보다 낮음']).toContain(result.retirementScore.percentileLabel);
+    expect(['또래 가구평균보다 높음', '또래 가구평균과 비슷함', '또래 가구평균보다 낮음']).toContain(result.retirementScore.percentileLabel);
   });
 });
 
@@ -74,28 +74,28 @@ describe('buildPeerComparison - 비교 라벨은 반올림 전 원시값 기준 
   });
   const AVG = 16401; // 40~49세 금융자산 평균
 
-  it('평균보다 낮으면(T-0.01%) "또래 평균보다 낮음"으로 판정한다', () => {
+  it('평균보다 낮으면(T-0.01%) "또래 가구평균보다 낮음"으로 판정한다', () => {
     const result = buildPeerComparison(argsWithFinancialAssets(AVG * (1 - 0.0001)));
-    expect(result.financialAssets.percentileLabel).toBe('또래 평균보다 낮음');
+    expect(result.financialAssets.percentileLabel).toBe('또래 가구평균보다 낮음');
   });
 
-  it('평균과 정확히 같으면(T) "또래 평균보다 높음"으로 판정한다(0 이상은 높음으로 처리, 구간은 상호배타적)', () => {
+  it('평균과 정확히 같으면(T) "또래 가구평균보다 높음"으로 판정한다(0 이상은 높음으로 처리, 구간은 상호배타적)', () => {
     const result = buildPeerComparison(argsWithFinancialAssets(AVG));
-    expect(result.financialAssets.percentileLabel).toBe('또래 평균보다 높음');
+    expect(result.financialAssets.percentileLabel).toBe('또래 가구평균보다 높음');
   });
 
-  it('평균보다 높으면(T+0.01%) "또래 평균보다 높음"으로 판정한다', () => {
+  it('평균보다 높으면(T+0.01%) "또래 가구평균보다 높음"으로 판정한다', () => {
     const result = buildPeerComparison(argsWithFinancialAssets(AVG * (1 + 0.0001)));
-    expect(result.financialAssets.percentileLabel).toBe('또래 평균보다 높음');
+    expect(result.financialAssets.percentileLabel).toBe('또래 가구평균보다 높음');
   });
 
-  it('반올림하면 0.0%로 표시되는 경계 근처에서도 원시 부호로 정확히 갈린다("또래 평균과 비슷함" 밴드는 존재하지 않는다)', () => {
+  it('반올림하면 0.0%로 표시되는 경계 근처에서도 원시 부호로 정확히 갈린다("또래 가구평균과 비슷함" 밴드는 존재하지 않는다)', () => {
     const belowRoundsToZero = buildPeerComparison(argsWithFinancialAssets(AVG * (1 - 0.0001)));
     const aboveRoundsToZero = buildPeerComparison(argsWithFinancialAssets(AVG * (1 + 0.0001)));
     expect(belowRoundsToZero.financialAssets.diffPercent).toBe(0);
     expect(aboveRoundsToZero.financialAssets.diffPercent).toBe(0);
-    expect(belowRoundsToZero.financialAssets.percentileLabel).toBe('또래 평균보다 낮음');
-    expect(aboveRoundsToZero.financialAssets.percentileLabel).toBe('또래 평균보다 높음');
+    expect(belowRoundsToZero.financialAssets.percentileLabel).toBe('또래 가구평균보다 낮음');
+    expect(aboveRoundsToZero.financialAssets.percentileLabel).toBe('또래 가구평균보다 높음');
   });
 });
 
@@ -115,7 +115,7 @@ describe('buildPeerComparison - 미입력과 실제 0원을 구분한다', () =>
     const result = buildPeerComparison({ ...BASE, netWorthMissing: false });
     expect(result.netWorth.value).toBe(0);
     expect(result.netWorth.diffPercent).toBe(-100);
-    expect(result.netWorth.percentileLabel).toBe('또래 평균보다 낮음');
+    expect(result.netWorth.percentileLabel).toBe('또래 가구평균보다 낮음');
   });
 
   it('연소득이 미입력(annualIncomeMissing)이면 "비교 데이터 부족"으로 처리한다', () => {

@@ -6,6 +6,7 @@ import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
+import FormattedNumberInput from '../fields/FormattedNumberInput';
 
 const LIQUID_ASSET_CATEGORIES = [
   { key: 'deposit', label: '예금' },
@@ -20,6 +21,22 @@ const FINANCIAL_ASSET_CATEGORIES = [
   { key: 'bonds', label: '채권' },
   { key: 'other', label: '기타' },
 ];
+
+const REAL_ESTATE_TYPES = ['주택', '아파트', '빌라', '오피스텔', '다가구', '고시원', '상가', '농지', '임야', '기타'];
+
+function PropertyTypeField({ value, onChange, label = '매물 종류' }) {
+  const isLegacyType = value && !REAL_ESTATE_TYPES.includes(value);
+  return (
+    <label className="field">
+      <span className="field-label">{label}</span>
+      <select value={value || ''} onChange={(event) => onChange(event.target.value)}>
+        <option value="">종류를 선택해 주세요</option>
+        {isLegacyType && <option value={value}>{value}</option>}
+        {REAL_ESTATE_TYPES.map((type) => <option value={type} key={type}>{type}</option>)}
+      </select>
+    </label>
+  );
+}
 
 // linked: true면 "3. 저축"과 값이 연동되어 양쪽 어디서나 입력·수정 가능한 항목, false면 여기서만 직접 입력하는 항목.
 const PENSION_ASSET_CATEGORIES = [
@@ -62,6 +79,7 @@ export default function Step4Assets() {
   };
 
   const clearRealEstateAssets = () => {
+    setField('assets.realEstateAssets.mainPropertyType', '');
     setField('assets.realEstateAssets.mainProperty', '');
     setField('assets.realEstateAssets.reverseMortgageHouse', '');
     setField('assets.realEstateAssets.otherItems', []);
@@ -236,7 +254,7 @@ export default function Step4Assets() {
               <label className="field" key={c.key}>
                 <span className="field-label">{c.label}</span>
                 <div className="field-input-row">
-                  <input
+                  <FormattedNumberInput
                     type="number"
                     min={0}
                     inputMode="numeric"
@@ -267,7 +285,7 @@ export default function Step4Assets() {
                 <label className="field">
                   <span className="field-label">금액</span>
                   <div className="field-input-row">
-                    <input type="number" value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                    <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
                     <span className="field-unit">만원</span>
                   </div>
                 </label>
@@ -278,7 +296,7 @@ export default function Step4Assets() {
         <label className="field" style={{ marginTop: 12 }}>
           <span className="field-label">금융자산 총액</span>
           <div className="field-input-row">
-            <input type="number" value={financialAssetsTotal || ''} readOnly />
+            <FormattedNumberInput value={financialAssetsTotal || ''} readOnly />
             <span className="field-unit">만원</span>
           </div>
           <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
@@ -311,7 +329,7 @@ export default function Step4Assets() {
             <label className="field" key={c.key}>
               <span className="field-label">{c.label}</span>
               <div className="field-input-row">
-                <input
+                <FormattedNumberInput
                   type="number"
                   min={0}
                   inputMode="numeric"
@@ -342,7 +360,7 @@ export default function Step4Assets() {
                 <label className="field">
                   <span className="field-label">금액</span>
                   <div className="field-input-row">
-                    <input type="number" value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                    <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
                     <span className="field-unit">만원</span>
                   </div>
                 </label>
@@ -353,7 +371,7 @@ export default function Step4Assets() {
         <label className="field" style={{ marginTop: 12 }}>
           <span className="field-label">연금자산 총액</span>
           <div className="field-input-row">
-            <input type="number" value={getIn(formData, 'assets.pensionAssets') || ''} readOnly />
+            <FormattedNumberInput value={getIn(formData, 'assets.pensionAssets') || ''} readOnly />
             <span className="field-unit">만원</span>
           </div>
           <span className="field-helper">위 4개 항목의 합으로 자동 계산됩니다. 금융자산비중지표 계산 시 금융자산과 별도로 취급됩니다.</span>
@@ -369,7 +387,18 @@ export default function Step4Assets() {
         <PresenceField label="부동산자산 여부" present={hasRealEstateAssets} onChange={(value) => setAssetPresence('assets.realEstateAssets.hasAssets', value, clearRealEstateAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
         {hasRealEstateAssets ? <>
         <div className="field-grid three-col">
-          <NumberField path="assets.realEstateAssets.mainProperty" label="부동산 시세" unit="만원" helper="주요 보유 부동산 1건" />
+          <PropertyTypeField
+            value={getIn(formData, 'assets.realEstateAssets.mainPropertyType')}
+            onChange={(value) => setField('assets.realEstateAssets.mainPropertyType', value)}
+            label="주요 부동산 종류"
+          />
+          <NumberField
+            path="assets.realEstateAssets.mainProperty"
+            label="주요 부동산 시세"
+            unit="만원"
+            helper={getIn(formData, 'assets.realEstateAssets.mainPropertyType') ? '선택한 주요 보유 부동산 1건의 현재 시세' : '매물 종류를 먼저 선택해 주세요'}
+            disabled={!getIn(formData, 'assets.realEstateAssets.mainPropertyType')}
+          />
           <NumberField
             path="assets.realEstateAssets.reverseMortgageHouse"
             label="주택연금 신청 대상 주택 1채의 가격"
@@ -381,19 +410,21 @@ export default function Step4Assets() {
           path="assets.realEstateAssets.otherItems"
           label="기타 부동산"
           addLabel="기타 부동산 추가"
-          emptyItem={{ name: '', amount: '' }}
+          emptyItem={{ type: '', amount: '' }}
           renderItem={(item, _i, update) => (
             <div className="field-grid three-col">
-              <label className="field">
-                <span className="field-label">종류</span>
-                <input type="text" placeholder="예: 상가" value={item.name} onChange={(e) => update('name', e.target.value)} />
-              </label>
+              <PropertyTypeField value={item.type || item.name} onChange={(value) => update('type', value)} />
               <label className="field">
                 <span className="field-label">시세</span>
                 <div className="field-input-row">
-                  <input type="number" value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                  <FormattedNumberInput
+                    value={item.amount}
+                    disabled={!(item.type || item.name)}
+                    onChange={(e) => update('amount', Number(e.target.value))}
+                  />
                   <span className="field-unit">만원</span>
                 </div>
+                {!(item.type || item.name) && <span className="field-helper">매물 종류를 먼저 선택해 주세요</span>}
               </label>
             </div>
           )}
@@ -401,7 +432,7 @@ export default function Step4Assets() {
         <label className="field" style={{ marginTop: 12 }}>
           <span className="field-label">부동산자산 총액</span>
           <div className="field-input-row">
-            <input type="number" value={realEstateTotal || ''} readOnly />
+            <FormattedNumberInput value={realEstateTotal || ''} readOnly />
             <span className="field-unit">만원</span>
           </div>
           <span className="field-helper">부동산 시세와 기타 부동산 시세의 합으로 자동 계산됩니다</span>

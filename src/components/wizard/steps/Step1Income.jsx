@@ -11,6 +11,8 @@ import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { initialFormData } from '../../../state/initialFormData';
 import { formatNumber } from '../../../utils/format';
+import { getNationalPensionStartAge } from '../../../utils/pensionEligibility';
+import FormattedNumberInput from '../fields/FormattedNumberInput';
 
 // 2024년 통계청 발표 기준 대한민국 평균 기대수명(성별 구분 없는 평균치, 참고용 초기 제안값).
 // 출생년도 입력 시 기대수명이 비어 있을 때만 이 값으로 자동 채워지며, 사용자가 직접 수정할 수 있다.
@@ -45,6 +47,7 @@ export default function Step1Income() {
   const personalPensionType = getIn(formData, 'income.personalPension.type');
   const spousePersonalPensionType = getIn(formData, 'spouse.personalPension.type');
   const hasSpouse = !!getIn(formData, 'basic.hasSpouse');
+  const spouseBirthYear = getIn(formData, 'spouse.birthYear');
   const selfHasSalary = getIn(formData, 'income.salary.hasSalary') !== false;
   const spouseHasSalary = getIn(formData, 'spouse.salary.hasSalary') !== false;
 
@@ -70,8 +73,8 @@ export default function Step1Income() {
 
   const handleNationalPensionMode = (basePath, value) => {
     if (value === 'none') {
-      clearPensionValues(basePath, ['monthly', 'months', 'paymentYears']);
-      clearPensionValues(`${basePath}.simulate`, ['averageMonthlyIncome', 'years']);
+      clearPensionValues(basePath, ['monthly', 'months', 'paymentMonths', 'paymentYears']);
+      clearPensionValues(`${basePath}.simulate`, ['averageMonthlyIncome', 'contributionMonths', 'years']);
     }
   };
 
@@ -166,49 +169,100 @@ export default function Step1Income() {
         : 0;
   const combinedSeveranceTotal = selfSeveranceTotal + spouseSeveranceTotal;
 
-  // 국민연금 "모의계산": 월평균 소득 × 가입기간(년) × 1.5%로 예상 월 수령액을 계산해 monthly에 반영한다.
+  // 실제 납부 개월 수를 12로 나눠 가입기간(년)을 산출한다. 120개월 이상일 때만 노령연금 수급 대상으로 본다.
   const nationalPensionInputMode = getIn(formData, 'income.nationalPension.inputMode') || 'direct';
   const spouseNationalPensionInputMode = getIn(formData, 'spouse.nationalPension.inputMode') || 'direct';
   const isFilledValue = (v) => v !== '' && v != null && Number.isFinite(Number(v));
 
   const selfNpAvgIncome = getIn(formData, 'income.nationalPension.simulate.averageMonthlyIncome');
-  const selfNpYears = getIn(formData, 'income.nationalPension.simulate.years');
+  const selfNpContributionMonths = getIn(formData, 'income.nationalPension.simulate.contributionMonths');
+  const selfNpPaymentMonths = getIn(formData, 'income.nationalPension.paymentMonths');
+  const selfNpLegacyContributionYears = getIn(formData, 'income.nationalPension.simulate.years');
+  const selfNpLegacyPaymentYears = getIn(formData, 'income.nationalPension.paymentYears');
+  const selfNpEffectiveContributionMonths = isFilledValue(selfNpContributionMonths)
+    ? Number(selfNpContributionMonths)
+    : (isFilledValue(selfNpLegacyContributionYears) ? Number(selfNpLegacyContributionYears) * 12 : '');
+  const selfNpEffectivePaymentMonths = isFilledValue(selfNpPaymentMonths)
+    ? Number(selfNpPaymentMonths)
+    : (isFilledValue(selfNpLegacyPaymentYears) ? Number(selfNpLegacyPaymentYears) * 12 : '');
+  const selfNpContributionYears = isFilledValue(selfNpEffectiveContributionMonths) ? Number(selfNpEffectiveContributionMonths) / 12 : null;
+  const selfNpPaymentYears = isFilledValue(selfNpEffectivePaymentMonths) ? Number(selfNpEffectivePaymentMonths) / 12 : null;
+  const selfNpEligibilityMonths = nationalPensionInputMode === 'simulate' ? selfNpEffectiveContributionMonths : selfNpEffectivePaymentMonths;
+  const selfNpEligible = isFilledValue(selfNpEligibilityMonths) && Number(selfNpEligibilityMonths) >= 120;
   const selfNpSimulated =
-    isFilledValue(selfNpAvgIncome) && isFilledValue(selfNpYears)
-      ? Math.round(Number(selfNpAvgIncome) * Number(selfNpYears) * 0.015)
+    isFilledValue(selfNpAvgIncome) && selfNpContributionYears != null && selfNpEligible
+      ? Math.round(Number(selfNpAvgIncome) * selfNpContributionYears * 0.015)
       : null;
 
   useEffect(() => {
-    if (nationalPensionInputMode === 'simulate' && selfNpSimulated != null) {
-      setField('income.nationalPension.monthly', selfNpSimulated);
+    setField('income.nationalPension.simulate.years', selfNpContributionYears ?? '');
+  }, [selfNpContributionYears, setField]);
+
+  useEffect(() => {
+    setField('income.nationalPension.paymentYears', selfNpPaymentYears ?? '');
+  }, [selfNpPaymentYears, setField]);
+
+  useEffect(() => {
+    if (nationalPensionInputMode === 'simulate') {
+      setField('income.nationalPension.monthly', selfNpSimulated ?? '');
     }
   }, [nationalPensionInputMode, selfNpSimulated, setField]);
 
   const spouseNpAvgIncome = getIn(formData, 'spouse.nationalPension.simulate.averageMonthlyIncome');
-  const spouseNpYears = getIn(formData, 'spouse.nationalPension.simulate.years');
+  const spouseNpContributionMonths = getIn(formData, 'spouse.nationalPension.simulate.contributionMonths');
+  const spouseNpPaymentMonths = getIn(formData, 'spouse.nationalPension.paymentMonths');
+  const spouseNpLegacyContributionYears = getIn(formData, 'spouse.nationalPension.simulate.years');
+  const spouseNpLegacyPaymentYears = getIn(formData, 'spouse.nationalPension.paymentYears');
+  const spouseNpEffectiveContributionMonths = isFilledValue(spouseNpContributionMonths)
+    ? Number(spouseNpContributionMonths)
+    : (isFilledValue(spouseNpLegacyContributionYears) ? Number(spouseNpLegacyContributionYears) * 12 : '');
+  const spouseNpEffectivePaymentMonths = isFilledValue(spouseNpPaymentMonths)
+    ? Number(spouseNpPaymentMonths)
+    : (isFilledValue(spouseNpLegacyPaymentYears) ? Number(spouseNpLegacyPaymentYears) * 12 : '');
+  const spouseNpContributionYears = isFilledValue(spouseNpEffectiveContributionMonths) ? Number(spouseNpEffectiveContributionMonths) / 12 : null;
+  const spouseNpPaymentYears = isFilledValue(spouseNpEffectivePaymentMonths) ? Number(spouseNpEffectivePaymentMonths) / 12 : null;
+  const spouseNpEligibilityMonths = spouseNationalPensionInputMode === 'simulate' ? spouseNpEffectiveContributionMonths : spouseNpEffectivePaymentMonths;
+  const spouseNpEligible = isFilledValue(spouseNpEligibilityMonths) && Number(spouseNpEligibilityMonths) >= 120;
   const spouseNpSimulated =
-    isFilledValue(spouseNpAvgIncome) && isFilledValue(spouseNpYears)
-      ? Math.round(Number(spouseNpAvgIncome) * Number(spouseNpYears) * 0.015)
+    isFilledValue(spouseNpAvgIncome) && spouseNpContributionYears != null && spouseNpEligible
+      ? Math.round(Number(spouseNpAvgIncome) * spouseNpContributionYears * 0.015)
       : null;
 
   useEffect(() => {
-    if (spouseNationalPensionInputMode === 'simulate' && spouseNpSimulated != null) {
-      setField('spouse.nationalPension.monthly', spouseNpSimulated);
+    setField('spouse.nationalPension.simulate.years', spouseNpContributionYears ?? '');
+  }, [spouseNpContributionYears, setField]);
+
+  useEffect(() => {
+    setField('spouse.nationalPension.paymentYears', spouseNpPaymentYears ?? '');
+  }, [spouseNpPaymentYears, setField]);
+
+  useEffect(() => {
+    if (spouseNationalPensionInputMode === 'simulate') {
+      setField('spouse.nationalPension.monthly', spouseNpSimulated ?? '');
     }
   }, [spouseNationalPensionInputMode, spouseNpSimulated, setField]);
 
-  // 본인 "국민연금 수령 개월 수"는 65세부터 기대수명까지로 자동 계산된다(수동 입력 불가).
-  // 배우자는 기대수명 입력 항목이 없어 동일한 방식으로 계산할 수 없으므로 수동 입력을 유지한다.
-  const NATIONAL_PENSION_START_AGE = 65;
-  const selfNpMonths = nationalPensionInputMode !== 'none' && isFilledValue(lifeExpectancy)
-    ? Math.round(Math.max(0, Number(lifeExpectancy) - NATIONAL_PENSION_START_AGE) * 12)
+  // 국민연금 수령 개월 수는 출생연도별 법정 개시 연령부터 기대수명까지로 자동 계산한다.
+  const selfNpStartAge = isFilledValue(birthYear) ? getNationalPensionStartAge(Number(birthYear)) : null;
+  const spouseNpStartAge = isFilledValue(spouseBirthYear) ? getNationalPensionStartAge(Number(spouseBirthYear)) : null;
+  const selfNpMonths = nationalPensionInputMode !== 'none' && selfNpEligible && selfNpStartAge != null && isFilledValue(lifeExpectancy)
+    ? Math.round(Math.max(0, Number(lifeExpectancy) - selfNpStartAge) * 12)
+    : null;
+  const spouseNpMonths = hasSpouse && spouseNationalPensionInputMode !== 'none' && spouseNpEligible && spouseNpStartAge != null && isFilledValue(lifeExpectancy)
+    ? Math.round(Math.max(0, Number(lifeExpectancy) - spouseNpStartAge) * 12)
     : null;
 
   useEffect(() => {
-    if (selfNpMonths != null) {
-      setField('income.nationalPension.months', selfNpMonths);
+    if (nationalPensionInputMode !== 'none') {
+      setField('income.nationalPension.months', selfNpMonths ?? '');
     }
-  }, [selfNpMonths, setField]);
+  }, [nationalPensionInputMode, selfNpMonths, setField]);
+
+  useEffect(() => {
+    if (hasSpouse && spouseNationalPensionInputMode !== 'none') {
+      setField('spouse.nationalPension.months', spouseNpMonths ?? '');
+    }
+  }, [hasSpouse, spouseNationalPensionInputMode, spouseNpMonths, setField]);
 
   // "국민연금 수령 총액" = 월 수령(예상) 금액 × 수령 개월 수.
   const selfNationalPensionMonthly = Number(getIn(formData, 'income.nationalPension.monthly')) || 0;
@@ -361,6 +415,17 @@ export default function Step1Income() {
             </button>
           </div>
         </div>
+        {hasSpouse && (
+          <div className="field-grid" style={{ marginTop: 14 }}>
+            <NumberField
+              path="spouse.birthYear"
+              label="배우자 출생년도 *"
+              placeholder="예: 1968"
+              helper="배우자 국민연금 수령 개시 연령과 수령 기간 계산에 사용됩니다."
+              required
+            />
+          </div>
+        )}
       </section>
 
       <section className="step-section">
@@ -381,7 +446,7 @@ export default function Step1Income() {
               <label className="field">
                 <span className="field-label">남은 퇴직기간</span>
                 <div className="field-input-row">
-                  <input type="number" value={selfYearsToRetirement ?? ''} readOnly />
+                  <FormattedNumberInput value={selfYearsToRetirement ?? ''} readOnly />
                   <span className="field-unit">년</span>
                 </div>
                 <span className="field-helper">출생년도·은퇴(예정) 연령을 입력하면 자동으로 계산됩니다</span>
@@ -426,14 +491,14 @@ export default function Step1Income() {
           <label className="field">
             <span className="field-label">현재 기준 월 소득</span>
             <div className="field-input-row">
-              <input type="number" value={Math.round(currentSalaryMonthly)} readOnly />
+              <FormattedNumberInput value={Math.round(currentSalaryMonthly)} readOnly />
               <span className="field-unit">만원</span>
             </div>
           </label>
           <label className="field">
             <span className="field-label">현재 기준 연 소득</span>
             <div className="field-input-row">
-              <input type="number" value={Math.round(currentSalaryMonthly * 12)} readOnly />
+              <FormattedNumberInput value={Math.round(currentSalaryMonthly * 12)} readOnly />
               <span className="field-unit">만원</span>
             </div>
           </label>
@@ -480,7 +545,7 @@ export default function Step1Income() {
               <label className="field">
                 <span className="field-label">수령 개월 수</span>
                 <div className="field-input-row">
-                  <input type="number" value={getIn(formData, 'income.severance.pensionMonths') || ''} readOnly />
+                  <FormattedNumberInput value={getIn(formData, 'income.severance.pensionMonths') || ''} readOnly />
                   <span className="field-unit">개월</span>
                 </div>
                 <span className="field-helper">수령 기간을 입력하면 자동으로 계산됩니다</span>
@@ -532,7 +597,7 @@ export default function Step1Income() {
                   <label className="field">
                     <span className="field-label">수령 개월 수</span>
                     <div className="field-input-row">
-                      <input type="number" value={getIn(formData, 'spouse.severance.pensionMonths') || ''} readOnly />
+                      <FormattedNumberInput value={getIn(formData, 'spouse.severance.pensionMonths') || ''} readOnly />
                       <span className="field-unit">개월</span>
                     </div>
                     <span className="field-helper">수령 기간을 입력하면 자동으로 계산됩니다</span>
@@ -575,20 +640,33 @@ export default function Step1Income() {
           <>
             <div className="field-grid three-col">
               <NumberField path="income.nationalPension.simulate.averageMonthlyIncome" label="가입기간 중 월평균급여" unit="만원" />
-              <NumberField path="income.nationalPension.simulate.years" label="가입기간" unit="년" />
+              <NumberField
+                path="income.nationalPension.simulate.contributionMonths"
+                label="실제 보험료 납부 개월 수"
+                unit="개월"
+                helper={isFilledValue(selfNpContributionMonths)
+                  ? (selfNpEligible
+                    ? `${formatNumber(selfNpContributionYears)}년으로 환산됩니다.`
+                    : `현재 ${formatNumber(selfNpContributionMonths)}개월입니다. 노령연금 수급에는 최소 120개월(10년)이 필요합니다.`)
+                  : '실제로 보험료를 납부한 전체 개월 수를 입력해 주세요. 최소 120개월(10년)이 필요합니다.'}
+              />
               <label className="field">
                 <span className="field-label">수령 개월 수</span>
                 <div className="field-input-row">
-                  <input type="number" value={getIn(formData, 'income.nationalPension.months') || ''} readOnly />
+                  <FormattedNumberInput value={getIn(formData, 'income.nationalPension.months') ?? ''} readOnly />
                   <span className="field-unit">개월</span>
                 </div>
-                <span className="field-helper">65세부터 기대수명까지로 자동 계산됩니다</span>
+                <span className="field-helper">
+                  {selfNpStartAge != null
+                    ? `출생연도 기준 ${selfNpStartAge}세부터 기대수명까지로 자동 계산됩니다.`
+                    : '출생년도와 기대수명을 입력하면 자동 계산됩니다.'}
+                </span>
               </label>
             </div>
             <label className="field" style={{ marginTop: 12 }}>
               <span className="field-label">국민연금 월 수령(예상) 금액</span>
               <div className="field-input-row">
-                <input type="number" value={getIn(formData, 'income.nationalPension.monthly') || ''} readOnly />
+                <FormattedNumberInput value={getIn(formData, 'income.nationalPension.monthly') || ''} readOnly />
                 <span className="field-unit">만원</span>
               </div>
               <span className="field-helper">월평균 소득 × 가입기간 × 1.5%로 자동 계산됩니다</span>
@@ -605,12 +683,25 @@ export default function Step1Income() {
             <label className="field">
               <span className="field-label">수령 개월 수</span>
               <div className="field-input-row">
-                <input type="number" value={getIn(formData, 'income.nationalPension.months') || ''} readOnly />
+                <FormattedNumberInput value={getIn(formData, 'income.nationalPension.months') ?? ''} readOnly />
                 <span className="field-unit">개월</span>
               </div>
-              <span className="field-helper">65세부터 기대수명까지로 자동 계산됩니다</span>
+              <span className="field-helper">
+                {selfNpStartAge != null
+                  ? `출생연도 기준 ${selfNpStartAge}세부터 기대수명까지로 자동 계산됩니다.`
+                  : '출생년도와 기대수명을 입력하면 자동 계산됩니다.'}
+              </span>
             </label>
-            <NumberField path="income.nationalPension.paymentYears" label="국민연금 납입기간" unit="년" />
+            <NumberField
+              path="income.nationalPension.paymentMonths"
+              label="국민연금 실제 납부 개월 수"
+              unit="개월"
+              helper={isFilledValue(selfNpPaymentMonths)
+                ? (selfNpEligible
+                  ? `${formatNumber(selfNpPaymentYears)}년으로 환산됩니다.`
+                  : `현재 ${formatNumber(selfNpPaymentMonths)}개월입니다. 노령연금 수급에는 최소 120개월(10년)이 필요합니다.`)
+                : '실제로 보험료를 납부한 전체 개월 수를 입력해 주세요. 최소 120개월(10년)이 필요합니다.'}
+            />
           </div>
         )}
         {selfNationalPensionMonthly > 0 && selfNationalPensionMonths > 0 && (
@@ -636,13 +727,33 @@ export default function Step1Income() {
               <>
                 <div className="field-grid three-col">
                   <NumberField path="spouse.nationalPension.simulate.averageMonthlyIncome" label="가입기간 중 월평균급여" unit="만원" />
-                  <NumberField path="spouse.nationalPension.simulate.years" label="가입기간" unit="년" />
-                  <NumberField path="spouse.nationalPension.months" label="수령 개월 수" unit="개월" />
+                  <NumberField
+                    path="spouse.nationalPension.simulate.contributionMonths"
+                    label="실제 보험료 납부 개월 수"
+                    unit="개월"
+                    helper={isFilledValue(spouseNpContributionMonths)
+                      ? (spouseNpEligible
+                        ? `${formatNumber(spouseNpContributionYears)}년으로 환산됩니다.`
+                        : `현재 ${formatNumber(spouseNpContributionMonths)}개월입니다. 노령연금 수급에는 최소 120개월(10년)이 필요합니다.`)
+                      : '실제로 보험료를 납부한 전체 개월 수를 입력해 주세요. 최소 120개월(10년)이 필요합니다.'}
+                  />
+                  <label className="field">
+                    <span className="field-label">수령 개월 수</span>
+                    <div className="field-input-row">
+                      <FormattedNumberInput value={getIn(formData, 'spouse.nationalPension.months') ?? ''} readOnly />
+                      <span className="field-unit">개월</span>
+                    </div>
+                    <span className="field-helper">
+                      {spouseNpStartAge != null
+                        ? `배우자 출생연도 기준 ${spouseNpStartAge}세부터 기대수명까지로 자동 계산됩니다.`
+                        : '배우자 출생년도와 기대수명을 입력하면 자동 계산됩니다.'}
+                    </span>
+                  </label>
                 </div>
                 <label className="field" style={{ marginTop: 12 }}>
                   <span className="field-label">국민연금 월 수령(예상) 금액</span>
                   <div className="field-input-row">
-                    <input type="number" value={getIn(formData, 'spouse.nationalPension.monthly') || ''} readOnly />
+                    <FormattedNumberInput value={getIn(formData, 'spouse.nationalPension.monthly') || ''} readOnly />
                     <span className="field-unit">만원</span>
                   </div>
                   <span className="field-helper">월평균 소득 × 가입기간 × 1.5%로 자동 계산됩니다</span>
@@ -651,8 +762,28 @@ export default function Step1Income() {
             ) : (
               <div className="field-grid three-col">
                 <NumberField path="spouse.nationalPension.monthly" label="국민연금 월 수령(예상) 금액" unit="만원" />
-                <NumberField path="spouse.nationalPension.months" label="수령 개월 수" unit="개월" />
-                <NumberField path="spouse.nationalPension.paymentYears" label="국민연금 납입기간" unit="년" />
+                <label className="field">
+                  <span className="field-label">수령 개월 수</span>
+                  <div className="field-input-row">
+                    <FormattedNumberInput value={getIn(formData, 'spouse.nationalPension.months') ?? ''} readOnly />
+                    <span className="field-unit">개월</span>
+                  </div>
+                  <span className="field-helper">
+                    {spouseNpStartAge != null
+                      ? `배우자 출생연도 기준 ${spouseNpStartAge}세부터 기대수명까지로 자동 계산됩니다.`
+                      : '배우자 출생년도와 기대수명을 입력하면 자동 계산됩니다.'}
+                  </span>
+                </label>
+                <NumberField
+                  path="spouse.nationalPension.paymentMonths"
+                  label="국민연금 실제 납부 개월 수"
+                  unit="개월"
+                  helper={isFilledValue(spouseNpPaymentMonths)
+                    ? (spouseNpEligible
+                      ? `${formatNumber(spouseNpPaymentYears)}년으로 환산됩니다.`
+                      : `현재 ${formatNumber(spouseNpPaymentMonths)}개월입니다. 노령연금 수급에는 최소 120개월(10년)이 필요합니다.`)
+                    : '실제로 보험료를 납부한 전체 개월 수를 입력해 주세요. 최소 120개월(10년)이 필요합니다.'}
+                />
               </div>
             )}
             {spouseNationalPensionMonthly > 0 && spouseNationalPensionMonths > 0 && (

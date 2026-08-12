@@ -33,9 +33,11 @@ export const initialFormData = {
       inputMode: 'direct',      // 'direct'(직접 입력) | 'simulate'(모의계산)
       monthly: '',
       months: '',
+      paymentMonths: '',        // 실제 보험료를 납부한 총 개월 수
       paymentYears: '',         // 국민연금 납입기간(년) - 직접입력 모드의 참고용 기록(계산에는 쓰이지 않음)
       simulate: {               // 모의계산 입력값 - monthly = 월평균급여×가입기간×1.5%로 자동 계산되어 반영됨
         averageMonthlyIncome: '', // 가입기간 중 월평균급여
+        contributionMonths: '',   // 실제 보험료를 납부한 총 개월 수
         years: '',                // 가입기간(년)
       },
     },
@@ -50,6 +52,7 @@ export const initialFormData = {
   },
 
   spouse: {
+    birthYear: '',
     salary: { hasSalary: true, annual: '', monthly: '', annualBonus: '', months: '' },
     severance: {
       type: 'lumpsum',          // 'lumpsum' | 'pension' | 'none'(이미 퇴직금을 수령해 해당 없음)
@@ -69,9 +72,11 @@ export const initialFormData = {
       inputMode: 'direct',
       monthly: '',
       months: '',
+      paymentMonths: '',
       paymentYears: '',
       simulate: {
         averageMonthlyIncome: '',
+        contributionMonths: '',
         years: '',
       },
     },
@@ -149,8 +154,9 @@ export const initialFormData = {
       hasAssets: true,
       // total은 mainProperty + otherItems 합으로 자동 계산된다(직접 입력하지 않음).
       total: '',
+      mainPropertyType: '',      // 주요 부동산 매물 종류
       mainProperty: '',          // 주요 부동산 시세(현재 시세 기준으로 직접 입력)
-      otherItems: [],            // [{ name, amount }] 기타 부동산(추가 보유 부동산)의 시세
+      otherItems: [],            // [{ type, amount }] 기타 부동산(추가 보유 부동산)의 종류와 시세
       reverseMortgageHouse: '',  // 주택연금 신청 대상 주택 1채의 가격
     },
     debtStatus: {
@@ -192,9 +198,9 @@ export const initialFormData = {
       customItems: [],       // [{ name, monthly, remainingMonths, interestRate }] 기본 항목 외 사용자가 추가한 저축. "현재까지
                              // 누적된 금액"은 여기 저장하지 않고 name과 같은 이름의 assets.liquidAssets.customItems 항목과 연동된다.
       retirementMonthly: '', retirementAnnual: '',
-      // true(기본값): 노후준비 저축액이 위 일반 저축액에 이미 포함되어 있음(중복 합산하지 않음).
-      // false: 노후준비 저축을 일반 저축과 별도로 하고 있음(총 저축액 = 일반 저축액 + 노후준비 저축액).
-      retirementIncludedInTotal: true,
+      // true: 사용자가 직접 "일반 저축액에 이미 포함" 버튼을 선택한 경우.
+      // false(기본값): 버튼을 미리 선택하지 않으며, 노후준비 저축을 별도 금액으로 합산한다.
+      retirementIncludedInTotal: false,
     },
   },
 

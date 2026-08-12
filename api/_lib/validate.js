@@ -156,12 +156,16 @@ const COUNT_FIELDS = [
   'income.severance.pensionMonths',
   'income.severance.lumpsumAge',
   'income.nationalPension.months',
+  'income.nationalPension.paymentMonths',
+  'income.nationalPension.simulate.contributionMonths',
   'income.personalPension.months',
   'income.personalPension.lumpsumAge',
   'spouse.salary.months',
   'spouse.severance.pensionMonths',
   'spouse.severance.lumpsumAge',
   'spouse.nationalPension.months',
+  'spouse.nationalPension.paymentMonths',
+  'spouse.nationalPension.simulate.contributionMonths',
   'spouse.personalPension.months',
   'spouse.personalPension.lumpsumAge',
   'expense.medical.years',
@@ -232,6 +236,9 @@ export function validateInput(input) {
   requiredBasicFields.forEach(([key, label]) => {
     if (isBlank(input.basic?.[key])) errors.push(`${label}은(는) 필수 입력 항목입니다.`);
   });
+  if (input.basic?.hasSpouse === true && isBlank(input.spouse?.birthYear)) {
+    errors.push('배우자 출생년도는 필수 입력 항목입니다.');
+  }
 
   // 노후 월 평균 생활비는 은퇴자산 시뮬레이션(필요자금 산출)의 핵심 입력값이라 필수로 강제한다.
   // 명시적으로 입력한 0(노후 생활비를 가정하지 않음)은 유효한 값으로 그대로 허용한다.
@@ -255,6 +262,19 @@ export function validateInput(input) {
   AGE_DECIMAL_FIELDS.forEach((path) => checkKindField(errors, input, path, 'ageDecimal'));
   checkKindField(errors, input, 'basic.assumedReturnRate', 'returnRate');
   checkKindField(errors, input, 'scenarios.expenseReduction.reductionRate', 'rate');
+
+  [
+    ['income.nationalPension.paymentMonths', input.income?.nationalPension?.inputMode],
+    ['income.nationalPension.simulate.contributionMonths', input.income?.nationalPension?.inputMode],
+    ['spouse.nationalPension.paymentMonths', input.spouse?.nationalPension?.inputMode],
+    ['spouse.nationalPension.simulate.contributionMonths', input.spouse?.nationalPension?.inputMode],
+  ].forEach(([path, mode]) => {
+    const value = getPath(input, path);
+    const isActivePath = (mode === 'simulate') === path.includes('.simulate.');
+    if (mode !== 'none' && isActivePath && !isBlank(value) && Number(value) > 0 && Number(value) < 120) {
+      errors.push(`${path} 값은 노령연금 수급을 위해 최소 120개월 이상이어야 합니다.`);
+    }
+  });
 
   ARRAY_FIELDS.forEach(({ path, fields }) => checkArrayField(errors, input, path, fields));
 

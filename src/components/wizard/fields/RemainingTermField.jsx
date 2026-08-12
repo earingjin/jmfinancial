@@ -1,5 +1,6 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
+import FormattedNumberInput from './FormattedNumberInput';
 
 /**
  * 개월 수를 저장하는 필드를 "N년 N개월" 형태의 두 입력칸으로 나눠서 입력받는 필드.
@@ -22,7 +23,7 @@ export default function RemainingTermField({ monthsPath, label, helper }) {
     <div className="field">
       <span className="field-label">{label}</span>
       <div className="field-input-row">
-        <input
+        <FormattedNumberInput
           type="number"
           min={0}
           inputMode="numeric"
@@ -30,7 +31,7 @@ export default function RemainingTermField({ monthsPath, label, helper }) {
           onChange={(e) => setParts(e.target.value, monthsPart)}
         />
         <span className="field-unit">년</span>
-        <input
+        <FormattedNumberInput
           type="number"
           min={0}
           max={11}
