@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import NumberField from '../fields/NumberField';
 import RadioField from '../fields/RadioField';
 import MonthlyIncomeField from '../fields/MonthlyIncomeField';
@@ -42,6 +42,7 @@ export default function Step1Income() {
   const birthYear = getIn(formData, 'basic.birthYear');
   const retirementAge = getIn(formData, 'basic.retirementAge');
   const lifeExpectancy = getIn(formData, 'basic.lifeExpectancy');
+  const lifeExpectancyEditedRef = useRef(false);
   const severanceType = getIn(formData, 'income.severance.type');
   const spouseSeveranceType = getIn(formData, 'spouse.severance.type');
   const personalPensionType = getIn(formData, 'income.personalPension.type');
@@ -288,9 +289,10 @@ export default function Step1Income() {
         (Number(getIn(formData, 'spouse.personalPension.months')) || 0);
   const combinedPersonalPensionTotal = selfPersonalPensionTotal + spousePersonalPensionTotal;
 
-  // 출생년도를 입력하면 기대수명이 비어 있을 때만 평균 기대수명으로 자동 채운다(사용자가 입력한 값은 덮어쓰지 않음).
+  // 출생년도를 입력하면 기대수명이 비어 있을 때 평균 기대수명을 최초 제안값으로 채운다.
+  // 이후에는 사용자가 값을 지우거나 변경해도 자동값으로 덮어쓰지 않는다.
   useEffect(() => {
-    if (birthYear !== '' && birthYear != null && (lifeExpectancy === '' || lifeExpectancy == null)) {
+    if (!lifeExpectancyEditedRef.current && birthYear !== '' && birthYear != null && (lifeExpectancy === '' || lifeExpectancy == null)) {
       setField('basic.lifeExpectancy', AVERAGE_LIFE_EXPECTANCY);
     }
   }, [birthYear, lifeExpectancy, setField]);
@@ -380,10 +382,11 @@ export default function Step1Income() {
           <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" required />
           <NumberField
             path="basic.lifeExpectancy"
-            label="기대수명 *"
+            label="기대수명 * (직접 수정 가능)"
             unit="세"
             required
-            helper="기대 수명나이는 출생년도를 입력하면 자동 계산됩니다. 2024년 대한민국 예상 평균수명은 남성 81.6세, 여성 87.6세 평균 약 84.6세입니다."
+            onValueChange={() => { lifeExpectancyEditedRef.current = true; }}
+            helper="출생년도를 입력하면 평균 기대수명 84.6세가 자동으로 제안됩니다. 본인의 건강 상태나 계획에 맞게 자유롭게 수정할 수 있습니다. (2024년 대한민국 예상 평균수명: 남성 81.6세, 여성 87.6세)"
           />
           <NumberField
             path="basic.serviceYears"

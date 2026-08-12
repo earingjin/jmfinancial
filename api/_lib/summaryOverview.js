@@ -5,6 +5,7 @@
 
 import { n } from './aggregate.js';
 import { getNationalPensionStartAge } from './pensionEligibility.js';
+import { buildFutureFinanceProjection } from './futureFinance.js';
 
 function isBlank(v) {
   return v === '' || v === null || v === undefined;
@@ -368,5 +369,6 @@ export function buildWebSummary({
       savings: buildSavingsDonut(savingsBreakdown, aggregates.monthlySavings),
     },
     retirementReadiness: buildRetirementReadiness({ input, simulation, indicators, aggregates }),
+    futureFinance: buildFutureFinanceProjection({ input, aggregates }),
   };
 }

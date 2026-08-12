@@ -124,10 +124,29 @@ function PeerMetricRow({ label, metric, unit }) {
   );
 }
 
+function FutureFinanceChart({ targets }) {
+  const maxValue = Math.max(...targets.flatMap((item) => [item.livingExpense || 0, item.pensionIncome || 0]), 1);
+  return (
+    <div className="future-chart" role="img" aria-label="60세, 70세, 80세 예상 생활비와 예상 연금소득 비교">
+      {targets.map((item) => (
+        <div className="future-chart-group" key={item.age}>
+          <div className="future-chart-bars">
+            <div className="future-chart-bar future-chart-bar--expense" style={{ height: `${((item.livingExpense || 0) / maxValue) * 100}%` }}><span>{item.livingExpense == null ? 'N/A' : formatWon(item.livingExpense)}</span></div>
+            <div className="future-chart-bar future-chart-bar--pension" style={{ height: `${((item.pensionIncome || 0) / maxValue) * 100}%` }}><span>{item.pensionIncome == null ? 'N/A' : formatWon(item.pensionIncome)}</span></div>
+          </div>
+          <strong>{item.age}세</strong>
+        </div>
+      ))}
+      <div className="future-chart-legend"><span><i className="future-legend-expense" />예상 생활비</span><span><i className="future-legend-pension" />예상 연금소득</span></div>
+    </div>
+  );
+}
+
 export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare }) {
   const { generatedAt, peerComparison, webSummary } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
+  const future = webSummary.futureFinance;
   const storedPeerAge = peerComparison.userAge ?? result.simulation?.currentAge;
   const peerUserAge = Number.isFinite(storedPeerAge) && storedPeerAge > 0 ? storedPeerAge : null;
   const peerBracketLabel = peerComparison.userBracketLabel
@@ -164,6 +183,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         <a href="#ss-h-overview">재무현황</a>
         <a href="#ss-h-composition">재무구성</a>
         <a href="#ss-h-peer">또래비교</a>
+        <a href="#ss-h-future">미래전망</a>
         <a href="#ss-h-retirement">은퇴준비</a>
         <a href="#ss-h-download">다운로드</a>
       </nav>
@@ -338,6 +358,73 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         </div>
       </section>
 
+      <section aria-labelledby="ss-h-future">
+        <h2 id="ss-h-future" className="simple-summary-title">미래 재무 전망</h2>
+        <p className="simple-summary-subtitle">물가와 연금의 변화를 반영해 60·70·80세의 예상 현금흐름을 살펴봅니다.</p>
+
+        {!future || future.missing.age ? (
+          <p className="ss-guidance">나이를 입력하면 미래 재무 전망을 확인할 수 있습니다.</p>
+        ) : future.targets.length === 0 ? (
+          <p className="ss-guidance">80세 이후에는 현재 시점 기준 전망 대상 연령이 없습니다.</p>
+        ) : (
+          <>
+            <h3 className="ss-section-title">미래 생활비 준비도</h3>
+            <div className="future-method-note">
+              <b>계산 원리</b>
+              <span>현재 월 생활비에는 매년 3%의 물가상승률을 복리로 적용합니다.</span>
+              <span>국민연금은 수급개시연령 이후부터 연 2.1% 증가를 적용하며, 개인연금과 퇴직연금은 현재 월 수령액이 유지된다고 가정합니다.</span>
+            </div>
+            <div className="future-card-grid">
+              {future.targets.map((item) => (
+                <article className={`future-card future-card--${item.status}`} key={item.age}>
+                  <div className="future-card-age">{item.age}세</div>
+                  <span className="future-card-label">생활비 충당률</span>
+                  <strong className="future-card-rate">{item.coverageRate == null ? 'N/A' : `${Math.round(item.coverageRate)}%`}</strong>
+                  <dl>
+                    <div><dt>예상 생활비</dt><dd>{item.livingExpense == null ? '데이터 부족' : formatWon(item.livingExpense)}</dd></div>
+                    <div><dt>예상 연금소득</dt><dd>{item.pensionIncome == null ? '데이터 부족' : formatWon(item.pensionIncome)}</dd></div>
+                  </dl>
+                  {item.balance != null && <p className="future-card-balance">{item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}</p>}
+                  {item.pensionBreakdown && !item.pensionBreakdown.nationalEligible && <small>국민연금 수급개시 전이라 합계에서 제외</small>}
+                </article>
+              ))}
+            </div>
+
+            <h3 className="ss-section-title">현금흐름 비교</h3>
+            <div className="future-method-note">
+              <b>계산 원리</b>
+              <span>생활비 충당률 = 해당 연령의 예상 연금소득 ÷ 예상 생활비 × 100</span>
+              <span>연금소득에서 생활비를 뺀 값으로 매월 예상 부족액 또는 여유금액을 계산합니다.</span>
+            </div>
+            <FutureFinanceChart targets={future.targets} />
+            {future.diagnosis && <p className="future-diagnosis">{future.diagnosis}</p>}
+          </>
+        )}
+
+        <div className="future-purchasing-card">
+          <h3>현재 자산의 미래 구매력</h3>
+          <div className="future-method-note future-method-note--in-card">
+            <b>계산 원리</b>
+            <span>필요한 미래 금액 = 현재 순자산 × (1 + 물가상승률 3%)<sup>경과연수</sup></span>
+            <span>자산이 해당 금액까지 실제로 늘어난다는 뜻이 아니라, 현재와 같은 구매력을 유지하기 위한 기준 금액입니다.</span>
+          </div>
+          {future?.purchasingPower ? (
+            <div className="future-purchasing-flow">
+              {future.purchasingPower.map((item, index) => (
+                <div className="future-purchasing-step" key={item.years}>
+                  {index > 0 && <span className="future-flow-arrow" aria-hidden="true">→</span>}
+                  <span>{item.years === 0 ? '현재' : `${item.years}년 후`}</span>
+                  <strong>{formatLargeWon(item.requiredAmount)}</strong>
+                  {item.years > 0 && <small>동일 구매력 기준</small>}
+                </div>
+              ))}
+            </div>
+          ) : <p className="overview-card-missing">순자산 데이터가 부족합니다.</p>}
+        </div>
+
+        <p className="future-disclaimer">본 결과는 현재 입력값과 가정에 따른 예상치이며 실제 물가, 연금 및 자산가치 변화에 따라 달라질 수 있습니다.</p>
+      </section>
+
       {/* 4. 나의 은퇴 준비 현황 */}
       <section aria-labelledby="ss-h-retirement">
         <h2 id="ss-h-retirement" className="simple-summary-title">나의 은퇴 준비 현황</h2>
@@ -379,6 +466,15 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                     ? <span className="overview-card-missing">산출 불가</span>
                     : formatPercent(rr.retirementIncomeIndicator?.value)}
                 </div>
+                {!rr.retirementIncomeIndicator?.notCalculable && (
+                  <div className="overview-card-explanation">
+                    <p>은퇴 후 필요한 월 생활비 중 예상 연금소득으로 충당할 수 있는 비율입니다.</p>
+                    <p>
+                      예상 연금소득이 은퇴 후 월 생활비의{' '}
+                      <strong>{formatPercent(rr.retirementIncomeIndicator?.value)}</strong>를 충당합니다.
+                    </p>
+                  </div>
+                )}
                 <p className="overview-card-formula">월 예상 노후소득 ÷ 은퇴 후 월 필요생활비 × 100</p>
                 {!rr.retirementIncomeIndicator?.notCalculable && rr.retirementIncomeIndicator?.value === 0 && (
                   <p className="overview-card-zero-reason">

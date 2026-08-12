@@ -27,13 +27,20 @@ const REAL_ESTATE_TYPES = ['주택', '아파트', '빌라', '오피스텔', '다
 function PropertyTypeField({ value, onChange, label = '매물 종류' }) {
   const isLegacyType = value && !REAL_ESTATE_TYPES.includes(value);
   return (
-    <label className="field">
-      <span className="field-label">{label}</span>
-      <select value={value || ''} onChange={(event) => onChange(event.target.value)}>
-        <option value="">종류를 선택해 주세요</option>
-        {isLegacyType && <option value={value}>{value}</option>}
-        {REAL_ESTATE_TYPES.map((type) => <option value={type} key={type}>{type}</option>)}
-      </select>
+    <label className="field property-type-field">
+      <span className="field-label property-type-label">{label}</span>
+      <span className="property-type-select-wrap">
+        <span className="property-type-icon" aria-hidden="true">⌂</span>
+        <select
+          className={!value ? 'is-placeholder' : ''}
+          value={value || ''}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          <option value="">종류를 선택해 주세요</option>
+          {isLegacyType && <option value={value}>{value}</option>}
+          {REAL_ESTATE_TYPES.map((type) => <option value={type} key={type}>{type}</option>)}
+        </select>
+      </span>
     </label>
   );
 }

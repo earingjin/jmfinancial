@@ -112,7 +112,7 @@ export default function ExpenseBreakdownField({
         </div>
         <span className="field-helper">세부 항목 버튼을 선택하지 않고 월 생활비 총액만 입력할 수 있습니다</span>
       </label>
-      <span className="field-label">해당하는 항목을 눌러 금액을 입력해 주세요</span>
+      <span className="field-label">해당하는 항목을 누르면 상세한 지출항목을 입력할 수 있습니다.</span>
       <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
         {categories.map((c) => (
           <button
