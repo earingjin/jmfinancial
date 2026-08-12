@@ -85,6 +85,7 @@ const PEER_METRIC_DEFS = [
 function PeerMetricRow({ label, metric, unit }) {
   const { value, average, diffPercent, percentileLabel } = metric;
   const formatValue = (v) => (unit === 'point' ? `${formatNumber(v)}점` : formatWon(v));
+  const displayPercentileLabel = percentileLabel?.replace('또래 평균', '또래 가구 평균');
 
   if (value == null || !Number.isFinite(value)) {
     return (
@@ -106,9 +107,9 @@ function PeerMetricRow({ label, metric, unit }) {
     <div className="peer-row">
       <div className="peer-row-head">
         <span className="peer-row-label">{label}</span>
-        <span className="peer-row-tag">{percentileLabel}</span>
+        <span className="peer-row-tag">{displayPercentileLabel}</span>
       </div>
-      <div className="peer-bar-track" role="img" aria-label={`${label} 내 값 ${formatValue(value)}, 또래 평균 ${formatValue(average)}`}>
+      <div className="peer-bar-track" role="img" aria-label={`${label} 내 값 ${formatValue(value)}, 또래 가구 평균 ${formatValue(average)}`}>
         <div className="peer-bar-fill" style={{ width: `${userPct}%` }} />
         <div className="peer-bar-avg-marker" style={{ left: `${avgPct}%` }}>
           <span className="peer-bar-avg-label">평균 {formatValue(average)}</span>
@@ -116,7 +117,7 @@ function PeerMetricRow({ label, metric, unit }) {
       </div>
       <div className="peer-row-numbers">
         <span>내 값 <b>{formatValue(value)}</b></span>
-        <span>또래 평균 {formatValue(average)}</span>
+        <span>또래 가구 평균 {formatValue(average)}</span>
         {diffPercent != null && <span className={diffClass}>{diffPercent > 0 ? '+' : ''}{diffPercent}%</span>}
       </div>
     </div>
@@ -218,11 +219,6 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                   필요자금 {formatWon(rr.requiredAtRetirement)} − 준비자산 {formatWon(rr.readyAssetsAtRetirement)} = {formatWon(rr.shortfall)}
                 </strong>
               </p>
-              <small>
-                {hasPreparationBreakdown
-                  ? `준비자산은 현재 자산 ${formatWon(rr.currentReadyAssets)}과 앞으로의 저축을 은퇴까지 연 ${formatPercent(rr.assumedReturnRate)}로 운용한다고 가정한 금액입니다.`
-                  : '준비자산은 현재 금융·현금·연금자산과 은퇴 전까지의 추가 저축을 반영한 예상 금액입니다.'}
-              </small>
             </div>
           </details>
         )}
@@ -432,7 +428,9 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                             />
                             <DetailRow label="은퇴 전까지 추가 저축의 예상금액" value={formatWon(rr.futureSavingsAtRetirement)} />
                             <DetailRow label="은퇴 시점 예상 준비자산" value={formatWon(rr.readyAssetsAtRetirement)} bold />
-                            <p className="need-breakdown-note">예상 운용수익률 연 {formatPercent(rr.assumedReturnRate)}를 적용했습니다.</p>
+                            <p className="need-breakdown-note">
+                              준비자산은 현재 자산 {formatWon(rr.currentReadyAssets)}과 앞으로의 저축을 은퇴까지 연 {formatPercent(rr.assumedReturnRate)}로 운용한다고 가정한 금액입니다.
+                            </p>
                           </>
                         ) : (
                           <>
