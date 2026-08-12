@@ -245,10 +245,12 @@ export default function Step1Income() {
   // 국민연금 수령 개월 수는 출생연도별 법정 개시 연령부터 기대수명까지로 자동 계산한다.
   const selfNpStartAge = isFilledValue(birthYear) ? getNationalPensionStartAge(Number(birthYear)) : null;
   const spouseNpStartAge = isFilledValue(spouseBirthYear) ? getNationalPensionStartAge(Number(spouseBirthYear)) : null;
-  const selfNpMonths = nationalPensionInputMode !== 'none' && selfNpEligible && selfNpStartAge != null && isFilledValue(lifeExpectancy)
+  // 수령기간 자체는 출생연도와 기대수명만으로 정해지므로 납부 개월 수 입력 전에도 바로 표시한다.
+  // 최소 120개월 가입요건은 예상 연금액의 산출·반영 여부에만 적용한다.
+  const selfNpMonths = nationalPensionInputMode !== 'none' && selfNpStartAge != null && isFilledValue(lifeExpectancy)
     ? Math.round(Math.max(0, Number(lifeExpectancy) - selfNpStartAge) * 12)
     : null;
-  const spouseNpMonths = hasSpouse && spouseNationalPensionInputMode !== 'none' && spouseNpEligible && spouseNpStartAge != null && isFilledValue(lifeExpectancy)
+  const spouseNpMonths = hasSpouse && spouseNationalPensionInputMode !== 'none' && spouseNpStartAge != null && isFilledValue(lifeExpectancy)
     ? Math.round(Math.max(0, Number(lifeExpectancy) - spouseNpStartAge) * 12)
     : null;
 
@@ -267,10 +269,10 @@ export default function Step1Income() {
   // "국민연금 수령 총액" = 월 수령(예상) 금액 × 수령 개월 수.
   const selfNationalPensionMonthly = Number(getIn(formData, 'income.nationalPension.monthly')) || 0;
   const selfNationalPensionMonths = Number(getIn(formData, 'income.nationalPension.months')) || 0;
-  const selfNationalPensionTotal = selfNationalPensionMonthly * selfNationalPensionMonths;
+  const selfNationalPensionTotal = selfNpEligible ? selfNationalPensionMonthly * selfNationalPensionMonths : 0;
   const spouseNationalPensionMonthly = Number(getIn(formData, 'spouse.nationalPension.monthly')) || 0;
   const spouseNationalPensionMonths = Number(getIn(formData, 'spouse.nationalPension.months')) || 0;
-  const spouseNationalPensionTotal = spouseNationalPensionMonthly * spouseNationalPensionMonths;
+  const spouseNationalPensionTotal = spouseNpEligible ? spouseNationalPensionMonthly * spouseNationalPensionMonths : 0;
   const combinedNationalPensionTotal = selfNationalPensionTotal + spouseNationalPensionTotal;
 
   // "개인연금 수령 총액" = 일시금이면 일시금 수령액 그대로, 분할 수령이면 월 수령액 × 수령 개월 수.
@@ -310,8 +312,8 @@ export default function Step1Income() {
   const pick = (monthly, months) => (Number(months) > 0 ? Number(monthly) || 0 : 0);
 
   const nationalPensionTotal =
-    pick(getIn(formData, 'income.nationalPension.monthly'), getIn(formData, 'income.nationalPension.months')) +
-    pick(getIn(formData, 'spouse.nationalPension.monthly'), getIn(formData, 'spouse.nationalPension.months'));
+    (selfNpEligible ? pick(getIn(formData, 'income.nationalPension.monthly'), getIn(formData, 'income.nationalPension.months')) : 0) +
+    (spouseNpEligible ? pick(getIn(formData, 'spouse.nationalPension.monthly'), getIn(formData, 'spouse.nationalPension.months')) : 0);
 
   const severanceTotal =
     (severanceType === 'pension'
@@ -374,7 +376,7 @@ export default function Step1Income() {
       <section className="step-section">
         <h3><span className="step-icon">📝</span> 기본 정보</h3>
         <div className="field-grid">
-          <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required />
+          <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required integerOnly />
           <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" required />
           <NumberField
             path="basic.lifeExpectancy"
@@ -423,6 +425,7 @@ export default function Step1Income() {
               placeholder="예: 1968"
               helper="배우자 국민연금 수령 개시 연령과 수령 기간 계산에 사용됩니다."
               required
+              integerOnly
             />
           </div>
         )}

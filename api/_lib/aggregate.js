@@ -144,6 +144,18 @@ export function calcRetirementIncomeByCategory(input) {
 
   const pick = (monthly, months) => (n(months) > 0 ? n(monthly) : 0);
 
+  const pickNationalPension = (pension) => {
+    const p = pension || {};
+    const mode = p.inputMode || 'direct';
+    const rawContributionMonths = mode === 'simulate' ? p.simulate?.contributionMonths : p.paymentMonths;
+    const legacyYears = mode === 'simulate' ? p.simulate?.years : p.paymentYears;
+    const hasNewContributionField = rawContributionMonths !== '' && rawContributionMonths != null;
+    const hasLegacyYears = legacyYears !== '' && legacyYears != null;
+    // 새 입력은 최소 120개월을 강제한다. 두 필드가 모두 없는 과거 저장 결과만 기존 계산을 유지한다.
+    if ((hasNewContributionField || hasLegacyYears) && n(hasNewContributionField ? rawContributionMonths : legacyYears * 12) < 120) return 0;
+    return pick(p.monthly, p.months);
+  };
+
   const pickSeverancePension = (severance) => {
     const s = severance || {};
     if ('type' in s && s.type !== 'pension') return 0; // 일시금 선택 시 제외
@@ -157,8 +169,8 @@ export function calcRetirementIncomeByCategory(input) {
   };
 
   const nationalPension =
-    pick(income.nationalPension?.monthly, income.nationalPension?.months) +
-    pick(spouse.nationalPension?.monthly, spouse.nationalPension?.months);
+    pickNationalPension(income.nationalPension) +
+    pickNationalPension(spouse.nationalPension);
 
   const severancePension = pickSeverancePension(income.severance) + pickSeverancePension(spouse.severance);
 
@@ -180,6 +192,16 @@ export function calcRetirementIncomeByPerson(input) {
   const spouse = input.spouse || {};
 
   const pick = (monthly, months) => (n(months) > 0 ? n(monthly) : 0);
+  const pickNationalPension = (pension) => {
+    const p = pension || {};
+    const mode = p.inputMode || 'direct';
+    const rawContributionMonths = mode === 'simulate' ? p.simulate?.contributionMonths : p.paymentMonths;
+    const legacyYears = mode === 'simulate' ? p.simulate?.years : p.paymentYears;
+    const hasNewContributionField = rawContributionMonths !== '' && rawContributionMonths != null;
+    const hasLegacyYears = legacyYears !== '' && legacyYears != null;
+    if ((hasNewContributionField || hasLegacyYears) && n(hasNewContributionField ? rawContributionMonths : legacyYears * 12) < 120) return 0;
+    return pick(p.monthly, p.months);
+  };
 
   const personalPensionMonthly = (personalPension) => {
     const p = personalPension || {};
@@ -189,12 +211,12 @@ export function calcRetirementIncomeByPerson(input) {
 
   return {
     self: {
-      nationalPensionMonthly: pick(income.nationalPension?.monthly, income.nationalPension?.months),
+      nationalPensionMonthly: pickNationalPension(income.nationalPension),
       severanceLumpsum: n(income.severance?.lumpsum),
       personalPensionMonthly: personalPensionMonthly(income.personalPension),
     },
     spouse: {
-      nationalPensionMonthly: pick(spouse.nationalPension?.monthly, spouse.nationalPension?.months),
+      nationalPensionMonthly: pickNationalPension(spouse.nationalPension),
       severanceLumpsum: n(spouse.severance?.lumpsum),
       personalPensionMonthly: personalPensionMonthly(spouse.personalPension),
     },

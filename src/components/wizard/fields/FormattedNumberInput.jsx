@@ -1,9 +1,10 @@
 import { forwardRef } from 'react';
 
-function formatNumericText(value) {
+function formatNumericText(value, integerOnly = false) {
   if (value === '' || value == null) return '';
 
-  const raw = String(value).replace(/,/g, '');
+  const rawValue = String(value).replace(/,/g, '');
+  const raw = integerOnly ? rawValue.split('.')[0] : rawValue;
   const sign = raw.startsWith('-') ? '-' : '';
   const unsigned = sign ? raw.slice(1) : raw;
   const [integer = '', ...fractionParts] = unsigned.split('.');
@@ -18,15 +19,16 @@ function formatNumericText(value) {
  * the same onChange contract as a native number input (target.value is plain).
  */
 const FormattedNumberInput = forwardRef(function FormattedNumberInput(
-  { value, onChange, min, max, inputMode = 'decimal', ...props },
+  { value, onChange, min, max, inputMode = 'decimal', integerOnly = false, ...props },
   ref,
 ) {
   const handleChange = (event) => {
     const raw = event.target.value.replace(/,/g, '').replace(/[^\d.-]/g, '');
     const allowsNegative = min == null || Number(min) < 0;
-    const normalized = `${allowsNegative && raw.startsWith('-') ? '-' : ''}${raw
-      .replace(/-/g, '')
-      .replace(/\.(?=.*\.)/g, '')}`;
+    const unsigned = raw.replace(/-/g, '');
+    const normalized = `${allowsNegative && raw.startsWith('-') ? '-' : ''}${integerOnly
+      ? unsigned.split('.')[0]
+      : unsigned.replace(/\.(?=.*\.)/g, '')}`;
 
     if (normalized === '-' || normalized === '.' || normalized === '-.') return;
 
@@ -43,7 +45,7 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
       ref={ref}
       type="text"
       inputMode={inputMode}
-      value={formatNumericText(value)}
+      value={formatNumericText(value, integerOnly)}
       onChange={handleChange}
       data-min={min}
       data-max={max}
