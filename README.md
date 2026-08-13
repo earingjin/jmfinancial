@@ -1,40 +1,110 @@
 # JM Financial Planner — 재무진단 웹앱
 
-퇴직/은퇴 준비 재무진단 리포트를 생성하는 웹앱입니다. 사용자가 마법사(wizard) 형태로
-소득·지출·자산 정보를 입력하면, 서버에서 9개 재무건강지표(FHS)와 은퇴자산 시뮬레이션,
-4가지 대응방안 시나리오를 계산해 리포트로 보여줍니다.
+퇴직/은퇴 준비 재무진단 리포트를 생성하는 웹앱입니다. 사용자가 Supabase 계정으로 로그인한 뒤
+마법사(wizard) 형태로 수입·지출·저축·자산·부채 정보를 입력하면, 서버에서 9개 재무건강지표(FHS),
+은퇴자산 시뮬레이션, 동일연령대 비교, 대응방안 시나리오를 계산해 요약 화면과 다중 페이지
+리포트(인쇄/PDF 저장 가능)로 보여줍니다. 진단 결과는 로그인 계정 기준으로 Supabase에 저장되어
+이후 이력 목록에서 다시 열어볼 수 있습니다.
+
+## 기술 스택
+
+- React 19 + Vite (프론트엔드 SPA, `package.json` `react`/`react-dom`/`vite`)
+- Vercel Functions (`api/` 폴더, 서버리스 계산/삭제 API — `calculate.js`, `delete-result.js`)
+- Supabase (`@supabase/supabase-js`, `src/lib/supabaseClient.js`) — 로그인/세션 인증 + 진단 이력 저장(DB)
+- Vitest — 계산 로직(`api/_lib/*.test.js`) 단위 테스트
+- oxlint — 린트
+
+## 주요 기능
+
+- 로그인/회원가입 후 이용 가능한 재무진단 마법사 (수입/지출/저축/자산/부채/순자산/대응방안 7단계 입력)
+- 9개 재무건강지표(FHS) 진단 및 등급 판정
+- 은퇴자산 시뮬레이션 (필요자금/준비자산/부족액/준비율)
+- 동일연령대 비교 (2025년 가계금융복지조사 등 실제 통계 기반, 재무건강 총점 평균만 placeholder)
+- 4개 대응방안 시나리오 적용 전/후 비교
+- 결과 요약 화면 + 다중 페이지 리포트, 인쇄/PDF 저장(A4 레이아웃)
+- 진단 이력 저장/재조회·삭제 (로그인 계정별, Supabase)
 
 ## 폴더 구조
 
 ```
 src/
-  state/            폼 상태 관리 (FormContext, initialFormData, pathUtils)
+  main.jsx / App.jsx   앱 진입점, 화면 전환(home/wizard/loading/summary/report/history/admin) 관리
+  lib/
+    supabaseClient.js  Supabase 클라이언트 초기화
+    aiFeedback.js      AI 피드백 문구 관련 유틸
+  state/
+    AuthContext.jsx / authState.js   Supabase 로그인 세션 관리
+    FormContext.jsx / formState.js  폼 상태 관리
+    initialFormData.js  폼 초기값
+    pathUtils.js         중첩 폼 경로 접근 유틸
   components/
-    wizard/          입력 마법사
-      steps/         Step1~5 (본인수입 / 배우자 / 지출 / 자산진단 / 대응방안)
-      fields/        재사용 입력 컴포넌트 (숫자, 라디오, 토글, 체크박스, 반복리스트)
-    report/          결과 리포트 화면 (Hero, 9개 지표 표, 상세, 시뮬레이션, 시나리오 비교 등)
-  utils/format.js    숫자 표시 포맷팅 (계산 로직 아님)
-  styles/            디자인 토큰 + 레이아웃 CSS
+    auth/AuthGate.jsx    로그인/회원가입 화면
+    home/                홈 화면, 진단 이력 목록(HistoryList)
+    admin/AdminDashboard.jsx   관리자 대시보드 (role=admin 계정 전용, /admin 경로)
+    wizard/              입력 마법사
+      Wizard.jsx           7단계 스텝 정의/네비게이션
+      steps/               Step1~7 (수입 / 지출 / 저축 / 자산 / 부채 / 순자산 / 대응방안 시뮬레이션)
+      fields/              재사용 입력 컴포넌트 (숫자, 라디오, 토글, 체크박스, 반복리스트,
+                            연금/퇴직금 계산기 버튼, 항목별 세부 입력 등)
+    summary/             결과 요약 화면 (SimpleSummaryReport, DonutChart) — 리포트 다운로드 전 미리보기
+    report/              다중 페이지 리포트 (Report.jsx + pages/ 표지·요약·현황·시뮬레이션·
+                          동일연령대 비교·대응방안 등 각 페이지, 인쇄/PDF 저장(window.print) 지원)
+  utils/
+    format.js            숫자 표시 포맷팅 (계산 로직 아님)
+    obfuscate.js         서버 응답 난독화(obfuscate)/복호화(deobfuscate)
+    pieChart.js / trendChart.js / pensionEligibility.js   화면 표시용 보조 유틸
+  styles/                디자인 토큰 + 레이아웃 CSS + 인쇄(A4)용 @media print 스타일
 
 api/
-  calculate.js        서버리스 함수 엔트리포인트 (POST /api/calculate)
+  calculate.js        서버리스 함수 엔트리포인트 (POST /api/calculate, 로그인 필요 + 응답 난독화)
+  delete-result.js    저장된 진단 이력 삭제용 서버리스 함수
   _lib/
-    aggregate.js       원본 입력 → 집계값(총소득/총지출/총자산 등) 변환
-    indicators.js       9개 지표 공식 + 등급 판정 테이블  ← 핵심 로직
-    simulation.js       은퇴자산 시뮬레이션(필요자금/준비자산/부족액/준비율)
-    scenarios.js        4개 대응방안 시나리오 적용 및 전/후 비교  ← 핵심 로직
-    peerComparison.js   동일연령대 비교 (현재는 placeholder 데이터)
-    grading.js          등급 구간 판정 유틸
-    validate.js         서버 측 입력 검증
+    auth.js              Authorization 헤더의 Supabase 세션 검증 (requireUser)
+    constants.js         공통 경제 가정치 (일반 물가상승률, 국민연금 실질증가율 등) ← 핵심 로직
+    aggregate.js         원본 입력 → 집계값(총소득/총지출/총자산 등) 변환
+    indicators.js        9개 지표 공식 + 등급 판정 테이블  ← 핵심 로직
+    indicatorMeta.js / indicatorComposition.js / gradeBands.js   지표 메타정보/구성/등급구간 정의
+    grading.js           등급 구간 판정 유틸
+    simulation.js        은퇴자산 시뮬레이션(필요자금/준비자산/부족액/준비율)  ← 핵심 로직
+    scenarios.js         4개 대응방안 시나리오 적용 및 전/후 비교 (주택연금 등)  ← 핵심 로직
+    peerComparison.js    동일연령대 비교 로직 (재무건강 총점만 placeholder, 나머지는 실제 통계)
+    peerBenchmarks.js    동일연령대 실제 통계 원천 데이터(2025년 가계금융복지조사 등)
+    pensionProjection.js / pensionEligibility.js   국민연금 등 연금 추정
+    futureFinance.js     미래 현금흐름/재무 전망 계산
+    reportBreakdowns.js / reportEnrichment.js / executiveSummary.js / summaryOverview.js
+                          리포트/요약 화면에 표시할 세부 데이터 가공
+    lifestyleTiers.js    생활수준 구간 정의
+    validate.js          서버 측 입력 검증
+    *.test.js            위 모듈들에 대한 Vitest 단위 테스트
+
+scripts/
+  verify-auth.mjs      인증 설정(Supabase 환경변수 등) 점검 스크립트 (npm run verify:auth)
 ```
+
+## 인증 & 데이터 저장 (Supabase)
+
+- 앱의 모든 화면은 `AuthGate`를 통과한 로그인 사용자만 접근할 수 있습니다 (`src/App.jsx`의 `AuthGatedApp`).
+- `/api/calculate` 요청에는 로그인 세션의 `access_token`을 `Authorization: Bearer` 헤더로 함께 보내며,
+  서버(`api/_lib/auth.js`의 `requireUser`)가 Supabase로 토큰을 검증합니다. 세션이 없거나 만료되면
+  401 응답과 함께 클라이언트가 자동 로그아웃됩니다.
+- 계산이 끝난 결과는 로그인한 사용자 소유로 Supabase `planner_results` 테이블에 저장됩니다
+  (`schema_version`, `input_json`, `result_json`, `assumptions_json` 포함). 홈 화면의 "이전 결과 보기"
+  (`HistoryList`)에서 목록을 조회/재조회하고, 삭제는 `api/delete-result.js`를 통해 처리합니다.
+- `/admin` 경로는 Supabase `profiles` 테이블의 `role`이 `admin`인 계정만 접근 가능한 별도
+  관리자 대시보드(`AdminDashboard.jsx`)입니다.
 
 ## 보안 설계 (핵심 로직 은닉)
 
-- 계산 공식·임계값·등급표는 전부 `api/` 폴더 안에만 존재합니다.
+- 계산 공식·임계값·등급표·경제 가정치는 전부 `api/` 폴더 안에만 존재합니다 (`api/_lib/constants.js`,
+  `indicators.js`, `grading.js`, `simulation.js`, `scenarios.js`, `peerBenchmarks.js` 등).
 - `api/` 폴더는 Vite 클라이언트 빌드에 포함되지 않고, Vercel에서 별도의 서버리스 함수로만 실행됩니다.
-- 클라이언트(`src/`)는 입력값을 `/api/calculate`로 전송하고, **계산이 끝난 결과 JSON만** 받아 화면에 표시합니다.
-- 브라우저 devtools의 Sources 탭에서 `src/` 번들을 열어봐도 공식·구간·계수는 보이지 않습니다. (Network 탭의 응답 JSON에는 "결과값"이 보이는데, 이는 사용자에게 반드시 보여줘야 하는 정보이므로 정상입니다 — 숨기는 대상은 "계산 방법"이지 "계산 결과"가 아닙니다.)
+- 클라이언트(`src/`)는 로그인 세션 토큰과 함께 입력값을 `/api/calculate`로 전송하고, **계산이 끝난
+  결과만** 받아 화면에 표시합니다.
+- `api/calculate.js`는 응답 payload를 그대로 반환하지 않고 `src/utils/obfuscate.js`의 `obfuscate()`로
+  한 번 더 스크램블한 뒤 전송하며, 클라이언트는 `deobfuscate()`로 복원합니다. 즉 브라우저 devtools의
+  Network 탭에서도 원문 JSON이 아니라 난독화된 문자열만 보입니다.
+- 브라우저 devtools의 Sources 탭에서 `src/` 번들을 열어봐도 공식·구간·계수는 보이지 않습니다.
+  (숨기는 대상은 "계산 방법"이지 "계산 결과"가 아닙니다 — 다만 위와 같이 결과 전송 자체도 난독화되어 있습니다.)
 
 ## 로컬 개발
 
@@ -43,9 +113,14 @@ npm install
 npm run dev
 ```
 
-`vite.config.js`에 로컬 전용 미들웨어를 넣어서, `npm run dev`만으로도 `/api/calculate`가
-실제 서버리스 함수처럼 동작합니다 (Vercel CLI 없이도 로컬 테스트 가능). 실제 배포 환경에서는
-이 미들웨어 대신 Vercel이 `api/` 폴더를 자동으로 서버리스 함수로 인식합니다.
+`vite.config.js`에 로컬 전용 미들웨어(`localApiMiddleware`)를 넣어서, `npm run dev`만으로도
+`/api/calculate`가 실제 서버리스 함수처럼 동작합니다 (Vercel CLI 없이도 로컬 테스트 가능). 실제 배포
+환경에서는 이 미들웨어 대신 Vercel이 `api/` 폴더를 자동으로 서버리스 함수로 인식합니다.
+
+로그인/데이터 저장 기능이 Supabase에 의존하므로, 로컬에서도 프로젝트 루트에 `.env.local`을 만들고
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`를 설정해야 합니다. `vite.config.js`는 이 값을
+`loadEnv`로 읽어 `process.env`에도 주입하므로, `npm run dev` 상태에서 `api/` 서버리스 함수(인증 검증
+등)도 동일한 키를 사용할 수 있습니다. 설정 상태는 `npm run verify:auth`로 점검할 수 있습니다.
 
 ## 배포 (Vercel)
 
@@ -53,31 +128,38 @@ npm run dev
 2. vercel.com 에서 New Project → 해당 저장소 선택.
 3. Framework Preset은 Vite로 자동 인식됩니다. Build Command/Output Directory는 기본값 그대로 두면 됩니다.
 4. `api/*.js` 파일들은 별도 설정 없이 Vercel Functions로 자동 인식됩니다.
-5. (현재는 외부 API 키를 쓰지 않으므로 환경변수 설정이 필수는 아닙니다. 추후 외부 API를 연동하면
-   Vercel 프로젝트 Settings → Environment Variables에 키를 등록하고, 서버리스 함수에서만 참조하세요.)
-6. 배포 후 브라우저 devtools의 Sources/Network 탭을 직접 열어 계산 로직이 노출되지 않는지 최종 확인하세요.
+5. **환경변수 설정이 필수입니다.** Vercel 프로젝트 Settings → Environment Variables에
+   `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`를 등록하세요. 이 값이 없으면 `api/_lib/auth.js`의
+   `requireUser()`가 실패하여 `/api/calculate`가 500 에러를 반환합니다.
+6. 배포 후 브라우저 devtools의 Sources/Network 탭을 직접 열어 계산 로직이 노출되지 않는지
+   (Network 응답도 난독화되어 있는지) 최종 확인하세요.
 
 ## 현재 구현의 가정 및 알려진 제약사항 (중요)
 
-원본 리포트(JM_재무진단_리포트_미리보기.html)가 실제로 어떤 산식을 쓰는지 소스가 없어,
-아래 항목은 표준적인 재무설계 방법론을 따른 1차 근사 모델입니다. 실제 서비스 전에
-회사 기준으로 검증/교체가 필요합니다.
+원본 리포트(JM_재무진단_리포트_미리보기.html) 및 계산로직 문서(1_계산로직.html) 기준으로 구현되어
+있으나, 아래 항목은 여전히 단순화된 가정이거나 회사 기준 재검증이 필요합니다.
 
-- 은퇴자산 시뮬레이션 (`api/_lib/simulation.js`): 물가상승률 3% 고정 가정 + 사용자가 입력한
-  예상 수익률로 현재가치를 환산하는 방식입니다. 실제 회사의 계리(actuarial) 모델이 있다면 교체하세요.
+- 은퇴자산 시뮬레이션 (`api/_lib/simulation.js`): 일반 물가상승률은 `api/_lib/constants.js`의
+  `GENERAL_INFLATION_RATE`(현재 연 4.1%, CPI 기준) 고정 가정을 사용하고, 사용자가 입력한(또는 기본값
+  3%인) 예상 수익률로 현재가치를 환산합니다. 계리(actuarial) 모델 자체는 여전히 근사 모델이며, 실제
+  회사 기준 검증/교체가 필요합니다.
+- 국민연금 실질증가율(`NATIONAL_PENSION_GROWTH_RATE`, 연 2.1%)은 일반 물가상승률과 별개로 고정되어
+  있습니다 (`api/_lib/constants.js`).
 - 주택연금 월지급액 추정 (`api/_lib/scenarios.js`의 `REVERSE_MORTGAGE_RATE_TABLE`): 나이대별
   주택가격 대비 월지급률을 단순화한 표입니다. 실제 금액은 반드시 한국주택금융공사 예상연금 조회로
-  재확인해야 하며, 리포트에도 이 안내 링크를 노출하는 것을 권장합니다.
-- 동일연령대 비교 (`api/_lib/peerComparison.js`): 현재 순자산 평균(51,131만원), 노후준비점수
-  평균(69.9점)은 자리표시(placeholder) 값입니다. 실제 통계(가계금융복지조사, 국민연금연구원 등)
-  연동 전까지 화면에 "placeholder 데이터"임을 안내하는 문구가 함께 표시됩니다.
-- 자녀 생애 목돈 지출 준비율: 금융자산을 우선 재원으로 가정한 단순 비율입니다. 실제로는
-  목표별 재원 배분 규칙(예: 목적자금 통장 분리 여부)을 반영해야 더 정확합니다.
+  재확인해야 합니다.
+- 동일연령대 비교 (`api/_lib/peerComparison.js`, `peerBenchmarks.js`): 순자산·소득·금융자산 평균은
+  2025년 가계금융복지조사 등 실제 통계를 연령대(5구간)별로 반영합니다. 다만 "재무건강 총점" 평균만은
+  공식 통계가 없어 여전히 placeholder 값(69.9점)을 사용합니다.
+- 자녀 생애 목돈 지출 준비율: 금융자산 + 현금성(유동) 자산을 우선 재원으로 가정한 단순 비율입니다
+  (`api/_lib/simulation.js`). 실제로는 목표별 재원 배분 규칙(예: 목적자금 통장 분리 여부)을 반영해야
+  더 정확합니다.
 
 ## 향후 개선 체크리스트
 
-- [ ] 실제 벤치마크 통계 데이터 연동 (동일연령대 비교)
+- [x] 실제 벤치마크 통계 데이터 연동 (동일연령대 비교) — 순자산/소득/금융자산은 완료
+- [ ] 재무건강 총점(FHS) 동일연령대 평균 — 공식 통계 부재로 여전히 placeholder(69.9점)
 - [ ] 한국주택금융공사 공식 문서 기반으로 주택연금 계산 정교화
 - [ ] 은퇴자산 시뮬레이션 계리 모델 회사 기준으로 검증
-- [ ] 입력값 저장/불러오기 (현재는 새로고침 시 초기화됨 — 필요하면 서버 DB 또는 로그인 연동)
-- [ ] PDF 출력/인쇄용 스타일 (원본 리포트처럼 A4 페이지 레이아웃으로 내보내기)
+- [x] 입력값 저장/불러오기 — Supabase 로그인 연동 + 진단 이력 저장/조회/삭제 구현 완료
+- [x] PDF 출력/인쇄용 스타일 — 리포트에 A4 `@media print` 레이아웃 및 인쇄/PDF 저장 버튼 구현 완료
