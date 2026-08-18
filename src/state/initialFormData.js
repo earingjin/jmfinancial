@@ -33,7 +33,6 @@ export const initialFormData = {
     nationalPension: {
       inputMode: 'direct',      // 'direct'(직접 입력) | 'simulate'(모의계산)
       monthly: '',
-      startAge: '',              // 개인연금 월 수령 시작 나이
       months: '',
       paymentMonths: '',        // 실제 보험료를 납부한 총 개월 수
       paymentYears: '',         // 국민연금 납입기간(년) - 직접입력 모드의 참고용 기록(계산에는 쓰이지 않음)
@@ -48,6 +47,7 @@ export const initialFormData = {
       lumpsum: '',
       lumpsumAge: '',           // 개인연금(일시금) 수령 나이
       monthly: '',
+      startAge: '',              // 개인연금 월 수령 시작 나이
       months: '',
     },
     otherIncomes: [],           // [{ name, annual, years }] 확정된 정기수입(임대수입 등) - regularIncomes 중 "기타" 항목만 자동 반영됨
@@ -74,7 +74,6 @@ export const initialFormData = {
     nationalPension: {
       inputMode: 'direct',
       monthly: '',
-      startAge: '',
       months: '',
       paymentMonths: '',
       paymentYears: '',
@@ -89,6 +88,7 @@ export const initialFormData = {
       lumpsum: '',
       lumpsumAge: '',
       monthly: '',
+      startAge: '',
       months: '',
     },
   },

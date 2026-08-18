@@ -37,19 +37,6 @@ function round1(value) {
   return Number.isFinite(value) ? Math.round(value * 10) / 10 : null;
 }
 
-export function calculateFuturePensionIncome({ national = 0, personal = 0, retirement = 0, years, targetAge, nationalPensionStartAge }) {
-  const nationalEligible = nationalPensionStartAge == null || targetAge >= nationalPensionStartAge;
-  const nationalPension = nationalEligible
-    ? calculateFutureValue(national, FUTURE_FINANCE_ASSUMPTIONS.nationalPensionGrowthRate, years)
-    : 0;
-  const personalPension = calculateFutureValue(personal, FUTURE_FINANCE_ASSUMPTIONS.privatePensionGrowthRate, years);
-  const retirementPension = calculateFutureValue(retirement, FUTURE_FINANCE_ASSUMPTIONS.retirementPensionGrowthRate, years);
-  const total = nationalPension == null || personalPension == null || retirementPension == null
-    ? null
-    : nationalPension + personalPension + retirementPension;
-  return { nationalPension, personalPension, retirementPension, total, nationalEligible };
-}
-
 const present = (value) => value !== '' && value !== null && value !== undefined;
 
 function nationalEligible(person = {}) {
