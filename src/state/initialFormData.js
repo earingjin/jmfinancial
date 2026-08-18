@@ -21,6 +21,7 @@ export const initialFormData = {
       lumpsum: '',
       lumpsumAge: '',           // 퇴직금(일시금) 수령 나이
       pensionMonthly: '',
+      pensionStartAge: '',       // 퇴직연금 월 수령 시작 나이
       pensionYears: '',         // 수령 기간(년) - 입력하면 pensionMonths(수령 개월수)가 자동 계산됨
       pensionMonths: '',
       calc: {                   // 퇴직금 모의계산기 입력값(퇴직금을 모르는 사용자가 lumpsum을 추정하기 위한 보조 입력)
@@ -32,6 +33,7 @@ export const initialFormData = {
     nationalPension: {
       inputMode: 'direct',      // 'direct'(직접 입력) | 'simulate'(모의계산)
       monthly: '',
+      startAge: '',              // 개인연금 월 수령 시작 나이
       months: '',
       paymentMonths: '',        // 실제 보험료를 납부한 총 개월 수
       paymentYears: '',         // 국민연금 납입기간(년) - 직접입력 모드의 참고용 기록(계산에는 쓰이지 않음)
@@ -59,6 +61,7 @@ export const initialFormData = {
       lumpsum: '',
       lumpsumAge: '',           // 퇴직금(일시금) 수령 나이
       pensionMonthly: '',
+      pensionStartAge: '',
       pensionYears: '',         // 수령 기간(년) - 입력하면 pensionMonths(수령 개월수)가 자동 계산됨
       pensionMonths: '',
       serviceYears: '',         // 배우자 근속년수(퇴직금 모의계산기 전용 - 배우자용 "기본 정보" 섹션이 없어 여기 둔다)
@@ -71,6 +74,7 @@ export const initialFormData = {
     nationalPension: {
       inputMode: 'direct',
       monthly: '',
+      startAge: '',
       months: '',
       paymentMonths: '',
       paymentYears: '',

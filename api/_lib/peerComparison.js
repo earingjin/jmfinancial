@@ -6,26 +6,6 @@
 
 import { PEER_AGE_BRACKETS, getPeerBracket, PEER_BENCHMARK_META } from './peerBenchmarks.js';
 
-// PDF 리포트 3페이지 차트에서 "내 구간이 아닌 다른 구간"에 예시로 표시하는 개인 순자산 값.
-// 2025년 가계금융복지조사에는 개인 단위 예시가 없어(평균만 제공) 기존 placeholder를 그대로 유지한다
-// (사용자 승인 범위는 연령대별 average뿐이었다 - 임의로 새 기준을 만들지 않는다).
-const SAMPLE_NET_WORTH_BY_KEY = {
-  under29: 5000,
-  '30to39': 15585,
-  '40to49': 28384,
-  '50to59': 31685,
-  '60plus': 25000,
-};
-
-// 평균 대비 배수를 [5, 95] 범위의 대략적인 백분위로 근사한다.
-// 실제 분포(가계금융복지조사 등) 연동 전까지 쓰는 단순 근사치임을 유의할 것.
-function estimatePercentileRank(value, average) {
-  if (!average) return null;
-  const ratio = value / average;
-  const percentile = Math.round(50 - (ratio - 1) * 40);
-  return Math.min(95, Math.max(5, percentile));
-}
-
 export function buildPeerComparison({
   age,
   totalAssets,
@@ -44,7 +24,7 @@ export function buildPeerComparison({
     key: b.key,
     label: b.label,
     average: b.netWorth,
-    netWorth: b.key === userBracket.key ? netWorth : SAMPLE_NET_WORTH_BY_KEY[b.key],
+    netWorth: b.key === userBracket.key ? netWorth : null,
     isUserBracket: b.key === userBracket.key,
   }));
 
@@ -56,7 +36,7 @@ export function buildPeerComparison({
     userBracketKey: userBracket.key,
     userBracketLabel: userBracket.label,
     userNetWorth: netWorth,
-    percentileRank: estimatePercentileRank(netWorth, userBracket.netWorth),
+    percentileRank: null,
     focusCompare: {
       peerAverage: userBracket.netWorth,
       userNetWorth: netWorth,

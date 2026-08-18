@@ -1,6 +1,7 @@
 import { n } from './aggregate.js';
 import { getNationalPensionStartAge } from './pensionEligibility.js';
 import { FUTURE_FINANCE_ASSUMPTIONS } from './constants.js';
+import { NonFiniteCalculationError } from './finite.js';
 
 export { FUTURE_FINANCE_ASSUMPTIONS } from './constants.js';
 
@@ -16,7 +17,8 @@ export const FUTURE_FINANCE_TARGET_AGES = Object.freeze([60, 70, 80]);
 
 export function calculateFutureValue(value, annualRate, years) {
   const result = Number(value) * Math.pow(1 + Number(annualRate), Math.max(0, Number(years)));
-  return Number.isFinite(result) ? result : null;
+  if (!Number.isFinite(result)) throw new NonFiniteCalculationError('futureFinance.futureValue');
+  return result;
 }
 
 export function calculateFutureLivingExpense(currentMonthlyExpense, years) {
@@ -46,6 +48,83 @@ export function calculateFuturePensionIncome({ national = 0, personal = 0, retir
     ? null
     : nationalPension + personalPension + retirementPension;
   return { nationalPension, personalPension, retirementPension, total, nationalEligible };
+}
+
+const present = (value) => value !== '' && value !== null && value !== undefined;
+
+function nationalEligible(person = {}) {
+  const pension = person.nationalPension || {};
+  if (pension.inputMode === 'none') return false;
+  const rawMonths = pension.inputMode === 'simulate' ? pension.simulate?.contributionMonths : pension.paymentMonths;
+  const legacyYears = pension.inputMode === 'simulate' ? pension.simulate?.years : pension.paymentYears;
+  if (present(rawMonths)) return n(rawMonths) >= 120;
+  if (present(legacyYears)) return n(legacyYears) * 12 >= 120;
+  return true;
+}
+
+function pensionComponents(input, currentYear) {
+  const people = [
+    { key: 'self', person: input.income || {}, birthYear: input.basic?.birthYear },
+    ...(input.basic?.hasSpouse ? [{ key: 'spouse', person: input.spouse || {}, birthYear: input.spouse?.birthYear }] : []),
+  ];
+  return people.flatMap(({ key, person, birthYear }) => {
+    const currentAge = present(birthYear) ? currentYear - n(birthYear) : null;
+    const national = person.nationalPension || {};
+    const severance = person.severance || {};
+    const personal = person.personalPension || {};
+    const nationalStart = present(birthYear) ? getNationalPensionStartAge(n(birthYear)) : null;
+    return [
+      {
+        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalEligible(person) ? n(national.monthly) : 0,
+        startAge: nationalStart, months: national.months, currentAge,
+        growthRate: FUTURE_FINANCE_ASSUMPTIONS.nationalPensionGrowthRate,
+      },
+      {
+        key: `${key}.retirementPension`, category: 'retirementPension', monthly: severance.type === 'pension' ? n(severance.pensionMonthly) : 0,
+        startAge: severance.pensionStartAge, months: severance.pensionMonths, currentAge,
+        growthRate: FUTURE_FINANCE_ASSUMPTIONS.retirementPensionGrowthRate,
+      },
+      {
+        key: `${key}.personalPension`, category: 'personalPension', monthly: personal.type === 'installment' ? n(personal.monthly) : 0,
+        startAge: personal.startAge, months: personal.months, currentAge,
+        growthRate: FUTURE_FINANCE_ASSUMPTIONS.privatePensionGrowthRate,
+      },
+    ];
+  });
+}
+
+export function calculatePensionIncomeAtTarget({ input, currentYear, years }) {
+  const components = pensionComponents(input, currentYear).map((component) => {
+    if (component.monthly <= 0) return { ...component, amount: 0, inclusionStatus: 'zero' };
+    if (!present(component.startAge) || !present(component.months) || component.currentAge == null) {
+      return { ...component, amount: null, inclusionStatus: 'unknown' };
+    }
+    const ageAtTarget = component.currentAge + years;
+    const endAge = n(component.startAge) + n(component.months) / 12;
+    const active = n(component.startAge) <= ageAtTarget && ageAtTarget < endAge;
+    return {
+      ...component,
+      amount: active ? calculateFutureValue(component.monthly, component.growthRate, years) : 0,
+      inclusionStatus: active ? 'included' : ageAtTarget < n(component.startAge) ? 'beforeStart' : 'afterEnd',
+      endAge,
+    };
+  });
+  const unknown = components.filter((component) => component.inclusionStatus === 'unknown');
+  const byCategory = (category) => {
+    const matching = components.filter((component) => component.category === category);
+    return matching.some((component) => component.amount == null) ? null : matching.reduce((sum, component) => sum + component.amount, 0);
+  };
+  const calculable = unknown.length === 0;
+  const nationalPension = byCategory('nationalPension');
+  const personalPension = byCategory('personalPension');
+  const retirementPension = byCategory('retirementPension');
+  return {
+    nationalPension, personalPension, retirementPension,
+    total: calculable ? nationalPension + personalPension + retirementPension : null,
+    calculable,
+    reason: calculable ? null : `연금 개시·종료 정보 부족: ${unknown.map((component) => component.key).join(', ')}`,
+    components,
+  };
 }
 
 function assetDataMissing(input) {
@@ -83,14 +162,7 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
     .map((targetAge) => {
       const years = Math.max(0, targetAge - currentAge);
       const livingExpense = livingExpenseMissing ? null : calculateFutureLivingExpense(aggregates.monthlyLivingCost, years);
-      const pension = pensionDataMissing ? null : calculateFuturePensionIncome({
-        national: aggregates.nationalPensionMonthly,
-        personal: aggregates.personalPensionMonthly,
-        retirement: aggregates.severancePensionMonthly,
-        years,
-        targetAge,
-        nationalPensionStartAge,
-      });
+      const pension = pensionDataMissing ? null : calculatePensionIncomeAtTarget({ input, currentYear, years });
       const pensionIncome = pension?.total ?? null;
       const coverageRate = livingExpense > 0 && pensionIncome != null ? (pensionIncome / livingExpense) * 100 : null;
       const balance = livingExpense != null && pensionIncome != null ? pensionIncome - livingExpense : null;
@@ -104,11 +176,13 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
           nationalPension: round(pension.nationalPension),
           personalPension: round(pension.personalPension),
           retirementPension: round(pension.retirementPension),
-          nationalEligible: pension.nationalEligible,
+          components: pension.components,
         },
         coverageRate: round1(coverageRate),
         balance: round(balance),
         status: coverageRate == null ? 'unknown' : coverageRate >= 100 ? 'good' : coverageRate >= 80 ? 'warning' : 'risk',
+        calculable: pension?.calculable ?? false,
+        calculationReason: pension?.reason ?? (pensionDataMissing ? '연금 정보 부족' : null),
       };
     });
 

@@ -4,6 +4,9 @@ import { buildPeerComparison } from './peerComparison.js';
 const BASE_ARGS = { age: 41, totalAssets: 40000, totalDebt: 5000, annualIncome: 12000, financialAssetsTotal: 5000, retirementScore: 75 };
 
 describe('buildPeerComparison - wording must never assert a confident percentile without real distribution data', () => {
+  it('does not return an estimated percentile rank without distribution data', () => {
+    expect(buildPeerComparison(BASE_ARGS).percentileRank).toBeNull();
+  });
   it('never uses a definitive "상위 N%" style claim in percentileLabel', () => {
     const result = buildPeerComparison(BASE_ARGS);
     for (const key of ['netWorth', 'householdIncome', 'financialAssets', 'retirementScore']) {
@@ -170,5 +173,10 @@ describe('buildPeerComparison - ageBrackets(PDF 리포트 3페이지 차트)도 
   it('focusCompare.referenceAverage(60세 기준선)도 갱신된 53,591을 사용한다', () => {
     const result = buildPeerComparison({ age: 41, totalAssets: 0, totalDebt: 0, annualIncome: 0, financialAssetsTotal: 0, retirementScore: null });
     expect(result.focusCompare.referenceAverage).toBe(53591);
+  });
+
+  it('does not mix placeholder household values into non-user age brackets', () => {
+    const result = buildPeerComparison(BASE_ARGS);
+    expect(result.ageBrackets.filter((item) => !item.isUserBracket).every((item) => item.netWorth == null)).toBe(true);
   });
 });

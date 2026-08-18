@@ -14,6 +14,19 @@ function isBlank(value) {
   return value === '' || value === null || value === undefined;
 }
 
+// JSON 숫자 또는 부호가 있는 10진 숫자 문자열만 허용한다. 공백, 지수/16진수 표기,
+// boolean·배열·객체가 Number()에 의해 암묵적으로 숫자가 되는 것을 금지한다.
+const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
+
+function parseNumericInput(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && DECIMAL_NUMBER_PATTERN.test(value)) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 const KIND_RULES = {
   amount: { min: 0, allowDecimal: true, label: '금액' }, // 만원 단위 금액 - 음수·NaN·Infinity 거부, 상한 없음
   count: { min: 0, allowDecimal: false, label: '개월/기간' }, // 개월·년 등 정수 카운트
@@ -31,9 +44,9 @@ function checkKindField(errors, input, path, kind) {
   if (isBlank(value)) return;
 
   const rule = KIND_RULES[kind];
-  const num = Number(value);
+  const num = parseNumericInput(value);
 
-  if (!Number.isFinite(num)) {
+  if (num === null) {
     errors.push(`${path} 값은 유효한 숫자여야 합니다.`);
     return;
   }
@@ -55,8 +68,8 @@ function checkKindField(errors, input, path, kind) {
 // 않으므로 basic.birthYear와 같은 규칙(1900~올해)을 쓰는 곳(자녀 출생년도 등)에서 공용으로 쓴다.
 function checkBirthYearField(errors, value, path) {
   if (isBlank(value)) return;
-  const year = Number(value);
-  if (Number.isNaN(year) || year < 1900 || year > new Date().getFullYear()) {
+  const year = parseNumericInput(value);
+  if (year === null || !Number.isInteger(year) || year < 1900 || year > new Date().getFullYear()) {
     errors.push(`${path} 출생년도가 유효하지 않습니다.`);
   }
 }
@@ -66,12 +79,20 @@ const MAX_ARRAY_LENGTH = 50; // 정기수입/기타수입/자녀/커스텀항목
 // 배열 필드(자녀별 항목, 반복 입력 목록 등)의 각 원소에 동일한 스키마를 적용한다.
 function checkArrayField(errors, input, arrayPath, itemFields) {
   const list = getPath(input, arrayPath);
-  if (!Array.isArray(list)) return;
+  if (list === undefined || list === null) return;
+  if (!Array.isArray(list)) {
+    errors.push(`${arrayPath} 값은 배열이어야 합니다.`);
+    return;
+  }
   if (list.length > MAX_ARRAY_LENGTH) {
     errors.push(`${arrayPath} 항목은 최대 ${MAX_ARRAY_LENGTH}개까지 입력할 수 있습니다.`);
     return;
   }
-  list.forEach((_, index) => {
+  list.forEach((item, index) => {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) {
+      errors.push(`${arrayPath}.${index} 항목은 객체여야 합니다.`);
+      return;
+    }
     itemFields.forEach(({ key, kind }) => checkKindField(errors, input, `${arrayPath}.${index}.${key}`, kind));
   });
 }
@@ -180,6 +201,10 @@ const COUNT_FIELDS = [
 
 const AGE_FIELDS = [
   'basic.retirementAge',
+  'income.severance.pensionStartAge',
+  'spouse.severance.pensionStartAge',
+  'income.personalPension.startAge',
+  'spouse.personalPension.startAge',
   'scenarios.reverseMortgage.ageAtStart',
   'scenarios.realEstateConversion.ageAtConversion',
 ];
@@ -194,6 +219,7 @@ const AGE_DECIMAL_FIELDS = [
 const ARRAY_FIELDS = [
   { path: 'income.regularIncomes', fields: [{ key: 'annual', kind: 'amount' }, { key: 'years', kind: 'count' }] },
   { path: 'income.otherIncomes', fields: [{ key: 'annual', kind: 'amount' }, { key: 'years', kind: 'count' }] },
+  { path: 'expense.debts', fields: [{ key: 'principal', kind: 'amount' }, { key: 'monthlyInterest', kind: 'amount' }, { key: 'monthlyRepayment', kind: 'amount' }, { key: 'months', kind: 'count' }] },
   { path: 'expense.children', fields: [{ key: 'educationCost', kind: 'amount' }, { key: 'marriageSupport', kind: 'amount' }, { key: 'otherCost', kind: 'amount' }] },
   { path: 'expense.otherExpenses', fields: [{ key: 'annual', kind: 'amount' }, { key: 'years', kind: 'count' }] },
   { path: 'expense.healthInsurance.items', fields: [{ key: 'monthly', kind: 'amount' }] },
@@ -245,21 +271,25 @@ export function validateInput(input) {
     errors.push('배우자 출생년도는 필수 입력 항목입니다.');
   }
 
+  [
+    ['income.severance', input.income?.severance?.type === 'pension', 'pensionStartAge'],
+    ['income.personalPension', input.income?.personalPension?.type === 'installment', 'startAge'],
+    ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'pension', 'pensionStartAge'],
+    ['spouse.personalPension', input.basic?.hasSpouse === true && input.spouse?.personalPension?.type === 'installment', 'startAge'],
+  ].forEach(([path, required, field]) => {
+    if (required && isBlank(getPath(input, `${path}.${field}`))) {
+      errors.push(`${path}.${field} 값은 월 연금 수령 방식에서 필수입니다.`);
+    }
+  });
+
   // 노후 월 평균 생활비는 은퇴자산 시뮬레이션(필요자금 산출)의 핵심 입력값이라 필수로 강제한다.
   // 명시적으로 입력한 0(노후 생활비를 가정하지 않음)은 유효한 값으로 그대로 허용한다.
   if (isBlank(input.expense?.retirementLivingCost)) {
     errors.push('노후 월 평균 생활비는 필수 입력 항목입니다.');
   }
 
-  const birthYear = Number(input.basic?.birthYear);
-  if (input.basic?.birthYear !== '' && (Number.isNaN(birthYear) || birthYear < 1900 || birthYear > new Date().getFullYear())) {
-    errors.push('출생년도가 유효하지 않습니다.');
-  }
-
-  const spouseBirthYear = Number(input.spouse?.birthYear);
-  if (input.spouse?.birthYear !== '' && input.spouse?.birthYear !== undefined && (Number.isNaN(spouseBirthYear) || spouseBirthYear < 1900 || spouseBirthYear > new Date().getFullYear())) {
-    errors.push('배우자 출생년도가 유효하지 않습니다.');
-  }
+  checkBirthYearField(errors, input.basic?.birthYear, 'basic.birthYear');
+  checkBirthYearField(errors, input.spouse?.birthYear, 'spouse.birthYear');
 
   AMOUNT_FIELDS.forEach((path) => checkKindField(errors, input, path, 'amount'));
   COUNT_FIELDS.forEach((path) => checkKindField(errors, input, path, 'count'));
@@ -282,6 +312,16 @@ export function validateInput(input) {
   });
 
   ARRAY_FIELDS.forEach(({ path, fields }) => checkArrayField(errors, input, path, fields));
+
+  // 체크박스 그룹은 객체 목록이 아니라 승인된 문자열 키 목록이다.
+  const expenseReductionTargets = getPath(input, 'scenarios.expenseReduction.targets');
+  if (expenseReductionTargets !== undefined && expenseReductionTargets !== null) {
+    if (!Array.isArray(expenseReductionTargets)) {
+      errors.push('scenarios.expenseReduction.targets 값은 배열이어야 합니다.');
+    } else if (expenseReductionTargets.some((target) => !['living', 'medical', 'other'].includes(target))) {
+      errors.push('scenarios.expenseReduction.targets 값이 유효하지 않습니다.');
+    }
+  }
 
   // 자녀 출생년도 - checkArrayField(kind 기반)와 별도로 basic.birthYear와 동일한 연도 범위 규칙을 적용한다.
   // MAX_ARRAY_LENGTH 초과 시에는 위 checkArrayField가 이미 별도 에러를 push했으므로 여기서는 건너뛴다.
