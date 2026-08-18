@@ -138,6 +138,22 @@ describe('buildPeerComparison - 미입력과 실제 0원을 구분한다', () =>
   });
 });
 
+describe('buildPeerComparison - 음수 순자산을 모든 출력 경로에서 보존한다', () => {
+  it('카드·차트·집중비교가 같은 음수 원시값을 사용한다', () => {
+    const result = buildPeerComparison({
+      ...BASE_ARGS,
+      totalAssets: 1000,
+      totalDebt: 1500,
+    });
+    const currentBracket = result.ageBrackets.find((item) => item.isUserBracket);
+
+    expect(result.netWorth.value).toBe(-500);
+    expect(result.userNetWorth).toBe(-500);
+    expect(result.focusCompare.userNetWorth).toBe(-500);
+    expect(currentBracket.netWorth).toBe(-500);
+  });
+});
+
 // PDF 리포트 3페이지(자산현황 세부내역 하단, PeerComparisonPage.jsx)의 연령대별 순자산 차트도
 // 같은 2025년 공식 데이터로 갱신한다(사용자 확인됨) - 기존 60세 이상 53,951은 오차값이었다.
 describe('buildPeerComparison - ageBrackets(PDF 리포트 3페이지 차트)도 2025년 공식 데이터를 반영한다', () => {

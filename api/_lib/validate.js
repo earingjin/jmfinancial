@@ -21,7 +21,9 @@ const KIND_RULES = {
   // 기대수명 전용 - 통계청 평균수명 참고값(예: 84.6세)의 소수 입력은 유지하면서 상한(120)만 추가한다.
   ageDecimal: { min: 0, max: 120, allowDecimal: true, label: '나이(소수 허용)' },
   rate: { min: 0, max: 100, allowDecimal: true, label: '비율(%)' }, // 절감률 등 0~100% 비율
-  returnRate: { allowDecimal: true, label: '수익률' }, // 예상 수익률 - 하한/상한을 두지 않음(음의 수익률도 유효한 가정)
+  // 복리의 밑(1 + r)이 양수여야 하므로 -100%는 허용하지 않는다.
+  // 정책상 별도 하한이 승인되지 않았으므로 -100%보다 큰 유한값은 허용한다.
+  returnRate: { exclusiveMin: -100, allowDecimal: true, label: '수익률' },
 };
 
 function checkKindField(errors, input, path, kind) {
@@ -37,6 +39,9 @@ function checkKindField(errors, input, path, kind) {
   }
   if (rule.min !== undefined && num < rule.min) {
     errors.push(`${path} 값은 ${rule.min} 이상이어야 합니다.`);
+  }
+  if (rule.exclusiveMin !== undefined && num <= rule.exclusiveMin) {
+    errors.push(`${path} 값은 ${rule.exclusiveMin}보다 커야 합니다.`);
   }
   if (rule.max !== undefined && num > rule.max) {
     errors.push(`${path} 값은 ${rule.max} 이하여야 합니다.`);

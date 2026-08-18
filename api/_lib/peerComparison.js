@@ -44,7 +44,7 @@ export function buildPeerComparison({
     key: b.key,
     label: b.label,
     average: b.netWorth,
-    netWorth: b.key === userBracket.key ? Math.max(0, netWorth) : SAMPLE_NET_WORTH_BY_KEY[b.key],
+    netWorth: b.key === userBracket.key ? netWorth : SAMPLE_NET_WORTH_BY_KEY[b.key],
     isUserBracket: b.key === userBracket.key,
   }));
 
@@ -55,11 +55,11 @@ export function buildPeerComparison({
     userAge: Number.isFinite(age) && age > 0 ? age : null,
     userBracketKey: userBracket.key,
     userBracketLabel: userBracket.label,
-    userNetWorth: Math.max(0, netWorth),
+    userNetWorth: netWorth,
     percentileRank: estimatePercentileRank(netWorth, userBracket.netWorth),
     focusCompare: {
       peerAverage: userBracket.netWorth,
-      userNetWorth: Math.max(0, netWorth),
+      userNetWorth: netWorth,
       referenceAverage: reference.netWorth,
     },
     netWorth: buildMetric(netWorth, userBracket.netWorth, { missing: netWorthMissing, binaryLabel: true }),

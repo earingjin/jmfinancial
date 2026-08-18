@@ -27,7 +27,7 @@ function buildComponents(person) {
     });
   }
 
-  // 국민연금 (물가와 무관하게 매년 2.1% 고정 증가)
+  // 국민연금: 2026 적용률 2.1%를 반복 적용하는 모델 가정이다. 영구 고정 정책률이 아니다.
   components.push({
     monthlyAmount: n(nationalPension.monthly),
     months: n(nationalPension.months),

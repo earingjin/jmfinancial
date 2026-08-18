@@ -23,9 +23,11 @@ async function savePlannerResult(user, formData, result) {
     schema_version: 'v2',
     input_json: formData,
     result_json: result,
+    // 서버가 실제 계산에 사용해 응답한 값만 저장한다. 클라이언트에 금융 가정을 중복 정의하지 않는다.
     assumptions_json: {
-      assumedReturnRate: formData?.basic?.assumedReturnRate ?? 3,
-      generalInflationRate: 4.1,
+      assumedReturnRate: result?.simulation?.assumedReturnRate,
+      simulationInflationRate: result?.simulation?.inflationRate,
+      futureFinance: result?.webSummary?.futureFinance?.assumptions,
     },
   });
   if (error) {

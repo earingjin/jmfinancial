@@ -1,5 +1,8 @@
 import { n } from './aggregate.js';
 import { getNationalPensionStartAge } from './pensionEligibility.js';
+import { FUTURE_FINANCE_ASSUMPTIONS } from './constants.js';
+
+export { FUTURE_FINANCE_ASSUMPTIONS } from './constants.js';
 
 const isBlank = (value) => value === '' || value === null || value === undefined;
 const getPath = (input, path) => path.split('.').reduce((value, key) => value?.[key], input);
@@ -8,13 +11,6 @@ const allBlankLeaf = (input, leafPaths, arrayPaths = []) => (
   leafPaths.every((path) => isBlank(getPath(input, path)))
   && arrayPaths.every((path) => !Array.isArray(getPath(input, path)) || getPath(input, path).length === 0)
 );
-
-export const FUTURE_FINANCE_ASSUMPTIONS = Object.freeze({
-  inflationRate: 0.03,
-  nationalPensionGrowthRate: 0.021,
-  privatePensionGrowthRate: 0,
-  retirementPensionGrowthRate: 0,
-});
 
 export const FUTURE_FINANCE_TARGET_AGES = Object.freeze([60, 70, 80]);
 

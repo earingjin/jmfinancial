@@ -3,7 +3,7 @@
 // 아래는 "은퇴시점 필요자금 = 은퇴 후 생활비의 현재가치를 은퇴시점 기준으로 환산한 합"이라는
 // 표준적인 은퇴설계 방법론을 단순화해 구현한 1차 버전입니다.
 
-import { n, pickAnnual, getCurrentAge, buildAggregates } from './aggregate.js';
+import { n, getCurrentAge, buildAggregates } from './aggregate.js';
 import { GENERAL_INFLATION_RATE } from './constants.js';
 import { calcPensionAdequacyTrend } from './pensionProjection.js';
 
@@ -11,7 +11,6 @@ const BASE_INFLATION = GENERAL_INFLATION_RATE; // 일반 물가상승률(CPI), �
 
 export function calcRetirementSimulation(input, currentYear = new Date().getFullYear()) {
   const basic = input.basic || {};
-  const assets = input.assets || {};
   const expense = input.expense || {};
 
   const currentAge = getCurrentAge(input, currentYear);
@@ -46,7 +45,9 @@ export function calcRetirementSimulation(input, currentYear = new Date().getFull
 
   const fvCurrentAssets = currentReadyAssets * Math.pow(1 + returnRate, yearsToRetirement);
 
-  const annualSavings = pickAnnual(assets.savingsPlan?.annual, assets.savingsPlan?.monthly);
+  // aggregate.js와 동일한 포함 규칙을 사용한다. 노후저축이 총저축에 포함되지 않는다고
+  // 명시한 경우(retirementIncludedInTotal === false)에는 별도 노후저축도 합산한다.
+  const annualSavings = agg.totalSavingsAnnual;
   let fvFutureSavings = 0;
   for (let y = 1; y <= yearsToRetirement; y++) {
     fvFutureSavings += annualSavings * Math.pow(1 + returnRate, yearsToRetirement - y);

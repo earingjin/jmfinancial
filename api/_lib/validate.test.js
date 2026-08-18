@@ -188,6 +188,29 @@ describe('rejects NaN / Infinity / negative amounts across numeric fields', () =
   });
 });
 
+describe('compound return rates must be greater than -100%', () => {
+  it.each([-100, -100.01])('rejects basic.assumedReturnRate=%s', (assumedReturnRate) => {
+    const result = validateInput(makeInput({ basic: { assumedReturnRate } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/assumedReturnRate.*-100보다 커야/);
+  });
+
+  it('accepts -99.99% because no stricter policy floor is approved', () => {
+    expect(validateInput(makeInput({ basic: { assumedReturnRate: -99.99 } })).ok).toBe(true);
+  });
+
+  it.each([NaN, Infinity])('rejects a non-finite assumed return rate (%s)', (assumedReturnRate) => {
+    expect(validateInput(makeInput({ basic: { assumedReturnRate } })).ok).toBe(false);
+  });
+
+  it.each([-100, -100.01])('applies the same boundary to savings item interestRate=%s', (interestRate) => {
+    const result = validateInput(makeInput({
+      assets: { savingsPlan: { breakdown: { installment: { monthly: 1, remainingMonths: 12, interestRate } } } },
+    }));
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe('age cap: basic.retirementAge (kind "age", max 120)', () => {
   it('rejects retirementAge at T+0.01 boundary (121)', () => {
     const result = validateInput(makeInput({ basic: { retirementAge: 121, lifeExpectancy: 121 } }));
