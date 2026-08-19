@@ -621,6 +621,36 @@
 .future-legend-expense { background: var(--gold); }
 .future-legend-pension { background: var(--navy-700); }
 .future-diagnosis { margin: 10px 0 20px; padding: 11px 14px; border-radius: 8px; background: var(--teal-soft); color: #0e6c5e; font-size: 12.5px; line-height: 1.55; }
+.retirement-cashflow-chart { margin: 0 0 16px; padding: 12px 12px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.retirement-cashflow-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.retirement-chart-grid { stroke: var(--line); stroke-width: 1; }
+.retirement-chart-axis { fill: var(--ink-soft); font-size: 9px; text-anchor: end; }
+.retirement-chart-gap { fill: rgba(217, 126, 61, 0.12); }
+.retirement-chart-line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.retirement-chart-line--expense { stroke: var(--gold); }
+.retirement-chart-line--income { stroke: var(--teal); }
+.retirement-chart-dot { stroke: var(--card); stroke-width: 2; }
+.retirement-chart-dot--expense { fill: var(--gold); }
+.retirement-chart-dot--income { fill: var(--teal); }
+.retirement-chart-age { fill: var(--ink-soft); font-size: 9.5px; font-weight: 600; text-anchor: middle; }
+.retirement-chart-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; color: var(--ink-soft); font-size: 10px; }
+.retirement-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.retirement-chart-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.retirement-chart-legend .is-expense { background: var(--gold); }
+.retirement-chart-legend .is-income { background: var(--teal); }
+.retirement-chart-legend .is-gap { background: rgba(217, 126, 61, 0.18); border: 1px solid rgba(217, 126, 61, 0.32); }
+.future-chart-help { margin: -7px 2px 14px; color: var(--ink-soft); font-size: 10.5px; line-height: 1.55; }
+.future-outlook-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.future-outlook-table { width: 100%; min-width: 650px; border-collapse: collapse; font-size: 11.5px; }
+.future-outlook-table th, .future-outlook-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.future-outlook-table thead th { background: var(--paper); color: var(--ink-soft); font-weight: 700; }
+.future-outlook-table thead small { font-size: 9px; font-weight: 500; }
+.future-income-label { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 9px; font-weight: 500; }
+.future-outlook-table th:first-child { color: var(--navy-800); text-align: left; }
+.future-outlook-table tbody tr:last-child th, .future-outlook-table tbody tr:last-child td { border-bottom: 0; }
+.future-outlook-table .is-shortfall { color: var(--red); font-weight: 700; }
+.future-outlook-table .is-surplus { color: var(--teal); font-weight: 700; }
+.future-outlook-disclaimer { margin: 9px 2px 0; color: var(--ink-soft); font-size: 9.5px; line-height: 1.55; }
 .future-purchasing-card { margin-top: 22px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
 .future-purchasing-card h3 { margin: 0; color: var(--navy-800); font-size: 15px; }
 .future-purchasing-card > p { margin: 5px 0 15px; color: var(--ink-soft); font-size: 11.5px; }
@@ -818,6 +848,8 @@
   font-weight: 800;
   margin: 6px 0 12px;
 }
+.simple-summary .btn-primary { background: #ff8612; }
+.simple-summary .btn-primary:hover { background: #ff8612; filter: brightness(.98); }
 .ss-actions {
   display: flex;
   gap: 8px;

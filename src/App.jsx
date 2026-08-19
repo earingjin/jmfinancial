@@ -231,7 +231,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
           />
         )}
       </main>
-      {phase !== 'report' && <AppCopyright />}
+      {phase !== 'report' && phase !== 'home' && <AppCopyright />}
     </div>
   );
 }

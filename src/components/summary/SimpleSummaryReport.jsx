@@ -142,6 +142,96 @@ function FutureFinanceChart({ targets }) {
   );
 }
 
+function RetirementCashFlowChart({ outlook }) {
+  if (!outlook?.length || outlook.some((item) => !Number.isFinite(item.totalIncome))) {
+    return <p className="ss-guidance">전체소득 전망이 없는 이전 결과입니다. 재무진단을 다시 실행하면 은퇴 후 현금흐름 그래프를 확인할 수 있습니다.</p>;
+  }
+
+  const width = 640;
+  const height = 290;
+  const plot = { left: 52, right: 18, top: 24, bottom: 48 };
+  const plotWidth = width - plot.left - plot.right;
+  const plotHeight = height - plot.top - plot.bottom;
+  const minAge = outlook[0].age;
+  const maxAge = outlook.at(-1).age;
+  const maxValue = Math.max(...outlook.flatMap((item) => [item.livingExpense || 0, item.totalIncome || 0]), 1);
+  const x = (age) => plot.left + ((age - minAge) / Math.max(1, maxAge - minAge)) * plotWidth;
+  const y = (value) => plot.top + plotHeight - (Math.max(0, value) / maxValue) * plotHeight;
+  const expensePoints = outlook.map((item) => `${x(item.age)},${y(item.livingExpense || 0)}`).join(' ');
+  const incomePoints = outlook.map((item) => `${x(item.age)},${y(item.totalIncome || 0)}`).join(' ');
+  const gapPoints = [
+    ...outlook.map((item) => `${x(item.age)},${y(item.livingExpense || 0)}`),
+    ...[...outlook].reverse().map((item) => `${x(item.age)},${y(item.totalIncome || 0)}`),
+  ].join(' ');
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+
+  return (
+    <div className="retirement-cashflow-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="은퇴 시점부터 예상 월 생활비와 예상 월 총소득의 차이">
+        {ticks.map((ratio) => {
+          const tickY = plot.top + plotHeight - ratio * plotHeight;
+          return (
+            <g key={ratio}>
+              <line className="retirement-chart-grid" x1={plot.left} x2={width - plot.right} y1={tickY} y2={tickY} />
+              <text className="retirement-chart-axis" x={plot.left - 8} y={tickY + 4}>{Math.round(maxValue * ratio)}만</text>
+            </g>
+          );
+        })}
+        <polygon className="retirement-chart-gap" points={gapPoints} />
+        <polyline className="retirement-chart-line retirement-chart-line--expense" points={expensePoints} />
+        <polyline className="retirement-chart-line retirement-chart-line--income" points={incomePoints} />
+        {outlook.map((item, index) => (
+          <g key={item.age}>
+            <circle className="retirement-chart-dot retirement-chart-dot--expense" cx={x(item.age)} cy={y(item.livingExpense || 0)} r="4" />
+            <circle className="retirement-chart-dot retirement-chart-dot--income" cx={x(item.age)} cy={y(item.totalIncome || 0)} r="4" />
+            <text className="retirement-chart-age" x={x(item.age)} y={height - 18}>{index === 0 ? `은퇴 ${item.age}세` : `${item.age}세`}</text>
+          </g>
+        ))}
+      </svg>
+      <div className="retirement-chart-legend">
+        <span><i className="is-expense" />예상 월 생활비</span>
+        <span><i className="is-income" />예상 월 총소득</span>
+        <span><i className="is-gap" />생활비와 소득의 간극</span>
+      </div>
+    </div>
+  );
+}
+
+function FiveYearOutlookTable({ outlook }) {
+  if (!outlook?.length) return null;
+  return (
+    <div className="future-outlook-table-wrap">
+      <table className="future-outlook-table">
+        <thead>
+          <tr>
+            <th scope="col">나이</th>
+            <th scope="col">예상 월 생활비</th>
+            <th scope="col">예상 월 총소득<br /><small>월급·연금 등</small></th>
+            <th scope="col">충당률</th>
+            <th scope="col">월 차이</th>
+          </tr>
+        </thead>
+        <tbody>
+          {outlook.map((item) => (
+            <tr key={item.age}>
+              <th scope="row">{item.age}세</th>
+              <td>{item.livingExpense == null ? '산출 불가' : formatWon(item.livingExpense)}</td>
+              <td>
+                {item.totalIncome == null ? '산출 불가' : formatWon(item.totalIncome)}
+                {item.incomeLabel && <small className="future-income-label">{item.incomeLabel}</small>}
+              </td>
+              <td>{item.coverageRate == null ? '산출 불가' : `${Math.round(item.coverageRate)}%`}</td>
+              <td className={item.balance == null ? '' : item.balance < 0 ? 'is-shortfall' : 'is-surplus'}>
+                {item.balance == null ? '산출 불가' : item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare }) {
   const { generatedAt, peerComparison, webSummary } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
@@ -398,6 +488,16 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
             </div>
             <FutureFinanceChart targets={future.targets} />
             {future.diagnosis && <p className="future-diagnosis">{future.diagnosis}</p>}
+            {future.fiveYearOutlook?.length > 0 && (
+              <>
+                <h3 className="ss-section-title">5년 단위 생활비·소득 전망</h3>
+                <p className="simple-summary-subtitle">현재 입력한 소득의 유지 기간과 연금 수령 시점을 반영해, 은퇴 후 예상 생활비와 총소득의 차이를 5년 단위로 보여드립니다. 생활비는 연 3%씩 상승한다고 가정합니다.</p>
+                <RetirementCashFlowChart outlook={future.retirementCashFlowOutlook} />
+                <p className="future-chart-help">주황색은 예상 월 생활비, 초록색은 예상 월 총소득입니다. 두 선 사이가 넓을수록 매월 예상되는 부족액 또는 여유금액이 큽니다.</p>
+                <FiveYearOutlookTable outlook={future.fiveYearOutlook} />
+                <p className="future-outlook-disclaimer">본 결과는 현재 입력값과 일정한 소득 유지 가정을 바탕으로 한 예상치이며, 실제 소득·물가·연금 변동에 따라 달라질 수 있습니다.</p>
+              </>
+            )}
           </>
         )}
 
@@ -631,9 +731,9 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
       {/* 5. 상세 리포트 다운로드 */}
       <section className="ss-download-section" aria-labelledby="ss-h-download">
         <h2 id="ss-h-download" className="simple-summary-title">더 자세한 분석이 필요하신가요?</h2>
-        <p className="simple-summary-subtitle">상세 리포트는 더 나은 분석을 위해 현재 개선 중입니다.</p>
-        <button type="button" className="btn-primary ss-download-btn" onClick={onDownload} disabled aria-disabled="true" title="현재 개선 중인 기능입니다">
-          상세 리포트 다운로드 (점검중입니다.)
+        <p className="simple-summary-subtitle">상세 리포트에서 재무 현황과 분석 내용을 확인해 보세요.</p>
+        <button type="button" className="btn-primary ss-download-btn" onClick={onDownload}>
+          상세 리포트 다운로드
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>
