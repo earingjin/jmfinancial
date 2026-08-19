@@ -12,8 +12,18 @@ describe('planner_drafts migration security', () => {
     expect(sql).not.toContain('admin');
   });
 
+  it('defines operation-specific authenticated policies, including both UPDATE guards', () => {
+    expect(sql).toMatch(/for select\s+to authenticated\s+using \(\(select auth\.uid\(\)\) = user_id\)/s);
+    expect(sql).toMatch(/for insert\s+to authenticated\s+with check \(\(select auth\.uid\(\)\) = user_id\)/s);
+    expect(sql).toMatch(
+      /for update\s+to authenticated\s+using \(\(select auth\.uid\(\)\) = user_id\)\s+with check \(\(select auth\.uid\(\)\) = user_id\)/s,
+    );
+    expect(sql).toMatch(/for delete\s+to authenticated\s+using \(\(select auth\.uid\(\)\) = user_id\)/s);
+  });
+
   it('uses user_id as the single-row primary key and grants no anon access', () => {
     expect(sql).toContain('user_id uuid primary key references auth.users(id) on delete cascade');
     expect(sql).toContain('revoke all on table public.planner_drafts from anon');
+    expect(sql).toContain('grant select, insert, update, delete on table public.planner_drafts to authenticated');
   });
 });

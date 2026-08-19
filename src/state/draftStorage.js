@@ -58,7 +58,6 @@ export async function upsertDraft(userId, formData, stepIndex, client = supabase
     form_data: formData,
     step_index: stepIndex,
     schema_version: DRAFT_SCHEMA_VERSION,
-    updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' }).select('user_id, form_data, step_index, schema_version, updated_at').single();
   if (error) throw error;
   sessionDraftCache.set(userId, Promise.resolve(data));
