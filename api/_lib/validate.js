@@ -202,6 +202,7 @@ const COUNT_FIELDS = [
 
 const AGE_FIELDS = [
   'basic.retirementAge',
+  'spouse.retirementAge',
   'income.severance.pensionStartAge',
   'spouse.severance.pensionStartAge',
   'income.personalPension.startAge',
@@ -212,6 +213,7 @@ const AGE_FIELDS = [
 
 const AGE_DECIMAL_FIELDS = [
   'basic.lifeExpectancy',
+  'spouse.lifeExpectancy',
   // simulation.js의 `lifeExpectancy || retirementEndAge` 폴백에서만 쓰이는 레거시 호환 별칭.
   // 초기 폼 데이터/입력 UI에는 없지만 같은 나이 필드이므로 lifeExpectancy와 동일한 규칙을 적용한다.
   'basic.retirementEndAge',
@@ -271,6 +273,12 @@ export function validateInput(input) {
   });
   if (input.basic?.hasSpouse === true && isBlank(input.spouse?.birthYear)) {
     errors.push('배우자 출생년도는 필수 입력 항목입니다.');
+  }
+  if (input.basic?.hasSpouse === true && isBlank(input.spouse?.retirementAge)) {
+    errors.push('배우자 은퇴(예정) 연령은 필수 입력 항목입니다.');
+  }
+  if (input.basic?.hasSpouse === true && isBlank(input.spouse?.lifeExpectancy)) {
+    errors.push('배우자 기대여명은 필수 입력 항목입니다.');
   }
 
   [
@@ -387,6 +395,12 @@ export function validateInput(input) {
   const lifeExpectancy = input.basic?.lifeExpectancy;
   if (!isBlank(retirementAge) && !isBlank(lifeExpectancy) && Number(lifeExpectancy) < Number(retirementAge)) {
     errors.push('기대수명(은퇴 종료 연령)은 은퇴 시작 연령보다 작을 수 없습니다.');
+  }
+  const spouseRetirementAge = input.spouse?.retirementAge;
+  const spouseLifeExpectancy = input.spouse?.lifeExpectancy;
+  if (input.basic?.hasSpouse === true && !isBlank(spouseRetirementAge) && !isBlank(spouseLifeExpectancy)
+    && Number(spouseLifeExpectancy) < Number(spouseRetirementAge)) {
+    errors.push('배우자 기대여명은 배우자 은퇴(예정) 연령보다 작을 수 없습니다.');
   }
 
   return { ok: errors.length === 0, errors };

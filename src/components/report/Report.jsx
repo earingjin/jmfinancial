@@ -4,21 +4,26 @@ import PART1FinancialStatusPage from './pages/PART1FinancialStatusPage';
 import HouseholdDetailPage from './pages/HouseholdDetailPage';
 import CashFlowOutlookPage from './pages/CashFlowOutlookPage';
 import ShortfallFillPage from './pages/ShortfallFillPage';
-import ConclusionPage from './pages/ConclusionPage';
 import AssetManagementOptionsPage from './pages/AssetManagementOptionsPage';
 import BackCoverPage from './pages/BackCoverPage';
+import FutureFinanceReportPage from './pages/FutureFinanceReportPage';
+import FiveYearOutlookReportPage from './pages/FiveYearOutlookReportPage';
+import FinancialCompositionReportPage from './pages/FinancialCompositionReportPage';
 
 const SHOW_RESPONSE_CONTENT = false;
-const TOTAL_PAGES = SHOW_RESPONSE_CONTENT ? 9 : 8;
 
 export default function Report({ result, onRestart, onBack, clientName, scenariosInput }) {
   const {
-    generatedAt, summary, indicators, aggregates, simulation, scenarioComparison, peerComparison, familyAges,
-    savingsBreakdown, debtBreakdown, otherLivingExpenseItems, otherLiquidAssetItems,
+    generatedAt, indicators, aggregates, simulation, scenarioComparison, peerComparison, familyAges,
+    savingsBreakdown, debtBreakdown, otherLivingExpenseItems, otherLiquidAssetItems, webSummary,
   } = result;
   // AI가 작성할 리포트 피드백 문구를 담을 자리. 아직 생성 API와 연결되지 않아 항상 비어 있으며,
   // 값이 없으면 각 페이지가 자체적으로 "준비 중" placeholder를 보여준다(AIFeedbackBox 참고).
   const aiFeedback = result.aiFeedback || {};
+  const hasComposition = !!webSummary?.donuts;
+  const hasFutureFinance = (webSummary?.futureFinance?.targets?.length || 0) > 0;
+  const hasFiveYearOutlook = (webSummary?.futureFinance?.fiveYearOutlook?.length || 0) > 0;
+  const totalPages = 7 + Number(SHOW_RESPONSE_CONTENT) + Number(hasComposition) + Number(hasFutureFinance) + Number(hasFiveYearOutlook);
 
   let page = 1;
   const nextPage = () => ++page;
@@ -50,17 +55,25 @@ export default function Report({ result, onRestart, onBack, clientName, scenario
         simulation={simulation}
         aggregates={aggregates}
         familyAges={familyAges}
+        retirementReadiness={webSummary?.retirementReadiness}
         feedback={aiFeedback.executiveSummary}
         pageNumber={nextPage()}
-        totalPages={TOTAL_PAGES}
+        totalPages={totalPages}
       />
 
       <PART1FinancialStatusPage
         aggregates={aggregates}
         savingsBreakdown={savingsBreakdown}
+        overviewDetail={webSummary?.overviewDetail}
         pageNumber={nextPage()}
-        totalPages={TOTAL_PAGES}
+        totalPages={totalPages}
       />
+
+      {hasComposition && <FinancialCompositionReportPage
+        donuts={webSummary?.donuts}
+        pageNumber={nextPage()}
+        totalPages={totalPages}
+      />}
 
       <HouseholdDetailPage
         aggregates={aggregates}
@@ -70,40 +83,41 @@ export default function Report({ result, onRestart, onBack, clientName, scenario
         otherLivingExpenseItems={otherLivingExpenseItems}
         otherLiquidAssetItems={otherLiquidAssetItems}
         pageNumber={nextPage()}
-        totalPages={TOTAL_PAGES}
+        totalPages={totalPages}
       />
 
       <CashFlowOutlookPage
         aggregates={aggregates}
         simulation={simulation}
         pageNumber={nextPage()}
-        totalPages={TOTAL_PAGES}
+        totalPages={totalPages}
       />
 
       <ShortfallFillPage
         simulation={simulation}
         aggregates={aggregates}
+        retirementReadiness={webSummary?.retirementReadiness}
         pageNumber={nextPage()}
-        totalPages={TOTAL_PAGES}
+        totalPages={totalPages}
       />
 
-      <ConclusionPage
-        summary={summary}
-        simulation={simulation}
-        scenarioComparison={scenarioComparison}
-        indicators={indicators}
-        goalFeedback={aiFeedback.financialGoals}
-        feedback={aiFeedback.conclusion}
-        showResponseContent={SHOW_RESPONSE_CONTENT}
+      {hasFutureFinance && <FutureFinanceReportPage
+        futureFinance={webSummary?.futureFinance}
         pageNumber={nextPage()}
-        totalPages={TOTAL_PAGES}
-      />
+        totalPages={totalPages}
+      />}
+
+      {hasFiveYearOutlook && <FiveYearOutlookReportPage
+        futureFinance={webSummary?.futureFinance}
+        pageNumber={nextPage()}
+        totalPages={totalPages}
+      />}
 
       {SHOW_RESPONSE_CONTENT && <AssetManagementOptionsPage
         scenariosInput={scenariosInput}
         scenarioComparison={scenarioComparison}
         pageNumber={nextPage()}
-        totalPages={TOTAL_PAGES}
+        totalPages={totalPages}
       />}
 
       <BackCoverPage generatedAt={generatedAt} />

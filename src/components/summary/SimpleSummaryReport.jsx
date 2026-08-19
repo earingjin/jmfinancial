@@ -266,16 +266,15 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         </button>
       </div>
 
-      {/* 페이지가 6개 섹션으로 길게 이어지는데 이동 수단이 없어, 스크롤 중에도 원하는
+      {/* 페이지가 여러 섹션으로 길게 이어지므로, 스크롤 중에도 원하는
           섹션으로 바로 이동할 수 있는 상단 고정 내비게이션을 추가한다. */}
       <nav className="ss-section-nav" aria-label="섹션 바로가기">
-        <a href="#ss-h-hero">종합결과</a>
-        <a href="#ss-h-overview">재무현황</a>
-        <a href="#ss-h-composition">재무구성</a>
-        <a href="#ss-h-peer">또래비교</a>
-        <a href="#ss-h-future">미래전망</a>
-        <a href="#ss-h-retirement">은퇴준비</a>
-        <a href="#ss-h-download">다운로드</a>
+        <a href="#ss-h-hero">종합 결과</a>
+        <a href="#ss-h-overview">나의 재무 현황</a>
+        <a href="#ss-h-composition">나의 재무 구성</a>
+        <a href="#ss-h-peer">또래 비교</a>
+        <a href="#ss-h-future">미래 재무 전망</a>
+        <a href="#ss-h-retirement">은퇴 준비 현황</a>
       </nav>
 
       <div className="simple-summary-date">최근 설계일 {formatDesignDate(generatedAt)}</div>

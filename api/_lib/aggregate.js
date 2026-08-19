@@ -214,11 +214,17 @@ export function calcRetirementIncomeByPerson(input) {
   return {
     self: {
       nationalPensionMonthly: pickNationalPension(income.nationalPension),
+      severancePensionMonthly: income.severance?.type === 'pension'
+        ? pick(income.severance?.pensionMonthly, income.severance?.pensionMonths)
+        : 0,
       severanceLumpsum: n(income.severance?.lumpsum),
       personalPensionMonthly: personalPensionMonthly(income.personalPension),
     },
     spouse: {
       nationalPensionMonthly: pickNationalPension(spouse.nationalPension),
+      severancePensionMonthly: spouse.severance?.type === 'pension'
+        ? pick(spouse.severance?.pensionMonthly, spouse.severance?.pensionMonths)
+        : 0,
       severanceLumpsum: n(spouse.severance?.lumpsum),
       personalPensionMonthly: personalPensionMonthly(spouse.personalPension),
     },
@@ -231,7 +237,7 @@ export function getCurrentAge(input, currentYear = new Date().getFullYear()) {
   return birthYear ? currentYear - birthYear : 0;
 }
 
-// 리포트 2페이지 가족구성원 표 전용 - 배우자·자녀는 별도 은퇴연령·기대여명을 입력받지 않으므로 연령만 산출한다.
+// 리포트 2페이지 가족구성원 표 전용.
 export function buildFamilyAges(input, currentYear = new Date().getFullYear()) {
   const spouseBirthYear = n(input.spouse?.birthYear);
   const children = (input.expense?.children || []).map((c) => {
@@ -241,7 +247,11 @@ export function buildFamilyAges(input, currentYear = new Date().getFullYear()) {
 
   return {
     self: { age: getCurrentAge(input, currentYear) },
-    spouse: spouseBirthYear ? { age: currentYear - spouseBirthYear } : null,
+    spouse: spouseBirthYear ? {
+      age: currentYear - spouseBirthYear,
+      retirementAge: n(input.spouse?.retirementAge) || null,
+      lifeExpectancy: n(input.spouse?.lifeExpectancy) || null,
+    } : null,
     children,
   };
 }

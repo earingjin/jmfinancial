@@ -1,25 +1,21 @@
 import PageFrame from './PageFrame';
-import { formatWon, round1 } from '../../../utils/format';
+import SectionBadge from './SectionBadge';
+import { formatWon } from '../../../utils/format';
 
-export default function ShortfallFillPage({ simulation, aggregates: agg, pageNumber, totalPages }) {
+export default function ShortfallFillPage({ simulation, aggregates: agg, retirementReadiness, pageNumber, totalPages }) {
   const byPerson = agg.retirementIncomeByPerson;
-  const selfMonthlyIncome = byPerson.self.nationalPensionMonthly + byPerson.self.personalPensionMonthly;
-  const spouseMonthlyIncome = byPerson.spouse.nationalPensionMonthly + byPerson.spouse.personalPensionMonthly;
+  const selfMonthlyIncome = byPerson.self.nationalPensionMonthly + byPerson.self.severancePensionMonthly + byPerson.self.personalPensionMonthly;
+  const spouseMonthlyIncome = byPerson.spouse.nationalPensionMonthly + byPerson.spouse.severancePensionMonthly + byPerson.spouse.personalPensionMonthly;
 
   const goals = simulation.lifeGoals;
   const goalGap = goals.preparedAmount - goals.totalGoalAmount;
 
   return (
     <PageFrame eyebrow="Retirement Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
-      <h3 className="num-section-title no-number-badge">PART2_은퇴자산</h3>
+      <div className="shortfall-report-content">
+      <SectionBadge number="5" label="노후 현금유입 및 생애재무목표" />
 
-      <div className="cashflow-info-heading-row" style={{ marginBottom: 16 }}>
-        <h4 className="num-section-title" style={{ fontSize: 14, marginBottom: 0 }}><span className="num-badge">1</span>노후목표 생활비 대응을 위한 현금 유입 현황(가구)</h4>
-        <div className="cashflow-info-box">
-          <div className="cashflow-info-row"><span>향후 노후 생활 기간</span><span className="num">{round1(simulation.retirementYears)}년</span></div>
-          <div className="cashflow-info-row"><span>월평균 지출비용</span><span className="num">{formatWon(simulation.retirementLivingCostNow)}</span></div>
-        </div>
-      </div>
+      <h4 className="num-section-title" style={{ fontSize: 14 }}><span className="num-badge">5-1</span>노후목표 생활비 대응을 위한 현금 유입 현황(가구)</h4>
 
       <h3 className="card-title" style={{ marginBottom: 8 }}>현재 총수입금액</h3>
       <table className="grade-table compact">
@@ -40,16 +36,21 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, pageNum
             <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.spouse.nationalPensionMonthly)}</td>
           </tr>
           <tr>
-            <td>4. 개인연금(월)</td>
+            <td>4. 퇴직연금(월)</td>
+            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.self.severancePensionMonthly)}</td>
+            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.spouse.severancePensionMonthly)}</td>
+          </tr>
+          <tr>
+            <td>5. 개인연금(월)</td>
             <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.self.personalPensionMonthly)}</td>
             <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.spouse.personalPensionMonthly)}</td>
           </tr>
           <tr>
-            <td>5. 현금성자산</td>
+            <td>6. 현금성자산</td>
             <td className="num" colSpan={2} style={{ textAlign: 'right' }}>{formatWon(agg.liquidAssets)} (가구 합산)</td>
           </tr>
           <tr>
-            <td>6. 기타수입(월)</td>
+            <td>7. 기타수입(월)</td>
             <td className="num" colSpan={2} style={{ textAlign: 'right' }}>{formatWon(agg.otherIncomeMonthly)} (가구 합산)</td>
           </tr>
           <tr className="total-row">
@@ -63,20 +64,24 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, pageNum
         기타수입 · 순자산은 가구 합산으로만 입력받아 본인 · 배우자로 나눠 표시하지 않습니다.
       </div>
 
-      <div className="summary-card-grid" style={{ marginBottom: 20 }}>
-        <div className="summary-card">
-          <div className="summary-card-title">나의 총수입금액</div>
-          <div className="summary-card-row"><span>월 수입 합계(국민연금+개인연금)</span><span className="num">{formatWon(selfMonthlyIncome)}</span></div>
-          <div className="summary-card-row total"><span>퇴직금(일시금)</span><span className="num">{formatWon(byPerson.self.severanceLumpsum)}</span></div>
+      {retirementReadiness && !retirementReadiness.notCalculable && (
+        <div className="report-retirement-income-strip">
+          <div><span>노후 월 필요생활비</span><strong>{formatWon(retirementReadiness.monthlyIncomeCompare.livingCostMonthly)}</strong></div>
+          <div><span>가구 월 연금합계</span><strong>{formatWon(selfMonthlyIncome + spouseMonthlyIncome)}</strong></div>
+          <div><span>월 부족액</span><strong className="is-shortfall">{formatWon(retirementReadiness.monthlyIncomeCompare.shortfallMonthly)}</strong></div>
+          <div><span>연금소득 기준 충당률</span><strong>{retirementReadiness.retirementIncomeIndicator?.notCalculable ? '산출 불가' : `${retirementReadiness.retirementIncomeIndicator?.displayValue ?? retirementReadiness.retirementIncomeIndicator?.value}%`}</strong></div>
         </div>
-        <div className="summary-card">
-          <div className="summary-card-title">배우자의 총수입금액</div>
-          <div className="summary-card-row"><span>월 수입 합계(국민연금+개인연금)</span><span className="num">{formatWon(spouseMonthlyIncome)}</span></div>
-          <div className="summary-card-row total"><span>퇴직금(일시금)</span><span className="num">{formatWon(byPerson.spouse.severanceLumpsum)}</span></div>
-        </div>
-      </div>
+      )}
 
-      <h4 className="num-section-title" style={{ fontSize: 14 }}><span className="num-badge">2</span>생애재무목표</h4>
+      {retirementReadiness?.incomeGap && !retirementReadiness.incomeGap.notCalculable && (
+        <div className="report-income-gap-box">
+          <strong>정년 이후 국민연금 수령 전 소득공백</strong>
+          <span>{retirementReadiness.retirementAge}세 은퇴 → {retirementReadiness.incomeGap.nationalPensionStartAge}세 국민연금 개시</span>
+          <span>{retirementReadiness.incomeGap.gapYears}년간 총 필요생활비 {formatWon(retirementReadiness.incomeGap.totalGapFundingNeeded)}</span>
+        </div>
+      )}
+
+      <h4 className="num-section-title" style={{ fontSize: 14 }}><span className="num-badge">5-2</span>생애재무목표</h4>
       <div className="cost-table-grid" style={{ marginTop: 10 }}>
         <table className="grade-table compact">
           <thead><tr><th>재무목표</th><th style={{ textAlign: 'right' }}>필요자금</th></tr></thead>
@@ -104,6 +109,7 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, pageNum
       <div className="fine-print" style={{ marginTop: 8 }}>
         &apos;자녀결혼 지원 · 자녀교육비 · 기타&apos;는 자녀별로 입력하신 생애 목돈 지출 항목의 합계이며, &apos;계&apos;가 양수이면 준비된
         자금이 필요자금보다 여유가 있고, 음수이면 그만큼 부족하다는 뜻입니다.
+      </div>
       </div>
     </PageFrame>
   );
