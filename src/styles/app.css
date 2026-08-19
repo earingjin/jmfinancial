@@ -521,6 +521,28 @@ body {
   .welcome-panel p { margin: 8px 0 18px; }
   .welcome-actions button { min-height: 48px; }
 }
+@media (max-width: 599px) {
+  .welcome-page {
+    height: 100svh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .welcome-shell {
+    height: 100%;
+    min-height: 0;
+  }
+  .welcome-visual {
+    flex: 1 1 auto;
+    min-height: 150px;
+  }
+  .welcome-panel {
+    padding: 22px 24px max(20px, env(safe-area-inset-bottom));
+    margin-top: -20px;
+  }
+  .welcome-accent { margin-bottom: 14px; }
+  .welcome-panel p { margin: 8px 0 20px; }
+  .welcome-actions button { min-height: 50px; }
+}
 
 /* ---------- 로그인/회원가입 (프리인덱스) ---------- */
 .auth-gate {
