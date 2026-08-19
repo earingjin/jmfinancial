@@ -17,6 +17,7 @@ describe('Supabase planner drafts', () => {
     await upsertDraft('user-1', compatibleFormData(), 2, client);
     expect(client.from).toHaveBeenCalledWith('planner_drafts');
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1', step_index: 2, schema_version: DRAFT_SCHEMA_VERSION }), { onConflict: 'user_id' });
+    expect(upsert.mock.calls[0][0]).not.toHaveProperty('updated_at');
   });
 
   it('queries and deletes only the requested user id', async () => {

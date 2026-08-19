@@ -12,9 +12,9 @@ function translateAuthError(message) {
   return message;
 }
 
-export default function AuthGate({ title = '잭앤리치', allowSignup = true, noticeMessage, secondaryAction }) {
+export default function AuthGate({ title = '잭앤리치', allowSignup = true, initialMode = 'login', noticeMessage, secondaryAction }) {
   const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState(initialMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

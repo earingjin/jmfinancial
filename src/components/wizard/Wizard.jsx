@@ -8,12 +8,12 @@ import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
 import { getIn } from '../../state/pathUtils';
-import incomeIcon from '../../assets/1.수입.png';
-import expenseIcon from '../../assets/2.지출.png';
-import savingsIcon from '../../assets/3.저축.png';
-import assetsIcon from '../../assets/4.자산.png';
-import debtIcon from '../../assets/5.부채.png';
-import netWorthIcon from '../../assets/6.순자산.png';
+import incomeIcon from '../../assets/1.수입.webp';
+import expenseIcon from '../../assets/2.지출.webp';
+import savingsIcon from '../../assets/3.저축.webp';
+import assetsIcon from '../../assets/4.자산.webp';
+import debtIcon from '../../assets/5.부채.webp';
+import netWorthIcon from '../../assets/6.순자산.webp';
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 const SHOW_SCENARIO_STEP = false;

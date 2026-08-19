@@ -63,36 +63,14 @@ body {
 /* ---------- 홈 랜딩 화면 / 이전 결과 목록 ---------- */
 /* 위저드 카드가 놓이는 .app-main과 같은 max-width(880px)를 그대로 써서 화면 전환 시
    본문 폭이 갑자기 바뀌지 않게 한다. */
-.home-screen {
-  max-width: 880px;
-  margin: 40px auto;
-  text-align: center;
+.app-main--home { max-width: none; margin: 0; padding: 0; }
+.home-welcome-page .welcome-panel p strong { color: #b9652d; font-weight: 700; }
+.home-signout {
+  margin: 15px auto 0; padding: 2px 8px; border: 0; background: transparent;
+  color: #8b8178; font: inherit; font-size: 12px; cursor: pointer;
 }
-.home-card {
-  margin: 22px auto 0;
-  background-color: var(--card);
-  background-image: url('../assets/리포트 속지.png');
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 48px 40px;
-  text-align: center;
-}
-.home-title { font-size: 24px; font-weight: 800; color: var(--navy-900); margin: 0; }
-.home-title span { display: block; }
-.home-subtitle { font-size: 16px; font-weight: 700; color: var(--navy-800); margin: 0 0 8px; }
-.home-desc { font-size: 14px; color: var(--ink-soft); margin: 0 0 22px; line-height: 1.6; }
-.home-visual {
-  display: block;
-  width: min(100%, 440px);
-  height: auto;
-  margin: 0 auto 28px;
-  border-radius: 14px;
-}
-.home-actions { display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 0 auto; }
-.home-actions .btn-primary, .home-actions .btn-secondary { width: 100%; padding: 14px; font-size: 15px; }
+.home-signout:hover { color: #b9652d; text-decoration: underline; }
+.home-signout:focus-visible { outline: 2px solid rgba(210, 122, 58, .35); outline-offset: 2px; }
 
 .history-card {
   background-image: none;
@@ -140,10 +118,6 @@ body {
 .history-delete-btn:hover { border-color: var(--red); color: var(--red); }
 .history-delete-btn:disabled { opacity: .5; cursor: not-allowed; }
 .history-delete-error { color: var(--red); font-size: 13px; margin: -8px 0 14px; }
-
-@media (max-width: 480px) {
-  .home-card { padding: 36px 22px; }
-}
 
 .app-copyright {
   padding: 0 20px 18px; color: var(--ink-soft); font-size: 9px;
@@ -499,6 +473,55 @@ body {
 .btn-secondary { background: #fff; border: 1px solid var(--line); color: var(--ink); }
 .btn-secondary:disabled { opacity: .4; cursor: not-allowed; }
 
+/* ---------- 최초 접속 웰컴 ---------- */
+.welcome-page { min-height: 100svh; display: grid; place-items: center; background: #f4f1e9; }
+.welcome-shell {
+  width: 100%; min-height: 100svh; display: flex; flex-direction: column;
+  overflow: hidden; background: #fffdf8;
+}
+.welcome-visual { flex: 1 1 58%; min-height: 0; overflow: hidden; background: #f5ead8; }
+.welcome-visual img {
+  width: 100%; height: 100%; display: block; object-fit: cover; object-position: center 58%;
+}
+.welcome-panel {
+  flex: 0 0 auto; padding: 30px 24px max(28px, env(safe-area-inset-bottom));
+  text-align: center; background: #fffdf8; border-radius: 28px 28px 0 0;
+  margin-top: -24px; position: relative; z-index: 1;
+}
+.welcome-accent {
+  width: 34px; height: 4px; margin: 0 auto 20px; border-radius: 999px; background: #849b7a;
+}
+.welcome-panel h1 {
+  margin: 0; color: #b9652d; font-size: clamp(24px, 7vw, 30px);
+  line-height: 1.25; letter-spacing: -.03em;
+}
+.welcome-panel p {
+  margin: 12px 0 26px; color: #65717a; font-size: 15px; line-height: 1.65;
+}
+.welcome-actions { display: grid; gap: 12px; }
+.welcome-actions button {
+  width: 100%; min-height: 52px; border-radius: 13px; font: inherit;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+}
+.welcome-login { border: 1px solid #d27a3a; background: #d27a3a; color: #fff; }
+.welcome-signup { border: 1px solid #e4c2a6; background: #fffdf8; color: #b9652d; }
+.welcome-actions button:focus-visible {
+  outline: 3px solid rgba(132, 155, 122, .4); outline-offset: 2px;
+}
+@media (min-width: 600px) {
+  .welcome-page { padding: 28px; }
+  .welcome-shell {
+    width: min(460px, 100%); min-height: min(820px, calc(100svh - 56px));
+    max-height: 880px; border-radius: 28px;
+  }
+}
+@media (max-height: 700px) {
+  .welcome-panel { padding-top: 22px; }
+  .welcome-accent { margin-bottom: 14px; }
+  .welcome-panel p { margin: 8px 0 18px; }
+  .welcome-actions button { min-height: 48px; }
+}
+
 /* ---------- 로그인/회원가입 (프리인덱스) ---------- */
 .auth-gate {
   position: relative;
@@ -558,14 +581,12 @@ body {
   position: relative;
   width: 100%;
   max-width: 380px;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(15, 27, 51, .35);
-  overflow: hidden;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 .auth-card-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+  display: none;
 }
 .auth-card-bg img {
   width: 100%;
@@ -584,7 +605,7 @@ body {
 .auth-card-content {
   position: relative;
   z-index: 1;
-  padding: 32px 28px;
+  padding: 0;
 }
 .auth-title { font-size: 18px; font-weight: 800; color: var(--navy-900); text-align: center; margin: 8px 0 24px; text-shadow: 0 1px 4px rgba(255,255,255,.7); }
 .auth-mode-toggle { justify-content: center; margin-bottom: 20px; }

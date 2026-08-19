@@ -31,7 +31,12 @@ export function AuthProvider({ children }) {
   const signOut = useCallback(async () => {
     removeLegacyLocalDraft(session?.user?.id);
     clearDraftSessionCache(session?.user?.id);
-    return supabase.auth.signOut();
+    const result = await supabase.auth.signOut();
+    if (!result.error && typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+    return result;
   }, [session?.user?.id]);
 
   const value = {

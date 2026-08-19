@@ -3,6 +3,7 @@ import { FormProvider } from './state/FormContext';
 import { AuthProvider } from './state/AuthContext';
 import { useAuth } from './state/authState';
 import AuthGate from './components/auth/AuthGate';
+import WelcomeScreen from './components/welcome/WelcomeScreen';
 import AdminDashboard from './components/admin/AdminDashboard';
 import HomeScreen from './components/home/HomeScreen';
 import HistoryList from './components/home/HistoryList';
@@ -147,7 +148,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
 
   return (
     <div className={`app-shell${isDiagnosisPhase ? ' app-shell--diagnosis' : ''}`}>
-      {phase !== 'report' && phase !== 'summary' && (
+      {phase !== 'report' && phase !== 'summary' && phase !== 'home' && (
         <header className={`app-header${useDiagnosisHeader ? ' app-header--diagnosis' : ''}`}>
           <div className="app-header-account">
             {phase === 'wizard' && (
@@ -164,12 +165,13 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         </header>
       )}
 
-      <main className={`app-main${phase === 'report' ? ' report-print-mode' : ''}`}>
+      <main className={`app-main${phase === 'report' ? ' report-print-mode' : ''}${phase === 'home' ? ' app-main--home' : ''}`}>
         {phase === 'home' && (
           <HomeScreen
             userName={user?.user_metadata?.name}
             onStart={startDiagnosis}
             onViewHistory={viewHistory}
+            onSignOut={signOut}
           />
         )}
 
@@ -234,7 +236,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   );
 }
 
-function AuthGatedApp() {
+function AuthGatedApp({ authView, onAuthViewChange }) {
   const { user, loading } = useAuth();
   const [draftDecision, setDraftDecision] = useState(null);
   const [draftLoad, setDraftLoad] = useState({ status: 'idle', source: null, draft: null, message: null });
@@ -310,7 +312,22 @@ function AuthGatedApp() {
   }
 
   if (!user) {
-    return <AuthGate />;
+    if (authView === 'welcome') {
+      return (
+        <WelcomeScreen
+          onLogin={() => onAuthViewChange('login')}
+          onSignup={() => onAuthViewChange('signup')}
+        />
+      );
+    }
+    return (
+      <AuthGate
+        key={authView}
+        initialMode={authView}
+        allowSignup={false}
+        secondaryAction={{ label: '← 뒤로가기', onClick: () => onAuthViewChange('welcome') }}
+      />
+    );
   }
 
   const currentDecision = draftDecision?.userId === user.id ? draftDecision : null;
@@ -392,10 +409,29 @@ function AdminRoute() {
 
 export default function App() {
   const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+  const resolveAuthView = () => {
+    if (window.location.pathname === '/login') return 'login';
+    if (window.location.pathname === '/signup') return 'signup';
+    return 'welcome';
+  };
+  const [authView, setAuthView] = useState(resolveAuthView);
+
+  useEffect(() => {
+    const handlePopState = () => setAuthView(resolveAuthView());
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const changeAuthView = (nextView) => {
+    const nextPath = nextView === 'welcome' ? '/' : `/${nextView}`;
+    window.history.pushState({}, '', nextPath);
+    setAuthView(nextView);
+    window.scrollTo(0, 0);
+  };
 
   return (
     <AuthProvider>
-      {isAdminRoute ? <AdminRoute /> : <AuthGatedApp />}
+      {isAdminRoute ? <AdminRoute /> : <AuthGatedApp authView={authView} onAuthViewChange={changeAuthView} />}
     </AuthProvider>
   );
 }
