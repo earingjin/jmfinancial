@@ -1,4 +1,4 @@
-import welcomeImage from '../../assets/웰컴화면.png';
+import welcomeImage from '../../assets/웰컴화면.webp';
 
 // 로그인 직후 랜딩 화면. 바로 마법사로 보내지 않고, 새 진단 시작 / 이전 결과 보기 중 고르게 한다.
 export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut }) {
