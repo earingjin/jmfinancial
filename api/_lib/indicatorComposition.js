@@ -90,6 +90,7 @@ const BUILDERS = {
       { key: 'financial', label: '금융자산(투자)', value: agg.financialAssetsTotal, color: 'var(--teal)' },
       { key: 'pension', label: '연금자산', value: agg.pensionAssets, color: 'var(--navy-600)' },
       { key: 'realEstate', label: '부동산자산', value: agg.realEstateTotal, color: 'var(--amber)' },
+      { key: 'otherAssets', label: '기타 자산', value: agg.otherAssetsTotal, color: 'var(--ink-soft)' },
     ],
     note: agg.realEstateTotal > agg.liquidAssets + agg.financialAssetsTotal + agg.pensionAssets
       ? '실물자산(부동산) 비중이 커서 필요할 때 현금화하기 어려운 구조입니다.'

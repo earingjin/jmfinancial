@@ -127,6 +127,7 @@ export default function Step2Expense() {
           basePath="assets.currentLivingCost.breakdown"
           totalPath="assets.currentLivingCost.monthly"
           annualPath="assets.currentLivingCost.annual"
+          modePath="assets.currentLivingCost.inputMode"
           categories={CURRENT_LIVING_COST_CATEGORIES}
           totalLabel="현재 기준 월 생활비 합계"
           annualLabel="현재 기준 연 생활비 합계"

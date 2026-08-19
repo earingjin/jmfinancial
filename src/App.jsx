@@ -12,6 +12,7 @@ import SimpleSummaryReport from './components/summary/SimpleSummaryReport';
 import AppCopyright from './components/AppCopyright';
 import { deobfuscate } from './utils/obfuscate';
 import { supabase } from './lib/supabaseClient';
+import { readDraft, removeDraft } from './state/draftStorage';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -36,9 +37,10 @@ async function savePlannerResult(user, formData, result) {
   }
 }
 
-function AppContent() {
+function AppContent({ initialDraft = null, startWithWizard = false }) {
   const { user, signOut } = useAuth();
-  const [phase, setPhase] = useState('home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'error' | 'history'
+  const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'error' | 'history'
+  const [draftSavedAt, setDraftSavedAt] = useState(initialDraft?.updatedAt || null);
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [wizardResume, setWizardResume] = useState(false);
@@ -173,8 +175,8 @@ function AppContent() {
           <HistoryList user={user} onSelect={openPastResult} onBackHome={goHome} onStart={startDiagnosis} />
         )}
 
-        <FormProvider>
-          {phase === 'wizard' && <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} />}
+        <FormProvider userId={user.id} initialDraft={initialDraft} onDraftSaved={setDraftSavedAt}>
+          {phase === 'wizard' && <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={initialDraft?.stepIndex || 0} userId={user.id} draftSavedAt={draftSavedAt} />}
         </FormProvider>
 
         {phase === 'loading' && (
@@ -220,6 +222,7 @@ function AppContent() {
 
 function AuthGatedApp() {
   const { user, loading } = useAuth();
+  const [draftDecision, setDraftDecision] = useState(null);
 
   if (loading) {
     return (
@@ -234,7 +237,22 @@ function AuthGatedApp() {
     return <AuthGate />;
   }
 
-  return <AppContent />;
+  const draft = readDraft(user.id);
+  const currentDecision = draftDecision?.userId === user.id ? draftDecision : null;
+  if (draft && !currentDecision) {
+    return (
+      <div className="draft-choice">
+        <div className="draft-choice-card">
+          <h2>작성 중인 내용이 있습니다</h2>
+          <p>마지막으로 임시 저장한 입력 내용을 이어서 작성하시겠습니까?</p>
+          <button type="button" className="btn-primary" onClick={() => setDraftDecision({ userId: user.id, draft })}>이어서 입력</button>
+          <button type="button" className="btn-secondary" onClick={() => { removeDraft(user.id); setDraftDecision({ userId: user.id, draft: null }); }}>새로 입력</button>
+        </div>
+      </div>
+    );
+  }
+
+  return <AppContent initialDraft={currentDecision?.draft || null} startWithWizard={Boolean(currentDecision)} />;
 }
 
 function AdminRoute() {

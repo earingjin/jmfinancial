@@ -3,6 +3,7 @@ import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
+import TotalAmountBox from './TotalAmountBox';
 
 /**
  * 항목 종류를 버튼(pill)으로 나열해 클릭한 종류만 금액 입력창을 펼쳐서 보여주는 필드.
@@ -195,10 +196,6 @@ export default function CategoryBreakdownField({
               <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.amount) || 0)}만원</td>
             </tr>
           ))}
-          <tr className="total-row">
-            <td>{totalLabel}</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatNumber(total || 0)}만원</td>
-          </tr>
           {annualPath && (
             <tr className="total-row">
               <td>{annualLabel}</td>
@@ -207,6 +204,7 @@ export default function CategoryBreakdownField({
           )}
         </tbody>
       </table>
+      <TotalAmountBox label={totalLabel} amount={Number(total) || 0} valueLabel="총액은" />
       <span className="field-helper">선택·추가하신 항목 금액을 자동으로 합산한 값입니다</span>
     </div>
   );

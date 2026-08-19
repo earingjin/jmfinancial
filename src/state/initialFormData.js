@@ -109,6 +109,7 @@ export const initialFormData = {
     currentIncome: { monthly: '', annual: '' },
     currentLivingCost: {
       monthly: '', annual: '',
+      inputMode: 'simple',   // 'simple'(총액 한번에 입력) | 'detailed'(지출별 입력) - UI 입력 방식 선택값
       breakdown: {           // 현재 월 생활비 세부 항목(월 생활비 합계는 이 값들의 합으로 자동 계산됨)
         rent: '',            // 월세
         maintenance: '',     // 관리비
@@ -162,6 +163,11 @@ export const initialFormData = {
       mainProperty: '',          // 주요 부동산 시세(현재 시세 기준으로 직접 입력)
       otherItems: [],            // [{ type, amount }] 기타 부동산(추가 보유 부동산)의 종류와 시세
       reverseMortgageHouse: '',  // 주택연금 신청 대상 주택 1채의 가격
+    },
+    otherAssets: {
+      hasAssets: true,
+      total: '',                 // items 금액의 합으로 자동 계산됨
+      items: [],                 // [{ name, amount }] 기타 자산 항목
     },
     debtStatus: {
       hasDebt: true,

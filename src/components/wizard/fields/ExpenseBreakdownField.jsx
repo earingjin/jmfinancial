@@ -4,6 +4,7 @@ import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
 import RepeatableList from './RepeatableList';
+import TotalAmountBox from './TotalAmountBox';
 
 /**
  * 세부 항목을 버튼(pill)으로 나열해 클릭한 항목만 금액 입력창을 펼쳐서 보여주는 필드.
@@ -17,14 +18,15 @@ export default function ExpenseBreakdownField({
   basePath,
   totalPath,
   annualPath,
+  modePath,
   categories,
   totalLabel = '월 합계',
-  annualLabel = '연 합계',
 }) {
   const { formData, setField } = useFormData();
   const breakdown = getIn(formData, basePath) || {};
   const total = getIn(formData, totalPath);
   const annualTotal = annualPath ? getIn(formData, annualPath) : null;
+  const mode = getIn(formData, modePath) || 'simple';
 
   const [openKeys, setOpenKeys] = useState(() => {
     const otherItemsInit = getIn(formData, `${basePath}.otherItems`) || [];
@@ -98,33 +100,62 @@ export default function ExpenseBreakdownField({
 
   return (
     <div className="field">
-      <label className="field" style={{ marginBottom: 16 }}>
-        <span className="field-label">현재 월 생활비</span>
-        <div className="field-input-row">
-          <FormattedNumberInput
-            type="number"
-            min={0}
-            inputMode="numeric"
-            value={total ?? ''}
-            onChange={(e) => handleTotalChange(e.target.value)}
-          />
-          <span className="field-unit">만원</span>
-        </div>
-        <span className="field-helper">세부 항목 버튼을 선택하지 않고 월 생활비 총액만 입력할 수 있습니다</span>
-      </label>
-      <span className="field-label">해당하는 항목을 누르면 상세한 지출항목을 입력할 수 있습니다.</span>
-      <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
-        {categories.map((c) => (
-          <button
-            type="button"
-            key={c.key}
-            className={`checkbox-pill ${openKeys.has(c.key) ? 'is-active' : ''}`}
-            onClick={() => toggle(c.key)}
-          >
-            {c.label}
-          </button>
-        ))}
+      <span className="field-label">입력 방식을 선택해 주세요</span>
+      <div className="radio-group" style={{ marginTop: 8, marginBottom: 14 }}>
+        <button
+          type="button"
+          className={`radio-pill ${mode === 'simple' ? 'is-active' : ''}`}
+          onClick={() => setField(modePath, 'simple')}
+        >
+          총액으로 한번에 입력
+        </button>
+        <button
+          type="button"
+          className={`radio-pill ${mode === 'detailed' ? 'is-active' : ''}`}
+          onClick={() => setField(modePath, 'detailed')}
+        >
+          지출별로 자세히 입력
+        </button>
       </div>
+
+      {mode === 'simple' ? (
+        <>
+          <label className="field" style={{ marginBottom: 16 }}>
+            <span className="field-label">현재 월 생활비</span>
+            <div className="field-input-row">
+              <FormattedNumberInput
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={total ?? ''}
+                onChange={(e) => handleTotalChange(e.target.value)}
+              />
+              <span className="field-unit">만원</span>
+            </div>
+          </label>
+          <TotalAmountBox
+            label={totalLabel}
+            amount={Number(total) || 0}
+            valueLabel="월 생활비는"
+            secondaryAmount={annualPath ? Number(annualTotal) || 0 : null}
+            secondaryValueLabel="연 생활비는"
+          />
+          <span className="field-helper">입력하신 월 생활비를 기준으로 연 생활비를 환산한 값입니다</span>
+        </>
+      ) : <>
+        <span className="field-label">해당하는 항목을 누르면 상세한 지출항목을 입력할 수 있습니다.</span>
+        <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
+          {categories.map((c) => (
+            <button
+              type="button"
+              key={c.key}
+              className={`checkbox-pill ${openKeys.has(c.key) ? 'is-active' : ''}`}
+              onClick={() => toggle(c.key)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
 
       {openNumberCategories.length > 0 && (
         <div className="field-grid three-col">
@@ -185,22 +216,22 @@ export default function ExpenseBreakdownField({
                 <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(breakdown[c.key]) || 0)}만원</td>
               </tr>
             ))}
-            <tr className="total-row">
-              <td>{totalLabel}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(total || 0)}만원</td>
-            </tr>
-            {annualPath && (
-              <tr className="total-row">
-                <td>{annualLabel}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatNumber(annualTotal || 0)}만원</td>
-              </tr>
-            )}
           </tbody>
         </table>
       )}
       {openCategories.length > 0 && (
-        <span className="field-helper">선택하신 항목 금액을 자동으로 합산한 값입니다</span>
+        <>
+          <TotalAmountBox
+            label={totalLabel}
+            amount={Number(total) || 0}
+            valueLabel="월 생활비는"
+            secondaryAmount={annualPath ? Number(annualTotal) || 0 : null}
+            secondaryValueLabel="연 생활비는"
+          />
+          <span className="field-helper">선택하신 항목 금액을 자동으로 합산한 값입니다</span>
+        </>
       )}
+      </>}
     </div>
   );
 }

@@ -124,6 +124,7 @@ const AMOUNT_FIELDS = [
   'assets.realEstateAssets.total',
   'assets.realEstateAssets.mainProperty',
   'assets.realEstateAssets.reverseMortgageHouse',
+  'assets.otherAssets.total',
   'assets.debtStatus.totalBalance',
   'assets.debtStatus.monthlyRepayment',
   'assets.insurance.monthlyPremium',
@@ -228,6 +229,7 @@ const ARRAY_FIELDS = [
   { path: 'assets.financialAssets.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
   { path: 'assets.pensionAssetsBreakdown.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
   { path: 'assets.realEstateAssets.otherItems', fields: [{ key: 'amount', kind: 'amount' }] },
+  { path: 'assets.otherAssets.items', fields: [{ key: 'amount', kind: 'amount' }] },
   {
     path: 'assets.savingsPlan.customItems',
     fields: [

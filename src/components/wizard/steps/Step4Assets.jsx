@@ -7,6 +7,7 @@ import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
+import TotalAmountBox from '../fields/TotalAmountBox';
 
 const LIQUID_ASSET_CATEGORIES = [
   { key: 'deposit', label: '예금' },
@@ -62,6 +63,7 @@ export default function Step4Assets() {
   const hasFinancialAssets = getIn(formData, 'assets.financialAssets.hasAssets') !== false;
   const hasPensionAssets = getIn(formData, 'assets.hasPensionAssets') !== false;
   const hasRealEstateAssets = getIn(formData, 'assets.realEstateAssets.hasAssets') !== false;
+  const hasOtherAssets = getIn(formData, 'assets.otherAssets.hasAssets') !== false;
 
   const setAssetPresence = (path, value, clear) => {
     setField(path, value);
@@ -91,6 +93,11 @@ export default function Step4Assets() {
     setField('assets.realEstateAssets.reverseMortgageHouse', '');
     setField('assets.realEstateAssets.otherItems', []);
     setField('assets.realEstateAssets.total', 0);
+  };
+
+  const clearOtherAssets = () => {
+    setField('assets.otherAssets.items', []);
+    setField('assets.otherAssets.total', 0);
   };
   const [openFinancialKeys, setOpenFinancialKeys] = useState(() => {
     const fa = getIn(formData, 'assets.financialAssets') || {};
@@ -204,11 +211,18 @@ export default function Step4Assets() {
   const realEstateOtherTotal = realEstateOtherItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
   const realEstateTotal = realEstateMainProperty + realEstateOtherTotal;
 
+  const otherAssetItems = getIn(formData, 'assets.otherAssets.items') || [];
+  const otherAssetsTotal = otherAssetItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
+
+  useEffect(() => {
+    setField('assets.otherAssets.total', otherAssetsTotal);
+  }, [otherAssetsTotal, setField]);
+
   useEffect(() => {
     setField('assets.realEstateAssets.total', realEstateTotal);
   }, [realEstateTotal, setField]);
 
-  const totalAssets = liquidAssets + financialAssetsTotal + pensionAssets + realEstateTotal;
+  const totalAssets = liquidAssets + financialAssetsTotal + pensionAssets + realEstateTotal + otherAssetsTotal;
 
   return (
     <div className="step">
@@ -300,14 +314,8 @@ export default function Step4Assets() {
             )}
           />
         )}
-        <label className="field" style={{ marginTop: 12 }}>
-          <span className="field-label">금융자산 총액</span>
-          <div className="field-input-row">
-            <FormattedNumberInput value={financialAssetsTotal || ''} readOnly />
-            <span className="field-unit">만원</span>
-          </div>
-          <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
-        </label>
+        <TotalAmountBox label="금융자산 총액" amount={financialAssetsTotal} valueLabel="총액은" />
+        <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
         </> : <p className="field-helper">금융자산 없음으로 선택했습니다.</p>}
       </section>
 
@@ -375,14 +383,8 @@ export default function Step4Assets() {
             )}
           />
         )}
-        <label className="field" style={{ marginTop: 12 }}>
-          <span className="field-label">연금자산 총액</span>
-          <div className="field-input-row">
-            <FormattedNumberInput value={getIn(formData, 'assets.pensionAssets') || ''} readOnly />
-            <span className="field-unit">만원</span>
-          </div>
-          <span className="field-helper">위 4개 항목의 합으로 자동 계산됩니다. 금융자산비중지표 계산 시 금융자산과 별도로 취급됩니다.</span>
-        </label>
+        <TotalAmountBox label="연금자산 총액" amount={pensionAssets} valueLabel="총액은" />
+        <span className="field-helper">위 4개 항목의 합으로 자동 계산됩니다. 금융자산비중지표 계산 시 금융자산과 별도로 취급됩니다.</span>
         </> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
       </section>
 
@@ -436,15 +438,42 @@ export default function Step4Assets() {
             </div>
           )}
         />
-        <label className="field" style={{ marginTop: 12 }}>
-          <span className="field-label">부동산자산 총액</span>
-          <div className="field-input-row">
-            <FormattedNumberInput value={realEstateTotal || ''} readOnly />
-            <span className="field-unit">만원</span>
-          </div>
-          <span className="field-helper">부동산 시세와 기타 부동산 시세의 합으로 자동 계산됩니다</span>
-        </label>
+        <TotalAmountBox label="부동산자산 총액" amount={realEstateTotal} valueLabel="총액은" />
+        <span className="field-helper">부동산 시세와 기타 부동산 시세의 합으로 자동 계산됩니다</span>
         </> : <p className="field-helper">부동산자산 없음으로 선택했습니다.</p>}
+      </section>
+
+      <section className="step-section">
+        <h3><span className="step-icon">📦</span> 기타 자산</h3>
+        <p className="field-helper" style={{ marginBottom: 10 }}>
+          위 자산 분류에 포함되지 않는 기타 보유 자산을 입력해 주세요.
+        </p>
+        <PresenceField label="기타 자산 여부" present={hasOtherAssets} onChange={(value) => setAssetPresence('assets.otherAssets.hasAssets', value, clearOtherAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
+        {hasOtherAssets ? <>
+          <RepeatableList
+            path="assets.otherAssets.items"
+            label="기타 자산 추가"
+            addLabel="기타 자산 추가"
+            emptyItem={{ name: '', amount: '' }}
+            renderItem={(item, _i, update) => (
+              <div className="field-grid three-col">
+                <label className="field">
+                  <span className="field-label">자산 이름</span>
+                  <input type="text" placeholder="예: 귀금속" value={item.name} onChange={(e) => update('name', e.target.value)} />
+                </label>
+                <label className="field">
+                  <span className="field-label">현재 가치</span>
+                  <div className="field-input-row">
+                    <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', e.target.value === '' ? '' : Number(e.target.value))} />
+                    <span className="field-unit">만원</span>
+                  </div>
+                </label>
+              </div>
+            )}
+          />
+          <TotalAmountBox label="기타 자산 총액" amount={otherAssetsTotal} valueLabel="총액은" />
+          <span className="field-helper">입력하신 기타 자산의 현재 가치를 자동으로 합산한 금액입니다.</span>
+        </> : <p className="field-helper">기타 자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">
@@ -458,6 +487,7 @@ export default function Step4Assets() {
             <tr><td>금융자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(financialAssetsTotal)}만원</td></tr>
             <tr><td>연금자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(pensionAssets)}만원</td></tr>
             <tr><td>부동산자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(realEstateTotal)}만원</td></tr>
+            <tr><td>기타 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(otherAssetsTotal)}만원</td></tr>
             <tr className="total-row"><td>총자산 합계</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalAssets)}만원</td></tr>
           </tbody>
         </table>

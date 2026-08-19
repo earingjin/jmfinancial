@@ -26,9 +26,11 @@ export function buildCanonicalInput(input) {
   result.income.otherIncomes = otherIncomes;
 
   const living = result.assets.currentLivingCost.breakdown;
-  living.other = sum(living.otherItems, (item) => item.amount);
-  result.assets.currentLivingCost.monthly = LIVING_KEYS.reduce((total, key) => total + n(living[key]), 0) + living.other;
-  result.assets.currentLivingCost.annual = Math.round(result.assets.currentLivingCost.monthly * 12);
+  if (result.assets.currentLivingCost.inputMode === 'detailed') {
+    living.other = sum(living.otherItems, (item) => item.amount);
+    result.assets.currentLivingCost.monthly = LIVING_KEYS.reduce((total, key) => total + n(living[key]), 0) + living.other;
+    result.assets.currentLivingCost.annual = Math.round(result.assets.currentLivingCost.monthly * 12);
+  }
   result.expense.healthInsurance.monthly = sum(result.expense.healthInsurance.items, (item) => item.monthly);
 
   const liquid = result.assets.liquidAssets;
@@ -43,6 +45,9 @@ export function buildCanonicalInput(input) {
 
   const realEstate = result.assets.realEstateAssets;
   realEstate.total = n(realEstate.mainProperty) + sum(realEstate.otherItems, (item) => item.amount);
+
+  const otherAssets = result.assets.otherAssets;
+  if (otherAssets) otherAssets.total = sum(otherAssets.items, (item) => item.amount);
 
   const debt = result.assets.debtStatus;
   if (debt.inputMode === 'detailed') {

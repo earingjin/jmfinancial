@@ -8,26 +8,40 @@ import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
 import { getIn } from '../../state/pathUtils';
+import { updateDraftStep } from '../../state/draftStorage';
+import incomeIcon from '../../assets/1.수입.png';
+import expenseIcon from '../../assets/2.지출.png';
+import savingsIcon from '../../assets/3.저축.png';
+import assetsIcon from '../../assets/4.자산.png';
+import debtIcon from '../../assets/5.부채.png';
+import netWorthIcon from '../../assets/6.순자산.png';
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 const SHOW_SCENARIO_STEP = false;
 
 const STEPS = [
-  { key: 'income', title: '수입', Component: Step1Income },
-  { key: 'expense', title: '지출', Component: Step2Expense },
-  { key: 'savings', title: '저축', Component: Step3Savings },
-  { key: 'assets', title: '자산', Component: Step4Assets },
-  { key: 'debt', title: '부채', Component: Step5Debt },
-  { key: 'netWorth', title: '순자산', Component: Step6NetWorth },
+  { key: 'income', title: '수입', icon: incomeIcon, Component: Step1Income },
+  { key: 'expense', title: '지출', icon: expenseIcon, Component: Step2Expense },
+  { key: 'savings', title: '저축', icon: savingsIcon, Component: Step3Savings },
+  { key: 'assets', title: '자산', icon: assetsIcon, Component: Step4Assets },
+  { key: 'debt', title: '부채', icon: debtIcon, Component: Step5Debt },
+  { key: 'netWorth', title: '순자산', icon: netWorthIcon, Component: Step6NetWorth },
   ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios }] : []),
 ];
 
-export default function Wizard({ onSubmit, startAtLastStep = false }) {
-  const [stepIndex, setStepIndex] = useState(startAtLastStep ? STEPS.length - 1 : 0);
+export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, userId, draftSavedAt }) {
+  const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
   const [showRequiredError, setShowRequiredError] = useState(false);
   const { formData } = useFormData();
   const { Component, key: currentStepKey } = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
+  const setStepIndex = (next) => {
+    setStepIndexState((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      updateDraftStep(userId, resolved);
+      return resolved;
+    });
+  };
 
   const requiredBasicPaths = ['basic.birthYear', 'basic.retirementAge', 'basic.lifeExpectancy', 'basic.serviceYears'];
   const basicInfoMissing = requiredBasicPaths.some((path) => !isFilled(getIn(formData, path)));
@@ -66,6 +80,10 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
 
   return (
     <div className="wizard">
+      <div className={`wizard-draft-status ${draftSavedAt ? 'is-saved' : ''}`} role="status">
+        <span aria-hidden="true">{draftSavedAt ? '✓' : '○'}</span>
+        {draftSavedAt ? '입력 내용이 자동으로 임시 저장되었습니다' : '입력 내용은 자동으로 임시 저장됩니다'}
+      </div>
       <div className="wizard-progress">
         {STEPS.map((s, i) => (
           <button
@@ -73,8 +91,10 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
             key={s.key}
             className={`wizard-progress-item ${i === stepIndex ? 'is-active' : ''} ${i < stepIndex ? 'is-done' : ''}`}
             onClick={() => setStepIndex(i)}
+            aria-current={i === stepIndex ? 'step' : undefined}
           >
             <span className="wizard-progress-dot" aria-hidden="true">{i + 1}</span>
+            <img className="wizard-progress-icon" src={s.icon} alt="" />
             <span className="wizard-progress-label">{s.title}</span>
           </button>
         ))}
