@@ -4,6 +4,9 @@ import { buildPeerComparison } from './peerComparison.js';
 const BASE_ARGS = { age: 41, totalAssets: 40000, totalDebt: 5000, annualIncome: 12000, financialAssetsTotal: 5000, retirementScore: 75 };
 
 describe('buildPeerComparison - wording must never assert a confident percentile without real distribution data', () => {
+  it('does not return an estimated percentile rank without distribution data', () => {
+    expect(buildPeerComparison(BASE_ARGS).percentileRank).toBeNull();
+  });
   it('never uses a definitive "상위 N%" style claim in percentileLabel', () => {
     const result = buildPeerComparison(BASE_ARGS);
     for (const key of ['netWorth', 'householdIncome', 'financialAssets', 'retirementScore']) {
@@ -138,6 +141,22 @@ describe('buildPeerComparison - 미입력과 실제 0원을 구분한다', () =>
   });
 });
 
+describe('buildPeerComparison - 음수 순자산을 모든 출력 경로에서 보존한다', () => {
+  it('카드·차트·집중비교가 같은 음수 원시값을 사용한다', () => {
+    const result = buildPeerComparison({
+      ...BASE_ARGS,
+      totalAssets: 1000,
+      totalDebt: 1500,
+    });
+    const currentBracket = result.ageBrackets.find((item) => item.isUserBracket);
+
+    expect(result.netWorth.value).toBe(-500);
+    expect(result.userNetWorth).toBe(-500);
+    expect(result.focusCompare.userNetWorth).toBe(-500);
+    expect(currentBracket.netWorth).toBe(-500);
+  });
+});
+
 // PDF 리포트 3페이지(자산현황 세부내역 하단, PeerComparisonPage.jsx)의 연령대별 순자산 차트도
 // 같은 2025년 공식 데이터로 갱신한다(사용자 확인됨) - 기존 60세 이상 53,951은 오차값이었다.
 describe('buildPeerComparison - ageBrackets(PDF 리포트 3페이지 차트)도 2025년 공식 데이터를 반영한다', () => {
@@ -154,5 +173,10 @@ describe('buildPeerComparison - ageBrackets(PDF 리포트 3페이지 차트)도 
   it('focusCompare.referenceAverage(60세 기준선)도 갱신된 53,591을 사용한다', () => {
     const result = buildPeerComparison({ age: 41, totalAssets: 0, totalDebt: 0, annualIncome: 0, financialAssetsTotal: 0, retirementScore: null });
     expect(result.focusCompare.referenceAverage).toBe(53591);
+  });
+
+  it('does not mix placeholder household values into non-user age brackets', () => {
+    const result = buildPeerComparison(BASE_ARGS);
+    expect(result.ageBrackets.filter((item) => !item.isUserBracket).every((item) => item.netWorth == null)).toBe(true);
   });
 });

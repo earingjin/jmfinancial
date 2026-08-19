@@ -1,12 +1,35 @@
 import SectionBadge from './SectionBadge';
 import { formatNumber } from '../../../utils/format';
+import { getPeerAssetBarDisplay } from './peerAssetBarDisplay';
 
 const MAX_BAR_HEIGHT = 150;
+
+function AssetValueBar({ value, tone, chartMax, contextLabel }) {
+  const display = getPeerAssetBarDisplay(value, chartMax, MAX_BAR_HEIGHT);
+
+  return (
+    <div role="img" aria-label={`${contextLabel}. ${display.ariaLabel}`}>
+      <span className="asset-chart-value" aria-hidden="true">{display.valueLabel}</span>
+      {display.showBar ? (
+        <div
+          className={`asset-chart-bar asset-chart-bar--${tone}`}
+          style={{ height: display.barHeight }}
+          aria-hidden="true"
+        />
+      ) : (
+        <div className="asset-chart-negative" aria-hidden="true">
+          <strong>순자산 마이너스</strong>
+          <span>{display.warningText}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // 자산현황_세부내역 페이지 하단에 함께 표시되는 섹션(별도 페이지 아님) - PageFrame을 여기서
 // 감싸지 않고, 호출하는 쪽(HouseholdDetailPage)의 페이지 안에 그대로 들어간다.
 export default function PeerComparisonPage({ peerComparison }) {
-  const { ageBrackets, percentileRank, focusCompare } = peerComparison;
+  const { ageBrackets, focusCompare } = peerComparison;
 
   const maxValue = Math.max(
     ...ageBrackets.flatMap((b) => [b.average, b.netWorth]),
@@ -49,10 +72,11 @@ export default function PeerComparisonPage({ peerComparison }) {
                       <span className="asset-chart-value">{formatNumber(b.average)}</span>
                       <div className="asset-chart-bar asset-chart-bar--average" style={{ height: Math.max(3, (b.average / chartMax) * MAX_BAR_HEIGHT) }} />
                     </div>
-                    <div className="asset-chart-bar-wrap">
-                      <span className="asset-chart-value">{formatNumber(b.netWorth)}</span>
-                      <div className="asset-chart-bar asset-chart-bar--net" style={{ height: Math.max(3, (b.netWorth / chartMax) * MAX_BAR_HEIGHT) }} />
-                    </div>
+                    {b.isUserBracket && (
+                      <div className="asset-chart-bar-wrap">
+                        <AssetValueBar value={b.netWorth} tone="net" chartMax={chartMax} contextLabel={`${b.label} 순자산`} />
+                      </div>
+                    )}
                   </div>
                   <div className="asset-chart-label">{b.label}</div>
                 </div>
@@ -62,11 +86,6 @@ export default function PeerComparisonPage({ peerComparison }) {
         </div>
 
         <div className="asset-chart-focus">
-          {percentileRank != null && (
-            <div className="asset-rank-badge">
-              현재 상위: {percentileRank}%
-            </div>
-          )}
           <div className="asset-focus-plot">
             {[
               { label: '연령평균', value: focusCompare.peerAverage, tone: 'average' },
@@ -75,8 +94,7 @@ export default function PeerComparisonPage({ peerComparison }) {
             ].map((item) => (
               <div key={item.label} className="asset-focus-item">
                 <div className="asset-focus-bar-area">
-                  <span className="asset-chart-value">{formatNumber(item.value)}</span>
-                  <div className={`asset-chart-bar asset-chart-bar--${item.tone}`} style={{ height: Math.max(3, (item.value / chartMax) * MAX_BAR_HEIGHT) }} />
+                  <AssetValueBar value={item.value} tone={item.tone} chartMax={chartMax} contextLabel={item.label} />
                 </div>
                 <div className="asset-chart-label">{item.label}</div>
               </div>

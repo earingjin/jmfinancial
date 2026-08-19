@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { AuthContext } from './authState';
+import { clearDraftSessionCache, removeLegacyLocalDraft } from './draftStorage';
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -28,8 +29,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    removeLegacyLocalDraft(session?.user?.id);
+    clearDraftSessionCache(session?.user?.id);
     return supabase.auth.signOut();
-  }, []);
+  }, [session?.user?.id]);
 
   const value = {
     session,

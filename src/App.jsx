@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FormProvider } from './state/FormContext';
 import { AuthProvider } from './state/AuthContext';
 import { useAuth } from './state/authState';
@@ -12,31 +12,14 @@ import SimpleSummaryReport from './components/summary/SimpleSummaryReport';
 import AppCopyright from './components/AppCopyright';
 import { deobfuscate } from './utils/obfuscate';
 import { supabase } from './lib/supabaseClient';
+import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
+import { completePlannerSubmission, createSubmissionId } from './services/plannerSubmission';
 import './styles/tokens.css';
 import './styles/app.css';
 
-async function savePlannerResult(user, formData, result) {
-  const { error } = await supabase.from('planner_results').insert({
-    user_id: user.id,
-    // v2: 지표 응답에 rawValue/displayValue/notCalculable/reason 필드가 추가되고, 분모 0(N/A) 처리 방식이
-    // 바뀌었다(0%로 위장하지 않고 notCalculable로 명시). 과거 저장된 v1 레코드와 형태가 다르므로 구분한다.
-    schema_version: 'v2',
-    input_json: formData,
-    result_json: result,
-    assumptions_json: {
-      assumedReturnRate: formData?.basic?.assumedReturnRate ?? 3,
-      generalInflationRate: 4.1,
-    },
-  });
-  if (error) {
-    // eslint-disable-next-line no-console
-    console.error('진단 결과 저장 실패:', error.message);
-  }
-}
-
-function AppContent() {
+function AppContent({ initialDraft = null, startWithWizard = false }) {
   const { user, signOut } = useAuth();
-  const [phase, setPhase] = useState('home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'error' | 'history'
+  const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'error' | 'history'
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [wizardResume, setWizardResume] = useState(false);
@@ -47,6 +30,31 @@ function AppContent() {
   // 마지막 페이지(AssetManagementOptionsPage)에서 그대로 보여주기 위해 보관한다. 서버 계산 결과와
   // 달리 이 값은 계산이 아니라 사용자가 입력한 그대로를 표시하는 용도라 formData에서 바로 가져온다.
   const [submittedScenariosInput, setSubmittedScenariosInput] = useState(null);
+  const pendingSubmissionRef = useRef(null);
+  const submissionPromiseRef = useRef(null);
+
+  const finishSubmission = async () => {
+    if (submissionPromiseRef.current) return submissionPromiseRef.current;
+    const pending = pendingSubmissionRef.current;
+    if (!pending) return;
+    submissionPromiseRef.current = (async () => {
+      setPhase('loading');
+      try {
+        const completedResult = await completePlannerSubmission(pending, user);
+        setResult(completedResult);
+        pendingSubmissionRef.current = null;
+        setPhase('summary');
+      } catch {
+        setErrorMessage(pending.resultSaved
+          ? '진단 결과는 저장되었지만 임시 초안 정리에 실패했습니다. 다시 시도해 주세요.'
+          : '진단 결과 저장에 실패했습니다. 입력 내용과 임시 초안은 유지됩니다.');
+        setPhase('save-error');
+      } finally {
+        submissionPromiseRef.current = null;
+      }
+    })();
+    return submissionPromiseRef.current;
+  };
 
   const handleSubmit = async (formData) => {
     setPhase('loading');
@@ -77,10 +85,8 @@ function AppContent() {
       }
       const body = await res.json();
       const data = deobfuscate(body.payload);
-      if (typeof window !== 'undefined') window.__DEBUG_RESULT = data;
-      setResult(data);
-      setPhase('summary');
-      savePlannerResult(user, formData, data);
+      pendingSubmissionRef.current = { formData, data, resultSaved: false, submissionId: createSubmissionId() };
+      await finishSubmission();
     } catch (err) {
       setErrorMessage(err.message || '알 수 없는 오류가 발생했습니다.');
       setPhase('error');
@@ -171,8 +177,8 @@ function AppContent() {
           <HistoryList user={user} onSelect={openPastResult} onBackHome={goHome} onStart={startDiagnosis} />
         )}
 
-        <FormProvider>
-          {phase === 'wizard' && <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} />}
+        <FormProvider userId={user.id} initialDraft={initialDraft}>
+          {phase === 'wizard' && <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={initialDraft?.step_index || 0} />}
         </FormProvider>
 
         {phase === 'loading' && (
@@ -187,6 +193,18 @@ function AppContent() {
             <p>{errorMessage}</p>
             <button type="button" className="btn-primary" onClick={restart}>
               처음부터 다시 입력하기
+            </button>
+          </div>
+        )}
+
+        {phase === 'save-error' && (
+          <div className="error-state">
+            <p>{errorMessage}</p>
+            <button type="button" className="btn-primary" onClick={() => void finishSubmission()}>
+              다시 저장
+            </button>
+            <button type="button" className="btn-secondary" onClick={backToWizard}>
+              입력 화면으로 돌아가기
             </button>
           </div>
         )}
@@ -218,6 +236,69 @@ function AppContent() {
 
 function AuthGatedApp() {
   const { user, loading } = useAuth();
+  const [draftDecision, setDraftDecision] = useState(null);
+  const [draftLoad, setDraftLoad] = useState({ status: 'idle', source: null, draft: null, message: null });
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setDraftLoad({ status: 'idle', source: null, draft: null, message: null });
+      setDraftDecision(null);
+      return;
+    }
+    let cancelled = false;
+    setDraftLoad({ status: 'loading', source: null, draft: null, message: null });
+    fetchDraftOnce(user.id).then((remoteDraft) => {
+      if (cancelled) return;
+      if (remoteDraft) {
+        const validation = validateDraft(remoteDraft);
+        setDraftLoad(validation.valid
+          ? { status: 'choice', source: 'remote', draft: remoteDraft, message: null }
+          : { status: 'incompatible', source: 'remote', draft: remoteDraft, message: validation.reason });
+        return;
+      }
+      const legacyDraft = readLegacyLocalDraft(user.id);
+      if (!legacyDraft) {
+        setDraftLoad({ status: 'ready', source: null, draft: null, message: null });
+        return;
+      }
+      const validation = validateDraft(legacyDraft);
+      if (validation.valid) {
+        setDraftLoad({ status: 'choice', source: 'legacy', draft: legacyDraft, message: null });
+      } else {
+        removeLegacyLocalDraft(user.id);
+        setDraftLoad({ status: 'incompatible', source: 'legacy', draft: null, message: validation.reason });
+      }
+    }).catch(() => {
+      if (!cancelled) setDraftLoad({ status: 'error', source: null, draft: null, message: '저장된 초안을 불러오지 못했습니다.' });
+    });
+    return () => { cancelled = true; };
+  }, [user?.id, loadAttempt]);
+
+  const continueDraft = async () => {
+    if (draftLoad.source === 'remote') {
+      setDraftDecision({ userId: user.id, draft: draftLoad.draft });
+      return;
+    }
+    setDraftLoad((state) => ({ ...state, status: 'loading' }));
+    try {
+      const migrated = await migrateLegacyDraft(user.id, draftLoad.draft);
+      setDraftDecision({ userId: user.id, draft: migrated });
+    } catch {
+      setDraftLoad((state) => ({ ...state, status: 'error', message: '기존 초안을 이전하지 못했습니다. 다시 시도해 주세요.' }));
+    }
+  };
+
+  const startNew = async () => {
+    setDraftLoad((state) => ({ ...state, status: 'loading' }));
+    try {
+      if (draftLoad.source === 'remote') await deleteDraft(user.id);
+      removeLegacyLocalDraft(user.id);
+      setDraftDecision({ userId: user.id, draft: null });
+    } catch {
+      setDraftLoad((state) => ({ ...state, status: 'error', message: '기존 초안을 삭제하지 못했습니다. 다시 시도해 주세요.' }));
+    }
+  };
 
   if (loading) {
     return (
@@ -232,7 +313,32 @@ function AuthGatedApp() {
     return <AuthGate />;
   }
 
-  return <AppContent />;
+  const currentDecision = draftDecision?.userId === user.id ? draftDecision : null;
+  if (!currentDecision && (draftLoad.status === 'idle' || draftLoad.status === 'loading')) {
+    return <div className="loading-state"><div className="spinner" /><p>작성 중인 초안을 확인하는 중…</p></div>;
+  }
+  if (!currentDecision && draftLoad.status === 'choice') {
+    return (
+      <div className="draft-choice">
+        <div className="draft-choice-card">
+          <h2>{draftLoad.source === 'legacy' ? '이 브라우저에 기존 초안이 있습니다' : '작성 중인 초안이 있습니다'}</h2>
+          <p>{draftLoad.source === 'legacy' ? '기존 로컬 초안을 Supabase로 이전해 다른 기기에서도 이어서 작성하시겠습니까?' : '다른 기기에서 저장한 내용까지 포함해 이어서 작성할 수 있습니다.'}</p>
+          <button type="button" className="btn-primary" onClick={() => void continueDraft()}>이어서 입력</button>
+          <button type="button" className="btn-secondary" onClick={() => void startNew()}>새로 입력</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentDecision && draftLoad.status === 'incompatible') {
+    return <div className="draft-choice"><div className="draft-choice-card"><h2>초안을 이어서 사용할 수 없습니다</h2><p>{draftLoad.message} 새 입력으로 시작해 주세요.</p><button type="button" className="btn-primary" onClick={() => void startNew()}>새로 입력</button></div></div>;
+  }
+
+  if (!currentDecision && draftLoad.status === 'error') {
+    return <div className="draft-choice"><div className="draft-choice-card"><h2>초안을 확인하지 못했습니다</h2><p>{draftLoad.message}</p><button type="button" className="btn-primary" onClick={() => { clearDraftSessionCache(user.id); setLoadAttempt((value) => value + 1); }}>다시 시도</button></div></div>;
+  }
+
+  return <AppContent initialDraft={currentDecision?.draft || null} startWithWizard={Boolean(currentDecision)} />;
 }
 
 function AdminRoute() {

@@ -8,26 +8,42 @@ import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
 import { getIn } from '../../state/pathUtils';
+import incomeIcon from '../../assets/1.수입.png';
+import expenseIcon from '../../assets/2.지출.png';
+import savingsIcon from '../../assets/3.저축.png';
+import assetsIcon from '../../assets/4.자산.png';
+import debtIcon from '../../assets/5.부채.png';
+import netWorthIcon from '../../assets/6.순자산.png';
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 const SHOW_SCENARIO_STEP = false;
 
 const STEPS = [
-  { key: 'income', title: '수입', Component: Step1Income },
-  { key: 'expense', title: '지출', Component: Step2Expense },
-  { key: 'savings', title: '저축', Component: Step3Savings },
-  { key: 'assets', title: '자산', Component: Step4Assets },
-  { key: 'debt', title: '부채', Component: Step5Debt },
-  { key: 'netWorth', title: '순자산', Component: Step6NetWorth },
+  { key: 'income', title: '수입', icon: incomeIcon, Component: Step1Income },
+  { key: 'expense', title: '지출', icon: expenseIcon, Component: Step2Expense },
+  { key: 'savings', title: '저축', icon: savingsIcon, Component: Step3Savings },
+  { key: 'assets', title: '자산', icon: assetsIcon, Component: Step4Assets },
+  { key: 'debt', title: '부채', icon: debtIcon, Component: Step5Debt },
+  { key: 'netWorth', title: '순자산', icon: netWorthIcon, Component: Step6NetWorth },
   ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios }] : []),
 ];
 
-export default function Wizard({ onSubmit, startAtLastStep = false }) {
-  const [stepIndex, setStepIndex] = useState(startAtLastStep ? STEPS.length - 1 : 0);
+const formatSavedAt = (value) => value
+  ? new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
+  : null;
+
+export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0 }) {
+  const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
   const [showRequiredError, setShowRequiredError] = useState(false);
-  const { formData } = useFormData();
+  const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
   const { Component, key: currentStepKey } = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
+  const moveToStep = (next) => {
+    const resolved = typeof next === 'function' ? next(stepIndex) : next;
+    setDraftStep(resolved);
+    setStepIndexState(resolved);
+    void saveCurrentDraft(resolved).catch(() => {});
+  };
 
   const requiredBasicPaths = ['basic.birthYear', 'basic.retirementAge', 'basic.lifeExpectancy', 'basic.serviceYears'];
   const basicInfoMissing = requiredBasicPaths.some((path) => !isFilled(getIn(formData, path)));
@@ -46,35 +62,52 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
       return;
     }
     setShowRequiredError(false);
-    setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
+    moveToStep((i) => Math.min(STEPS.length - 1, i + 1));
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (basicInfoMissing) {
       setShowRequiredError(true);
-      setStepIndex(STEPS.findIndex((s) => s.key === 'income'));
+      moveToStep(STEPS.findIndex((s) => s.key === 'income'));
       return;
     }
     if (retirementLivingCostMissing) {
       setShowRequiredError(true);
-      setStepIndex(STEPS.findIndex((s) => s.key === 'expense'));
+      moveToStep(STEPS.findIndex((s) => s.key === 'expense'));
       return;
     }
     setShowRequiredError(false);
-    onSubmit(formData);
+    try {
+      await saveCurrentDraft(stepIndex);
+      await onSubmit(formData);
+    } catch {
+      // saveCurrentDraft keeps the input in memory and exposes the retry state.
+    }
   };
 
   return (
     <div className="wizard">
+      <div className={`wizard-draft-status ${draftState.status === 'saved' ? 'is-saved' : ''} ${draftState.status === 'error' ? 'is-error' : ''}`} role="status">
+        <span>
+          {draftState.status === 'saving' && '임시 저장 중…'}
+          {draftState.status === 'error' && draftState.error}
+          {draftState.status !== 'saving' && draftState.status !== 'error' && (draftState.updatedAt ? `마지막 저장: ${formatSavedAt(draftState.updatedAt)}` : '아직 저장되지 않았습니다')}
+        </span>
+        <button type="button" className="wizard-draft-save" disabled={draftState.status === 'saving' || !draftState.dirty} onClick={() => void saveCurrentDraft().catch(() => {})}>
+          {draftState.status === 'error' ? '다시 저장' : '임시 저장'}
+        </button>
+      </div>
       <div className="wizard-progress">
         {STEPS.map((s, i) => (
           <button
             type="button"
             key={s.key}
             className={`wizard-progress-item ${i === stepIndex ? 'is-active' : ''} ${i < stepIndex ? 'is-done' : ''}`}
-            onClick={() => setStepIndex(i)}
+            onClick={() => moveToStep(i)}
+            aria-current={i === stepIndex ? 'step' : undefined}
           >
             <span className="wizard-progress-dot" aria-hidden="true">{i + 1}</span>
+            <img className="wizard-progress-icon" src={s.icon} alt="" />
             <span className="wizard-progress-label">{s.title}</span>
           </button>
         ))}
@@ -93,12 +126,12 @@ export default function Wizard({ onSubmit, startAtLastStep = false }) {
           type="button"
           className="btn-secondary"
           disabled={stepIndex === 0}
-          onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+          onClick={() => moveToStep((i) => Math.max(0, i - 1))}
         >
           이전
         </button>
         {isLast ? (
-          <button type="button" className="btn-primary" onClick={submit}>
+          <button type="button" className="btn-primary" onClick={() => void submit()}>
             진단 결과 보기
           </button>
         ) : (

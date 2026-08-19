@@ -106,6 +106,15 @@ describe('financialAssets.bonds is included in financialAssetsTotal', () => {
   });
 });
 
+describe('otherAssets is included in totalAssets', () => {
+  it('adds the canonical 기타 자산 total without treating it as a financial asset', () => {
+    const agg = buildAggregates(input({ assets: { otherAssets: { total: 250 } } }));
+    expect(agg.otherAssetsTotal).toBe(250);
+    expect(agg.totalAssets).toBe(250);
+    expect(agg.financialAssetsTotal).toBe(0);
+  });
+});
+
 describe('savingsPlan.retirementIncludedInTotal - retirementIncludedInSavings is exposed for display purposes', () => {
   it('defaults to true when the flag is omitted', () => {
     const agg = buildAggregates(input());

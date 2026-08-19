@@ -11,6 +11,8 @@ import { buildSavingsBreakdown, buildDebtBreakdown, buildLivingExpenseItems, bui
 import { buildWebSummary, allBlankLeaf } from './_lib/summaryOverview.js';
 import { obfuscate } from '../src/utils/obfuscate.js';
 import { requireUser } from './_lib/auth.js';
+import { assertFiniteCalculationResult } from './_lib/finite.js';
+import { buildCanonicalInput } from './_lib/canonicalInput.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -44,6 +46,9 @@ export default async function handler(req, res) {
     res.status(400).json({ error: '입력값을 다시 확인해 주세요.', details: validation.errors });
     return;
   }
+
+  // 브라우저 자동 합계는 신뢰하지 않는다. 구조·숫자 검증을 통과한 세부 입력으로 서버에서 재계산한다.
+  input = buildCanonicalInput(input);
 
   try {
     const { indicators, totalScore, grade, notCalculable, missingInputs, weakest, strongest, aggregates, is65Plus } = calcIndicators(input);
@@ -137,7 +142,7 @@ export default async function handler(req, res) {
     // 응답을 평문 JSON으로 그대로 내려보내지 않고 스크램블한다. F12 → Network 탭에서
     // 열어봤을 때 계산 기준표(임계값·공식·판정 사유 등)가 곧바로 읽히지 않도록 하기 위함이다.
     // 클라이언트(src/App.jsx)가 동일한 유틸로 즉시 복호화하므로 화면·계산 결과는 그대로다.
-    const payload = obfuscate({
+    const calculationResult = {
       generatedAt: new Date().toISOString(),
       summary: {
         totalScore,
@@ -167,12 +172,15 @@ export default async function handler(req, res) {
       livingExpenseItems,
       otherLiquidAssetItems,
       webSummary,
-    });
+    };
+    assertFiniteCalculationResult(calculationResult);
+    const payload = obfuscate(calculationResult);
 
     res.status(200).json({ payload });
   } catch (err) {
+    // 민감한 입력이나 전체 결과는 기록하지 않고 비민감 오류 코드만 남긴다.
     // eslint-disable-next-line no-console
-    console.error('calculate error:', err);
+    console.error('calculate error code:', err?.code || 'CALCULATION_FAILED');
     res.status(500).json({ error: '계산 중 오류가 발생했습니다.' });
   }
 }

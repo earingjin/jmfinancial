@@ -188,6 +188,29 @@ describe('rejects NaN / Infinity / negative amounts across numeric fields', () =
   });
 });
 
+describe('compound return rates must be greater than -100%', () => {
+  it.each([-100, -100.01])('rejects basic.assumedReturnRate=%s', (assumedReturnRate) => {
+    const result = validateInput(makeInput({ basic: { assumedReturnRate } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/assumedReturnRate.*-100보다 커야/);
+  });
+
+  it('accepts -99.99% because no stricter policy floor is approved', () => {
+    expect(validateInput(makeInput({ basic: { assumedReturnRate: -99.99 } })).ok).toBe(true);
+  });
+
+  it.each([NaN, Infinity])('rejects a non-finite assumed return rate (%s)', (assumedReturnRate) => {
+    expect(validateInput(makeInput({ basic: { assumedReturnRate } })).ok).toBe(false);
+  });
+
+  it.each([-100, -100.01])('applies the same boundary to savings item interestRate=%s', (interestRate) => {
+    const result = validateInput(makeInput({
+      assets: { savingsPlan: { breakdown: { installment: { monthly: 1, remainingMonths: 12, interestRate } } } },
+    }));
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe('age cap: basic.retirementAge (kind "age", max 120)', () => {
   it('rejects retirementAge at T+0.01 boundary (121)', () => {
     const result = validateInput(makeInput({ basic: { retirementAge: 121, lifeExpectancy: 121 } }));
@@ -347,5 +370,73 @@ describe('birth-year range validation: expense.children[].birthYear (same rule a
     expect(result.ok).toBe(false);
     expect(result.errors.join(' ')).toMatch(/expense\.children\.1\.birthYear/);
     expect(result.errors.join(' ')).not.toMatch(/expense\.children\.0\.birthYear/);
+  });
+});
+
+describe('repeated input structure validation', () => {
+  const arrayPaths = [
+    ['income', 'regularIncomes'], ['income', 'otherIncomes'], ['expense', 'children'],
+    ['expense', 'debts'], ['expense', 'otherExpenses'], ['expense', 'healthInsurance', 'items'],
+    ['assets', 'liquidAssets', 'customItems'], ['assets', 'financialAssets', 'otherItems'],
+    ['assets', 'pensionAssetsBreakdown', 'otherItems'], ['assets', 'realEstateAssets', 'otherItems'],
+    ['assets', 'savingsPlan', 'customItems'], ['assets', 'debtStatus', 'customItems'],
+  ];
+
+  const withPath = (path, value) => path.reduceRight((nested, key) => ({ [key]: nested }), value);
+
+  it.each(arrayPaths)('rejects a non-array value at %s.%s', (...path) => {
+    expect(validateInput(makeInput(withPath(path, {}))).ok).toBe(false);
+  });
+
+  it.each([null, [], 'item', 1])('rejects a non-plain-object array item: %j', (item) => {
+    expect(validateInput(makeInput({ income: { otherIncomes: [item] } })).ok).toBe(false);
+  });
+
+  it('keeps omitted and empty arrays valid', () => {
+    expect(validateInput(makeInput({ income: { otherIncomes: undefined } })).ok).toBe(true);
+    expect(validateInput(makeInput({ income: { otherIncomes: [] } })).ok).toBe(true);
+  });
+
+  it('validates the checkbox target array without requiring object items', () => {
+    expect(validateInput(makeInput({ scenarios: { expenseReduction: { targets: ['living', 'medical'] } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ scenarios: { expenseReduction: { targets: {} } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ scenarios: { expenseReduction: { targets: ['unknown'] } } })).ok).toBe(false);
+  });
+});
+
+describe('strict numeric input types and strings', () => {
+  it.each([true, false, [], {}, '   '])('rejects non-numeric amount input: %j', (monthly) => {
+    expect(validateInput(makeInput({ assets: { currentIncome: { monthly } } })).ok).toBe(false);
+  });
+
+  it.each(['0', '123', '-99.99', '12.5', '.5'])('accepts an explicit decimal numeric string: %s', (assumedReturnRate) => {
+    expect(validateInput(makeInput({ basic: { assumedReturnRate } })).ok).toBe(true);
+  });
+
+  it.each([' 1', '1 ', '1e3', '0x10', '+', '.', 'Infinity', '-Infinity'])('rejects an unsupported numeric string: %s', (assumedReturnRate) => {
+    expect(validateInput(makeInput({ basic: { assumedReturnRate } })).ok).toBe(false);
+  });
+
+  it.each([true, [], {}, '   '])('rejects invalid birthYear types: %j', (birthYear) => {
+    expect(validateInput(makeInput({ basic: { birthYear } })).ok).toBe(false);
+  });
+});
+
+describe('monthly pension start age requirements', () => {
+  it.each([
+    { income: { severance: { type: 'pension', pensionStartAge: '' } } },
+    { income: { personalPension: { type: 'installment', startAge: '' } } },
+  ])('rejects a missing self pension start age', (override) => {
+    expect(validateInput(makeInput(override)).ok).toBe(false);
+  });
+
+  it('accepts explicit start ages for monthly pensions', () => {
+    const result = validateInput(makeInput({
+      income: {
+        severance: { type: 'pension', pensionStartAge: 60 },
+        personalPension: { type: 'installment', startAge: 65 },
+      },
+    }));
+    expect(result.ok).toBe(true);
   });
 });

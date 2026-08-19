@@ -15,12 +15,13 @@ export function buildLifestyleTrack(retirementLivingCost) {
     const rightEdge = Number.isFinite(tier.max) ? tier.max : scaleMax;
     const left = (tier.min / scaleMax) * 100;
     const width = Math.max(0, (rightEdge / scaleMax) * 100 - left);
-    return { ...tier, left, width };
+    return { ...tier, max: Number.isFinite(tier.max) ? tier.max : null, left, width };
   });
 
   const markerPercent = Math.min(100, Math.max(0, (retirementLivingCost / scaleMax) * 100));
-  const currentTier = LIFESTYLE_TIERS.find((t) => retirementLivingCost >= t.min && retirementLivingCost <= t.max)
+  const matchedTier = LIFESTYLE_TIERS.find((t) => retirementLivingCost >= t.min && retirementLivingCost <= t.max)
     || (retirementLivingCost < LIFESTYLE_TIERS[0].min ? LIFESTYLE_TIERS[0] : LIFESTYLE_TIERS[LIFESTYLE_TIERS.length - 1]);
+  const currentTier = { ...matchedTier, max: Number.isFinite(matchedTier.max) ? matchedTier.max : null };
 
   return { scaleMax, segments, markerPercent, currentTier };
 }

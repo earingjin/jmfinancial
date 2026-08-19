@@ -65,7 +65,8 @@ export function buildAggregates(input) {
   const realEstateTotal = n(assets.realEstateAssets?.total);
   // 현금성자산(예금·적금·비상금 등, 비상예비금지표에도 쓰이는 값)은 총자산에도 포함된다.
   const liquidAssets = n(assets.liquidAssets?.total);
-  const totalAssets = financialAssetsTotal + liquidAssets + pensionAssets + realEstateTotal;
+  const otherAssetsTotal = n(assets.otherAssets?.total);
+  const totalAssets = financialAssetsTotal + liquidAssets + pensionAssets + realEstateTotal + otherAssetsTotal;
 
   // ---- 부채 ----
   const totalDebt = n(assets.debtStatus?.totalBalance);
@@ -111,6 +112,7 @@ export function buildAggregates(input) {
     financialAssetsTotal,
     pensionAssets,
     realEstateTotal,
+    otherAssetsTotal,
     totalAssets,
     totalDebt,
     netWorth,

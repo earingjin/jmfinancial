@@ -62,6 +62,7 @@ export function buildFinancialOverviewCards(input, aggregates) {
     'assets.financialAssets.other',
     'assets.pensionAssets',
     'assets.realEstateAssets.total',
+    'assets.otherAssets.total',
   ];
 
   return [
@@ -82,6 +83,7 @@ export function buildFinancialOverviewCards(input, aggregates) {
     ]),
     card('pensionAssets', '연금자산', aggregates.pensionAssets, ['assets.pensionAssets']),
     card('realEstateAssets', '부동산자산', aggregates.realEstateTotal, ['assets.realEstateAssets.total']),
+    card('otherAssets', '기타 자산', aggregates.otherAssetsTotal, ['assets.otherAssets.total']),
     card('totalAssets', '총자산', aggregates.totalAssets, totalAssetPaths, { highlight: true }),
     card('totalDebt', '총부채', aggregates.totalDebt, ['assets.debtStatus.totalBalance'], { highlight: true }),
     (() => {
@@ -183,6 +185,7 @@ export function buildAssetDonut(aggregates, otherLiquidAssetItems = []) {
       { key: 'financial', label: '투자 금융자산', value: safe(aggregates.financialAssetsTotal) },
       { key: 'pension', label: '연금자산', value: safe(aggregates.pensionAssets) },
       { key: 'realEstate', label: '부동산자산', value: safe(aggregates.realEstateTotal) },
+      { key: 'otherAssets', label: '기타 자산', value: safe(aggregates.otherAssetsTotal) },
     ],
   };
 }

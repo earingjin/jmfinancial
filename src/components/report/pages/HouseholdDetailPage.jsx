@@ -16,6 +16,7 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, peerC
     { label: '금융자산', value: agg.financialAssetsTotal },
     { label: '연금자산', value: agg.pensionAssets },
     { label: '부동산자산', value: agg.realEstateTotal },
+    { label: '기타 자산', value: agg.otherAssetsTotal },
   ];
   const enteredDebts = (debtBreakdown || []).filter((item) => Number(item.value) > 0);
   const debtRows = enteredDebts.length > 0

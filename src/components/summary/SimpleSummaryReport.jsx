@@ -368,7 +368,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
           <p className="ss-guidance">80세 이후에는 현재 시점 기준 전망 대상 연령이 없습니다.</p>
         ) : (
           <>
-            <h3 className="ss-section-title">미래 생활비 준비도</h3>
+            <h3 className="ss-section-title">연금소득 기준 생활비 충당률</h3>
             <div className="future-method-note">
               <b>계산 원리</b>
               <span>현재 월 생활비에는 매년 3%의 물가상승률을 복리로 적용합니다.</span>
@@ -378,14 +378,14 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               {future.targets.map((item) => (
                 <article className={`future-card future-card--${item.status}`} key={item.age}>
                   <div className="future-card-age">{item.age}세</div>
-                  <span className="future-card-label">생활비 충당률</span>
-                  <strong className="future-card-rate">{item.coverageRate == null ? 'N/A' : `${Math.round(item.coverageRate)}%`}</strong>
+                  <span className="future-card-label">연금소득 기준 생활비 충당률</span>
+                  <strong className="future-card-rate">{item.coverageRate == null ? '산출 불가' : `${Math.round(item.coverageRate)}%`}</strong>
                   <dl>
                     <div><dt>예상 생활비</dt><dd>{item.livingExpense == null ? '데이터 부족' : formatWon(item.livingExpense)}</dd></div>
-                    <div><dt>예상 연금소득</dt><dd>{item.pensionIncome == null ? '데이터 부족' : formatWon(item.pensionIncome)}</dd></div>
+                    <div><dt>예상 연금소득</dt><dd>{item.pensionIncome == null ? '산출 불가' : formatWon(item.pensionIncome)}</dd></div>
                   </dl>
                   {item.balance != null && <p className="future-card-balance">{item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}</p>}
-                  {item.pensionBreakdown && !item.pensionBreakdown.nationalEligible && <small>국민연금 수급개시 전이라 합계에서 제외</small>}
+                  {item.calculationReason && <small>{item.calculationReason}</small>}
                 </article>
               ))}
             </div>

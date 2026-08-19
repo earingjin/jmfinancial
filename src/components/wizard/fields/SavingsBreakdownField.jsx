@@ -3,6 +3,7 @@ import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatNumber } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
+import TotalAmountBox from './TotalAmountBox';
 
 // Step4Assets.jsx의 LIQUID_ASSET_CATEGORIES(assets.liquidAssets.breakdown)와 반드시 동일한 키
 // 목록을 유지한다 - 여기 없는 항목이 있으면 저축 쪽에서 다른 항목을 수정할 때마다 그 항목 금액이
@@ -356,14 +357,9 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
               <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.interestRate) || 0)}%</td>
             </tr>
           ))}
-          <tr className="total-row">
-            <td>합계</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatNumber(total || 0)}만원</td>
-            <td className="num" style={{ textAlign: 'right' }}>-</td>
-            <td className="num" style={{ textAlign: 'right' }}>-</td>
-          </tr>
         </tbody>
       </table>
+      <TotalAmountBox label="저축 합계" amount={Number(total) || 0} valueLabel="총액은" />
       <span className="field-helper">선택·추가하신 항목의 월 저축액을 자동으로 합산한 값입니다. 개월수·이자율·누적액은 항목별로 다를 수 있어 합산하지 않습니다.</span>
 
       {annualPath && (
