@@ -10,6 +10,6 @@ if (!supabaseUrl || !supabaseKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    storage: window.sessionStorage,
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
   },
 });

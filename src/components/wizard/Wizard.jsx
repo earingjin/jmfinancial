@@ -8,7 +8,6 @@ import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
 import { getIn } from '../../state/pathUtils';
-import { updateDraftStep } from '../../state/draftStorage';
 import incomeIcon from '../../assets/1.수입.png';
 import expenseIcon from '../../assets/2.지출.png';
 import savingsIcon from '../../assets/3.저축.png';
@@ -29,18 +28,21 @@ const STEPS = [
   ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios }] : []),
 ];
 
-export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, userId, draftSavedAt }) {
+const formatSavedAt = (value) => value
+  ? new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
+  : null;
+
+export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0 }) {
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
   const [showRequiredError, setShowRequiredError] = useState(false);
-  const { formData } = useFormData();
+  const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
   const { Component, key: currentStepKey } = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
-  const setStepIndex = (next) => {
-    setStepIndexState((current) => {
-      const resolved = typeof next === 'function' ? next(current) : next;
-      updateDraftStep(userId, resolved);
-      return resolved;
-    });
+  const moveToStep = (next) => {
+    const resolved = typeof next === 'function' ? next(stepIndex) : next;
+    setDraftStep(resolved);
+    setStepIndexState(resolved);
+    void saveCurrentDraft(resolved).catch(() => {});
   };
 
   const requiredBasicPaths = ['basic.birthYear', 'basic.retirementAge', 'basic.lifeExpectancy', 'basic.serviceYears'];
@@ -60,29 +62,40 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
       return;
     }
     setShowRequiredError(false);
-    setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
+    moveToStep((i) => Math.min(STEPS.length - 1, i + 1));
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (basicInfoMissing) {
       setShowRequiredError(true);
-      setStepIndex(STEPS.findIndex((s) => s.key === 'income'));
+      moveToStep(STEPS.findIndex((s) => s.key === 'income'));
       return;
     }
     if (retirementLivingCostMissing) {
       setShowRequiredError(true);
-      setStepIndex(STEPS.findIndex((s) => s.key === 'expense'));
+      moveToStep(STEPS.findIndex((s) => s.key === 'expense'));
       return;
     }
     setShowRequiredError(false);
-    onSubmit(formData);
+    try {
+      await saveCurrentDraft(stepIndex);
+      await onSubmit(formData);
+    } catch {
+      // saveCurrentDraft keeps the input in memory and exposes the retry state.
+    }
   };
 
   return (
     <div className="wizard">
-      <div className={`wizard-draft-status ${draftSavedAt ? 'is-saved' : ''}`} role="status">
-        <span aria-hidden="true">{draftSavedAt ? '✓' : '○'}</span>
-        {draftSavedAt ? '입력 내용이 자동으로 임시 저장되었습니다' : '입력 내용은 자동으로 임시 저장됩니다'}
+      <div className={`wizard-draft-status ${draftState.status === 'saved' ? 'is-saved' : ''} ${draftState.status === 'error' ? 'is-error' : ''}`} role="status">
+        <span>
+          {draftState.status === 'saving' && '임시 저장 중…'}
+          {draftState.status === 'error' && draftState.error}
+          {draftState.status !== 'saving' && draftState.status !== 'error' && (draftState.updatedAt ? `마지막 저장: ${formatSavedAt(draftState.updatedAt)}` : '아직 저장되지 않았습니다')}
+        </span>
+        <button type="button" className="wizard-draft-save" disabled={draftState.status === 'saving' || !draftState.dirty} onClick={() => void saveCurrentDraft().catch(() => {})}>
+          {draftState.status === 'error' ? '다시 저장' : '임시 저장'}
+        </button>
       </div>
       <div className="wizard-progress">
         {STEPS.map((s, i) => (
@@ -90,7 +103,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
             type="button"
             key={s.key}
             className={`wizard-progress-item ${i === stepIndex ? 'is-active' : ''} ${i < stepIndex ? 'is-done' : ''}`}
-            onClick={() => setStepIndex(i)}
+            onClick={() => moveToStep(i)}
             aria-current={i === stepIndex ? 'step' : undefined}
           >
             <span className="wizard-progress-dot" aria-hidden="true">{i + 1}</span>
@@ -113,12 +126,12 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
           type="button"
           className="btn-secondary"
           disabled={stepIndex === 0}
-          onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+          onClick={() => moveToStep((i) => Math.max(0, i - 1))}
         >
           이전
         </button>
         {isLast ? (
-          <button type="button" className="btn-primary" onClick={submit}>
+          <button type="button" className="btn-primary" onClick={() => void submit()}>
             진단 결과 보기
           </button>
         ) : (

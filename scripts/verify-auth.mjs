@@ -99,8 +99,10 @@ const testPayload = structuredClone(initialFormData);
 testPayload.basic.birthYear = 1975;
 testPayload.basic.retirementAge = 60;
 testPayload.basic.lifeExpectancy = 90;
+testPayload.basic.serviceYears = 10;
 testPayload.expense.retirementLivingCost = 300;
 testPayload.assets.currentIncome.monthly = 500;
+testPayload.income.personalPension.startAge = 65;
 
 const results = [];
 
