@@ -15,6 +15,17 @@ const allBlankLeaf = (input, leafPaths, arrayPaths = []) => (
 
 export const FUTURE_FINANCE_TARGET_AGES = Object.freeze([60, 70, 80]);
 
+export function buildFiveYearOutlookAges(currentAge, lifeExpectancy) {
+  if (!Number.isFinite(currentAge) || !Number.isFinite(lifeExpectancy) || lifeExpectancy < currentAge) return [];
+
+  const ages = [currentAge];
+  for (let age = Math.ceil(currentAge / 5) * 5; age < lifeExpectancy; age += 5) {
+    ages.push(age);
+  }
+  ages.push(lifeExpectancy);
+  return [...new Set(ages)].sort((a, b) => a - b);
+}
+
 export function calculateFutureValue(value, annualRate, years) {
   const result = Number(value) * Math.pow(1 + Number(annualRate), Math.max(0, Number(years)));
   if (!Number.isFinite(result)) throw new NonFiniteCalculationError('futureFinance.futureValue');
@@ -114,6 +125,29 @@ export function calculatePensionIncomeAtTarget({ input, currentYear, years }) {
   };
 }
 
+export function calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge, years }) {
+  const selfSalary = input.income?.salary || {};
+  const spouseSalary = input.spouse?.salary || {};
+  const monthlySalary = (salary) => n(salary.monthly) + n(salary.annualBonus) / 12;
+  const activeFor = (monthly, durationYears) => monthly > 0 && (years === 0 || (durationYears > 0 && years < durationYears));
+  const retirementAge = Number(input.basic?.retirementAge);
+  const selfIncomeYears = present(selfSalary.months)
+    ? Math.max(0, n(selfSalary.months) / 12)
+    : Number.isFinite(retirementAge) ? Math.max(0, retirementAge - currentAge) : 0;
+  const spouseIncomeYears = present(spouseSalary.months) ? Math.max(0, n(spouseSalary.months) / 12) : 0;
+  const selfSalaryMonthly = monthlySalary(selfSalary);
+  const spouseSalaryMonthly = input.basic?.hasSpouse ? monthlySalary(spouseSalary) : 0;
+  const salaryIncome = (activeFor(selfSalaryMonthly, selfIncomeYears) ? selfSalaryMonthly : 0)
+    + (activeFor(spouseSalaryMonthly, spouseIncomeYears) ? spouseSalaryMonthly : 0);
+  const businessIncome = activeFor(aggregates.businessMonthly, selfIncomeYears) ? aggregates.businessMonthly : 0;
+  const otherIncome = (input.income?.otherIncomes || []).reduce((sum, item) => {
+    const monthly = n(item.annual) / 12;
+    return sum + (activeFor(monthly, n(item.years)) ? monthly : 0);
+  }, 0);
+
+  return salaryIncome + businessIncome + otherIncome;
+}
+
 function assetDataMissing(input) {
   return allBlankLeaf(input, [
     'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
@@ -144,21 +178,29 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
   const netWorthMissing = assetDataMissing(input);
   const nationalPensionStartAge = ageMissing ? null : getNationalPensionStartAge(n(birthYearRaw));
 
-  const targets = ageMissing ? [] : FUTURE_FINANCE_TARGET_AGES
-    .filter((targetAge) => targetAge >= currentAge)
-    .map((targetAge) => {
+  const buildTargets = (targetAges, includeAllIncome = false) => targetAges.map((targetAge) => {
       const years = Math.max(0, targetAge - currentAge);
       const livingExpense = livingExpenseMissing ? null : calculateFutureLivingExpense(aggregates.monthlyLivingCost, years);
       const pension = pensionDataMissing ? null : calculatePensionIncomeAtTarget({ input, currentYear, years });
       const pensionIncome = pension?.total ?? null;
-      const coverageRate = livingExpense > 0 && pensionIncome != null ? (pensionIncome / livingExpense) * 100 : null;
-      const balance = livingExpense != null && pensionIncome != null ? pensionIncome - livingExpense : null;
+      const nonPensionIncome = includeAllIncome
+        ? calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge, years })
+        : 0;
+      const totalIncome = pensionIncome == null ? null : pensionIncome + nonPensionIncome;
+      const incomeForComparison = includeAllIncome ? totalIncome : pensionIncome;
+      const coverageRate = livingExpense > 0 && incomeForComparison != null ? (incomeForComparison / livingExpense) * 100 : null;
+      const balance = livingExpense != null && incomeForComparison != null ? incomeForComparison - livingExpense : null;
 
       return {
         age: targetAge,
         years,
         livingExpense: round(livingExpense),
         pensionIncome: round(pensionIncome),
+        ...(includeAllIncome ? {
+          nonPensionIncome: round(nonPensionIncome),
+          totalIncome: round(totalIncome),
+          incomeLabel: nonPensionIncome > 0 ? '월급·연금 등' : pensionIncome > 0 ? '연금소득' : '소득 없음',
+        } : {}),
         pensionBreakdown: pension && {
           nationalPension: round(pension.nationalPension),
           personalPension: round(pension.personalPension),
@@ -172,6 +214,26 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
         calculationReason: pension?.reason ?? (pensionDataMissing ? '연금 정보 부족' : null),
       };
     });
+
+  const targets = ageMissing ? [] : buildTargets(
+    FUTURE_FINANCE_TARGET_AGES.filter((targetAge) => targetAge >= currentAge),
+  );
+  const lifeExpectancyRaw = input.basic?.lifeExpectancy || input.basic?.retirementEndAge;
+  const lifeExpectancy = isBlank(lifeExpectancyRaw) ? null : Number(lifeExpectancyRaw);
+  const fiveYearOutlook = ageMissing ? [] : buildTargets(
+    buildFiveYearOutlookAges(currentAge, lifeExpectancy),
+    true,
+  );
+  const retirementAge = Number(input.basic?.retirementAge);
+  const retirementCashFlowOutlook = Number.isFinite(retirementAge)
+    && retirementAge >= currentAge
+    && Number.isFinite(lifeExpectancy)
+    && retirementAge <= lifeExpectancy
+    ? buildTargets([
+      retirementAge,
+      ...fiveYearOutlook.map((item) => item.age).filter((age) => age > retirementAge),
+    ], true)
+    : [];
 
   const purchasingPower = netWorthMissing ? null : [0, 10, 20].map((years) => ({
     years,
@@ -194,6 +256,8 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
     nationalPensionStartAge,
     missing: { age: ageMissing, livingExpense: livingExpenseMissing, pension: pensionDataMissing, netWorth: netWorthMissing },
     targets,
+    fiveYearOutlook,
+    retirementCashFlowOutlook,
     purchasingPower,
     diagnosis,
   };
