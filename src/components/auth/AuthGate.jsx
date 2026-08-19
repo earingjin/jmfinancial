@@ -112,7 +112,7 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
             {notice && <p className="auth-notice">{notice}</p>}
 
             <button type="submit" className="btn-primary auth-submit" disabled={submitting}>
-              {submitting ? '처리 중…' : mode === 'signup' ? '회원가입' : '로그인'}
+              {submitting ? 'Loading...' : mode === 'signup' ? '회원가입' : '로그인'}
             </button>
           </form>
 
