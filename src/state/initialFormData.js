@@ -55,6 +55,8 @@ export const initialFormData = {
 
   spouse: {
     birthYear: '',
+    retirementAge: '',
+    lifeExpectancy: '',
     salary: { hasSalary: true, annual: '', monthly: '', annualBonus: '', months: '' },
     severance: {
       type: 'lumpsum',          // 'lumpsum' | 'pension' | 'none'(이미 퇴직금을 수령해 해당 없음)

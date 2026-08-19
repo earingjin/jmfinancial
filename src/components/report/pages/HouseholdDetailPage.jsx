@@ -26,7 +26,7 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, peerC
 
   return (
     <PageFrame eyebrow="Household Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
-      <SectionBadge number="1" label="자산현황_세부내역" />
+      <SectionBadge number="3" label="자산·부채 및 또래 비교" />
       <h3 className="card-title" style={{ marginBottom: 6 }}>① 지출 현황 — 고정지출 (5개 항목, 월평균, 만원)</h3>
       <table className="grade-table compact">
         <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>

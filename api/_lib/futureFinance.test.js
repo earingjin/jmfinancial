@@ -112,6 +112,21 @@ describe('future finance projection', () => {
     expect(at47.coverageRate).toBeCloseTo((470 / 300) * 100, 1);
   });
 
+  it('uses the spouse retirement age when legacy spouse salary months are missing', () => {
+    const input = makeInput({
+      basic: { birthYear: 1979, retirementAge: 60, lifeExpectancy: 70, hasSpouse: true },
+      spouse: {
+        birthYear: 1981,
+        retirementAge: 50,
+        salary: { monthly: 100, annualBonus: 0, months: '' },
+      },
+    });
+    const aggregates = buildAggregates(input);
+
+    expect(calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge: 47, currentYear: 2026, years: 4 })).toBe(100);
+    expect(calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge: 47, currentYear: 2026, years: 5 })).toBe(0);
+  });
+
   it('keeps the legacy diagnosis based on age 80, not the final five-year point', () => {
     const baselineInput = makeInput({ basic: { birthYear: 1979, lifeExpectancy: 80, hasSpouse: false } });
     const input = makeInput({ basic: { birthYear: 1979, lifeExpectancy: 83, hasSpouse: false } });

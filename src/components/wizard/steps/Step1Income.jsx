@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import NumberField from '../fields/NumberField';
 import RadioField from '../fields/RadioField';
 import MonthlyIncomeField from '../fields/MonthlyIncomeField';
-import RemainingTermField from '../fields/RemainingTermField';
 import SeveranceCalculatorButton from '../fields/SeveranceCalculatorButton';
 import PensionCalculatorButton from '../fields/PensionCalculatorButton';
 import RegularIncomeListField from '../fields/RegularIncomeListField';
@@ -49,6 +48,9 @@ export default function Step1Income() {
   const spousePersonalPensionType = getIn(formData, 'spouse.personalPension.type');
   const hasSpouse = !!getIn(formData, 'basic.hasSpouse');
   const spouseBirthYear = getIn(formData, 'spouse.birthYear');
+  const spouseRetirementAge = getIn(formData, 'spouse.retirementAge');
+  const spouseLifeExpectancy = getIn(formData, 'spouse.lifeExpectancy');
+  const spouseLifeExpectancyEditedRef = useRef(false);
   const selfHasSalary = getIn(formData, 'income.salary.hasSalary') !== false;
   const spouseHasSalary = getIn(formData, 'spouse.salary.hasSalary') !== false;
 
@@ -104,13 +106,17 @@ export default function Step1Income() {
     setField('assets.currentIncome.annual', Math.round(currentSalaryMonthly * 12));
   }, [currentSalaryMonthly, setField]);
 
-  // 본인 "남은 퇴직기간"은 출생년도·은퇴(예정) 연령이 모두 입력되면 자동으로 계산된다(수동 입력 불가).
-  // 배우자는 출생년도·은퇴연령 입력 항목이 없어 동일한 방식으로 계산할 수 없으므로 수동 입력을 유지한다.
+  // 본인과 배우자의 "남은 퇴직기간"은 각자의 출생년도·은퇴(예정) 연령으로 자동 계산한다.
   const currentYear = new Date().getFullYear();
   const selfCurrentAge = birthYear !== '' && birthYear != null ? currentYear - Number(birthYear) : null;
   const selfYearsToRetirement =
     selfCurrentAge != null && retirementAge !== '' && retirementAge != null
       ? Math.max(0, Number(retirementAge) - selfCurrentAge)
+      : null;
+  const spouseCurrentAge = spouseBirthYear !== '' && spouseBirthYear != null ? currentYear - Number(spouseBirthYear) : null;
+  const spouseYearsToRetirement =
+    spouseCurrentAge != null && spouseRetirementAge !== '' && spouseRetirementAge != null
+      ? Math.max(0, Number(spouseRetirementAge) - spouseCurrentAge)
       : null;
 
   useEffect(() => {
@@ -119,15 +125,19 @@ export default function Step1Income() {
     }
   }, [selfYearsToRetirement, setField]);
 
+  useEffect(() => {
+    if (hasSpouse && spouseYearsToRetirement != null) {
+      setField('spouse.salary.months', spouseYearsToRetirement * 12);
+    }
+  }, [hasSpouse, spouseYearsToRetirement, setField]);
+
   // "퇴직전 급여 총액"(사용자 승인) = 이번 1년(연봉+상여금) 기준 총액 × 은퇴까지 남은 기간(년).
   // 매년 급여가 동일하다고 가정하는 단순화이며, 실제 계산(aggregate.js 등)에는 쓰이지 않는
   // 이 화면 전용 참고 표시값이다. 남은 기간을 아직 계산할 수 없으면(출생년도·은퇴연령 미입력) 0으로 둔다.
   const selfSalaryThisYearTotal = Math.round(selfSalaryMonthly * 12) + selfAnnualBonus;
   const spouseSalaryThisYearTotal = Math.round(spouseSalaryMonthly * 12) + spouseAnnualBonus;
-  const spouseSalaryMonths = Number(getIn(formData, 'spouse.salary.months')) || 0;
-  const spouseYearsToRetirement = spouseSalaryMonths / 12;
   const selfSalaryLifetimeTotal = selfSalaryThisYearTotal * (selfYearsToRetirement ?? 0);
-  const spouseSalaryLifetimeTotal = spouseSalaryThisYearTotal * spouseYearsToRetirement;
+  const spouseSalaryLifetimeTotal = spouseSalaryThisYearTotal * (spouseYearsToRetirement ?? 0);
   const householdSalaryLifetimeTotal = selfSalaryLifetimeTotal + spouseSalaryLifetimeTotal;
 
   // 퇴직연금 "수령 기간(년)"을 입력하면 "수령 개월 수"가 자동으로 계산된다(직접 입력하지 않음).
@@ -251,8 +261,8 @@ export default function Step1Income() {
   const selfNpMonths = nationalPensionInputMode !== 'none' && selfNpStartAge != null && isFilledValue(lifeExpectancy)
     ? Math.round(Math.max(0, Number(lifeExpectancy) - selfNpStartAge) * 12)
     : null;
-  const spouseNpMonths = hasSpouse && spouseNationalPensionInputMode !== 'none' && spouseNpStartAge != null && isFilledValue(lifeExpectancy)
-    ? Math.round(Math.max(0, Number(lifeExpectancy) - spouseNpStartAge) * 12)
+  const spouseNpMonths = hasSpouse && spouseNationalPensionInputMode !== 'none' && spouseNpStartAge != null && isFilledValue(spouseLifeExpectancy || lifeExpectancy)
+    ? Math.round(Math.max(0, Number(spouseLifeExpectancy || lifeExpectancy) - spouseNpStartAge) * 12)
     : null;
 
   useEffect(() => {
@@ -296,6 +306,13 @@ export default function Step1Income() {
       setField('basic.lifeExpectancy', AVERAGE_LIFE_EXPECTANCY);
     }
   }, [birthYear, lifeExpectancy, setField]);
+
+  useEffect(() => {
+    if (hasSpouse && !spouseLifeExpectancyEditedRef.current && spouseBirthYear !== '' && spouseBirthYear != null
+      && (spouseLifeExpectancy === '' || spouseLifeExpectancy == null)) {
+      setField('spouse.lifeExpectancy', AVERAGE_LIFE_EXPECTANCY);
+    }
+  }, [hasSpouse, spouseBirthYear, spouseLifeExpectancy, setField]);
 
   const retirementAgeNum = Number(retirementAge);
   const lifeExpectancyNum = Number(lifeExpectancy);
@@ -431,6 +448,15 @@ export default function Step1Income() {
               integerOnly
               useGrouping={false}
             />
+            <NumberField path="spouse.retirementAge" label="배우자 은퇴(예정) 연령 *" unit="세" required />
+            <NumberField
+              path="spouse.lifeExpectancy"
+              label="배우자 기대여명 * (직접 수정 가능)"
+              unit="세"
+              required
+              onValueChange={() => { spouseLifeExpectancyEditedRef.current = true; }}
+              helper="배우자 출생년도를 입력하면 평균 기대수명 84.6세가 자동으로 제안됩니다."
+            />
           </div>
         )}
       </section>
@@ -479,7 +505,14 @@ export default function Step1Income() {
                 <div className="field-grid three-col">
                   <MonthlyIncomeField monthlyPath="spouse.salary.monthly" annualPath="spouse.salary.annual" label="현재 소득 (세금 제외한 실수령액)" />
                   <NumberField path="spouse.salary.annualBonus" label="상여금" unit="만원(연)" helper="연간 상여금 총액" />
-                  <RemainingTermField monthsPath="spouse.salary.months" label="남은 퇴직기간" />
+                  <label className="field">
+                    <span className="field-label">남은 퇴직기간</span>
+                    <div className="field-input-row">
+                      <FormattedNumberInput value={spouseYearsToRetirement ?? ''} readOnly />
+                      <span className="field-unit">년</span>
+                    </div>
+                    <span className="field-helper">배우자 출생년도·은퇴(예정) 연령을 입력하면 자동으로 계산됩니다</span>
+                  </label>
                 </div>
                 <TotalAmountBox label="퇴직전 급여 총액" amount={spouseSalaryLifetimeTotal} />
                 <span className="field-helper">현재 소득(월급+상여금) 기준, 은퇴까지 남은 기간 동안 급여가 동일하게 유지된다고 가정한 누적 총액입니다</span>

@@ -1,5 +1,5 @@
 import SectionBadge from './SectionBadge';
-import { formatNumber } from '../../../utils/format';
+import { formatNumber, formatWon } from '../../../utils/format';
 import { getPeerAssetBarDisplay } from './peerAssetBarDisplay';
 
 const MAX_BAR_HEIGHT = 150;
@@ -30,6 +30,10 @@ function AssetValueBar({ value, tone, chartMax, contextLabel }) {
 // 감싸지 않고, 호출하는 쪽(HouseholdDetailPage)의 페이지 안에 그대로 들어간다.
 export default function PeerComparisonPage({ peerComparison }) {
   const { ageBrackets, focusCompare } = peerComparison;
+  const comparisonRows = [
+    { key: 'householdIncome', label: '연소득', metric: peerComparison.householdIncome },
+    { key: 'financialAssets', label: '금융자산', metric: peerComparison.financialAssets },
+  ];
 
   const maxValue = Math.max(
     ...ageBrackets.flatMap((b) => [b.average, b.netWorth]),
@@ -43,7 +47,7 @@ export default function PeerComparisonPage({ peerComparison }) {
 
   return (
     <div style={{ marginTop: 22 }}>
-      <SectionBadge number="2" label="또래자산비교" />
+      <SectionBadge label="또래자산비교" />
       <p className="intro-text" style={{ marginBottom: 10 }}>
         현금흐름은 우리 가정에 들어오고 나가는 돈을 나타냅니다. 안정적인 미래 현금을 위해서는 현재 삶을 위한
         생활비와 저축에 대한 적정 밸런스가 필요합니다. 현재 생활비 수준과 돈을 사용하는 습관이 미래 노후
@@ -102,6 +106,26 @@ export default function PeerComparisonPage({ peerComparison }) {
           </div>
         </div>
       </div>
+
+      <table className="grade-table compact peer-report-compare-table">
+        <thead><tr><th>비교 항목</th><th>우리집</th><th>또래 평균</th><th>평균 대비</th><th>상대 위치</th></tr></thead>
+        <tbody>
+          {comparisonRows.map(({ key, label, metric }) => (
+            <tr key={key}>
+              <td>{label}</td>
+              <td className="num">{metric?.value == null ? '-' : formatWon(metric.value)}</td>
+              <td className="num">{metric?.average == null ? '-' : formatWon(metric.average)}</td>
+              <td className="num">{metric?.diffPercent == null ? '-' : `${metric.diffPercent > 0 ? '+' : ''}${metric.diffPercent}%`}</td>
+              <td>{metric?.percentileLabel || '-'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {peerComparison.benchmarkMeta && (
+        <div className="fine-print peer-report-source">
+          {peerComparison.benchmarkMeta.source}({peerComparison.benchmarkMeta.agency}) · {peerComparison.benchmarkMeta.ageBasis} 평균 · 자산·부채 {peerComparison.benchmarkMeta.assetAndDebtAsOf} 기준 · 소득 {peerComparison.benchmarkMeta.incomeYear}년 기준
+        </div>
+      )}
     </div>
   );
 }

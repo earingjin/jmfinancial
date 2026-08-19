@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAggregates } from './aggregate.js';
+import { buildAggregates, buildFamilyAges } from './aggregate.js';
 
 function deepMerge(base, override) {
   if (Array.isArray(override)) return override;
@@ -46,6 +46,30 @@ describe('savingsPlan.retirementIncludedInTotal - monthlySavings', () => {
   it('included=false: retirement savings is kept separate, so it is added on top of monthly', () => {
     const agg = buildAggregates(input({ assets: { savingsPlan: { retirementIncludedInTotal: false } } }));
     expect(agg.monthlySavings).toBe(130);
+  });
+});
+
+describe('buildFamilyAges', () => {
+  it('includes the spouse retirement age and life expectancy in report data', () => {
+    const result = buildFamilyAges({
+      basic: { birthYear: 1992 },
+      spouse: { birthYear: 1990, retirementAge: 63, lifeExpectancy: 86.5 },
+      expense: { children: [] },
+    }, 2026);
+
+    expect(result.spouse).toEqual({ age: 36, retirementAge: 63, lifeExpectancy: 86.5 });
+  });
+});
+
+describe('retirementIncomeByPerson', () => {
+  it('keeps retirement pension income separated for the report', () => {
+    const result = buildAggregates(input({
+      income: { severance: { type: 'pension', pensionMonthly: 40, pensionMonths: 120 } },
+      spouse: { severance: { type: 'pension', pensionMonthly: 30, pensionMonths: 120 } },
+    }));
+
+    expect(result.retirementIncomeByPerson.self.severancePensionMonthly).toBe(40);
+    expect(result.retirementIncomeByPerson.spouse.severancePensionMonthly).toBe(30);
   });
 });
 

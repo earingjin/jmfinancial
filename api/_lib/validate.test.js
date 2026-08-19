@@ -36,6 +36,33 @@ describe('validateInput - baseline', () => {
   });
 });
 
+describe('required spouse retirement fields', () => {
+  const spouseInput = {
+    basic: { hasSpouse: true },
+    spouse: { birthYear: 1990, retirementAge: 63, lifeExpectancy: 86.5 },
+  };
+
+  it('accepts spouse retirement age and life expectancy', () => {
+    expect(validateInput(makeInput(spouseInput)).ok).toBe(true);
+  });
+
+  it.each(['retirementAge', 'lifeExpectancy'])('requires spouse.%s when a spouse is included', (key) => {
+    const result = validateInput(makeInput({
+      ...spouseInput,
+      spouse: { ...spouseInput.spouse, [key]: '' },
+    }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects spouse life expectancy before spouse retirement age', () => {
+    const result = validateInput(makeInput({
+      ...spouseInput,
+      spouse: { ...spouseInput.spouse, retirementAge: 70, lifeExpectancy: 69 },
+    }));
+    expect(result.errors).toContain('배우자 기대여명은 배우자 은퇴(예정) 연령보다 작을 수 없습니다.');
+  });
+});
+
 describe('required field: expense.retirementLivingCost', () => {
   it('rejects when blank ("")', () => {
     const result = validateInput(makeInput({ expense: { retirementLivingCost: '' } }));

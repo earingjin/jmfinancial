@@ -125,16 +125,23 @@ export function calculatePensionIncomeAtTarget({ input, currentYear, years }) {
   };
 }
 
-export function calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge, years }) {
+export function calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge, currentYear = new Date().getFullYear(), years }) {
   const selfSalary = input.income?.salary || {};
   const spouseSalary = input.spouse?.salary || {};
   const monthlySalary = (salary) => n(salary.monthly) + n(salary.annualBonus) / 12;
   const activeFor = (monthly, durationYears) => monthly > 0 && (years === 0 || (durationYears > 0 && years < durationYears));
   const retirementAge = Number(input.basic?.retirementAge);
+  const spouseBirthYear = Number(input.spouse?.birthYear);
+  const spouseRetirementAge = Number(input.spouse?.retirementAge);
   const selfIncomeYears = present(selfSalary.months)
     ? Math.max(0, n(selfSalary.months) / 12)
     : Number.isFinite(retirementAge) ? Math.max(0, retirementAge - currentAge) : 0;
-  const spouseIncomeYears = present(spouseSalary.months) ? Math.max(0, n(spouseSalary.months) / 12) : 0;
+  const spouseCurrentAge = Number.isFinite(spouseBirthYear) ? currentYear - spouseBirthYear : null;
+  const spouseIncomeYears = present(spouseSalary.months)
+    ? Math.max(0, n(spouseSalary.months) / 12)
+    : spouseCurrentAge != null && Number.isFinite(spouseRetirementAge)
+      ? Math.max(0, spouseRetirementAge - spouseCurrentAge)
+      : 0;
   const selfSalaryMonthly = monthlySalary(selfSalary);
   const spouseSalaryMonthly = input.basic?.hasSpouse ? monthlySalary(spouseSalary) : 0;
   const salaryIncome = (activeFor(selfSalaryMonthly, selfIncomeYears) ? selfSalaryMonthly : 0)
@@ -184,7 +191,7 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
       const pension = pensionDataMissing ? null : calculatePensionIncomeAtTarget({ input, currentYear, years });
       const pensionIncome = pension?.total ?? null;
       const nonPensionIncome = includeAllIncome
-        ? calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge, years })
+        ? calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge, currentYear, years })
         : 0;
       const totalIncome = pensionIncome == null ? null : pensionIncome + nonPensionIncome;
       const incomeForComparison = includeAllIncome ? totalIncome : pensionIncome;
