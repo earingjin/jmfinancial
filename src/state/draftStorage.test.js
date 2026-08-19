@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../lib/supabaseClient', () => ({ supabase: {} }));
+
 import { clearDraftSessionCache, createLatestDraftSaver, deleteDraft, DRAFT_SCHEMA_VERSION, fetchDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, upsertDraft, validateDraft } from './draftStorage.js';
 
 const compatibleFormData = () => ({ basic: {}, income: {}, spouse: {}, expense: {}, assets: {} });

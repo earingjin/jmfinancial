@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../lib/supabaseClient', () => ({ supabase: {} }));
+
 import { mergeDraft } from './draftStorage.js';
 import { initialFormData } from './initialFormData.js';
 

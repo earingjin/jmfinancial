@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../lib/supabaseClient', () => ({ supabase: {} }));
+
 import { buildPlannerResultRow, completePlannerSubmission, savePlannerResult } from './plannerSubmission.js';
 
 const pending = () => ({ formData: { basic: {} }, data: { score: 1 }, resultSaved: false, submissionId: 'submission-1' });
