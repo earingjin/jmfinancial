@@ -1,4 +1,4 @@
-import welcomeImage from '../../assets/웰컴화면.png';
+import welcomeImage from '../../assets/웰컴화면.webp';
 
 export default function WelcomeScreen({ onLogin, onSignup }) {
   return (
