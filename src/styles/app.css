@@ -64,7 +64,49 @@ body {
 /* 위저드 카드가 놓이는 .app-main과 같은 max-width(880px)를 그대로 써서 화면 전환 시
    본문 폭이 갑자기 바뀌지 않게 한다. */
 .app-main--home { max-width: none; margin: 0; padding: 0; }
+.web-brand-logo {
+  position: fixed; z-index: 50; top: max(16px, env(safe-area-inset-top)); left: 18px;
+  width: clamp(132px, 15vw, 152px); height: auto;
+}
+body:has(.report-print-mode) .web-brand-logo { display: none; }
+.home-intro { transform: translateY(-72px); }
+.home-welcome-page .welcome-panel h1 {
+  font-family: 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-weight: 800; letter-spacing: -.055em;
+}
 .home-welcome-page .welcome-panel p strong { color: #b9652d; font-weight: 700; }
+.home-welcome-page .home-tagline {
+  display: grid; gap: 1px; width: fit-content; margin: 8px auto 16px; padding: 0;
+  color: #e8750c; font-family: 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-size: 13px; font-weight: 400; line-height: 1.55; letter-spacing: -.025em;
+}
+.home-welcome-page .home-tagline span,
+.home-welcome-page .home-tagline-emphasis { display: block; }
+.home-welcome-page .home-tagline-emphasis { color: #e8750c; font-size: 14px; font-weight: 700; }
+.home-orientation { display: grid; gap: 10px; margin: 0 0 14px; text-align: left; }
+.home-orientation-summary {
+  display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden;
+  border: 1px solid rgba(210, 122, 58, .18); border-radius: 12px; background: rgba(255, 250, 245, .88);
+  box-shadow: 0 3px 10px rgba(112, 75, 42, .05);
+}
+.home-orientation-summary > div {
+  display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; padding: 11px 5px;
+  color: #766e68; font-size: 10.5px; white-space: nowrap;
+}
+.home-orientation-summary > div + div { border-left: 1px solid rgba(210, 122, 58, .14); }
+.home-orientation-summary span { color: #ed6816; font-size: 17px; line-height: 1; }
+.home-orientation-summary strong { color: #4a423c; font-size: 10.5px; }
+.home-orientation-notes {
+  display: grid; gap: 7px; margin: 0; padding: 13px 14px; list-style: none;
+  border: 1px solid rgba(210, 122, 58, .18); border-radius: 12px; background: rgba(255, 250, 245, .88);
+  color: #6f665f; font-size: 12.5px; line-height: 1.55;
+  box-shadow: 0 3px 10px rgba(112, 75, 42, .05);
+}
+.home-orientation-notes li { position: relative; padding-left: 21px; }
+.home-orientation-notes li::before {
+  position: absolute; top: .12em; left: 0; display: grid; width: 16px; height: 16px; place-items: center;
+  border-radius: 50%; background: #ff8612; color: #fff; font-size: 10px; font-weight: 800; content: '✓';
+}
 .home-signout {
   margin: 15px auto 0; padding: 2px 8px; border: 0; background: transparent;
   color: #8b8178; font: inherit; font-size: 12px; cursor: pointer;
@@ -180,9 +222,10 @@ body {
 }
 .wizard-progress-item.is-active .wizard-progress-dot { background: #c76108; color: #fff; }
 .wizard-progress-item.is-done .wizard-progress-dot { background: #d7b98e; color: #fff; }
-.wizard-progress-icon { display: block; width: 48px; height: 46px; margin: 0 auto 5px; object-fit: contain; filter: saturate(.72) drop-shadow(0 3px 3px rgba(126,83,37,.12)); }
-.wizard-progress-item.is-active .wizard-progress-icon { filter: saturate(1.08) drop-shadow(0 4px 5px rgba(176,85,14,.20)); }
-.wizard-progress-item.is-done .wizard-progress-icon { filter: saturate(.88) drop-shadow(0 3px 3px rgba(126,83,37,.12)); }
+.wizard-progress-icon {
+  display: block; width: 48px; height: 46px; margin: 0 auto 5px; fill: none; stroke: #ff8612;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
 .wizard-progress-label { display: block; font-weight: 800; }
 
 .wizard-body {
@@ -527,6 +570,10 @@ body {
   .welcome-panel h1 { font-size: 23px; }
   .welcome-panel p { margin: 8px 0 18px; font-size: 13px; }
   .welcome-actions button { min-height: 48px; }
+  .home-welcome-page .welcome-panel { padding-right: 28px; padding-left: 28px; }
+  .home-orientation { gap: 7px; margin-bottom: 10px; }
+  .home-orientation-summary > div { padding-top: 8px; padding-bottom: 8px; }
+  .home-orientation-notes { gap: 4px; padding-top: 8px; padding-bottom: 8px; }
 }
 @media (max-width: 599px) {
   .welcome-page {
@@ -539,7 +586,15 @@ body {
     min-height: 0;
   }
   .welcome-panel { padding-right: 50px; padding-left: 50px; }
+  .home-welcome-page { height: auto; min-height: 100svh; overflow-y: auto; }
+  .home-welcome-page .welcome-shell { height: auto; min-height: 100svh; overflow: visible; }
+  .home-welcome-page .welcome-panel { padding-right: 24px; padding-left: 24px; }
+  .web-brand-logo { width: 126px; }
   .welcome-actions button { min-height: 50px; }
+}
+
+@media print {
+  .web-brand-logo { display: none !important; }
 }
 
 /* ---------- 로그인/회원가입 (프리인덱스) ---------- */

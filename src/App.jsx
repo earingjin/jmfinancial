@@ -11,6 +11,7 @@ import Wizard from './components/wizard/Wizard';
 import Report from './components/report/Report';
 import SimpleSummaryReport from './components/summary/SimpleSummaryReport';
 import AppCopyright from './components/AppCopyright';
+import WebBrandLogo from './components/WebBrandLogo';
 import { deobfuscate } from './utils/obfuscate';
 import { supabase } from './lib/supabaseClient';
 import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
@@ -160,8 +161,6 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
               로그아웃
             </button>
           </div>
-          <div className="app-brand">JM FINANCIAL PLANNER</div>
-          <div className="app-brand-sub">제이엠 자산관리 플래너</div>
         </header>
       )}
 
@@ -431,6 +430,7 @@ export default function App() {
 
   return (
     <AuthProvider>
+      <WebBrandLogo />
       {isAdminRoute ? <AdminRoute /> : <AuthGatedApp authView={authView} onAuthViewChange={changeAuthView} />}
     </AuthProvider>
   );

@@ -8,23 +8,18 @@ import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
 import { getIn } from '../../state/pathUtils';
-import incomeIcon from '../../assets/1.수입.webp';
-import expenseIcon from '../../assets/2.지출.webp';
-import savingsIcon from '../../assets/3.저축.webp';
-import assetsIcon from '../../assets/4.자산.webp';
-import debtIcon from '../../assets/5.부채.webp';
-import netWorthIcon from '../../assets/6.순자산.webp';
+import DiagnosisAreaIcon from '../DiagnosisAreaIcon';
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 const SHOW_SCENARIO_STEP = false;
 
 const STEPS = [
-  { key: 'income', title: '수입', icon: incomeIcon, Component: Step1Income },
-  { key: 'expense', title: '지출', icon: expenseIcon, Component: Step2Expense },
-  { key: 'savings', title: '저축', icon: savingsIcon, Component: Step3Savings },
-  { key: 'assets', title: '자산', icon: assetsIcon, Component: Step4Assets },
-  { key: 'debt', title: '부채', icon: debtIcon, Component: Step5Debt },
-  { key: 'netWorth', title: '순자산', icon: netWorthIcon, Component: Step6NetWorth },
+  { key: 'income', title: '수입', Component: Step1Income },
+  { key: 'expense', title: '지출', Component: Step2Expense },
+  { key: 'savings', title: '저축', Component: Step3Savings },
+  { key: 'assets', title: '자산', Component: Step4Assets },
+  { key: 'debt', title: '부채', Component: Step5Debt },
+  { key: 'netWorth', title: '순자산', Component: Step6NetWorth },
   ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios }] : []),
 ];
 
@@ -107,7 +102,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
             aria-current={i === stepIndex ? 'step' : undefined}
           >
             <span className="wizard-progress-dot" aria-hidden="true">{i + 1}</span>
-            <img className="wizard-progress-icon" src={s.icon} alt="" />
+            <DiagnosisAreaIcon className="wizard-progress-icon" type={s.key} />
             <span className="wizard-progress-label">{s.title}</span>
           </button>
         ))}
