@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Step1Income from './steps/Step1Income';
 import Step2Expense from './steps/Step2Expense';
 import Step3Savings from './steps/Step3Savings';
@@ -30,9 +30,23 @@ const formatSavedAt = (value) => value
 export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0 }) {
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
   const [showRequiredError, setShowRequiredError] = useState(false);
+  const [showProgressHint, setShowProgressHint] = useState(false);
+  const progressRef = useRef(null);
   const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
   const { Component, key: currentStepKey } = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
+  useEffect(() => {
+    const progress = progressRef.current;
+    if (!progress) return undefined;
+    const updateHint = () => setShowProgressHint(progress.scrollLeft + progress.clientWidth < progress.scrollWidth - 4);
+    updateHint();
+    progress.addEventListener('scroll', updateHint, { passive: true });
+    window.addEventListener('resize', updateHint);
+    return () => {
+      progress.removeEventListener('scroll', updateHint);
+      window.removeEventListener('resize', updateHint);
+    };
+  }, []);
   const moveToStep = (next) => {
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
     setDraftStep(resolved);
@@ -92,20 +106,23 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
           {draftState.status === 'error' ? '다시 저장' : '임시 저장'}
         </button>
       </div>
-      <div className="wizard-progress">
-        {STEPS.map((s, i) => (
-          <button
-            type="button"
-            key={s.key}
-            className={`wizard-progress-item ${i === stepIndex ? 'is-active' : ''} ${i < stepIndex ? 'is-done' : ''}`}
-            onClick={() => moveToStep(i)}
-            aria-current={i === stepIndex ? 'step' : undefined}
-          >
-            <span className="wizard-progress-dot" aria-hidden="true">{i + 1}</span>
-            <DiagnosisAreaIcon className="wizard-progress-icon" type={s.key} />
-            <span className="wizard-progress-label">{s.title}</span>
-          </button>
-        ))}
+      <div className="wizard-progress-wrap">
+        <div className="wizard-progress" ref={progressRef}>
+          {STEPS.map((s, i) => (
+            <button
+              type="button"
+              key={s.key}
+              className={`wizard-progress-item ${i === stepIndex ? 'is-active' : ''} ${i < stepIndex ? 'is-done' : ''}`}
+              onClick={() => moveToStep(i)}
+              aria-current={i === stepIndex ? 'step' : undefined}
+            >
+              <span className="wizard-progress-dot" aria-hidden="true">{i + 1}</span>
+              <DiagnosisAreaIcon className="wizard-progress-icon" type={s.key} />
+              <span className="wizard-progress-label">{s.title}</span>
+            </button>
+          ))}
+        </div>
+        {showProgressHint && <span className="wizard-progress-more" aria-hidden="true">›</span>}
       </div>
 
       <div className="wizard-body">
