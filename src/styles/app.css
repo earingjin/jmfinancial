@@ -1,3 +1,5 @@
+@import 'pretendard/dist/web/variable/pretendardvariable.css';
+
 * { box-sizing: border-box; }
 
 /* 앵커(#id) 이동 시 부드럽게 스크롤되도록 - 요약페이지 섹션 내비게이션에서 사용. */
@@ -10,7 +12,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-family: 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
   line-height: 1.55;
 }
 
@@ -71,13 +73,12 @@ body {
 body:has(.report-print-mode) .web-brand-logo { display: none; }
 .home-intro { transform: translateY(-72px); }
 .home-welcome-page .welcome-panel h1 {
-  font-family: 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   font-weight: 800; letter-spacing: -.055em;
 }
 .home-welcome-page .welcome-panel p strong { color: #b9652d; font-weight: 700; }
 .home-welcome-page .home-tagline {
   display: grid; gap: 1px; width: fit-content; margin: 8px auto 16px; padding: 0;
-  color: #e8750c; font-family: 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  color: #e8750c;
   font-size: 13px; font-weight: 400; line-height: 1.55; letter-spacing: -.025em;
 }
 .home-welcome-page .home-tagline span,
@@ -99,7 +100,7 @@ body:has(.report-print-mode) .web-brand-logo { display: none; }
 .home-orientation-notes {
   display: grid; gap: 7px; margin: 0; padding: 13px 14px; list-style: none;
   border: 1px solid rgba(210, 122, 58, .18); border-radius: 12px; background: rgba(255, 250, 245, .88);
-  color: #6f665f; font-size: 12.5px; line-height: 1.55;
+  color: #524940; font-size: 12.5px; font-weight: 600; line-height: 1.55;
   box-shadow: 0 3px 10px rgba(112, 75, 42, .05);
 }
 .home-orientation-notes li { position: relative; padding-left: 21px; }
@@ -127,6 +128,15 @@ body:has(.report-print-mode) .web-brand-logo { display: none; }
 }
 .history-back-btn:hover { color: var(--navy-700); }
 .history-title { text-align: left; font-size: 20px; margin-bottom: 20px; }
+.history-retention-notice {
+  margin: -8px 0 18px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--teal-soft);
+  color: #0e6c5e;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
 .history-empty { text-align: center; padding: 40px 0; color: var(--ink-soft); }
 .history-empty p { margin: 0 0 16px; }
 .history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -170,20 +180,23 @@ body:has(.report-print-mode) .web-brand-logo { display: none; }
 }
 
 /* ---------- Wizard ---------- */
+.wizard-progress-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 0 14px;
+}
 .wizard-progress {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  position: sticky;
-  top: 0;
-  z-index: 20;
   background: linear-gradient(90deg, #fffaf2, #faf1e3, #fffaf2);
   border: 1px solid #f0dfc6;
   border-radius: 14px;
   padding: 10px 12px;
-  margin: 0 0 14px;
   box-shadow: 0 4px 10px -6px rgba(15, 27, 51, 0.25);
 }
+.wizard-progress-more { display: none; }
 .wizard-progress-item {
   position: relative;
   flex: 1;
@@ -883,6 +896,22 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   .field-grid, .field-grid.three-col { grid-template-columns: 1fr; }
   .sim-summary { grid-template-columns: 1fr; }
 
+  .report-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: calc(100% - 20px);
+    gap: 6px;
+    padding: 12px 10px;
+  }
+  .report-actions button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 9px 3px;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .report-actions-hint { grid-column: 1 / -1; }
+
   /* ---------- 모바일 최적화 ---------- */
   .app-header { padding: 18px 16px; }
   .app-header--diagnosis {
@@ -902,6 +931,12 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
     padding: 8px;
   }
   .wizard-progress::-webkit-scrollbar { display: none; }
+  .wizard-progress-more {
+    position: absolute; top: 50%; right: 5px; display: grid; width: 30px; height: 42px; place-items: center;
+    border: 1px solid rgba(255, 134, 18, .28); border-radius: 999px; background: rgba(255, 250, 242, .96);
+    color: #ff8612; font-size: 28px; font-weight: 800; line-height: 1; pointer-events: none;
+    box-shadow: -8px 0 14px rgba(255, 250, 242, .92); transform: translateY(-50%);
+  }
   .wizard-progress-item { flex: 0 0 auto; min-width: 74px; font-size: 11px; padding: 7px 6px; }
   .wizard-progress-item:not(:last-child)::after { width: 8px; left: calc(100% + 1px); }
   .wizard-progress-dot { width: 23px; height: 23px; margin-bottom: 2px; font-size: 11px; }
@@ -933,6 +968,10 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 
   table.grade-table th, table.grade-table td { padding: 7px 6px; }
   table.grade-table.compact th, table.grade-table.compact td { padding: 4px 5px; font-size: 11px; }
+}
+
+@media (max-width: 380px) {
+  .report-actions button { font-size: 10.5px; }
 }
 
 /* iOS Safari는 입력창 font-size가 16px 미만이면 포커스 시 자동으로 확대한다 - 항상 16px 이상 유지 */

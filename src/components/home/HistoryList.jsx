@@ -93,6 +93,9 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
         ← 홈으로
       </button>
       <h2 className="home-title history-title">이전 결과 보기</h2>
+      <p className="history-retention-notice">
+        진단 결과는 완료 후 7일간 보관되며, 이후 Supabase에서 자동 삭제됩니다.
+      </p>
       {deleteError && <p className="history-delete-error">{deleteError}</p>}
 
       {rows.length === 0 ? (
