@@ -3,7 +3,7 @@ import SavingsBreakdownField from '../fields/SavingsBreakdownField';
 import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
-import { formatNumber } from '../../../utils/format';
+import { formatWon } from '../../../utils/format';
 
 // assetLink: "현재까지 누적된 금액"이 "4. 자산" 파트의 어느 값과 연동되는지(사용자 승인된 매핑).
 // 변액연금·연금저축·IRP는 "4. 자산 > 연금자산"의 각각 전용 항목(pensionAssetsBreakdown)에 바로 연동된다
@@ -108,10 +108,10 @@ export default function Step3Savings() {
 
         <table className="grade-table compact" style={{ marginTop: 16 }}>
           <tbody>
-            <tr><td>일반 저축</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(savingsMonthly)}만원</td></tr>
-            <tr><td>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(retirementSavingsMonthly)}만원</td></tr>
-            <tr className="total-row"><td>총 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalSavingsMonthly)}만원</td></tr>
-            <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalSavingsMonthly * 12)}만원</td></tr>
+            <tr><td>일반 저축</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(savingsMonthly)}</td></tr>
+            <tr><td>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(retirementSavingsMonthly)}</td></tr>
+            <tr className="total-row"><td>총 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthly)}</td></tr>
+            <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthly * 12)}</td></tr>
           </tbody>
         </table>
         </> : <p className="field-helper">저축 없음으로 선택했습니다. 저축 금액은 진단 계산에서 제외됩니다.</p>}

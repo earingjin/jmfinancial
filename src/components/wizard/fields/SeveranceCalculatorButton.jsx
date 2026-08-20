@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
+import { formatWon } from '../../../utils/format';
 import NumberField from './NumberField';
 
 // 퇴직 전 3개월간의 총 일수(간이 모의계산기 통례값 - 실제 퇴직일 기준 정확한 일수가 아니라
@@ -131,8 +132,7 @@ export default function SeveranceCalculatorButton({
                 <div className="field-navy-box">
                   <span className="field-navy-label">예상 퇴직금은</span>
                   <div className="field-navy-value">
-                    <span>{confirmedSeverance}</span>
-                    <span className="unit">만원</span>
+                    <span>{formatWon(confirmedSeverance)}</span>
                   </div>
                 </div>
               </div>
@@ -142,8 +142,7 @@ export default function SeveranceCalculatorButton({
                   <div className="field-navy-box">
                     <span className="field-navy-label">월 수령액은</span>
                     <div className="field-navy-value">
-                      <span>{monthlyAmount != null ? monthlyAmount : '-'}</span>
-                      <span className="unit">만원</span>
+                      <span>{monthlyAmount != null ? formatWon(monthlyAmount) : '-'}</span>
                     </div>
                   </div>
                   <span className="field-helper">

@@ -6,7 +6,7 @@ import TotalAmountBox from '../fields/TotalAmountBox';
 import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
-import { formatNumber } from '../../../utils/format';
+import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
 
 // 국민연금연구원 조사 2024년 기준 적정 노후생활비(단위: 천원, 외부 공식 자료 - 계산에는 쓰이지 않는 참고용 표).
@@ -279,11 +279,11 @@ export default function Step2Expense() {
             <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th></tr>
           </thead>
           <tbody>
-            <tr><td>현재 생활비</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(monthlyLivingCost)}만원</td></tr>
-            <tr><td>보장성보험료</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(insurancePremium)}만원</td></tr>
-            <tr><td>기타 보험료(건강보험료 등)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(healthInsurance)}만원</td></tr>
-            <tr className="total-row"><td>현재 총 지출 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalMonthlyExpense)}만원</td></tr>
-            <tr className="total-row"><td>현재 총 지출 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalMonthlyExpense * 12)}만원</td></tr>
+            <tr><td>현재 생활비</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(monthlyLivingCost)}</td></tr>
+            <tr><td>보장성보험료</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(insurancePremium)}</td></tr>
+            <tr><td>기타 보험료(건강보험료 등)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(healthInsurance)}</td></tr>
+            <tr className="total-row"><td>현재 총 지출 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalMonthlyExpense)}</td></tr>
+            <tr className="total-row"><td>현재 총 지출 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalMonthlyExpense * 12)}</td></tr>
           </tbody>
         </table>
         <span className="field-helper">

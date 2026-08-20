@@ -23,14 +23,6 @@ function formatDesignDate(iso) {
   return `${yy}.${mm}.${dd}`;
 }
 
-function formatLargeWon(value) {
-  const amount = Math.round(Number(value) || 0);
-  if (amount < 10000) return formatWon(amount);
-  const eok = Math.floor(amount / 10000);
-  const manwon = amount % 10000;
-  return manwon > 0 ? `${eok}억 ${manwon.toLocaleString('ko-KR')}만원` : `${eok}억원`;
-}
-
 function getRetirementStatus(readiness) {
   if (readiness.notCalculable) {
     return {
@@ -52,20 +44,20 @@ function getRetirementStatus(readiness) {
     return {
       icon: '🙂',
       titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 일부 보완이 필요한 상태입니다.'],
-      detailLines: [`예상 준비자금이 필요자금보다 ${formatLargeWon(readiness.shortfall)} 부족합니다.`, '지금부터 저축과 노후소득 계획을 조정하면 개선할 수 있습니다.'],
+      detailLines: [`예상 준비자금이 필요자금보다 ${formatWon(readiness.shortfall)} 부족합니다.`, '지금부터 저축과 노후소득 계획을 조정하면 개선할 수 있습니다.'],
     };
   }
   if (readiness.preparationRate >= 50) {
     return {
       icon: '😥',
       titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 부족한 상태입니다.'],
-      detailLines: [`예상 준비자금이 필요자금보다 ${formatLargeWon(readiness.shortfall)} 부족합니다.`, '지금부터 저축과 노후소득 계획을 함께 점검할 필요가 있습니다.'],
+      detailLines: [`예상 준비자금이 필요자금보다 ${formatWon(readiness.shortfall)} 부족합니다.`, '지금부터 저축과 노후소득 계획을 함께 점검할 필요가 있습니다.'],
     };
   }
   return {
     icon: '😰',
     titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 많이 부족한 상태입니다.'],
-    detailLines: [`예상 준비자금이 필요자금보다 ${formatLargeWon(readiness.shortfall)} 부족합니다.`, '우선순위를 정해 저축과 노후소득 계획을 조정할 필요가 있습니다.'],
+    detailLines: [`예상 준비자금이 필요자금보다 ${formatWon(readiness.shortfall)} 부족합니다.`, '우선순위를 정해 저축과 노후소득 계획을 조정할 필요가 있습니다.'],
   };
 }
 
@@ -311,7 +303,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
             </div>
             <div>
               <span>월평균 지출비용</span>
-              <strong>{formatNumber(rr.monthlyIncomeCompare.livingCostMonthly)}만원</strong>
+              <strong>{formatWon(rr.monthlyIncomeCompare.livingCostMonthly)}</strong>
             </div>
           </div>
         )}
@@ -328,7 +320,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               <p>
                 <span>② 은퇴생활 필요자금</span>
                 <strong>
-                  월 {formatNumber(livingCostAtRetirement)}만원 × {formatNumber(retirementMonths)}개월 = {formatWon(rr.requiredAtRetirement)}
+                  월 {formatWon(livingCostAtRetirement)} × {formatNumber(retirementMonths)}개월 = {formatWon(rr.requiredAtRetirement)}
                 </strong>
               </p>
               <p className="retirement-calculation-result">
@@ -525,7 +517,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                 <div className="future-purchasing-step" key={item.years}>
                   {index > 0 && <span className="future-flow-arrow" aria-hidden="true">→</span>}
                   <span className="future-purchasing-label">{item.years === 0 ? '현재 순자산' : `${item.years}년 후 필요금액`}</span>
-                  <strong>{formatLargeWon(item.requiredAmount)}</strong>
+                  <strong>{formatWon(item.requiredAmount)}</strong>
                   {item.years > 0 && <small>동일 구매력 유지 목표</small>}
                 </div>
               ))}
@@ -615,7 +607,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                     {bar.key === 'required' && (
                       <div className="need-breakdown-list">
                         <DetailRow
-                          label={`현재 기준 생활비 (월 ${formatNumber(livingCostNow)}만원 × ${formatNumber(retirementMonths)}개월)`}
+                          label={`현재 기준 생활비 (월 ${formatWon(livingCostNow)} × ${formatNumber(retirementMonths)}개월)`}
                           value={formatWon(baseLivingCost)}
                         />
                         <DetailRow

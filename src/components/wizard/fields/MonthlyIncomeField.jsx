@@ -1,6 +1,6 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
-import { formatNumber } from '../../../utils/format';
+import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
 
 /**
@@ -34,7 +34,7 @@ export default function MonthlyIncomeField({ monthlyPath, annualPath, label, hel
         <span className="field-unit">만원(월)</span>
       </div>
       <span className="field-helper">
-        연 환산 {formatNumber(annualValue || 0)}만원{helper ? ` · ${helper}` : ''}
+        연 환산 {formatWon(annualValue || 0)}{helper ? ` · ${helper}` : ''}
       </span>
     </label>
   );

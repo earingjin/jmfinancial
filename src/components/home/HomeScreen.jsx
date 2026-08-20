@@ -1,9 +1,21 @@
+import { useState } from 'react';
 import homeImage from '../../assets/홈화면.webp';
 import AppCopyright from '../AppCopyright';
 
 // 로그인 직후 랜딩 화면. 바로 마법사로 보내지 않고, 새 진단 시작 / 이전 결과 보기 중 고르게 한다.
-export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut }) {
+export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut, onDeleteAccount }) {
   const displayName = userName?.trim() || '고객';
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('회원탈퇴하시겠습니까? 진단 결과를 포함한 모든 정보가 삭제되며 되돌릴 수 없습니다.')) return;
+    setDeleteError('');
+    setDeleting(true);
+    const { error } = await onDeleteAccount();
+    setDeleting(false);
+    if (error) setDeleteError(error.message || '회원탈퇴에 실패했습니다.');
+  };
 
   return (
     <div className="welcome-page home-welcome-page">
@@ -41,7 +53,14 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
             <button type="button" className="welcome-login" onClick={onStart}>자산진단 시작하기</button>
             <button type="button" className="welcome-signup" onClick={onViewHistory}>이전 결과 보기</button>
           </div>
-          <button type="button" className="home-signout" onClick={onSignOut}>로그아웃</button>
+          <div className="home-account-actions">
+            <button type="button" className="home-signout" onClick={onSignOut}>로그아웃</button>
+            <span className="home-account-actions-divider" aria-hidden="true">|</span>
+            <button type="button" className="home-signout home-delete-account" onClick={handleDeleteAccount} disabled={deleting}>
+              {deleting ? '탈퇴 처리 중…' : '회원탈퇴'}
+            </button>
+          </div>
+          {deleteError && <p className="home-delete-account-error">{deleteError}</p>}
           <AppCopyright className="welcome-copyright" />
         </div>
       </section>

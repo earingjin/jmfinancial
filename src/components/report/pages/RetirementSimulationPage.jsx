@@ -1,7 +1,7 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import AIFeedbackBox from './AIFeedbackBox';
-import { formatWon, formatPercent, formatNumber, round1 } from '../../../utils/format';
+import { formatWon, formatPercent, round1 } from '../../../utils/format';
 
 // 국민연금 수급개시연령은 출생연도별로 법정 고정값이다(계산치가 아닌 참고 자료).
 // 정년(고정 60세)과 수급개시연령 사이의 "소득공백기간"을 함께 보여준다.
@@ -11,15 +11,6 @@ const PENSION_COHORTS = [
   { range: '1965~1968년', from: 1965, to: 1968, retireAge: 60, pensionAge: 64, gapYears: 4 },
   { range: '1969년 이후', from: 1969, to: Infinity, retireAge: 60, pensionAge: 65, gapYears: 5 },
 ];
-
-function formatEok(value) {
-  if (value >= 10000) {
-    const eok = Math.floor(value / 10000);
-    const man = Math.round(value % 10000);
-    return man > 0 ? `${eok.toLocaleString('ko-KR')}억 ${man.toLocaleString('ko-KR')}만원` : `${eok.toLocaleString('ko-KR')}억원`;
-  }
-  return formatWon(value);
-}
 
 export default function RetirementSimulationPage({ simulation, aggregates: agg, retirementLivingCost, feedbackBars, feedbackPension, pageNumber, totalPages }) {
   const retirementAge = simulation.currentAge + simulation.yearsToRetirement;
@@ -40,18 +31,18 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
       <SectionBadge number="7" label="은퇴자산 시뮬레이션" />
       <div className="shortfall-headline">
         <div className="lead">은퇴시점 필요자금에 비해</div>
-        <div className="amount">{formatEok(simulation.shortfall)}</div>
+        <div className="amount">{formatWon(simulation.shortfall)}</div>
         <div className="lead">부족할 것으로 예상돼요</div>
       </div>
       <div className="shortfall-sub">
-        {retirementAge}세부터 {round1(retirementAge + simulation.retirementYears)}세까지 매년 목표 생활비(월 {formatNumber(retirementLivingCost)}만원)를 감당하려면<br />
-        은퇴시점에 준비자산 {formatEok(simulation.requiredAtRetirement)}이 필요해요
+        {retirementAge}세부터 {round1(retirementAge + simulation.retirementYears)}세까지 매년 목표 생활비(월 {formatWon(retirementLivingCost)})를 감당하려면<br />
+        은퇴시점에 준비자산 {formatWon(simulation.requiredAtRetirement)}이 필요해요
       </div>
 
       <div className="bar-chart-wrap" style={{ height: 150 }}>
         {bars.map((bar) => (
           <div className="bar-col" key={bar.label}>
-            <div className="bar-value-tag">{formatEok(bar.value)}</div>
+            <div className="bar-value-tag">{formatWon(bar.value)}</div>
             <div className="bar-fill" style={{ height: `${Math.max(4, (bar.value / maxBarValue) * MAX_BAR_HEIGHT)}px`, background: bar.color }} />
             <div className="bar-caption">{bar.label.split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}</div>
           </div>
@@ -59,9 +50,9 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
       </div>
 
       <div className="bar-legend" style={{ margin: '4px auto 0' }}>
-        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--navy-700)' }} />자체 준비자산 <span className="val num">{formatEok(simulation.readyAssetsAtRetirement)}</span></div>
-        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--red)' }} />필요 준비자산 <span className="val num">{formatEok(simulation.requiredAtRetirement)}</span></div>
-        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--red)' }} />부족금액 <span className="val num" style={{ color: 'var(--red)' }}>{formatEok(simulation.shortfall)}</span></div>
+        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--navy-700)' }} />자체 준비자산 <span className="val num">{formatWon(simulation.readyAssetsAtRetirement)}</span></div>
+        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--red)' }} />필요 준비자산 <span className="val num">{formatWon(simulation.requiredAtRetirement)}</span></div>
+        <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'var(--red)' }} />부족금액 <span className="val num" style={{ color: 'var(--red)' }}>{formatWon(simulation.shortfall)}</span></div>
         <div className="bar-legend-item"><span className="pie-dot" style={{ background: 'transparent' }} />준비율 <span className="val num" style={{ color: 'var(--navy-800)' }}>{formatPercent(simulation.preparationRate)}</span></div>
       </div>
 
@@ -92,9 +83,9 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
                 <td className="num" style={{ textAlign: 'right' }}>{c.retireAge}세</td>
                 <td className="num" style={{ textAlign: 'right' }}>{c.pensionAge}세</td>
                 <td className="num" style={{ textAlign: 'right' }}>{c.gapYears}년</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatEok(retirementLivingCost)}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatEok(annualNeeded)}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatEok(totalNeeded)}</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatWon(retirementLivingCost)}</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatWon(annualNeeded)}</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatWon(totalNeeded)}</td>
               </tr>
             );
           })}
