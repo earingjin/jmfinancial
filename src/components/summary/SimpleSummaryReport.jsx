@@ -2,10 +2,17 @@ import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/form
 import DonutChart from './DonutChart';
 import '../../styles/simpleSummary.css';
 
-const CHART_COLORS = ['var(--navy-700)', 'var(--teal)', 'var(--gold)', 'var(--navy-600)', 'var(--amber)', 'var(--red)', 'var(--navy-800)', 'var(--teal-soft)'];
+const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
+const CHART_COLOR_BY_KEY = {
+  carInsurance: '#00a6a6',
+  debtRepay: '#54278f',
+};
 
 function withColors(items) {
-  return items.map((item, i) => ({ ...item, color: item.color || CHART_COLORS[i % CHART_COLORS.length] }));
+  return items.map((item, i) => ({
+    ...item,
+    color: CHART_COLOR_BY_KEY[item.key] || item.color || CHART_COLORS[i % CHART_COLORS.length],
+  }));
 }
 
 function formatDesignDate(iso) {
@@ -215,14 +222,16 @@ function FiveYearOutlookTable({ outlook }) {
           {outlook.map((item) => (
             <tr key={item.age}>
               <th scope="row">{item.age}세</th>
-              <td>{item.livingExpense == null ? '산출 불가' : formatWon(item.livingExpense)}</td>
-              <td>
-                {item.totalIncome == null ? '산출 불가' : formatWon(item.totalIncome)}
-                {item.incomeLabel && <small className="future-income-label">{item.incomeLabel}</small>}
+              <td data-label="예상 월 생활비"><span className="future-cell-value">{item.livingExpense == null ? '산출 불가' : formatWon(item.livingExpense)}</span></td>
+              <td data-label="예상 월 총소득">
+                <span className="future-cell-value">
+                  {item.totalIncome == null ? '산출 불가' : formatWon(item.totalIncome)}
+                  {item.incomeLabel && <small className="future-income-label">{item.incomeLabel}</small>}
+                </span>
               </td>
-              <td>{item.coverageRate == null ? '산출 불가' : `${Math.round(item.coverageRate)}%`}</td>
-              <td className={item.balance == null ? '' : item.balance < 0 ? 'is-shortfall' : 'is-surplus'}>
-                {item.balance == null ? '산출 불가' : item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}
+              <td data-label="충당률"><span className="future-cell-value">{item.coverageRate == null ? '산출 불가' : `${Math.round(item.coverageRate)}%`}</span></td>
+              <td data-label="월 차이" className={item.balance == null ? '' : item.balance < 0 ? 'is-shortfall' : 'is-surplus'}>
+                <span className="future-cell-value">{item.balance == null ? '산출 불가' : item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}</span>
               </td>
             </tr>
           ))}
@@ -458,10 +467,16 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         ) : (
           <>
             <h3 className="ss-section-title">연금소득 기준 생활비 충당률</h3>
-            <div className="future-method-note">
+            <div className="future-method-note future-method-note--coverage">
               <b>계산 원리</b>
-              <span>현재 월 생활비에는 매년 3%의 물가상승률을 복리로 적용합니다.</span>
-              <span>국민연금은 수급개시연령 이후부터 연 2.1% 증가를 적용하며, 개인연금과 퇴직연금은 현재 월 수령액이 유지된다고 가정합니다.</span>
+              <div className="future-method-formula">생활비 충당률 = 해당 연령의 예상 연금소득 ÷ 예상 생활비 × 100</div>
+              <ul className="future-method-list">
+                <li><strong>예상 생활비</strong><span>현재 월 생활비에 매년 3%의 물가상승률을 복리로 적용합니다.</span></li>
+                <li><strong>국민연금</strong><span>수급개시연령 이후부터 연 2.1% 증가를 적용합니다.</span></li>
+                <li><strong>개인·퇴직연금</strong><span>현재 월 수령액이 유지된다고 가정합니다.</span></li>
+                <li><strong>부족·여유액</strong><span>연금소득에서 생활비를 뺀 값으로 매월 예상 금액을 계산합니다.</span></li>
+                <li><strong>해석 범위</strong><span>연금소득만으로 생활비를 얼마나 충당하는지를 나타내며, 종합 은퇴 준비도를 의미하지 않습니다.</span></li>
+              </ul>
             </div>
             <div className="future-card-grid">
               {future.targets.map((item) => (
@@ -479,12 +494,8 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               ))}
             </div>
 
-            <h3 className="ss-section-title">현금흐름 비교</h3>
-            <div className="future-method-note">
-              <b>계산 원리</b>
-              <span>생활비 충당률 = 해당 연령의 예상 연금소득 ÷ 예상 생활비 × 100</span>
-              <span>연금소득에서 생활비를 뺀 값으로 매월 예상 부족액 또는 여유금액을 계산합니다.</span>
-            </div>
+            <h3 className="ss-section-title">연령별 예상 생활비와 연금소득</h3>
+            <p className="simple-summary-subtitle">각 연령의 예상 생활비와 예상 연금소득을 금액으로 비교합니다. 두 막대의 차이가 해당 연령의 월 부족액 또는 여유액입니다.</p>
             <FutureFinanceChart targets={future.targets} />
             {future.diagnosis && <p className="future-diagnosis">{future.diagnosis}</p>}
             {future.fiveYearOutlook?.length > 0 && (
@@ -501,20 +512,21 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         )}
 
         <div className="future-purchasing-card">
-          <h3>현재 자산의 미래 구매력</h3>
-          <div className="future-method-note future-method-note--in-card">
-            <b>계산 원리</b>
-            <span>필요한 미래 금액 = 현재 순자산 × (1 + 물가상승률 3%)<sup>경과연수</sup></span>
-            <span>자산이 해당 금액까지 실제로 늘어난다는 뜻이 아니라, 현재와 같은 구매력을 유지하기 위한 기준 금액입니다.</span>
+          <h3>현재 자산과 같은 구매력을 유지하려면</h3>
+          <div className="future-method-note future-method-note--in-card future-method-note--purchasing">
+            <b>구매력 유지 계산</b>
+            <div className="future-method-formula">필요한 미래 금액 = 현재 순자산 × (1 + 물가상승률 3%)<sup>경과연수</sup></div>
+            <strong className="future-purchasing-warning">자산이 아래 금액으로 불어난다는 예상이 아닙니다.</strong>
+            <span>물가가 오를수록 현재와 같은 구매력을 유지하기 위해 미래에 필요한 목표금액이 커진다는 의미입니다.</span>
           </div>
           {future?.purchasingPower ? (
             <div className="future-purchasing-flow">
               {future.purchasingPower.map((item, index) => (
                 <div className="future-purchasing-step" key={item.years}>
                   {index > 0 && <span className="future-flow-arrow" aria-hidden="true">→</span>}
-                  <span>{item.years === 0 ? '현재' : `${item.years}년 후`}</span>
+                  <span className="future-purchasing-label">{item.years === 0 ? '현재 순자산' : `${item.years}년 후 필요금액`}</span>
                   <strong>{formatLargeWon(item.requiredAmount)}</strong>
-                  {item.years > 0 && <small>동일 구매력 기준</small>}
+                  {item.years > 0 && <small>동일 구매력 유지 목표</small>}
                 </div>
               ))}
             </div>
