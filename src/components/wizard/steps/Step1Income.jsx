@@ -9,7 +9,7 @@ import TotalAmountBox from '../fields/TotalAmountBox';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { initialFormData } from '../../../state/initialFormData';
-import { formatNumber } from '../../../utils/format';
+import { formatNumber, formatWon } from '../../../utils/format';
 import { getNationalPensionStartAge } from '../../../utils/pensionEligibility';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
 
@@ -952,42 +952,42 @@ export default function Step1Income() {
           <tbody>
             <tr>
               <td>급여(상여금 포함)</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(currentSalaryMonthly))}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(currentSalaryMonthly))}</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfYearsToRetirement, spouseYearsToRetirement)}</td>
             </tr>
             <tr>
               <td>사업소득</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(businessMonthly)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(businessMonthly)}</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatYears(selfYearsToRetirement)}</td>
             </tr>
             <tr>
               <td>국민연금</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(nationalPensionTotal)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(nationalPensionTotal)}</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfNationalPensionMonths / 12, spouseNationalPensionMonths / 12)}</td>
             </tr>
             <tr>
               <td>퇴직연금</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(severanceTotal)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(severanceTotal)}</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfSeverancePensionYears, spouseSeverancePensionYears)}</td>
             </tr>
             <tr>
               <td>개인연금</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(personalPensionTotal)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(personalPensionTotal)}</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfPersonalPensionYears, spousePersonalPensionYears)}</td>
             </tr>
             <tr>
               <td>기타 정기수입(연 환산)</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(otherIncomesMonthly))}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(otherIncomesMonthly))}</td>
               <td className="num" style={{ textAlign: 'right' }}>{otherIncomes.length > 0 ? '항목별 상이' : '-'}</td>
             </tr>
             <tr className="total-row">
               <td>총 월 수입 합계</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(totalMonthlyIncome))}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(totalMonthlyIncome))}</td>
               <td className="num" style={{ textAlign: 'right' }}>-</td>
             </tr>
             <tr className="total-row">
               <td>총 연 수입 합계</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Math.round(totalMonthlyIncome) * 12)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(totalMonthlyIncome) * 12)}</td>
               <td className="num" style={{ textAlign: 'right' }}>-</td>
             </tr>
           </tbody>

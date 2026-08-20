@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
-import { formatNumber } from '../../../utils/format';
+import { formatNumber, formatWon } from '../../../utils/format';
 
 // 연 3~4% 수준의 장기 수익률을 단순 반영한 시뮬레이션 계수(사용자 제공 값).
 const INVESTMENT_MULTIPLIER = 1.3;
@@ -77,7 +77,7 @@ export default function PensionCalculatorButton({
                 반영합니다.
               </p>
               <p className="field-helper" style={{ marginBottom: 4 }}>
-                급여(월): {isFilled(monthlySalary) ? `${formatNumber(monthlySalary)}만원 (급여 입력값과 연동됨)` : '위에서 급여(월)를 입력해 주세요'}
+                급여(월): {isFilled(monthlySalary) ? `${formatWon(monthlySalary)} (급여 입력값과 연동됨)` : '위에서 급여(월)를 입력해 주세요'}
               </p>
               <p className="field-helper" style={{ marginBottom: 4 }}>
                 남은근무기간: {remainingYears != null ? `${formatNumber(Math.round(remainingYears * 10) / 10)}년 (남은 퇴직기간과 연동됨)` : '남은 퇴직기간이 입력되면 자동으로 연동됩니다'}
@@ -101,8 +101,7 @@ export default function PensionCalculatorButton({
                 <div className="field-navy-box">
                   <span className="field-navy-label">예상 퇴직연금은</span>
                   <div className="field-navy-value">
-                    <span>{formatNumber(estimatedPension)}</span>
-                    <span className="unit">만원</span>
+                    <span>{formatWon(estimatedPension)}</span>
                   </div>
                 </div>
                 <span className="field-helper">
@@ -114,8 +113,7 @@ export default function PensionCalculatorButton({
                 <div className="field-navy-box">
                   <span className="field-navy-label">월 수령 금액은</span>
                   <div className="field-navy-value">
-                    <span>{estimatedMonthly != null ? formatNumber(estimatedMonthly) : '-'}</span>
-                    <span className="unit">만원</span>
+                    <span>{estimatedMonthly != null ? formatWon(estimatedMonthly) : '-'}</span>
                   </div>
                 </div>
                 <span className="field-helper">

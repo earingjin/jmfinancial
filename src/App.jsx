@@ -20,7 +20,7 @@ import './styles/tokens.css';
 import './styles/app.css';
 
 function AppContent({ initialDraft = null, startWithWizard = false }) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
   const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'error' | 'history'
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -171,6 +171,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
             onStart={startDiagnosis}
             onViewHistory={viewHistory}
             onSignOut={signOut}
+            onDeleteAccount={deleteAccount}
           />
         )}
 

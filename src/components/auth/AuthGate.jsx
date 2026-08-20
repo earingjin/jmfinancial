@@ -12,6 +12,56 @@ function translateAuthError(message) {
   return message;
 }
 
+function PrivacyConsentModal({ onClose, onConfirm }) {
+  const [checked, setChecked] = useState(false);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h4>개인정보 수집·이용 동의</h4>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="닫기">
+            ✕
+          </button>
+        </div>
+        <div className="consent-body">
+          <p>본 서비스는 자산진단 및 결과 리포트 제공을 위해 아래와 같이 개인정보를 수집·이용합니다.</p>
+
+          <h5>1. 수집·이용 목적</h5>
+          <p>자산진단 서비스 제공</p>
+          <p>맞춤형 재무분석 및 결과 리포트 생성</p>
+          <p>서비스 이용자가 중간이탈시 자동저장</p>
+
+          <h5>2. 수집항목</h5>
+          <p><strong>필수항목</strong></p>
+          <p>이메일 주소</p>
+          <p>비밀번호</p>
+          <p>출생연도</p>
+
+          <p><strong>선택항목</strong></p>
+          <p>소득, 자산, 부채 관련 정보</p>
+          <p>재무목표</p>
+          <p>기타 이용자가 입력하는 재무 관련 정보</p>
+
+          <h5>보유 및 이용기간</h5>
+          <p>수집된 개인정보는 자산진단 결과 제공 완료 후 7일간 보관되며, 이후 자동으로 파기됩니다.</p>
+
+          <h5>동의 거부 권리</h5>
+          <p>이용자는 개인정보 수집·이용에 대한 동의를 거부할 권리가 있습니다. 다만 필수항목 수집에 동의하지 않을 경우 자산진단 서비스 이용이 제한될 수 있습니다.</p>
+
+          <p className="consent-quote">"입력된 재무정보는 진단 결과 생성 목적으로만 사용되며 제3자에게 제공되지 않습니다."</p>
+        </div>
+        <label className="consent-checkbox">
+          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
+          <span>개인정보 수집·이용에 동의합니다.</span>
+        </label>
+        <button type="button" className="btn-primary consent-confirm" disabled={!checked} onClick={onConfirm}>
+          확인
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AuthGate({ title = '잭앤리치', allowSignup = true, initialMode = 'login', noticeMessage, secondaryAction }) {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState(initialMode);
@@ -21,6 +71,8 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
 
   const switchMode = (next) => {
     setMode(next);
@@ -32,6 +84,10 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
     e.preventDefault();
     setError('');
     setNotice('');
+    if (mode === 'signup' && !consentGiven) {
+      setError('개인정보 수집·이용에 동의해야 회원가입할 수 있습니다.');
+      return;
+    }
     setSubmitting(true);
     try {
       if (mode === 'signup') {
@@ -57,6 +113,13 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
         <div className="auth-page-brand">JM FINANCIAL PLANNER</div>
         <p className="auth-page-title">제이엠 자산관리 플래너</p>
       </div>
+      {mode === 'login' && title === '잭앤리치' && (
+        <ul className="auth-login-notice">
+          <li>제3자에게 제공되지 않습니다</li>
+          <li>진단결과 제공 7일 후 자동삭제됩니다.</li>
+          <li>회원탈퇴시 바로 삭제됩니다.</li>
+        </ul>
+      )}
       <div className="auth-card">
         <div className="auth-card-bg">
           <img src={heroImage} alt="전문적인 재무진단 리포트 표지" />
@@ -75,6 +138,12 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
                 회원가입
               </button>
             </div>
+          )}
+
+          {mode === 'signup' && (
+            <button type="button" className="auth-consent-trigger" onClick={() => setShowConsentModal(true)}>
+              개인정보 수집 동의하기
+            </button>
           )}
 
           <form onSubmit={handleSubmit} className="auth-form">
@@ -111,7 +180,11 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
             {error && <p className="auth-error">{error}</p>}
             {notice && <p className="auth-notice">{notice}</p>}
 
-            <button type="submit" className="btn-primary auth-submit" disabled={submitting}>
+            <button
+              type="submit"
+              className="btn-primary auth-submit"
+              disabled={submitting || (mode === 'signup' && !consentGiven)}
+            >
               {submitting ? 'Loading...' : mode === 'signup' ? '회원가입' : '로그인'}
             </button>
           </form>
@@ -123,6 +196,15 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
           )}
         </div>
       </div>
+      {showConsentModal && (
+        <PrivacyConsentModal
+          onClose={() => setShowConsentModal(false)}
+          onConfirm={() => {
+            setConsentGiven(true);
+            setShowConsentModal(false);
+          }}
+        />
+      )}
       <AppCopyright className="auth-copyright" />
     </div>
   );

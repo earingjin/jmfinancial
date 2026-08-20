@@ -1,7 +1,7 @@
 import { useState, Fragment } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
-import { formatNumber } from '../../../utils/format';
+import { formatNumber, formatWon } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
 import TotalAmountBox from './TotalAmountBox';
 
@@ -343,7 +343,7 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
             return (
               <tr key={c.key}>
                 <td>{c.label}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.monthly) || 0)}만원</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatWon(Number(item.monthly) || 0)}</td>
                 <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.remainingMonths) || 0)}개월</td>
                 <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.interestRate) || 0)}%</td>
               </tr>
@@ -352,7 +352,7 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
           {customItems.map((item, i) => (
             <tr key={`custom-${i}`}>
               <td>{item.name || '(이름 미입력)'}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.monthly) || 0)}만원</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Number(item.monthly) || 0)}</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.remainingMonths) || 0)}개월</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatNumber(Number(item.interestRate) || 0)}%</td>
             </tr>
@@ -363,7 +363,7 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
       <span className="field-helper">선택·추가하신 항목의 월 저축액을 자동으로 합산한 값입니다. 개월수·이자율·누적액은 항목별로 다를 수 있어 합산하지 않습니다.</span>
 
       {annualPath && (
-        <p className="field-helper" style={{ marginTop: 10 }}>연 환산 {formatNumber(annualTotal || 0)}만원</p>
+        <p className="field-helper" style={{ marginTop: 10 }}>연 환산 {formatWon(annualTotal || 0)}</p>
       )}
     </div>
   );

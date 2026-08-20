@@ -1,6 +1,6 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
-import { formatNumber } from '../../../utils/format';
+import { formatWon } from '../../../utils/format';
 
 export default function Step6NetWorth() {
   const { formData } = useFormData();
@@ -22,9 +22,9 @@ export default function Step6NetWorth() {
         <h3><span className="step-icon">⚖️</span> 현재 순자산</h3>
         <table className="grade-table compact">
           <tbody>
-            <tr><td>총자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalAssets)}만원</td></tr>
-            <tr><td>총부채</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalDebt)}만원</td></tr>
-            <tr className="total-row"><td>현재 순자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(netWorth)}만원</td></tr>
+            <tr><td>총자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalAssets)}</td></tr>
+            <tr><td>총부채</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalDebt)}</td></tr>
+            <tr className="total-row"><td>현재 순자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(netWorth)}</td></tr>
           </tbody>
         </table>
         <span className="field-helper">4. 자산, 5. 부채 단계에서 입력하신 값을 기준으로 자동 계산됩니다</span>

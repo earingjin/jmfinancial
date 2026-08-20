@@ -5,7 +5,7 @@ import RepeatableList from '../fields/RepeatableList';
 import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
-import { formatNumber } from '../../../utils/format';
+import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
 import TotalAmountBox from '../fields/TotalAmountBox';
 
@@ -483,12 +483,12 @@ export default function Step4Assets() {
             <tr><th>구분</th><th style={{ textAlign: 'right' }}>금액</th></tr>
           </thead>
           <tbody>
-            <tr><td>현금성 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(liquidAssets)}만원</td></tr>
-            <tr><td>금융자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(financialAssetsTotal)}만원</td></tr>
-            <tr><td>연금자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(pensionAssets)}만원</td></tr>
-            <tr><td>부동산자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(realEstateTotal)}만원</td></tr>
-            <tr><td>기타 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(otherAssetsTotal)}만원</td></tr>
-            <tr className="total-row"><td>총자산 합계</td><td className="num" style={{ textAlign: 'right' }}>{formatNumber(totalAssets)}만원</td></tr>
+            <tr><td>현금성 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(liquidAssets)}</td></tr>
+            <tr><td>금융자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(financialAssetsTotal)}</td></tr>
+            <tr><td>연금자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(pensionAssets)}</td></tr>
+            <tr><td>부동산자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(realEstateTotal)}</td></tr>
+            <tr><td>기타 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(otherAssetsTotal)}</td></tr>
+            <tr className="total-row"><td>총자산 합계</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalAssets)}</td></tr>
           </tbody>
         </table>
       </section>
