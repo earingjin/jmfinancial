@@ -38,7 +38,7 @@
 .ss-section-nav {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 60;
   display: flex;
   gap: 4px;
   overflow-x: auto;
@@ -880,6 +880,7 @@
 }
 
 @media (max-width: 620px) {
+  .simple-summary-topbar { margin-top: 22px; }
   .donut-grid { grid-template-columns: 1fr; }
   .future-method-list { grid-template-columns: 1fr; }
   .future-method-list li:last-child { grid-column: auto; }
