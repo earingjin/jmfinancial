@@ -47,11 +47,18 @@ function ExecutiveFinanceSummary({ agg }) {
   );
 }
 
-export default function ExecutiveSummaryPage({ simulation, aggregates: agg, familyAges, retirementReadiness, feedback, pageNumber, totalPages }) {
+export default function ExecutiveSummaryPage({ simulation, aggregates: agg, familyAges, retirementReadiness, retirementAssetProjection, feedback, pageNumber, totalPages }) {
   const retirementAge = simulation.currentAge + simulation.yearsToRetirement;
   const retirementEndAge = round1(retirementAge + simulation.retirementYears);
   const retirementStatus = simulation.shortfall > 0 ? '부족' : '적정';
   const fb = feedback || {};
+  // 은퇴 후 자산잔액 시뮬레이션(retirementAssetProjection)이 있으면 실제 소진 여부를 보여주고,
+  // 이전 저장 결과처럼 데이터가 없을 때만 "산출 불가"로 표시한다(임의로 0세·소진으로 추정하지 않음).
+  const assetDepletionLabel = !retirementAssetProjection || retirementAssetProjection.notCalculable
+    ? '산출 불가'
+    : retirementAssetProjection.assetsRemainAtLifeExpectancy
+      ? '기대수명까지 유지'
+      : `${retirementAssetProjection.depletionAge}세 소진 예상`;
 
   return (
     <PageFrame eyebrow="Executive Summary" title="핵심 이슈 & 종합 결과" pageNumber={pageNumber} totalPages={totalPages}>
@@ -114,7 +121,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
             <span className="summary-card-rating">{RATING_PLACEHOLDER}</span>
           </div>
           <div className="summary-card-row"><span>월평균 지출</span><span className="num">{formatWon(simulation.retirementLivingCostNow)}</span></div>
-          <div className="summary-card-row total"><span>자산소진</span><span className="num">산출 불가</span></div>
+          <div className="summary-card-row total"><span>자산소진</span><span className="num">{assetDepletionLabel}</span></div>
         </div>
       </div>
       <div className="executive-feedback">

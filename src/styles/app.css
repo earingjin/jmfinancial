@@ -1503,6 +1503,24 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .report-chart-legend .expense::before { background: #f28a32; }
 .report-chart-legend .income::before { background: #6c9b75; }
 .report-chart-legend .gap::before { background: rgba(225, 150, 72, .24); }
+
+/* ---------- 예상 자산 유지 기간(은퇴 후 자산잔액) ---------- */
+.report-asset-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.report-asset-stat-grid > div { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.report-asset-stat-grid > div.is-highlight { border-color: var(--orange-strong, #ff7a0a); border-width: 2px; background: var(--paper); }
+.report-asset-stat-grid span { display: block; margin-bottom: 6px; color: var(--ink-soft); font-size: 10.5px; }
+.report-asset-stat-grid strong { display: block; color: var(--navy-900); font-size: 17px; }
+.report-asset-chart { padding: 8px 10px 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.report-asset-chart svg { display: block; width: 100%; height: 230px; }
+.report-asset-chart line { stroke: #eadfce; stroke-width: 1; }
+.report-asset-chart .asset-area { fill: rgba(108, 155, 117, .14); stroke: none; }
+.report-asset-chart .asset-line { fill: none; stroke: #6c9b75; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.report-asset-chart .asset-dot { fill: #6c9b75; stroke: var(--card); stroke-width: 1.5; }
+.report-asset-chart .depletion-line { stroke: #d64545; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .7; }
+.report-asset-chart .depletion-dot { fill: #d64545; }
+.report-asset-chart .asset-value { fill: var(--navy-900); font-size: 9px; font-weight: 700; paint-order: stroke fill; stroke: var(--card); stroke-width: 3px; }
+.report-asset-chart .depletion-label { fill: #d64545; font-size: 9px; font-weight: 700; paint-order: stroke fill; stroke: var(--card); stroke-width: 3px; }
+.report-asset-chart .age-label { font-size: 8.5px; fill: var(--ink-soft); }
 .report-chart-help { margin: 7px 0 10px; text-align: center; }
 .report-outlook-table { table-layout: fixed; }
 .report-outlook-table th, .report-outlook-table td { text-align: right; }
@@ -1556,6 +1574,9 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .report-key-note--composition .report-key-note-space { min-height: 72px; }
 .report-key-note--future { bottom: 8px; }
 .report-key-note--future .report-key-note-space { min-height: 105px; }
+.report-metric-chart-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 18px; }
+.report-metric-chart-title { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-size: 11px; font-weight: 800; color: var(--navy-900); }
+.report-metric-chart-title span { font-size: 9px; font-weight: 600; color: var(--ink-soft); }
 .peer-report-compare-table { margin-top: 11px; }
 .peer-report-compare-table th, .peer-report-compare-table td { padding: 3px 5px !important; font-size: 9px !important; }
 .peer-report-source { margin-top: 5px; font-size: 8.5px; }

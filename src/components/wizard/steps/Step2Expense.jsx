@@ -174,6 +174,43 @@ export default function Step2Expense() {
       </section>
 
       <section className="step-section">
+        <h3><span className="step-icon">💰</span> 은퇴 후 예상 목돈지출</h3>
+        <p className="field-helper" style={{ marginBottom: 10 }}>
+          은퇴 후 차량 교체, 주택 수리, 자녀 지원처럼 예상되는 큰 지출이 있다면 추가해 주세요. 없다면 입력하지 않아도 됩니다.
+        </p>
+        <RepeatableList
+          path="expense.retirementLumpSumExpenses"
+          label="목돈지출 계획"
+          addLabel="목돈지출 추가"
+          maxItems={10}
+          emptyItem={{ name: '', expectedAge: '', amount: '' }}
+          renderItem={(item, _i, update) => (
+            <div className="field-grid three-col">
+              <label className="field">
+                <span className="field-label">지출 용도</span>
+                <input type="text" placeholder="예: 자녀 결혼지원" value={item.name} onChange={(e) => update('name', e.target.value)} />
+              </label>
+              <label className="field">
+                <span className="field-label">예상 지출 나이</span>
+                <div className="field-input-row">
+                  <FormattedNumberInput value={item.expectedAge} onChange={(e) => update('expectedAge', Number(e.target.value))} />
+                  <span className="field-unit">세</span>
+                </div>
+              </label>
+              <label className="field">
+                <span className="field-label">예상 금액</span>
+                <div className="field-input-row">
+                  <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                  <span className="field-unit">만원</span>
+                </div>
+              </label>
+            </div>
+          )}
+        />
+        <span className="field-helper">예상 지출 나이는 은퇴(예정) 연령 이후 ~ 기대수명 이내로 입력해 주세요.</span>
+      </section>
+
+      <section className="step-section">
         <h3><span className="step-icon">🛡️</span> 보장성 보험</h3>
         <PresenceField label="보장성 보험 여부" present={hasInsurance} onChange={setHasInsurance} presentLabel="보험 있음" absentLabel="보험 없음" />
         {hasInsurance ? <div className="field-grid">

@@ -180,3 +180,46 @@ describe('buildPeerComparison - ageBrackets(PDF 리포트 3페이지 차트)도 
     expect(result.ageBrackets.filter((item) => !item.isUserBracket).every((item) => item.netWorth == null)).toBe(true);
   });
 });
+
+// 리포트의 또래자산비교 페이지에 연소득/금융자산도 순자산처럼 전 연령대 비교 차트를 넣기 위해
+// incomeAgeBrackets/financialAssetsAgeBrackets를 추가한다 - 이미 승인된 2025년 공식 통계를
+// 사용자 구간 하나가 아니라 전 연령대로 노출할 뿐, 새 계산이나 기준은 만들지 않는다.
+describe('buildPeerComparison - incomeAgeBrackets/financialAssetsAgeBrackets(연소득·금융자산 전 연령대 비교)', () => {
+  it('구간 라벨과 연소득/금융자산 평균이 2025년 가계금융복지조사 수치와 일치한다', () => {
+    const result = buildPeerComparison({ age: 41, totalAssets: 0, totalDebt: 0, annualIncome: 0, financialAssetsTotal: 0, retirementScore: null });
+    const incomeByKey = Object.fromEntries(result.incomeAgeBrackets.map((b) => [b.key, b]));
+    const financialByKey = Object.fromEntries(result.financialAssetsAgeBrackets.map((b) => [b.key, b]));
+
+    expect(incomeByKey.under29).toMatchObject({ label: '29세 이하', average: 4509 });
+    expect(incomeByKey['30to39']).toMatchObject({ label: '30~39세', average: 7386 });
+    expect(incomeByKey['40to49']).toMatchObject({ label: '40~49세', average: 9333 });
+    expect(incomeByKey['50to59']).toMatchObject({ label: '50~59세', average: 9416 });
+    expect(incomeByKey['60plus']).toMatchObject({ label: '60세 이상', average: 5767 });
+
+    expect(financialByKey.under29).toMatchObject({ label: '29세 이하', average: 8843 });
+    expect(financialByKey['30to39']).toMatchObject({ label: '30~39세', average: 14104 });
+    expect(financialByKey['40to49']).toMatchObject({ label: '40~49세', average: 16401 });
+    expect(financialByKey['50to59']).toMatchObject({ label: '50~59세', average: 16507 });
+    expect(financialByKey['60plus']).toMatchObject({ label: '60세 이상', average: 11236 });
+  });
+
+  it('사용자 값은 본인 연령구간에만 채워지고, 다른 구간은 null이다', () => {
+    const result = buildPeerComparison(BASE_ARGS);
+    const userIncomeBracket = result.incomeAgeBrackets.find((b) => b.isUserBracket);
+    const userFinancialBracket = result.financialAssetsAgeBrackets.find((b) => b.isUserBracket);
+
+    expect(userIncomeBracket.annualIncome).toBe(BASE_ARGS.annualIncome);
+    expect(userFinancialBracket.financialAssets).toBe(BASE_ARGS.financialAssetsTotal);
+    expect(result.incomeAgeBrackets.filter((b) => !b.isUserBracket).every((b) => b.annualIncome == null)).toBe(true);
+    expect(result.financialAssetsAgeBrackets.filter((b) => !b.isUserBracket).every((b) => b.financialAssets == null)).toBe(true);
+  });
+
+  it('연소득·금융자산이 미입력이면 본인 구간 값도 null로 남는다(0원으로 오인되지 않음)', () => {
+    const result = buildPeerComparison({ ...BASE_ARGS, annualIncomeMissing: true, financialAssetsMissing: true });
+    const userIncomeBracket = result.incomeAgeBrackets.find((b) => b.isUserBracket);
+    const userFinancialBracket = result.financialAssetsAgeBrackets.find((b) => b.isUserBracket);
+
+    expect(userIncomeBracket.annualIncome).toBeNull();
+    expect(userFinancialBracket.financialAssets).toBeNull();
+  });
+});

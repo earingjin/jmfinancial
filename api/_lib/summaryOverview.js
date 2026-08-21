@@ -5,7 +5,7 @@
 
 import { n } from './aggregate.js';
 import { getNationalPensionStartAge } from './pensionEligibility.js';
-import { buildFutureFinanceProjection } from './futureFinance.js';
+import { buildFutureFinanceProjection, buildRetirementAssetProjection } from './futureFinance.js';
 
 function isBlank(v) {
   return v === '' || v === null || v === undefined;
@@ -382,6 +382,12 @@ export function buildWebSummary({
       savings: buildSavingsDonut(savingsBreakdown, aggregates.monthlySavings),
     },
     retirementReadiness: buildRetirementReadiness({ input, simulation, indicators, aggregates }),
-    futureFinance: buildFutureFinanceProjection({ input, aggregates }),
+    futureFinance: {
+      ...buildFutureFinanceProjection({ input, aggregates }),
+      // 은퇴 후 "자산잔액이 몇 살까지 유지되는가" 전망 - buildFutureFinanceProjection과는 별도
+      // 함수(futureFinance.js)로 계산해 기존 60/70/80세·5년 단위 현금흐름 결과에는 전혀 영향을
+      // 주지 않는다. simulation(이미 계산된 readyAssetsAtRetirement 등)을 그대로 재사용한다.
+      retirementAssetProjection: buildRetirementAssetProjection({ input, aggregates, simulation }),
+    },
   };
 }

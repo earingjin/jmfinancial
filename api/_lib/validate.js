@@ -245,6 +245,11 @@ const ARRAY_FIELDS = [
     path: 'assets.debtStatus.customItems',
     fields: [{ key: 'principal', kind: 'amount' }, { key: 'monthlyInterest', kind: 'amount' }, { key: 'monthlyRepayment', kind: 'amount' }, { key: 'months', kind: 'count' }],
   },
+  // 은퇴 후 예상 목돈지출 - expense.children(교육비 등, 시점 불명·은퇴 전에도 발생 가능)과는
+  // 의도적으로 분리된 별도 입력이다. amount/expectedAge의 기본 범위(0 이상, 0~120세 정수)는
+  // 여기서 checkArrayField로 검사하고, "은퇴나이~기대수명 이내"라는 교차 필드 규칙과 지출 용도
+  // 문자열 검사는 validateInput 본문에서 별도로 확인한다(checkArrayField는 숫자 kind만 다룬다).
+  { path: 'expense.retirementLumpSumExpenses', fields: [{ key: 'amount', kind: 'amount' }, { key: 'expectedAge', kind: 'age' }] },
 ];
 
 const DEBT_BREAKDOWN_CATEGORIES = ['mortgage', 'depositLoan', 'businessLoan', 'buildingLoan', 'carLoan', 'studentLoan', 'otherLoan'];
@@ -338,6 +343,37 @@ export function validateInput(input) {
   const children = getPath(input, 'expense.children');
   if (Array.isArray(children) && children.length <= MAX_ARRAY_LENGTH) {
     children.forEach((child, index) => checkBirthYearField(errors, child?.birthYear, `expense.children.${index}.birthYear`));
+  }
+
+  // 은퇴 후 예상 목돈지출 - 지출 용도(문자열)와 "은퇴나이~기대수명 이내"라는 교차 필드 규칙은
+  // checkArrayField(숫자 kind 전용)가 다루지 않으므로 여기서 별도로 확인한다. 시점을 임의로
+  // 추정하지 않는다는 원칙에 따라, 은퇴 전이거나 기대수명 이후인 나이는 그대로 반려한다.
+  const lumpSumExpenses = getPath(input, 'expense.retirementLumpSumExpenses');
+  if (Array.isArray(lumpSumExpenses) && lumpSumExpenses.length <= MAX_ARRAY_LENGTH) {
+    const lumpSumRetirementAge = input.basic?.retirementAge;
+    const lumpSumLifeExpectancy = input.basic?.lifeExpectancy;
+    lumpSumExpenses.forEach((item, index) => {
+      if (item === null || typeof item !== 'object' || Array.isArray(item)) return;
+      const path = `expense.retirementLumpSumExpenses.${index}`;
+      const isInUse = !isBlank(item.amount) || !isBlank(item.expectedAge) || !isBlank(item.name);
+
+      if (typeof item.name === 'string' && item.name.length > 0 && item.name.trim() === '') {
+        errors.push(`${path}.name 값은 공백만 입력할 수 없습니다.`);
+      }
+      if (typeof item.name === 'string' && item.name.length > 40) {
+        errors.push(`${path}.name 값은 40자 이하로 입력해 주세요.`);
+      }
+      if (isInUse && isBlank(item.name)) {
+        errors.push(`${path}.name 값은 필수 입력 항목입니다.`);
+      }
+
+      if (!isBlank(item.expectedAge) && !isBlank(lumpSumRetirementAge) && Number(item.expectedAge) < Number(lumpSumRetirementAge)) {
+        errors.push(`${path}.expectedAge 값은 은퇴(예정) 연령(${lumpSumRetirementAge}세) 이후로 입력해 주세요.`);
+      }
+      if (!isBlank(item.expectedAge) && !isBlank(lumpSumLifeExpectancy) && Number(item.expectedAge) > Number(lumpSumLifeExpectancy)) {
+        errors.push(`${path}.expectedAge 값은 기대수명(${lumpSumLifeExpectancy}세) 이내로 입력해 주세요.`);
+      }
+    });
   }
 
   DEBT_BREAKDOWN_CATEGORIES.forEach((cat) => {

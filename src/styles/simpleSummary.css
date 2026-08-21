@@ -761,24 +761,10 @@
 .future-card-balance { margin: 9px 0 0; color: var(--red); font-size: 12px; font-weight: 800; }
 .future-card--good .future-card-balance { color: var(--teal); }
 .future-card small { display: block; margin-top: 7px; color: var(--ink-soft); font-size: 9.5px; line-height: 1.4; }
-.future-chart { position: relative; display: flex; align-items: flex-end; justify-content: space-around; height: 240px; padding: 34px 12px 42px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
-.future-chart-group { width: 27%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 7px; }
-.future-chart-bars { width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 7px; border-bottom: 1px solid var(--line); }
-.future-chart-bar { position: relative; width: 30%; min-height: 2px; border-radius: 5px 5px 0 0; }
-.future-chart-bar--expense { background: var(--gold); }
-.future-chart-bar--pension { background: var(--navy-700); }
-.future-chart-bar span { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); padding-bottom: 4px; color: var(--ink-soft); font-size: 9px; white-space: nowrap; }
-.future-chart-group > strong { color: var(--navy-800); font-size: 12px; }
-.future-chart-legend { position: absolute; bottom: 12px; left: 0; right: 0; display: flex; justify-content: center; gap: 16px; font-size: 10px; color: var(--ink-soft); }
-.future-chart-legend span { display: flex; align-items: center; gap: 5px; }
-.future-chart-legend i { width: 9px; height: 9px; border-radius: 2px; }
-.future-legend-expense { background: var(--gold); }
-.future-legend-pension { background: var(--navy-700); }
 .future-diagnosis { margin: 10px 0 20px; padding: 11px 14px; border-radius: 8px; background: var(--teal-soft); color: #0e6c5e; font-size: 12.5px; line-height: 1.55; }
 .retirement-cashflow-chart { margin: 0 0 16px; padding: 12px 12px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
 .retirement-cashflow-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .retirement-chart-grid { stroke: var(--line); stroke-width: 1; }
-.retirement-chart-axis { fill: var(--ink-soft); font-size: 9px; text-anchor: end; }
 .retirement-chart-gap { fill: rgba(217, 126, 61, 0.12); }
 .retirement-chart-line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .retirement-chart-line--expense { stroke: var(--gold); }
@@ -795,6 +781,56 @@
 .retirement-chart-legend i { width: 10px; height: 10px; border-radius: 3px; }
 .retirement-chart-legend .is-expense { background: var(--gold); }
 .retirement-chart-legend .is-income { background: var(--teal); }
+
+/* ---------- 은퇴 후 자산잔액 시뮬레이션 그래프 ---------- */
+.asset-projection-chart { margin: 0 0 10px; padding: 12px 12px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.asset-projection-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.asset-projection-area { fill: rgba(31, 158, 142, 0.14); stroke: none; }
+.asset-projection-line { fill: none; stroke: var(--teal); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.asset-projection-dot { fill: var(--teal); stroke: var(--card); stroke-width: 2; }
+.asset-projection-dot.is-muted { fill: var(--ink-soft); }
+.asset-projection-dot.is-warning { fill: var(--red); }
+.asset-projection-depletion-line { stroke: var(--red); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.6; }
+.asset-projection-value {
+  font-size: 11px; font-weight: 800; text-anchor: middle; fill: var(--navy-800);
+  paint-order: stroke fill; stroke: var(--card); stroke-width: 3px;
+}
+.asset-projection-warning-label {
+  font-size: 10.5px; font-weight: 800; text-anchor: middle; fill: var(--red);
+  paint-order: stroke fill; stroke: var(--card); stroke-width: 3px;
+}
+.retirement-chart-legend .is-asset { background: var(--teal); }
+.retirement-chart-legend .is-warning { background: var(--red); }
+.retirement-chart-legend .is-lumpsum { background: var(--gold); }
+
+/* 목돈지출 이벤트 마커 - 그래프에는 금액만 간결하게 표시하고, 항목명은 그래프 아래
+   "예상 목돈지출" 목록(.asset-lumpsum-summary)에서 항상 확인할 수 있게 한다. */
+.asset-projection-lumpsum-line { stroke: var(--gold); stroke-width: 1.5; }
+.asset-projection-lumpsum-marker { font-size: 11px; text-anchor: middle; fill: var(--gold); }
+.asset-projection-lumpsum-amount {
+  font-size: 8.5px; font-weight: 700; text-anchor: middle; fill: var(--navy-800);
+  paint-order: stroke fill; stroke: var(--card); stroke-width: 3px;
+}
+
+
+/* 예상 목돈지출 요약 - 그래프 마커의 상세 내용을 hover 없이 항상 확인할 수 있는 목록(모바일 포함). */
+.asset-lumpsum-summary {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.asset-lumpsum-summary-title { font-size: 12.5px; font-weight: 800; color: var(--navy-800); margin-bottom: 6px; }
+.asset-lumpsum-summary-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 5px 0; border-top: 1px solid var(--line); font-size: 12.5px;
+}
+.asset-lumpsum-summary-row:first-of-type { border-top: none; }
+.asset-lumpsum-age { flex: 0 0 auto; color: var(--ink-soft); font-weight: 700; }
+.asset-lumpsum-name { flex: 1; color: var(--ink); word-break: keep-all; }
+.asset-lumpsum-amount { flex: 0 0 auto; color: var(--navy-800); font-weight: 700; font-variant-numeric: tabular-nums; }
+.asset-lumpsum-empty { margin: 0; color: var(--ink-soft); font-size: 12.5px; }
 .retirement-chart-legend .is-gap { background: rgba(217, 126, 61, 0.18); border: 1px solid rgba(217, 126, 61, 0.32); }
 .future-chart-help { margin: -7px 2px 14px; color: var(--ink-soft); font-size: 10.5px; line-height: 1.55; }
 .future-outlook-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
@@ -1011,16 +1047,16 @@
   .future-card dl { grid-area: details; margin-top: 10px; }
   .future-card-balance { grid-area: balance; }
   .future-card small { grid-area: reason; }
-  .future-chart-bar span { font-size: 11px; font-weight: 600; }
-  .future-chart-group > strong { font-size: 13px; }
-  .future-chart-legend { font-size: 12px; }
-  .future-chart-legend i { width: 11px; height: 11px; }
   .retirement-cashflow-chart { padding: 14px 6px 12px; }
-  .retirement-chart-axis { font-size: 18px; font-weight: 600; }
   .retirement-chart-age { font-size: 17px; font-weight: 700; }
   .retirement-chart-value { font-size: 15px; }
   .retirement-chart-legend { gap: 9px 14px; font-size: 12.5px; line-height: 1.4; }
   .retirement-chart-legend i { width: 12px; height: 12px; }
+  .asset-projection-chart { padding: 14px 6px 12px; }
+  .asset-projection-value { font-size: 15px; }
+  .asset-projection-warning-label { font-size: 15px; }
+  .asset-projection-lumpsum-marker { font-size: 18px; }
+  .asset-projection-lumpsum-amount { font-size: 14px; }
   .future-chart-help { margin-top: -4px; font-size: 12px; line-height: 1.65; }
   .future-outlook-table-wrap { overflow: hidden; }
   .future-outlook-table { display: block; width: 100%; min-width: 0; font-size: 12px; }
@@ -1063,7 +1099,6 @@
 
 @media (max-width: 480px) {
   .overview-card-grid { grid-template-columns: repeat(2, 1fr); }
-  .future-chart { height: 220px; padding-left: 4px; padding-right: 4px; }
   .future-purchasing-flow { flex-direction: column; }
   .future-purchasing-step .future-flow-arrow { left: 50%; top: -14px; transform: translateX(-50%) rotate(90deg); }
 }

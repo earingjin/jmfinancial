@@ -11,6 +11,7 @@ import {
   buildDebtDonut,
   buildSavingsDonut,
   buildRetirementReadiness,
+  buildWebSummary,
 } from './summaryOverview.js';
 
 function deepMerge(base, override) {
@@ -447,5 +448,34 @@ describe('buildFinancialOverviewDetail - grouped card (income / expense / balanc
     const detail = buildFinancialOverviewDetail(bondsOnly, aggregates);
     expect(detail.balance.financialAndPensionMissing).toBe(false);
     expect(detail.balance.financialAndPension).toBe(40);
+  });
+});
+
+describe('buildWebSummary - retirement asset projection wiring (regression guard)', () => {
+  it('adds retirementAssetProjection under futureFinance without changing any existing FHS/retirement/donut output', () => {
+    // FULL_INPUT의 개인연금에는 startAge가 없어 그 자체로는 개시 시점 불명(notCalculable)이 되므로,
+    // "정상적으로 계산되는" 케이스를 보여주기 위해 startAge만 채워 넣는다.
+    const scoped = input({ income: { personalPension: { type: 'installment', monthly: 15, months: 120, startAge: 65 } } });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const before = {
+      donuts: {
+        income: buildIncomeDonut(scoped, aggregates),
+        debt: buildDebtDonut([], aggregates.totalDebt),
+      },
+      retirementReadiness: buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates }),
+    };
+
+    const webSummary = buildWebSummary({
+      input: scoped, aggregates, simulation, indicators,
+      savingsBreakdown: [], debtBreakdown: [], livingExpenseItems: [], otherLiquidAssetItems: [],
+    });
+
+    // 새 필드는 futureFinance 안에만 추가되고, 기존 FHS/은퇴 준비/도넛 결과는 그대로다.
+    expect(webSummary.retirementReadiness).toEqual(before.retirementReadiness);
+    expect(webSummary.donuts.income).toEqual(before.donuts.income);
+    expect(webSummary.donuts.debt).toEqual(before.donuts.debt);
+    expect(webSummary.futureFinance.retirementAssetProjection).toBeDefined();
+    expect(webSummary.futureFinance.retirementAssetProjection.notCalculable).toBe(false);
+    expect(webSummary.futureFinance.retirementAssetProjection.points.length).toBeGreaterThan(0);
   });
 });
