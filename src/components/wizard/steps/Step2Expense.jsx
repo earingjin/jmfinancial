@@ -9,13 +9,14 @@ import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
 
-// 국민연금연구원 조사 2024년 기준 적정 노후생활비(단위: 천원, 외부 공식 자료 - 계산에는 쓰이지 않는 참고용 표).
+// 국민연금연구원 조사 2024년 기준 적정 노후생활비(단위: 만원, 외부 공식 자료 - 계산에는 쓰이지 않는 참고용 표).
+// 원 자료는 천원 단위이며, 이 앱의 금액 단위(만원)에 맞춰 표시만 변환했다(예: 3,328천원 → 332.8만원).
 const RETIREMENT_COST_GUIDE_ROWS = [
-  { age: '50대 미만', couple: '3,328', single: '2,084' },
-  { age: '50대', couple: '3,068', single: '1,983' },
-  { age: '60대', couple: '2,888', single: '1,838' },
-  { age: '70대', couple: '2,513', single: '1,617' },
-  { age: '80대 이상', couple: '2,268', single: '1,440' },
+  { age: '50대 미만', couple: '332.8', single: '208.4' },
+  { age: '50대', couple: '306.8', single: '198.3' },
+  { age: '60대', couple: '288.8', single: '183.8' },
+  { age: '70대', couple: '251.3', single: '161.7' },
+  { age: '80대 이상', couple: '226.8', single: '144.0' },
 ];
 
 function RetirementCostGuideModal({ onClose }) {
@@ -28,7 +29,8 @@ function RetirementCostGuideModal({ onClose }) {
             ✕
           </button>
         </div>
-        <p className="field-helper" style={{ textAlign: 'right', marginBottom: 6 }}>(단위: 천원)</p>
+        <p style={{ fontWeight: 700, margin: '0 0 8px' }}>적정 노후 생활비는 도시가구 기준입니다.</p>
+        <p className="field-helper" style={{ textAlign: 'right', marginBottom: 6 }}>(단위: 만원)</p>
         <table className="grade-table compact">
           <thead>
             <tr>
@@ -279,11 +281,11 @@ export default function Step2Expense() {
             <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th></tr>
           </thead>
           <tbody>
+            <tr className="total-row"><td>현재 총 지출 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalMonthlyExpense)}</td></tr>
+            <tr className="total-row"><td>현재 총 지출 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalMonthlyExpense * 12)}</td></tr>
             <tr><td>현재 생활비</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(monthlyLivingCost)}</td></tr>
             <tr><td>보장성보험료</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(insurancePremium)}</td></tr>
             <tr><td>기타 보험료(건강보험료 등)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(healthInsurance)}</td></tr>
-            <tr className="total-row"><td>현재 총 지출 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalMonthlyExpense)}</td></tr>
-            <tr className="total-row"><td>현재 총 지출 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalMonthlyExpense * 12)}</td></tr>
           </tbody>
         </table>
         <span className="field-helper">

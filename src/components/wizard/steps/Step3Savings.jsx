@@ -108,10 +108,10 @@ export default function Step3Savings() {
 
         <table className="grade-table compact" style={{ marginTop: 16 }}>
           <tbody>
-            <tr><td>일반 저축</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(savingsMonthly)}</td></tr>
-            <tr><td>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(retirementSavingsMonthly)}</td></tr>
             <tr className="total-row"><td>총 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthly)}</td></tr>
             <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthly * 12)}</td></tr>
+            <tr><td>일반 저축</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(savingsMonthly)}</td></tr>
+            <tr><td>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(retirementSavingsMonthly)}</td></tr>
           </tbody>
         </table>
         </> : <p className="field-helper">저축 없음으로 선택했습니다. 저축 금액은 진단 계산에서 제외됩니다.</p>}

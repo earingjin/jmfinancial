@@ -483,12 +483,12 @@ export default function Step4Assets() {
             <tr><th>구분</th><th style={{ textAlign: 'right' }}>금액</th></tr>
           </thead>
           <tbody>
+            <tr className="total-row"><td>총자산 합계</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalAssets)}</td></tr>
             <tr><td>현금성 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(liquidAssets)}</td></tr>
             <tr><td>금융자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(financialAssetsTotal)}</td></tr>
             <tr><td>연금자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(pensionAssets)}</td></tr>
             <tr><td>부동산자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(realEstateTotal)}</td></tr>
             <tr><td>기타 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(otherAssetsTotal)}</td></tr>
-            <tr className="total-row"><td>총자산 합계</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalAssets)}</td></tr>
           </tbody>
         </table>
       </section>

@@ -184,6 +184,12 @@ export default function CategoryBreakdownField({
           <tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr>
         </thead>
         <tbody>
+          {annualPath && (
+            <tr className="total-row">
+              <td>{annualLabel}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(annualTotal || 0)}</td>
+            </tr>
+          )}
           {openCategories.map((c) => (
             <tr key={c.key}>
               <td>{c.label}</td>
@@ -196,12 +202,6 @@ export default function CategoryBreakdownField({
               <td className="num" style={{ textAlign: 'right' }}>{formatWon(Number(item.amount) || 0)}</td>
             </tr>
           ))}
-          {annualPath && (
-            <tr className="total-row">
-              <td>{annualLabel}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatWon(annualTotal || 0)}</td>
-            </tr>
-          )}
         </tbody>
       </table>
       <TotalAmountBox label={totalLabel} amount={Number(total) || 0} valueLabel="총액은" />
