@@ -387,6 +387,16 @@ export default function Step1Income() {
   const formatPeriodRow = (selfYears, spouseYears) =>
     hasSpouse ? `본인 ${formatYears(selfYears)} · 배우자 ${formatYears(spouseYears)}` : formatYears(selfYears);
 
+  // "수령 시작 나이" 열 - 급여·사업소득·기타 정기수입은 지금 이미 받고 있어 개시 나이 개념이 없다(null).
+  // 국민연금은 출생연도별 법정 개시 나이, 퇴직연금·개인연금은 사용자가 입력한 수령 시작 나이를 그대로 보여준다.
+  const formatAge = (age) => (isFilledValue(age) ? `${Math.round(Number(age))}세` : '-');
+  const formatStartAgeRow = (selfAge, spouseAge) =>
+    hasSpouse ? `본인 ${formatAge(selfAge)} · 배우자 ${formatAge(spouseAge)}` : formatAge(selfAge);
+  const selfSeveranceStartAge = severanceType === 'pension' ? getIn(formData, 'income.severance.pensionStartAge') : null;
+  const spouseSeveranceStartAge = spouseSeveranceType === 'pension' ? getIn(formData, 'spouse.severance.pensionStartAge') : null;
+  const selfPersonalPensionStartAge = personalPensionType === 'installment' ? getIn(formData, 'income.personalPension.startAge') : null;
+  const spousePersonalPensionStartAge = spousePersonalPensionType === 'installment' ? getIn(formData, 'spouse.personalPension.startAge') : null;
+
   return (
     <div className="step">
       <h2 className="step-title">1. 수입</h2>
@@ -947,52 +957,66 @@ export default function Step1Income() {
         <h3><span className="step-icon">🧮</span> 총 수입 합계</h3>
         <table className="grade-table compact">
           <thead>
-            <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th><th style={{ textAlign: 'right' }}>수입 기간</th></tr>
+            <tr>
+              <th>항목</th>
+              <th style={{ textAlign: 'right' }}>월 예상 금액</th>
+              <th style={{ textAlign: 'right' }}>수령 시작 나이</th>
+              <th style={{ textAlign: 'right' }}>수입 기간</th>
+            </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>급여(상여금 포함)</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(currentSalaryMonthly))}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfYearsToRetirement, spouseYearsToRetirement)}</td>
-            </tr>
-            <tr>
-              <td>사업소득</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatWon(businessMonthly)}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatYears(selfYearsToRetirement)}</td>
-            </tr>
-            <tr>
-              <td>국민연금</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatWon(nationalPensionTotal)}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfNationalPensionMonths / 12, spouseNationalPensionMonths / 12)}</td>
-            </tr>
-            <tr>
-              <td>퇴직연금</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatWon(severanceTotal)}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfSeverancePensionYears, spouseSeverancePensionYears)}</td>
-            </tr>
-            <tr>
-              <td>개인연금</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatWon(personalPensionTotal)}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfPersonalPensionYears, spousePersonalPensionYears)}</td>
-            </tr>
-            <tr>
-              <td>기타 정기수입(연 환산)</td>
-              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(otherIncomesMonthly))}</td>
-              <td className="num" style={{ textAlign: 'right' }}>{otherIncomes.length > 0 ? '항목별 상이' : '-'}</td>
-            </tr>
             <tr className="total-row">
               <td>총 월 수입 합계</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(totalMonthlyIncome))}</td>
+              <td className="num" style={{ textAlign: 'right' }}>-</td>
               <td className="num" style={{ textAlign: 'right' }}>-</td>
             </tr>
             <tr className="total-row">
               <td>총 연 수입 합계</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(totalMonthlyIncome) * 12)}</td>
               <td className="num" style={{ textAlign: 'right' }}>-</td>
+              <td className="num" style={{ textAlign: 'right' }}>-</td>
+            </tr>
+            <tr>
+              <td>급여(상여금 포함)</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(currentSalaryMonthly))}</td>
+              <td className="num" style={{ textAlign: 'right' }}>-</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfYearsToRetirement, spouseYearsToRetirement)}</td>
+            </tr>
+            <tr>
+              <td>사업소득</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(businessMonthly)}</td>
+              <td className="num" style={{ textAlign: 'right' }}>-</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatYears(selfYearsToRetirement)}</td>
+            </tr>
+            <tr>
+              <td>국민연금</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(nationalPensionTotal)}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatStartAgeRow(selfNpEligible ? selfNpStartAge : null, spouseNpEligible ? spouseNpStartAge : null)}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfNationalPensionMonths / 12, spouseNationalPensionMonths / 12)}</td>
+            </tr>
+            <tr>
+              <td>퇴직연금</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(severanceTotal)}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatStartAgeRow(selfSeveranceStartAge, spouseSeveranceStartAge)}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfSeverancePensionYears, spouseSeverancePensionYears)}</td>
+            </tr>
+            <tr>
+              <td>개인연금</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(personalPensionTotal)}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatStartAgeRow(selfPersonalPensionStartAge, spousePersonalPensionStartAge)}</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatPeriodRow(selfPersonalPensionYears, spousePersonalPensionYears)}</td>
+            </tr>
+            <tr>
+              <td>기타 정기수입(연 환산)</td>
+              <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(otherIncomesMonthly))}</td>
+              <td className="num" style={{ textAlign: 'right' }}>-</td>
+              <td className="num" style={{ textAlign: 'right' }}>{otherIncomes.length > 0 ? '항목별 상이' : '-'}</td>
             </tr>
           </tbody>
         </table>
         <span className="field-helper">
+          연금 금액은 실제로 받고 있는 돈이 아니라, 입력하신 수령 시작 나이부터 적용되는 예상 수령액입니다.
           수령 개월 수(또는 기간)가 입력된 연금·수입만 합산됩니다.
         </span>
       </section>

@@ -11,6 +11,7 @@ import {
   buildDebtDonut,
   buildSavingsDonut,
   buildRetirementReadiness,
+  buildWebSummary,
 } from './summaryOverview.js';
 
 function deepMerge(base, override) {
@@ -253,11 +254,11 @@ describe('buildAssetDonut', () => {
 });
 
 describe('buildDebtDonut / buildSavingsDonut', () => {
-  it('shows a prompt (not a fabricated split) when total debt exists but no breakdown was entered', () => {
+  it('shows a single total slice (not a fabricated category split) when total debt exists but no breakdown was entered', () => {
     const donut = buildDebtDonut([], 5000);
-    expect(donut.hasBreakdown).toBe(false);
+    expect(donut.hasBreakdown).toBe(true);
     expect(donut.isEmpty).toBe(false);
-    expect(donut.items).toEqual([]);
+    expect(donut.items).toEqual([{ key: 'total', label: '총부채', value: 5000 }]);
   });
 
   it('shows the empty (no debt) state when total debt is genuinely 0', () => {
@@ -357,14 +358,17 @@ describe('buildRetirementReadiness', () => {
     expect(readiness.retirementIncomeZeroReason).toContain('수령 기간');
   });
 
-  it('computes the total funding needed to bridge the income gap (annual living cost x gap years)', () => {
+  it('computes the total funding needed to bridge the income gap using the inflation-adjusted living cost at retirement (not today\'s cost)', () => {
     const scoped = input({ basic: { birthYear: 1985, retirementAge: 60 }, expense: { retirementLivingCost: 200 } });
     const { aggregates, simulation, indicators } = calc(scoped);
     const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
-    // gapYears=5 (60 -> 65), living cost 200/월 -> 2400/년 -> 12000(1억2000) over 5 years
+    // gapYears=5 (60 -> 65). 공백기간 생활비도 "은퇴생활 필요자금"과 동일하게
+    // simulation.retirementLivingCostAtRetirement(물가반영, requiredAtRetirement 계산에 쓰인 값)를
+    // 그대로 재사용해야 한다 - retirementLivingCostNow(오늘 기준)를 쓰면 안 된다.
     expect(readiness.incomeGap.gapYears).toBe(5);
-    expect(readiness.incomeGap.annualGapCost).toBe(2400);
-    expect(readiness.incomeGap.totalGapFundingNeeded).toBe(12000);
+    expect(simulation.retirementLivingCostAtRetirement).toBeGreaterThan(simulation.retirementLivingCostNow);
+    expect(readiness.incomeGap.annualGapCost).toBe(simulation.retirementLivingCostAtRetirement * 12);
+    expect(readiness.incomeGap.totalGapFundingNeeded).toBe(readiness.incomeGap.annualGapCost * 5);
   });
 
   it('does not fabricate a funding total when the gap itself is not calculable', () => {
@@ -444,5 +448,34 @@ describe('buildFinancialOverviewDetail - grouped card (income / expense / balanc
     const detail = buildFinancialOverviewDetail(bondsOnly, aggregates);
     expect(detail.balance.financialAndPensionMissing).toBe(false);
     expect(detail.balance.financialAndPension).toBe(40);
+  });
+});
+
+describe('buildWebSummary - retirement asset projection wiring (regression guard)', () => {
+  it('adds retirementAssetProjection under futureFinance without changing any existing FHS/retirement/donut output', () => {
+    // FULL_INPUT의 개인연금에는 startAge가 없어 그 자체로는 개시 시점 불명(notCalculable)이 되므로,
+    // "정상적으로 계산되는" 케이스를 보여주기 위해 startAge만 채워 넣는다.
+    const scoped = input({ income: { personalPension: { type: 'installment', monthly: 15, months: 120, startAge: 65 } } });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const before = {
+      donuts: {
+        income: buildIncomeDonut(scoped, aggregates),
+        debt: buildDebtDonut([], aggregates.totalDebt),
+      },
+      retirementReadiness: buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates }),
+    };
+
+    const webSummary = buildWebSummary({
+      input: scoped, aggregates, simulation, indicators,
+      savingsBreakdown: [], debtBreakdown: [], livingExpenseItems: [], otherLiquidAssetItems: [],
+    });
+
+    // 새 필드는 futureFinance 안에만 추가되고, 기존 FHS/은퇴 준비/도넛 결과는 그대로다.
+    expect(webSummary.retirementReadiness).toEqual(before.retirementReadiness);
+    expect(webSummary.donuts.income).toEqual(before.donuts.income);
+    expect(webSummary.donuts.debt).toEqual(before.donuts.debt);
+    expect(webSummary.futureFinance.retirementAssetProjection).toBeDefined();
+    expect(webSummary.futureFinance.retirementAssetProjection.notCalculable).toBe(false);
+    expect(webSummary.futureFinance.retirementAssetProjection.points.length).toBeGreaterThan(0);
   });
 });

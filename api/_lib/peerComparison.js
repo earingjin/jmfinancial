@@ -28,10 +28,29 @@ export function buildPeerComparison({
     isUserBracket: b.key === userBracket.key,
   }));
 
+  // 연소득/금융자산도 순자산과 같은 2025년 가계금융복지조사 연령대별 공식 통계를 이미 갖고 있으므로
+  // (userBracket.annualIncome/financialAssets), 사용자 구간 평균 하나만 쓰지 않고 전 연령대를 그대로 노출한다.
+  const incomeAgeBrackets = PEER_AGE_BRACKETS.map((b) => ({
+    key: b.key,
+    label: b.label,
+    average: b.annualIncome,
+    annualIncome: b.key === userBracket.key && !annualIncomeMissing && Number.isFinite(annualIncome) ? annualIncome : null,
+    isUserBracket: b.key === userBracket.key,
+  }));
+  const financialAssetsAgeBrackets = PEER_AGE_BRACKETS.map((b) => ({
+    key: b.key,
+    label: b.label,
+    average: b.financialAssets,
+    financialAssets: b.key === userBracket.key && !financialAssetsMissing && Number.isFinite(financialAssetsTotal) ? financialAssetsTotal : null,
+    isUserBracket: b.key === userBracket.key,
+  }));
+
   const reference = PEER_AGE_BRACKETS.find((b) => b.key === '60plus');
 
   return {
     ageBrackets,
+    incomeAgeBrackets,
+    financialAssetsAgeBrackets,
     userAge: Number.isFinite(age) && age > 0 ? age : null,
     userBracketKey: userBracket.key,
     userBracketLabel: userBracket.label,

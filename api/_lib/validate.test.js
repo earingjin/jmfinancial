@@ -400,6 +400,91 @@ describe('birth-year range validation: expense.children[].birthYear (same rule a
   });
 });
 
+describe('expense.retirementLumpSumExpenses[] - post-retirement lump-sum expenses', () => {
+  // makeInput()의 basic 기본값: retirementAge 65, lifeExpectancy 90.
+  const item = (overrides = {}) => ({ name: '자녀 결혼지원', expectedAge: 72, amount: 3000, ...overrides });
+
+  it('accepts a fully valid item', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item()] } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('accepts an empty list (no lump-sum expenses entered)', () => {
+    expect(validateInput(makeInput({ expense: { retirementLumpSumExpenses: [] } })).ok).toBe(true);
+  });
+
+  it('accepts multiple items, including two at the same age', () => {
+    const result = validateInput(makeInput({
+      expense: { retirementLumpSumExpenses: [item({ expectedAge: 72 }), item({ name: '차량 교체', expectedAge: 72, amount: 2000 })] },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('accepts an amount of exactly 0', () => {
+    expect(validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ amount: 0 })] } })).ok).toBe(true);
+  });
+
+  it('rejects a negative amount', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ amount: -1 })] } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/expense\.retirementLumpSumExpenses\.0\.amount/);
+  });
+
+  it('rejects a non-numeric amount', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ amount: 'abc' })] } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects an expected age before the retirement age (retirementAge=65)', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ expectedAge: 64 })] } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/은퇴\(예정\) 연령/);
+  });
+
+  it('accepts an expected age exactly at the retirement age (T boundary)', () => {
+    expect(validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ expectedAge: 65 })] } })).ok).toBe(true);
+  });
+
+  it('rejects an expected age after life expectancy (lifeExpectancy=90)', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ expectedAge: 91 })] } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/기대수명/);
+  });
+
+  it('accepts an expected age exactly at life expectancy (T boundary)', () => {
+    expect(validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ expectedAge: 90 })] } })).ok).toBe(true);
+  });
+
+  it('rejects a whitespace-only name', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ name: '   ' })] } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a name over 40 characters', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ name: 'a'.repeat(41) })] } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('requires a name once amount or expectedAge is filled in', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [{ name: '', expectedAge: 72, amount: 3000 }] } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/expense\.retirementLumpSumExpenses\.0\.name/);
+  });
+
+  it('leaves a fully blank placeholder row valid (not yet filled in, same convention as other repeatable lists)', () => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [{ name: '', expectedAge: '', amount: '' }] } }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('re-validates against a changed life expectancy (an item that was in range can become out of range)', () => {
+    const result = validateInput(makeInput({
+      basic: { lifeExpectancy: 80 },
+      expense: { retirementLumpSumExpenses: [item({ expectedAge: 85 })] },
+    }));
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe('repeated input structure validation', () => {
   const arrayPaths = [
     ['income', 'regularIncomes'], ['income', 'otherIncomes'], ['expense', 'children'],
@@ -407,6 +492,7 @@ describe('repeated input structure validation', () => {
     ['assets', 'liquidAssets', 'customItems'], ['assets', 'financialAssets', 'otherItems'],
     ['assets', 'pensionAssetsBreakdown', 'otherItems'], ['assets', 'realEstateAssets', 'otherItems'],
     ['assets', 'savingsPlan', 'customItems'], ['assets', 'debtStatus', 'customItems'],
+    ['expense', 'retirementLumpSumExpenses'],
   ];
 
   const withPath = (path, value) => path.reduceRight((nested, key) => ({ [key]: nested }), value);

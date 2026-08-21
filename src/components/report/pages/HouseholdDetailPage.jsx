@@ -1,9 +1,8 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
-import PeerComparisonSection from './PeerComparisonPage';
 import { formatWon, formatPercent } from '../../../utils/format';
 
-export default function HouseholdDetailPage({ aggregates: agg, indicators, peerComparison, debtBreakdown, otherLivingExpenseItems, otherLiquidAssetItems, pageNumber, totalPages }) {
+export default function HouseholdDetailPage({ aggregates: agg, indicators, debtBreakdown, otherLivingExpenseItems, otherLiquidAssetItems, pageNumber, totalPages }) {
   const householdIndicator = indicators.find((i) => i.key === 'household');
   const financialAssetIndicator = indicators.find((i) => i.key === 'financialAssetRatio');
   const fixedExpenseWithSavings = agg.fixedExpenseMonthly + agg.monthlySavings;
@@ -26,7 +25,7 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, peerC
 
   return (
     <PageFrame eyebrow="Household Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
-      <SectionBadge number="3" label="자산·부채 및 또래 비교" />
+      <SectionBadge number="3" label="자산·부채 현황" />
       <h3 className="card-title" style={{ marginBottom: 6 }}>① 지출 현황 — 고정지출 (5개 항목, 월평균, 만원)</h3>
       <table className="grade-table compact">
         <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
@@ -90,8 +89,6 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, peerC
           <> 총자산 중 금융자산 비중은 {formatPercent(financialAssetIndicator.value)}로, 금융자산비중지표(권장 40% 이상)와 비교해 실물자산 편중 여부를 확인하세요.</>
         )}
       </div>
-
-      <PeerComparisonSection peerComparison={peerComparison} />
     </PageFrame>
   );
 }

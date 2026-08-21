@@ -7,7 +7,7 @@ import { n, getCurrentAge, buildAggregates } from './aggregate.js';
 import { GENERAL_INFLATION_RATE } from './constants.js';
 import { calcPensionAdequacyTrend } from './pensionProjection.js';
 
-const BASE_INFLATION = GENERAL_INFLATION_RATE; // 일반 물가상승률(CPI), 연 4.1%
+const BASE_INFLATION = GENERAL_INFLATION_RATE; // 일반 물가상승률(CPI), 연 3%
 
 export function calcRetirementSimulation(input, currentYear = new Date().getFullYear()) {
   const basic = input.basic || {};

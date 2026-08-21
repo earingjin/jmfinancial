@@ -1,8 +1,69 @@
+import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import { formatNumber, formatWon } from '../../../utils/format';
 import { getPeerAssetBarDisplay } from './peerAssetBarDisplay';
 
 const MAX_BAR_HEIGHT = 150;
+
+function computeChartScale(values) {
+  const maxValue = Math.max(...values.filter((v) => Number.isFinite(v)), 1);
+  const chartMax = Math.max(10000, Math.ceil(maxValue / 10000) * 10000);
+  const axisTicks = Array.from({ length: 7 }, (_, i) => Math.round(chartMax - (chartMax / 6) * i));
+  return { chartMax, axisTicks };
+}
+
+// 순자산과 같은 연령대별 비교 차트(전 연령대 평균 + 본인 구간 실제값)를 연소득·금융자산에도 그대로 재사용한다.
+function AgeBracketChart({ label, ageBrackets, valueKey }) {
+  // 이 필드가 없는 과거 저장 결과(히스토리에서 연 리포트)도 있을 수 있어, 없으면 임의로 만들지 않고
+  // 산출 불가로 표시한다(크래시로 리포트 전체가 빈 화면이 되는 것을 막는다).
+  if (!ageBrackets || ageBrackets.length === 0) {
+    return (
+      <div>
+        <div className="report-metric-chart-title"><span>{label}</span></div>
+        <div className="fine-print">연령대별 비교 데이터 산출 불가(새로 진단하면 표시됩니다).</div>
+      </div>
+    );
+  }
+  const { chartMax, axisTicks } = computeChartScale(ageBrackets.flatMap((b) => [b.average, b[valueKey]]));
+
+  return (
+    <div>
+      <div className="report-metric-chart-title"><span>{label}</span></div>
+      <div className="asset-chart-legend">
+        <span><i className="asset-legend-swatch asset-legend-average" />평균</span>
+        <span><i className="asset-legend-swatch asset-legend-net" />우리집</span>
+      </div>
+      <div className="asset-chart-with-axis">
+        <div className="asset-chart-axis" aria-hidden="true">
+          {axisTicks.map((tick) => <span key={tick}>{formatNumber(tick)}</span>)}
+        </div>
+        <div className="asset-chart-plot">
+          {ageBrackets.map((b) => (
+            <div key={b.key} className={`asset-chart-group${b.isUserBracket ? ' is-current' : ''}`}>
+              <div className="asset-chart-bars" style={{ height: MAX_BAR_HEIGHT }}>
+                <div className="asset-chart-bar-wrap">
+                  <span className="asset-chart-value">{formatNumber(b.average)}</span>
+                  <div className="asset-chart-bar asset-chart-bar--average" style={{ height: Math.max(3, (b.average / chartMax) * MAX_BAR_HEIGHT) }} />
+                </div>
+                {b.isUserBracket && b[valueKey] != null && (
+                  <div className="asset-chart-bar-wrap" role="img" aria-label={`${b.label} 우리집 ${formatWon(b[valueKey])}`}>
+                    <span className="asset-chart-value" aria-hidden="true">{formatNumber(b[valueKey])}</span>
+                    <div
+                      className="asset-chart-bar asset-chart-bar--net"
+                      style={{ height: Math.max(3, (b[valueKey] / chartMax) * MAX_BAR_HEIGHT) }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="asset-chart-label">{b.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AssetValueBar({ value, tone, chartMax, contextLabel }) {
   const display = getPeerAssetBarDisplay(value, chartMax, MAX_BAR_HEIGHT);
@@ -26,11 +87,14 @@ function AssetValueBar({ value, tone, chartMax, contextLabel }) {
   );
 }
 
-// 자산현황_세부내역 페이지 하단에 함께 표시되는 섹션(별도 페이지 아님) - PageFrame을 여기서
-// 감싸지 않고, 호출하는 쪽(HouseholdDetailPage)의 페이지 안에 그대로 들어간다.
-export default function PeerComparisonPage({ peerComparison }) {
+// 원래는 HouseholdDetailPage 하단에 같은 페이지로 함께 표시했으나, 자산·부채 표에 항목이 많은
+// 진단 결과에서는 두 섹션을 합친 내용이 인쇄 페이지 높이(고정 A4, overflow:hidden)를 넘어
+// 아래쪽(이 섹션)이 통째로 잘려 보이지 않는 문제가 있었다. 데이터 양에 따라 넘칠 수 있는
+// 섹션이라 별도 페이지로 분리해, 내용이 얼마나 많든 잘리지 않게 한다.
+export default function PeerComparisonPage({ peerComparison, pageNumber, totalPages }) {
   const { ageBrackets, focusCompare } = peerComparison;
   const comparisonRows = [
+    { key: 'netWorth', label: '순자산', metric: peerComparison.netWorth },
     { key: 'householdIncome', label: '연소득', metric: peerComparison.householdIncome },
     { key: 'financialAssets', label: '금융자산', metric: peerComparison.financialAssets },
   ];
@@ -46,7 +110,7 @@ export default function PeerComparisonPage({ peerComparison }) {
   const axisTicks = Array.from({ length: 7 }, (_, i) => Math.round(chartMax - (chartMax / 6) * i));
 
   return (
-    <div style={{ marginTop: 22 }}>
+    <PageFrame eyebrow="Peer Comparison" pageNumber={pageNumber} totalPages={totalPages}>
       <SectionBadge label="또래자산비교" />
       <p className="intro-text" style={{ marginBottom: 10 }}>
         현금흐름은 우리 가정에 들어오고 나가는 돈을 나타냅니다. 안정적인 미래 현금을 위해서는 현재 삶을 위한
@@ -107,6 +171,11 @@ export default function PeerComparisonPage({ peerComparison }) {
         </div>
       </div>
 
+      <div className="report-metric-chart-row">
+        <AgeBracketChart label="연소득" ageBrackets={peerComparison.incomeAgeBrackets} valueKey="annualIncome" />
+        <AgeBracketChart label="금융자산" ageBrackets={peerComparison.financialAssetsAgeBrackets} valueKey="financialAssets" />
+      </div>
+
       <table className="grade-table compact peer-report-compare-table">
         <thead><tr><th>비교 항목</th><th>우리집</th><th>또래 평균</th><th>평균 대비</th><th>상대 위치</th></tr></thead>
         <tbody>
@@ -126,6 +195,6 @@ export default function PeerComparisonPage({ peerComparison }) {
           {peerComparison.benchmarkMeta.source}({peerComparison.benchmarkMeta.agency}) · {peerComparison.benchmarkMeta.ageBasis} 평균 · 자산·부채 {peerComparison.benchmarkMeta.assetAndDebtAsOf} 기준 · 소득 {peerComparison.benchmarkMeta.incomeYear}년 기준
         </div>
       )}
-    </div>
+    </PageFrame>
   );
 }

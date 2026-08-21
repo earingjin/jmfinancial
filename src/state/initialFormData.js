@@ -105,6 +105,10 @@ export const initialFormData = {
     // monthly는 이 항목들의 합계로 자동 계산되어, 기존처럼 고정지출로 집계된다.
     healthInsurance: { monthly: '', years: '', items: [] },
     otherExpenses: [],          // [{ name, annual, years }]
+    // [{ name, expectedAge, amount }] - 은퇴 후 자산잔액 시뮬레이션 전용 목돈지출(차량 교체·주택
+    // 수리 등). children(교육비 등)과 달리 발생 나이가 명확한 항목만 여기 담으며, 은퇴 전
+    // 지출과 섞이지 않도록 children과는 별도로 관리한다(자동 연결 없음).
+    retirementLumpSumExpenses: [],
   },
 
   assets: {

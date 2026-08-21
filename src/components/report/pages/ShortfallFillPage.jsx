@@ -65,19 +65,26 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
       </div>
 
       {retirementReadiness && !retirementReadiness.notCalculable && (
-        <div className="report-retirement-income-strip">
-          <div><span>노후 월 필요생활비</span><strong>{formatWon(retirementReadiness.monthlyIncomeCompare.livingCostMonthly)}</strong></div>
-          <div><span>가구 월 연금합계</span><strong>{formatWon(selfMonthlyIncome + spouseMonthlyIncome)}</strong></div>
-          <div><span>월 부족액</span><strong className="is-shortfall">{formatWon(retirementReadiness.monthlyIncomeCompare.shortfallMonthly)}</strong></div>
-          <div><span>연금소득 기준 충당률</span><strong>{retirementReadiness.retirementIncomeIndicator?.notCalculable ? '산출 불가' : `${retirementReadiness.retirementIncomeIndicator?.displayValue ?? retirementReadiness.retirementIncomeIndicator?.value}%`}</strong></div>
-        </div>
+        <>
+          <div className="report-retirement-income-strip">
+            <div><span>노후 월 필요생활비</span><strong>{formatWon(retirementReadiness.monthlyIncomeCompare.livingCostMonthly)}</strong></div>
+            <div><span>가구 월 연금합계</span><strong>{formatWon(selfMonthlyIncome + spouseMonthlyIncome)}</strong></div>
+            <div><span>월 부족액</span><strong className="is-shortfall">{formatWon(retirementReadiness.monthlyIncomeCompare.shortfallMonthly)}</strong></div>
+            <div><span>연금소득 기준 충당률</span><strong>{retirementReadiness.retirementIncomeIndicator?.notCalculable ? '산출 불가' : `${retirementReadiness.retirementIncomeIndicator?.displayValue ?? retirementReadiness.retirementIncomeIndicator?.value}%`}</strong></div>
+          </div>
+          <p className="fine-print" style={{ margin: '6px 0 0' }}>
+            연금소득 기준 충당률 = 월 예상 노후소득 ÷ 은퇴 후 월 필요생활비 × 100 (전체 자산이 아닌 연금소득만으로 생활비를 얼마나 충당하는지를 나타냅니다)
+            {!retirementReadiness.retirementIncomeIndicator?.notCalculable && retirementReadiness.retirementIncomeIndicator?.value === 0
+              && ` — ${retirementReadiness.retirementIncomeZeroReason || '월 수령 방식으로 입력된 노후 연금액이 없어 0%입니다.'}`}
+          </p>
+        </>
       )}
 
       {retirementReadiness?.incomeGap && !retirementReadiness.incomeGap.notCalculable && (
         <div className="report-income-gap-box">
           <strong>정년 이후 국민연금 수령 전 소득공백</strong>
           <span>{retirementReadiness.retirementAge}세 은퇴 → {retirementReadiness.incomeGap.nationalPensionStartAge}세 국민연금 개시</span>
-          <span>{retirementReadiness.incomeGap.gapYears}년간 총 필요생활비 {formatWon(retirementReadiness.incomeGap.totalGapFundingNeeded)}</span>
+          <span>공백기간 연 필요금액 {formatWon(retirementReadiness.incomeGap.annualGapCost)} × {retirementReadiness.incomeGap.gapYears}년 = 총 {formatWon(retirementReadiness.incomeGap.totalGapFundingNeeded)}</span>
         </div>
       )}
 

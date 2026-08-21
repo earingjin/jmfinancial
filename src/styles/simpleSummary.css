@@ -129,6 +129,36 @@
   margin: 22px 0 10px;
 }
 
+.ss-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 22px 0 10px;
+}
+.ss-section-title-row .ss-section-title {
+  margin: 0;
+}
+
+.ss-info-toggle {
+  flex-shrink: 0;
+  display: inline-block;
+  margin: 10px 0;
+  padding: 3px 10px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--navy-800);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ss-section-title-row .ss-info-toggle {
+  margin: 0;
+}
+.ss-info-toggle:hover {
+  background: var(--amber-soft);
+}
+
 .ss-guidance {
   background: var(--amber-soft);
   border-left: 4px solid var(--amber);
@@ -188,6 +218,96 @@
   white-space: nowrap;
 }
 
+/* 종합 결과 - 현재 재무상태 / 은퇴 준비상태 카드 2개와 각각의 세부 내역을 grid-template-areas로
+   배치한다. 데스크톱은 "카드 나란히 + 세부내역 나란히"(2열 2행)이고, 모바일은 1열로 바뀌면서
+   area 순서(card1 → details1 → card2 → details2) 그대로 쌓여 각 세부 내역이 자기 카드
+   바로 아래에 오도록 만든다. */
+.summary-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "card1 card2"
+    "details1 details2";
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.summary-grid-area--card1 { grid-area: card1; }
+.summary-grid-area--card2 { grid-area: card2; }
+.summary-grid-area--details1 { grid-area: details1; align-self: start; }
+.summary-grid-area--details2 { grid-area: details2; align-self: start; }
+
+.summary-status-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+/* 카드 상단(갈색 그라데이션 박스 안)의 작은 배지 - "재무" 카드와 "은퇴" 카드를 한눈에
+   구분할 수 있도록 표시만 한다. */
+.summary-card-kicker {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 4px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.fhs-hero-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  width: 100%;
+}
+@media (min-width: 769px) {
+  .fhs-hero-row { justify-content: center; }
+}
+.summary-status-card .fhs-hero,
+.summary-status-card .ss-status-facts {
+  margin-bottom: 0;
+}
+.summary-status-card .fhs-hero {
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 0;
+}
+.summary-status-card .ss-status-facts {
+  margin-top: 10px;
+}
+@media (max-width: 768px) {
+  .summary-cards-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "card1"
+      "details1"
+      "card2"
+      "details2";
+    gap: 14px;
+  }
+}
+
+.fhs-status-pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.fhs-status-pill--good { background: var(--teal-soft); color: #0E6C5E; }
+.fhs-status-pill--caution { background: var(--amber-soft); color: #8A5A12; }
+.fhs-status-pill--risk { background: var(--red-soft); color: var(--red); }
+.fhs-status-pill--unknown,
+.fhs-status-pill--na { background: var(--paper); color: var(--ink-soft); }
+
 /* ---------- 1. 재무 현황 카드 ---------- */
 .overview-card-grid {
   display: grid;
@@ -234,6 +354,26 @@
   word-break: keep-all;
 }
 .overview-card--risk .overview-card-value { color: var(--red); }
+.overview-card--clickable {
+  display: block;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.overview-card--clickable:hover,
+.overview-card--clickable:focus-visible {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+.overview-card-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--navy-700);
+  font-size: 10.5px;
+  font-weight: 700;
+}
 .overview-card-explanation {
   margin: 12px 0 0;
   padding: 11px 13px;
@@ -621,24 +761,10 @@
 .future-card-balance { margin: 9px 0 0; color: var(--red); font-size: 12px; font-weight: 800; }
 .future-card--good .future-card-balance { color: var(--teal); }
 .future-card small { display: block; margin-top: 7px; color: var(--ink-soft); font-size: 9.5px; line-height: 1.4; }
-.future-chart { position: relative; display: flex; align-items: flex-end; justify-content: space-around; height: 240px; padding: 34px 12px 42px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
-.future-chart-group { width: 27%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 7px; }
-.future-chart-bars { width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 7px; border-bottom: 1px solid var(--line); }
-.future-chart-bar { position: relative; width: 30%; min-height: 2px; border-radius: 5px 5px 0 0; }
-.future-chart-bar--expense { background: var(--gold); }
-.future-chart-bar--pension { background: var(--navy-700); }
-.future-chart-bar span { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); padding-bottom: 4px; color: var(--ink-soft); font-size: 9px; white-space: nowrap; }
-.future-chart-group > strong { color: var(--navy-800); font-size: 12px; }
-.future-chart-legend { position: absolute; bottom: 12px; left: 0; right: 0; display: flex; justify-content: center; gap: 16px; font-size: 10px; color: var(--ink-soft); }
-.future-chart-legend span { display: flex; align-items: center; gap: 5px; }
-.future-chart-legend i { width: 9px; height: 9px; border-radius: 2px; }
-.future-legend-expense { background: var(--gold); }
-.future-legend-pension { background: var(--navy-700); }
 .future-diagnosis { margin: 10px 0 20px; padding: 11px 14px; border-radius: 8px; background: var(--teal-soft); color: #0e6c5e; font-size: 12.5px; line-height: 1.55; }
 .retirement-cashflow-chart { margin: 0 0 16px; padding: 12px 12px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
 .retirement-cashflow-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .retirement-chart-grid { stroke: var(--line); stroke-width: 1; }
-.retirement-chart-axis { fill: var(--ink-soft); font-size: 9px; text-anchor: end; }
 .retirement-chart-gap { fill: rgba(217, 126, 61, 0.12); }
 .retirement-chart-line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .retirement-chart-line--expense { stroke: var(--gold); }
@@ -647,11 +773,64 @@
 .retirement-chart-dot--expense { fill: var(--gold); }
 .retirement-chart-dot--income { fill: var(--teal); }
 .retirement-chart-age { fill: var(--ink-soft); font-size: 9.5px; font-weight: 600; text-anchor: middle; }
+.retirement-chart-value { font-size: 8.5px; font-weight: 700; text-anchor: middle; paint-order: stroke fill; stroke: var(--card); stroke-width: 3px; }
+.retirement-chart-value--expense { fill: var(--gold); }
+.retirement-chart-value--income { fill: var(--teal); }
 .retirement-chart-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; color: var(--ink-soft); font-size: 10px; }
 .retirement-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .retirement-chart-legend i { width: 10px; height: 10px; border-radius: 3px; }
 .retirement-chart-legend .is-expense { background: var(--gold); }
 .retirement-chart-legend .is-income { background: var(--teal); }
+
+/* ---------- 은퇴 후 자산잔액 시뮬레이션 그래프 ---------- */
+.asset-projection-chart { margin: 0 0 10px; padding: 12px 12px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.asset-projection-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.asset-projection-area { fill: rgba(31, 158, 142, 0.14); stroke: none; }
+.asset-projection-line { fill: none; stroke: var(--teal); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.asset-projection-dot { fill: var(--teal); stroke: var(--card); stroke-width: 2; }
+.asset-projection-dot.is-muted { fill: var(--ink-soft); }
+.asset-projection-dot.is-warning { fill: var(--red); }
+.asset-projection-depletion-line { stroke: var(--red); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.6; }
+.asset-projection-value {
+  font-size: 11px; font-weight: 800; text-anchor: middle; fill: var(--navy-800);
+  paint-order: stroke fill; stroke: var(--card); stroke-width: 3px;
+}
+.asset-projection-warning-label {
+  font-size: 10.5px; font-weight: 800; text-anchor: middle; fill: var(--red);
+  paint-order: stroke fill; stroke: var(--card); stroke-width: 3px;
+}
+.retirement-chart-legend .is-asset { background: var(--teal); }
+.retirement-chart-legend .is-warning { background: var(--red); }
+.retirement-chart-legend .is-lumpsum { background: var(--gold); }
+
+/* 목돈지출 이벤트 마커 - 그래프에는 금액만 간결하게 표시하고, 항목명은 그래프 아래
+   "예상 목돈지출" 목록(.asset-lumpsum-summary)에서 항상 확인할 수 있게 한다. */
+.asset-projection-lumpsum-line { stroke: var(--gold); stroke-width: 1.5; }
+.asset-projection-lumpsum-marker { font-size: 11px; text-anchor: middle; fill: var(--gold); }
+.asset-projection-lumpsum-amount {
+  font-size: 8.5px; font-weight: 700; text-anchor: middle; fill: var(--navy-800);
+  paint-order: stroke fill; stroke: var(--card); stroke-width: 3px;
+}
+
+
+/* 예상 목돈지출 요약 - 그래프 마커의 상세 내용을 hover 없이 항상 확인할 수 있는 목록(모바일 포함). */
+.asset-lumpsum-summary {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.asset-lumpsum-summary-title { font-size: 12.5px; font-weight: 800; color: var(--navy-800); margin-bottom: 6px; }
+.asset-lumpsum-summary-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 5px 0; border-top: 1px solid var(--line); font-size: 12.5px;
+}
+.asset-lumpsum-summary-row:first-of-type { border-top: none; }
+.asset-lumpsum-age { flex: 0 0 auto; color: var(--ink-soft); font-weight: 700; }
+.asset-lumpsum-name { flex: 1; color: var(--ink); word-break: keep-all; }
+.asset-lumpsum-amount { flex: 0 0 auto; color: var(--navy-800); font-weight: 700; font-variant-numeric: tabular-nums; }
+.asset-lumpsum-empty { margin: 0; color: var(--ink-soft); font-size: 12.5px; }
 .retirement-chart-legend .is-gap { background: rgba(217, 126, 61, 0.18); border: 1px solid rgba(217, 126, 61, 0.32); }
 .future-chart-help { margin: -7px 2px 14px; color: var(--ink-soft); font-size: 10.5px; line-height: 1.55; }
 .future-outlook-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
@@ -665,8 +844,9 @@
 .future-outlook-table .is-shortfall { color: var(--red); font-weight: 700; }
 .future-outlook-table .is-surplus { color: var(--teal); font-weight: 700; }
 .future-outlook-disclaimer { margin: 9px 2px 0; color: var(--ink-soft); font-size: 9.5px; line-height: 1.55; }
-.future-purchasing-card { margin-top: 22px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.future-purchasing-card { margin-top: 22px; padding: 22px 22px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
 .future-purchasing-card h3 { margin: 0; color: var(--navy-800); font-size: 15px; }
+.future-purchasing-card .ss-section-title-row { margin: 0 0 6px; }
 .future-purchasing-card > p { margin: 5px 0 15px; color: var(--ink-soft); font-size: 11.5px; }
 .future-purchasing-flow { display: flex; align-items: stretch; justify-content: space-between; gap: 8px; }
 .future-purchasing-step { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 11px 6px; border-radius: 9px; background: var(--paper); text-align: center; }
@@ -678,41 +858,6 @@
 
 /* ---------- 4. 은퇴 준비 현황 ---------- */
 .retirement-card-grid { margin-bottom: 22px; }
-.need-compare-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 22px;
-}
-.need-compare-row {
-  display: grid;
-  grid-template-columns: 64px 1fr auto;
-  align-items: center;
-  gap: 10px;
-}
-.need-compare-label { font-size: 12px; color: var(--ink-soft); }
-.need-compare-track {
-  height: 14px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-}
-.need-compare-fill { height: 100%; }
-.need-compare-value { font-size: 12.5px; font-weight: 700; color: var(--navy-800); white-space: nowrap; }
-.need-compare-item {
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-}
-.need-compare-item:last-child { border-bottom: none; }
-.need-breakdown { margin: 7px 0 0 74px; }
-.need-breakdown summary {
-  width: fit-content;
-  color: var(--navy-700);
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
 .need-breakdown-list {
   margin-top: 8px;
   padding: 8px 14px 10px;
@@ -729,7 +874,6 @@
   font-size: 10.5px;
   line-height: 1.55;
 }
-.need-compare-assumptions { margin: -10px 0 22px; }
 
 /* 부족자금을 보여준 직후, "그럼 어떻게 개선하지?"로 바로 이어지는 동선을 만든다
    (지금까지는 페이지 맨 끝의 다운로드 버튼까지 스크롤해야만 다음 행동을 찾을 수 있었음). */
@@ -903,15 +1047,16 @@
   .future-card dl { grid-area: details; margin-top: 10px; }
   .future-card-balance { grid-area: balance; }
   .future-card small { grid-area: reason; }
-  .future-chart-bar span { font-size: 11px; font-weight: 600; }
-  .future-chart-group > strong { font-size: 13px; }
-  .future-chart-legend { font-size: 12px; }
-  .future-chart-legend i { width: 11px; height: 11px; }
   .retirement-cashflow-chart { padding: 14px 6px 12px; }
-  .retirement-chart-axis { font-size: 18px; font-weight: 600; }
   .retirement-chart-age { font-size: 17px; font-weight: 700; }
+  .retirement-chart-value { font-size: 15px; }
   .retirement-chart-legend { gap: 9px 14px; font-size: 12.5px; line-height: 1.4; }
   .retirement-chart-legend i { width: 12px; height: 12px; }
+  .asset-projection-chart { padding: 14px 6px 12px; }
+  .asset-projection-value { font-size: 15px; }
+  .asset-projection-warning-label { font-size: 15px; }
+  .asset-projection-lumpsum-marker { font-size: 18px; }
+  .asset-projection-lumpsum-amount { font-size: 14px; }
   .future-chart-help { margin-top: -4px; font-size: 12px; line-height: 1.65; }
   .future-outlook-table-wrap { overflow: hidden; }
   .future-outlook-table { display: block; width: 100%; min-width: 0; font-size: 12px; }
@@ -954,7 +1099,6 @@
 
 @media (max-width: 480px) {
   .overview-card-grid { grid-template-columns: repeat(2, 1fr); }
-  .future-chart { height: 220px; padding-left: 4px; padding-right: 4px; }
   .future-purchasing-flow { flex-direction: column; }
   .future-purchasing-step .future-flow-arrow { left: 50%; top: -14px; transform: translateX(-50%) rotate(90deg); }
 }
@@ -966,8 +1110,6 @@
   .overview-card-value { font-size: 16px; }
   .simple-summary-title { font-size: 17px; }
   .ss-section-title { font-size: 14px; margin: 18px 0 8px; }
-  .need-compare-row { grid-template-columns: 54px 1fr auto; }
-  .need-breakdown { margin-left: 64px; }
   .need-breakdown-list .detail-row { align-items: flex-start; gap: 10px; }
   .need-breakdown-list .detail-row-label { max-width: 66%; }
   .detail-card { padding: 14px 14px 10px; }

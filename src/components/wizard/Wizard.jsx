@@ -27,7 +27,7 @@ const formatSavedAt = (value) => value
   ? new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
   : null;
 
-export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0 }) {
+export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, onStepChange }) {
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [showProgressHint, setShowProgressHint] = useState(false);
@@ -35,6 +35,13 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
   const { Component, key: currentStepKey } = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
+  // startAtLastStep일 때는 stepIndex의 초기값이 useState 초기화에서만 정해지므로(moveToStep을
+  // 거치지 않음), 마운트 시 한 번 실제 시작 단계를 부모(App)에 동기화해 홈↔위저드 왕복 후에도
+  // 정확한 단계를 이어갈 수 있게 한다.
+  useEffect(() => {
+    onStepChange?.(stepIndex);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const progress = progressRef.current;
     if (!progress) return undefined;
@@ -51,6 +58,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
     setDraftStep(resolved);
     setStepIndexState(resolved);
+    onStepChange?.(resolved);
     void saveCurrentDraft(resolved).catch(() => {});
   };
 

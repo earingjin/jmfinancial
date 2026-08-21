@@ -284,6 +284,11 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
               <tr><th>대출 종류</th><th style={{ textAlign: 'right' }}>원금</th><th style={{ textAlign: 'right' }}>월 상환부담</th></tr>
             </thead>
             <tbody>
+              <tr className="total-row">
+                <td>합계</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatWon(balanceTotal || 0)}</td>
+                <td className="num" style={{ textAlign: 'right' }}>{formatWon(repaymentTotal || 0)}</td>
+              </tr>
               {openCategories.map((c) => {
                 const item = breakdown[c.key] || {};
                 return (
@@ -301,11 +306,6 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
                   <td className="num" style={{ textAlign: 'right' }}>{formatWon(monthlyBurdenOf(item))}</td>
                 </tr>
               ))}
-              <tr className="total-row">
-                <td>합계</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatWon(balanceTotal || 0)}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatWon(repaymentTotal || 0)}</td>
-              </tr>
             </tbody>
           </table>
           <span className="field-helper">선택·추가하신 항목의 대출 원금·월 이자·상환액을 자동으로 합산한 값입니다</span>

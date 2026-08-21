@@ -25,6 +25,9 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [wizardResume, setWizardResume] = useState(false);
+  // 위저드에서 홈으로 나갔다가 "자산진단 시작하기"로 되돌아와도 마지막으로 입력하던 단계를
+  // 그대로 이어가도록, Wizard가 언마운트/재마운트되어도 여기서 마지막 단계를 계속 들고 있는다.
+  const [wizardStep, setWizardStep] = useState(initialDraft?.step_index || 0);
   // 지금 보고 있는 result가 방금 새로 진단한 것인지('new'), 과거 목록에서 열어본 것인지('history')
   // 구분한다 - 요약 화면의 "뒤로가기"가 어디로 돌아가야 하는지를 이 값으로 분기한다.
   const [resultSource, setResultSource] = useState('new');
@@ -99,6 +102,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setResult(null);
     setResultSource('new');
     setWizardResume(false);
+    setWizardStep(0);
     setPhase('wizard');
   };
 
@@ -180,7 +184,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         )}
 
         <FormProvider userId={user.id} initialDraft={initialDraft}>
-          {phase === 'wizard' && <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={initialDraft?.step_index || 0} />}
+          {phase === 'wizard' && <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={wizardStep} onStepChange={setWizardStep} />}
         </FormProvider>
 
         {phase === 'loading' && (

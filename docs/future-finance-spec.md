@@ -105,7 +105,8 @@
 
 | 항목 | 현재 상태 |
 | --- | --- |
-| canonical 장기 물가상승률과 갱신주기 | 미확정 |
+| canonical 장기 물가상승률 | 연 3%로 승인(2026-08-20). `GENERAL_INFLATION_RATE`·`FUTURE_FINANCE_ASSUMPTIONS.inflationRate` 모두 이 값을 사용 |
+| 위 물가상승률의 갱신주기 | 미확정 |
 | 개인연금 증가율 | 미확정 |
 | 퇴직연금 증가율 | 미확정 |
 | 이미 지난 목표 나이의 표시 정책 | 미확정; 현행 유지 |
