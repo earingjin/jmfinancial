@@ -200,8 +200,16 @@ function buildBreakdownDonut(breakdownItems, total) {
   };
 }
 
+// "총액으로 한번에 입력" 모드(DebtBreakdownField.jsx)에서는 항목별 원금이 없어 debtBreakdown이
+// 비어 있어도 총 부채잔액(totalDebt)만큼은 이미 입력되어 있다. 이 경우 항목이 하나도 없다고
+// 표시하는 대신, HouseholdDetailPage.jsx의 "부채 합계" 단일 행 표시와 동일하게 총액 하나짜리
+// 슬라이스로 도넛을 채운다 - 새로운 금액을 만들지 않고 이미 계산된 totalDebt를 그대로 쓴다.
 export function buildDebtDonut(debtBreakdown, totalDebt) {
-  return buildBreakdownDonut(debtBreakdown, totalDebt);
+  const total = safe(totalDebt);
+  if (debtBreakdown.length === 0 && total > 0) {
+    return buildBreakdownDonut([{ key: 'total', label: '총부채', value: total }], total);
+  }
+  return buildBreakdownDonut(debtBreakdown, total);
 }
 
 export function buildSavingsDonut(savingsBreakdown, totalSavings) {
@@ -223,9 +231,11 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
   const nationalPensionStartAge = birthYearBlank ? null : getNationalPensionStartAge(n(input.basic.birthYear));
   const incomeGapNotCalculable = retirementAgeBlank || birthYearBlank || nationalPensionStartAge === null;
   const gapYears = incomeGapNotCalculable ? null : Math.max(0, nationalPensionStartAge - retirementAge);
-  // 공백기간 동안 순수하게 생활비만으로 필요한 자금(연금 반영 전 단순 곱셈) - 새 재무 가정을
-  // 추가하는 것이 아니라 이미 있는 월 필요생활비×12×공백연수를 그대로 계산한다.
-  const annualGapCost = incomeGapNotCalculable ? null : simulation.retirementLivingCostNow * 12;
+  // 공백기간 동안 순수하게 생활비만으로 필요한 자금(연금 반영 전 단순 곱셈). "은퇴생활 필요자금"
+  // (requiredAtRetirement)과 동일하게 simulation.retirementLivingCostAtRetirement(오늘 생활비에
+  // 은퇴까지의 물가상승률을 반영한 값, simulation.js 참고)를 그대로 재사용한다 - 새 물가상승률이나
+  // 별도 복리식을 추가하지 않고, 은퇴 후에는 실질가치가 유지된다는 동일한 가정을 그대로 적용한다.
+  const annualGapCost = incomeGapNotCalculable ? null : simulation.retirementLivingCostAtRetirement * 12;
   const totalGapFundingNeeded = incomeGapNotCalculable ? null : annualGapCost * gapYears;
 
   const pensionMonthlyTotal = aggregates.nationalPensionMonthly + aggregates.severancePensionMonthly + aggregates.personalPensionMonthly;

@@ -72,6 +72,10 @@ body {
 }
 body:has(.report-print-mode) .web-brand-logo { display: none; }
 body:has(.app-shell--diagnosis) .web-brand-logo { position: absolute; }
+/* 결과 요약 화면(SimpleSummaryReport)은 길게 스크롤되는 페이지라, 로고가 fixed로 화면에
+   계속 붙어 따라오면 미완성처럼 보인다는 피드백이 있었다 - 위저드/로딩과 동일하게 문서
+   맨 위에서만 보이도록 absolute로 전환한다. */
+body:has(.simple-summary) .web-brand-logo { position: absolute; }
 .home-intro { transform: translateY(-72px); }
 .home-welcome-page .welcome-panel h1 {
   font-weight: 800; letter-spacing: -.055em;

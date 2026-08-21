@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
 import '../../styles/simpleSummary.css';
@@ -69,6 +70,149 @@ function DetailRow({ label, value, missing, bold, highlight, valueColor }) {
       <span className="detail-row-value" style={valueColor ? { color: valueColor } : undefined}>
         {missing ? <span className="overview-card-missing">입력 필요</span> : value}
       </span>
+    </div>
+  );
+}
+
+// "종합 결과"의 현재 재무상태 카드에 쓰는 3개 대표 FHS 지표. 점수·등급·권장기준은 전부
+// api/_lib/indicators.js·indicatorMeta.js에서 이미 계산·enrich된 값을 그대로 쓰고, 여기서는
+// 화면 표시용 라벨만 다시 붙인다(재무 기준 자체를 새로 만들지 않음).
+const FHS_REP_KEYS = ['household', 'emergency', 'dsr'];
+const FHS_REP_LABELS = { household: '매달 소득 중 지출 비율', emergency: '비상자금으로 버틸 수 있는 기간', dsr: '매달 소득 중 빚 갚는 비율' };
+
+// 비상예비금지표는 서버에서 "배"(유동성자산 ÷ 월지출) 단위로 계산되지만, 월지출 대비 몇 개월을
+// 버틸 수 있는지와 정확히 같은 숫자이므로 사용자에게는 "개월"로 바꿔 표시한다 - 값은 그대로,
+// 표시 문구만 바꾸는 것이라 계산에는 영향이 없다.
+function formatIndicatorValue(indicator) {
+  return indicator.key === 'emergency' ? `${formatNumber(indicator.value)}개월` : formatPercent(indicator.value);
+}
+
+// api/_lib/indicators.js의 판정 문구(매우 우수/우수/양호/보통/주의/위험)는 배점 근거이므로
+// 그대로 두고, "현재 재무상태" 카드의 상태 배지에만 사용자가 요청한 더 쉬운 문구로 바꿔
+// 보여준다 - 점수·ratioClass(배지 색상 판단 기준)는 전혀 건드리지 않는다. 인접한 두 단계인
+// "우수"·"양호"는 배지에서는 하나의 "양호"로 합쳐 보여준다.
+const FHS_STATUS_BADGE_LABELS = {
+  '매우 우수': '안정적',
+  '우수': '양호',
+  '양호': '양호',
+  '보통': '점검 필요',
+  '주의': '개선 필요',
+  '위험': '우선 개선',
+};
+function formatIndicatorStatusBadge(indicator) {
+  return FHS_STATUS_BADGE_LABELS[indicator.status] || indicator.status;
+}
+// 새 재무점수·임계값을 만들지 않고, 이미 서버가 계산해 내려주는 ratioClass(good/caution/risk,
+// indicatorMeta.js의 점수비율 기준)만 세어 3가지 안내 문구 중 하나를 고르는 "표시 문구 선택기"다.
+// FHS 원 점수·등급에는 전혀 관여하지 않는다.
+export function getFinancialHealthStatus(reps) {
+  const known = (reps || []).filter((r) => r && !r.notCalculable);
+  if (known.length === 0) {
+    return {
+      icon: '🤔',
+      title: '현재 재무상태를 확인하려면 정보가 조금 더 필요합니다.',
+      detail: '가계수지·비상예비금·부채상환 정보를 입력하면 확인할 수 있습니다.',
+    };
+  }
+  const riskCount = known.filter((r) => r.ratioClass === 'risk').length;
+  const cautionCount = known.filter((r) => r.ratioClass === 'caution').length;
+  if (riskCount === 0 && cautionCount === 0) {
+    return {
+      icon: '😊',
+      title: '현재 재무상태가 전반적으로 안정적입니다.',
+      detail: '수입과 지출의 균형, 비상자금과 부채 수준이 비교적 안정적으로 관리되고 있습니다.',
+    };
+  }
+  if (riskCount >= 2) {
+    return {
+      icon: '😥',
+      title: '현재 재무구조에서 우선 점검할 부분이 있습니다.',
+      detail: '지출·비상자금·부채 중 취약한 항목부터 순서대로 점검할 필요가 있습니다.',
+    };
+  }
+  return {
+    icon: '🙂',
+    title: '현재 재무상태는 대체로 안정적이지만 일부 점검이 필요합니다.',
+    detail: '지출·비상자금·부채 중 보완이 필요한 항목을 확인해 보세요.',
+  };
+}
+
+// "종합 결과"의 왼쪽 카드 - 가계수지/비상예비금/DSR 3개 대표지표와 FHS 총점을 보여준다.
+// 값·상태·등급은 모두 서버 계산 결과(indicators, summary)를 그대로 표시만 한다.
+function FinancialHealthSummaryCard({ indicators }) {
+  const reps = FHS_REP_KEYS.map((key) => (indicators || []).find((ind) => ind.key === key)).filter(Boolean);
+  const status = getFinancialHealthStatus(reps);
+
+  return (
+    <div className="summary-status-card">
+      <div className="fhs-hero">
+        <div className="summary-card-kicker">1. 현재 재무상태</div>
+        <div className="fhs-hero-row">
+          <div className="ss-status-icon" aria-hidden="true">{status.icon}</div>
+          <div className="fhs-hero-text ss-status-copy">
+            <div className="ss-status-title"><span>{status.title}</span></div>
+            <div className="ss-status-detail"><span>{status.detail}</span></div>
+          </div>
+        </div>
+      </div>
+      {reps.length > 0 && (
+        <div className="ss-status-facts">
+          {reps.map((ind) => (
+            <div key={ind.key}>
+              <span>{FHS_REP_LABELS[ind.key]}</span>
+              <strong>
+                {ind.notCalculable ? (
+                  <span className="overview-card-missing">산출 불가</span>
+                ) : (
+                  <>
+                    {formatIndicatorValue(ind)}
+                    <span className={`fhs-status-pill fhs-status-pill--${ind.ratioClass || 'unknown'}`}>{formatIndicatorStatusBadge(ind)}</span>
+                  </>
+                )}
+              </strong>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// "종합 결과"의 오른쪽 카드 - 기존 은퇴 준비 히어로(icon/title/detail + 핵심 사실 3가지)를
+// 그대로 컴포넌트로 분리한 것뿐, 계산 로직은 하나도 바꾸지 않았다.
+function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, livingCostAtRetirement }) {
+  return (
+    <div className="summary-status-card">
+      <div className="fhs-hero">
+        <div className="summary-card-kicker">2. 은퇴 준비상태</div>
+        <div className="fhs-hero-row">
+          <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
+          <div className="fhs-hero-text ss-status-copy">
+            <div className="ss-status-title">
+              {retirementStatus.titleLines.map((line) => <span key={line}>{line}</span>)}
+            </div>
+            <div className="ss-status-detail">
+              {retirementStatus.detailLines.map((line) => <span key={line}>{line}</span>)}
+            </div>
+          </div>
+        </div>
+      </div>
+      {!rr.notCalculable && (
+        <div className="ss-status-facts">
+          <div>
+            <span>향후 노후 생활 기간</span>
+            <strong>{round1(rr.retirementYears)}년</strong>
+          </div>
+          <div>
+            <span>은퇴 시점 예상 월 생활비</span>
+            <strong>{formatWon(livingCostAtRetirement)}</strong>
+          </div>
+          <div>
+            <span>현재 월 생활비</span>
+            <strong>{formatWon(currentLivingCost)}</strong>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -183,6 +327,14 @@ function RetirementCashFlowChart({ outlook }) {
           <g key={item.age}>
             <circle className="retirement-chart-dot retirement-chart-dot--expense" cx={x(item.age)} cy={y(item.livingExpense || 0)} r="4" />
             <circle className="retirement-chart-dot retirement-chart-dot--income" cx={x(item.age)} cy={y(item.totalIncome || 0)} r="4" />
+            <text className="retirement-chart-value retirement-chart-value--income" x={x(item.age)} y={Math.max(11, y(item.totalIncome || 0) - 10)}>
+              {formatWon(item.totalIncome)}
+            </text>
+            {item.livingExpense != null && (
+              <text className="retirement-chart-value retirement-chart-value--expense" x={x(item.age)} y={y(item.livingExpense) + 17}>
+                {formatWon(item.livingExpense)}
+              </text>
+            )}
             <text className="retirement-chart-age" x={x(item.age)} y={height - 18}>{index === 0 ? `은퇴 ${item.age}세` : `${item.age}세`}</text>
           </g>
         ))}
@@ -234,7 +386,7 @@ function FiveYearOutlookTable({ outlook }) {
 }
 
 export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare }) {
-  const { generatedAt, peerComparison, webSummary } = result;
+  const { generatedAt, peerComparison, webSummary, aggregates, indicators } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
   const future = webSummary.futureFinance;
@@ -244,8 +396,8 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
     || peerComparison.ageBrackets?.find((bracket) => bracket.isUserBracket)?.label
     || '확인 불가';
   const retirementStatus = getRetirementStatus(rr);
+  const allIndicators = indicators || [];
 
-  const requiredBarMax = Math.max(rr.requiredAtRetirement || 0, rr.readyAssetsAtRetirement || 0, rr.shortfall || 0, 1);
   const pensionMonthlyTotal = rr.monthlyIncomeCompare.nationalPensionMonthly + rr.monthlyIncomeCompare.severancePensionMonthly + rr.monthlyIncomeCompare.personalPensionMonthly;
   // 이전에 저장된 결과에도 계산 근거가 보이도록 기존 필드에서 안전하게 역산한다.
   const retirementMonths = rr.retirementYears * 12;
@@ -255,6 +407,10 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
   const hasPreparationBreakdown = Number.isFinite(rr.currentReadyAssets) && Number.isFinite(rr.assumedReturnRate);
   const baseLivingCost = Math.round(livingCostNow * retirementMonths);
   const inflationIncrease = Math.max(0, rr.requiredAtRetirement - baseLivingCost);
+  const [showCoverageMethod, setShowCoverageMethod] = useState(false);
+  const [showPurchasingMethod, setShowPurchasingMethod] = useState(false);
+  const [retirementDetailKey, setRetirementDetailKey] = useState(null);
+  const [showFiveYearTable, setShowFiveYearTable] = useState(false);
 
   return (
     <div className="simple-summary">
@@ -280,58 +436,79 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
 
       <div className="simple-summary-date">최근 설계일 {formatDesignDate(generatedAt)}</div>
 
-      {/* 0. 종합 결과 (히어로) - result.summary는 이미 서버에서 계산돼 내려오지만
-          지금까지 어떤 화면에도 노출되지 않던 값이라 여기서 처음 표시한다. */}
+      {/* 0. 종합 결과 - 현재 재무상태(FHS 대표 3개 지표)와 은퇴 준비상태를 한 화면에서 바로
+          비교할 수 있도록 카드 두 개로 구성한다. 두 카드 모두 서버가 이미 계산해 내려준 값
+          (indicators/summary, webSummary.retirementReadiness)을 표시만 할 뿐, 새 계산을 하지 않는다. */}
       <section aria-labelledby="ss-h-hero">
         <h2 id="ss-h-hero" className="simple-summary-title">종합 결과</h2>
-        <div className="fhs-hero">
-          <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
-          <div className="fhs-hero-text ss-status-copy">
-            <div className="ss-status-title">
-              {retirementStatus.titleLines.map((line) => <span key={line}>{line}</span>)}
-            </div>
-            <div className="ss-status-detail">
-              {retirementStatus.detailLines.map((line) => <span key={line}>{line}</span>)}
-            </div>
+
+        {/* 데스크톱에서는 카드 2개가 나란히, 그 아래 각 세부 내역이 나란히 배치되지만
+            (grid-template-areas로 위치를 명시), 모바일 1열에서는 area 순서 그대로
+            카드1 → 세부내역1 → 카드2 → 세부내역2 순으로 쌓여 각 세부 내역이 자기 카드
+            바로 아래에 온다. */}
+        <div className="summary-cards-grid">
+          <div className="summary-grid-area--card1">
+            <FinancialHealthSummaryCard indicators={allIndicators} />
           </div>
-        </div>
-        {!rr.notCalculable && (
-          <div className="ss-status-facts">
-            <div>
-              <span>향후 노후 생활 기간</span>
-              <strong>{round1(rr.retirementYears)}년</strong>
-            </div>
-            <div>
-              <span>월평균 지출비용</span>
-              <strong>{formatWon(rr.monthlyIncomeCompare.livingCostMonthly)}</strong>
-            </div>
-          </div>
-        )}
-        {!rr.notCalculable && (
-          <details className="retirement-calculation retirement-calculation--hero">
-            <summary>왜 이 금액이 나왔나요?</summary>
+
+          <details className="retirement-calculation summary-grid-area--details1">
+            <summary>현재 재무상태 세부 내역</summary>
             <div className="retirement-calculation-body">
-              <p>
-                <span>① 은퇴 시점 월 생활비</span>
-                <strong>
-                  현재 {formatWon(livingCostNow)} → 물가 {rr.inflationRate != null ? `${formatPercent(rr.inflationRate)} ` : ''}반영 후 {formatWon(livingCostAtRetirement)}
-                </strong>
-              </p>
-              <p>
-                <span>② 은퇴생활 필요자금</span>
-                <strong>
-                  월 {formatWon(livingCostAtRetirement)} × {formatNumber(retirementMonths)}개월 = {formatWon(rr.requiredAtRetirement)}
-                </strong>
-              </p>
-              <p className="retirement-calculation-result">
-                <span>③ 최종 부족자금</span>
-                <strong>
-                  필요자금 {formatWon(rr.requiredAtRetirement)} − 준비자산 {formatWon(rr.readyAssetsAtRetirement)} = {formatWon(rr.shortfall)}
-                </strong>
-              </p>
+              {allIndicators.length === 0 ? (
+                <p className="ss-guidance">해당 진단에서는 세부 지표를 확인할 수 없습니다.</p>
+              ) : (
+                <div className="need-breakdown-list">
+                  {allIndicators.map((ind) => (
+                    <DetailRow
+                      key={ind.key}
+                      label={ind.label}
+                      value={ind.notCalculable ? <span className="overview-card-missing">산출 불가</span> : `${formatIndicatorValue(ind)} · ${ind.status}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </details>
-        )}
+
+          <div className="summary-grid-area--card2">
+            <RetirementSummaryCard
+              rr={rr}
+              retirementStatus={retirementStatus}
+              currentLivingCost={aggregates.monthlyLivingCost}
+              livingCostAtRetirement={livingCostAtRetirement}
+            />
+          </div>
+
+          <details className="retirement-calculation summary-grid-area--details2">
+            <summary>은퇴 준비상태 세부 내역</summary>
+            <div className="retirement-calculation-body">
+              {rr.notCalculable ? (
+                <p className="ss-guidance">{rr.reason}</p>
+              ) : (
+                <>
+                  <p>
+                    <span>① 은퇴 시점 월 생활비</span>
+                    <strong>
+                      현재 {formatWon(livingCostNow)} → 물가 {rr.inflationRate != null ? `${formatPercent(rr.inflationRate)} ` : ''}반영 후 {formatWon(livingCostAtRetirement)}
+                    </strong>
+                  </p>
+                  <p>
+                    <span>② 은퇴생활 필요자금</span>
+                    <strong>
+                      월 {formatWon(livingCostAtRetirement)} × {formatNumber(retirementMonths)}개월 = {formatWon(rr.requiredAtRetirement)}
+                    </strong>
+                  </p>
+                  <p className="retirement-calculation-result">
+                    <span>③ 최종 부족자금</span>
+                    <strong>
+                      필요자금 {formatWon(rr.requiredAtRetirement)} − 준비자산 {formatWon(rr.readyAssetsAtRetirement)} = {formatWon(rr.shortfall)}
+                    </strong>
+                  </p>
+                </>
+              )}
+            </div>
+          </details>
+        </div>
       </section>
 
       {/* 1. 나의 재무 현황 */}
@@ -458,18 +635,30 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
           <p className="ss-guidance">80세 이후에는 현재 시점 기준 전망 대상 연령이 없습니다.</p>
         ) : (
           <>
-            <h3 className="ss-section-title">연금소득 기준 생활비 충당률</h3>
-            <div className="future-method-note future-method-note--coverage">
-              <b>계산 원리</b>
-              <div className="future-method-formula">생활비 충당률 = 해당 연령의 예상 연금소득 ÷ 예상 생활비 × 100</div>
-              <ul className="future-method-list">
-                <li><strong>예상 생활비</strong><span>현재 월 생활비에 매년 3%의 물가상승률을 복리로 적용합니다.</span></li>
-                <li><strong>국민연금</strong><span>수급개시연령 이후부터 연 2.1% 증가를 적용합니다.</span></li>
-                <li><strong>개인·퇴직연금</strong><span>현재 월 수령액이 유지된다고 가정합니다.</span></li>
-                <li><strong>부족·여유액</strong><span>연금소득에서 생활비를 뺀 값으로 매월 예상 금액을 계산합니다.</span></li>
-                <li><strong>해석 범위</strong><span>연금소득만으로 생활비를 얼마나 충당하는지를 나타내며, 종합 은퇴 준비도를 의미하지 않습니다.</span></li>
-              </ul>
+            <div className="ss-section-title-row">
+              <h3 className="ss-section-title">연금소득 기준 생활비 충당률</h3>
+              <button
+                type="button"
+                className="ss-info-toggle"
+                aria-expanded={showCoverageMethod}
+                onClick={() => setShowCoverageMethod((prev) => !prev)}
+              >
+                계산 원리 {showCoverageMethod ? '숨기기' : '보기'}
+              </button>
             </div>
+            {showCoverageMethod && (
+              <div className="future-method-note future-method-note--coverage">
+                <b>계산 원리</b>
+                <div className="future-method-formula">생활비 충당률 = 해당 연령의 예상 연금소득 ÷ 예상 생활비 × 100</div>
+                <ul className="future-method-list">
+                  <li><strong>예상 생활비</strong><span>현재 월 생활비에 매년 3%의 물가상승률을 복리로 적용합니다.</span></li>
+                  <li><strong>국민연금</strong><span>수급개시연령 이후부터 연 2.1% 증가를 적용합니다.</span></li>
+                  <li><strong>개인·퇴직연금</strong><span>현재 월 수령액이 유지된다고 가정합니다.</span></li>
+                  <li><strong>부족·여유액</strong><span>연금소득에서 생활비를 뺀 값으로 매월 예상 금액을 계산합니다.</span></li>
+                  <li><strong>해석 범위</strong><span>연금소득만으로 생활비를 얼마나 충당하는지를 나타내며, 종합 은퇴 준비도를 의미하지 않습니다.</span></li>
+                </ul>
+              </div>
+            )}
             <div className="future-card-grid">
               {future.targets.map((item) => (
                 <article className={`future-card future-card--${item.status}`} key={item.age}>
@@ -492,25 +681,51 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
             {future.diagnosis && <p className="future-diagnosis">{future.diagnosis}</p>}
             {future.fiveYearOutlook?.length > 0 && (
               <>
-                <h3 className="ss-section-title">5년 단위 생활비·소득 전망</h3>
+                <div className="ss-section-title-row">
+                  <h3 className="ss-section-title">5년 단위 생활비·소득 전망</h3>
+                  <button
+                    type="button"
+                    className="ss-info-toggle"
+                    aria-expanded={showFiveYearTable}
+                    onClick={() => setShowFiveYearTable((prev) => !prev)}
+                  >
+                    연령별 상세 표 {showFiveYearTable ? '숨기기' : '보기'}
+                  </button>
+                </div>
                 <p className="simple-summary-subtitle">현재 입력한 소득의 유지 기간과 연금 수령 시점을 반영해, 은퇴 후 예상 생활비와 총소득의 차이를 5년 단위로 보여드립니다. 생활비는 연 3%씩 상승한다고 가정합니다.</p>
                 <RetirementCashFlowChart outlook={future.retirementCashFlowOutlook} />
                 <p className="future-chart-help">주황색은 예상 월 생활비, 초록색은 예상 월 총소득입니다. 두 선 사이가 넓을수록 매월 예상되는 부족액 또는 여유금액이 큽니다.</p>
-                <FiveYearOutlookTable outlook={future.fiveYearOutlook} />
-                <p className="future-outlook-disclaimer">본 결과는 현재 입력값과 일정한 소득 유지 가정을 바탕으로 한 예상치이며, 실제 소득·물가·연금 변동에 따라 달라질 수 있습니다.</p>
+                {showFiveYearTable && (
+                  <>
+                    <FiveYearOutlookTable outlook={future.fiveYearOutlook} />
+                    <p className="future-outlook-disclaimer">본 결과는 현재 입력값과 일정한 소득 유지 가정을 바탕으로 한 예상치이며, 실제 소득·물가·연금 변동에 따라 달라질 수 있습니다.</p>
+                  </>
+                )}
               </>
             )}
           </>
         )}
 
         <div className="future-purchasing-card">
-          <h3>현재 자산과 같은 구매력을 유지하려면</h3>
-          <div className="future-method-note future-method-note--in-card future-method-note--purchasing">
-            <b>구매력 유지 계산</b>
-            <div className="future-method-formula">필요한 미래 금액 = 현재 순자산 × (1 + 물가상승률 3%)<sup>경과연수</sup></div>
-            <strong className="future-purchasing-warning">자산이 아래 금액으로 불어난다는 예상이 아닙니다.</strong>
-            <span>물가가 오를수록 현재와 같은 구매력을 유지하기 위해 미래에 필요한 목표금액이 커진다는 의미입니다.</span>
+          <div className="ss-section-title-row">
+            <h3>현재 자산과 같은 구매력을 유지하려면</h3>
+            <button
+              type="button"
+              className="ss-info-toggle"
+              aria-expanded={showPurchasingMethod}
+              onClick={() => setShowPurchasingMethod((prev) => !prev)}
+            >
+              계산 원리 {showPurchasingMethod ? '숨기기' : '보기'}
+            </button>
           </div>
+          {showPurchasingMethod && (
+            <div className="future-method-note future-method-note--in-card future-method-note--purchasing">
+              <b>구매력 유지 계산</b>
+              <div className="future-method-formula">필요한 미래 금액 = 현재 순자산 × (1 + 물가상승률 3%)<sup>경과연수</sup></div>
+              <strong className="future-purchasing-warning">자산이 아래 금액으로 불어난다는 예상이 아닙니다.</strong>
+              <span>물가가 오를수록 현재와 같은 구매력을 유지하기 위해 미래에 필요한 목표금액이 커진다는 의미입니다.</span>
+            </div>
+          )}
           {future?.purchasingPower ? (
             <div className="future-purchasing-flow">
               {future.purchasingPower.map((item, index) => (
@@ -550,18 +765,33 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                 <div className="overview-card-label">은퇴 후 생활 기간</div>
                 <div className="overview-card-value">{round1(rr.retirementYears)}년</div>
               </div>
-              <div className="overview-card overview-card--highlight">
+              <button
+                type="button"
+                className="overview-card overview-card--highlight overview-card--clickable"
+                onClick={() => setRetirementDetailKey('required')}
+              >
                 <div className="overview-card-label">은퇴 시점 필요자금</div>
                 <div className="overview-card-value">{formatWon(rr.requiredAtRetirement)}</div>
-              </div>
-              <div className="overview-card overview-card--highlight">
+                <span className="overview-card-hint">내역 보기</span>
+              </button>
+              <button
+                type="button"
+                className="overview-card overview-card--highlight overview-card--clickable"
+                onClick={() => setRetirementDetailKey('ready')}
+              >
                 <div className="overview-card-label">은퇴 시점 예상 준비자산</div>
                 <div className="overview-card-value">{formatWon(rr.readyAssetsAtRetirement)}</div>
-              </div>
-              <div className="overview-card overview-card--risk">
+                <span className="overview-card-hint">내역 보기</span>
+              </button>
+              <button
+                type="button"
+                className="overview-card overview-card--risk overview-card--clickable"
+                onClick={() => setRetirementDetailKey('shortfall')}
+              >
                 <div className="overview-card-label">예상 부족자금</div>
                 <div className="overview-card-value">{formatWon(rr.shortfall)}</div>
-              </div>
+                <span className="overview-card-hint">내역 보기</span>
+              </button>
               <div className="overview-card overview-card--wide">
                 <div className="overview-card-label">현재 노후소득보장률</div>
                 <div className="overview-card-value">
@@ -587,74 +817,69 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               </div>
             </div>
 
-            <h3 className="ss-section-title">필요자금 비교</h3>
-            <div className="need-compare-bars">
-              {[
-                { key: 'required', label: '필요자금', value: rr.requiredAtRetirement, color: 'var(--red)' },
-                { key: 'ready', label: '준비자산', value: rr.readyAssetsAtRetirement, color: 'var(--navy-700)' },
-                { key: 'shortfall', label: '부족자금', value: rr.shortfall, color: 'var(--red)' },
-              ].map((bar) => (
-                <div className="need-compare-item" key={bar.key}>
-                  <div className="need-compare-row">
-                    <span className="need-compare-label">{bar.label}</span>
-                    <div className="need-compare-track">
-                      <div className="need-compare-fill" style={{ width: `${Math.min(100, (bar.value / requiredBarMax) * 100)}%`, background: bar.color }} />
-                    </div>
-                    <span className="need-compare-value">{formatWon(bar.value)}</span>
+            {retirementDetailKey && (
+              <div className="modal-overlay" onClick={() => setRetirementDetailKey(null)}>
+                <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header">
+                    <h4>
+                      {retirementDetailKey === 'required' && '은퇴 시점 필요자금 내역'}
+                      {retirementDetailKey === 'ready' && '은퇴 시점 예상 준비자산 내역'}
+                      {retirementDetailKey === 'shortfall' && '예상 부족자금 내역'}
+                    </h4>
+                    <button type="button" className="modal-close" onClick={() => setRetirementDetailKey(null)} aria-label="닫기">
+                      ✕
+                    </button>
                   </div>
-                  <details className="need-breakdown">
-                    <summary>{bar.label} 내역 보기</summary>
-                    {bar.key === 'required' && (
-                      <div className="need-breakdown-list">
-                        <DetailRow
-                          label={`현재 기준 생활비 (월 ${formatWon(livingCostNow)} × ${formatNumber(retirementMonths)}개월)`}
-                          value={formatWon(baseLivingCost)}
-                        />
-                        <DetailRow
-                          label={`은퇴까지 ${formatNumber(rr.yearsToRetirement)}년간 물가상승분${rr.inflationRate != null ? ` (연 ${formatPercent(rr.inflationRate)})` : ''}`}
-                          value={`+${formatWon(inflationIncrease)}`}
-                        />
-                        <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} bold />
-                      </div>
-                    )}
-                    {bar.key === 'ready' && (
-                      <div className="need-breakdown-list">
-                        {hasPreparationBreakdown ? (
-                          <>
-                            <DetailRow
-                              label={`현재 보유자산 ${formatWon(rr.currentReadyAssets)}의 은퇴 시점 예상금액`}
-                              value={formatWon(rr.currentAssetsAtRetirement)}
-                            />
-                            <DetailRow label="은퇴 전까지 추가 저축의 예상금액" value={formatWon(rr.futureSavingsAtRetirement)} />
-                            <DetailRow label="은퇴 시점 예상 준비자산" value={formatWon(rr.readyAssetsAtRetirement)} bold />
-                            <p className="need-breakdown-note">
-                              준비자산은 현재 자산 {formatWon(rr.currentReadyAssets)}과 앞으로의 저축을 은퇴까지 연 {formatPercent(rr.assumedReturnRate)}로 운용한다고 가정한 금액입니다.
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <DetailRow label="은퇴 시점 예상 준비자산" value={formatWon(rr.readyAssetsAtRetirement)} bold />
-                            <p className="need-breakdown-note">현재 금융·현금·연금자산과 은퇴 전까지의 추가 저축을 반영한 금액입니다.</p>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    {bar.key === 'shortfall' && (
-                      <div className="need-breakdown-list">
-                        <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} />
-                        <DetailRow label="은퇴 시점 예상 준비자산" value={`−${formatWon(rr.readyAssetsAtRetirement)}`} />
-                        <DetailRow label="예상 부족자금" value={formatWon(rr.shortfall)} bold />
-                      </div>
-                    )}
-                  </details>
+                  {retirementDetailKey === 'required' && (
+                    <div className="need-breakdown-list">
+                      <DetailRow
+                        label={`현재 기준 생활비 (월 ${formatWon(livingCostNow)} × ${formatNumber(retirementMonths)}개월)`}
+                        value={formatWon(baseLivingCost)}
+                      />
+                      <DetailRow
+                        label={`은퇴까지 ${formatNumber(rr.yearsToRetirement)}년간 물가상승분${rr.inflationRate != null ? ` (연 ${formatPercent(rr.inflationRate)})` : ''}`}
+                        value={`+${formatWon(inflationIncrease)}`}
+                      />
+                      <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} bold />
+                    </div>
+                  )}
+                  {retirementDetailKey === 'ready' && (
+                    <div className="need-breakdown-list">
+                      {hasPreparationBreakdown ? (
+                        <>
+                          <DetailRow
+                            label={`현재 보유자산 ${formatWon(rr.currentReadyAssets)}의 은퇴 시점 예상금액`}
+                            value={formatWon(rr.currentAssetsAtRetirement)}
+                          />
+                          <DetailRow label="은퇴 전까지 추가 저축의 예상금액" value={formatWon(rr.futureSavingsAtRetirement)} />
+                          <DetailRow label="은퇴 시점 예상 준비자산" value={formatWon(rr.readyAssetsAtRetirement)} bold />
+                          <p className="need-breakdown-note">
+                            준비자산은 현재 자산 {formatWon(rr.currentReadyAssets)}과 앞으로의 저축을 은퇴까지 연 {formatPercent(rr.assumedReturnRate)}로 운용한다고 가정한 금액입니다.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <DetailRow label="은퇴 시점 예상 준비자산" value={formatWon(rr.readyAssetsAtRetirement)} bold />
+                          <p className="need-breakdown-note">현재 금융·현금·연금자산과 은퇴 전까지의 추가 저축을 반영한 금액입니다.</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {retirementDetailKey === 'shortfall' && (
+                    <div className="need-breakdown-list">
+                      <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} />
+                      <DetailRow label="은퇴 시점 예상 준비자산" value={`−${formatWon(rr.readyAssetsAtRetirement)}`} />
+                      <DetailRow label="예상 부족자금" value={formatWon(rr.shortfall)} bold />
+                    </div>
+                  )}
+                  <p className="need-compare-assumptions">
+                    계산 가정: 은퇴까지 {formatNumber(rr.yearsToRetirement)}년 · 은퇴 후 {formatNumber(rr.retirementYears)}년({formatNumber(retirementMonths)}개월)
+                    {rr.inflationRate != null ? ` · 물가상승률 연 ${formatPercent(rr.inflationRate)}` : ''}
+                    {rr.assumedReturnRate != null ? ` · 예상 운용수익률 연 ${formatPercent(rr.assumedReturnRate)}` : ''}
+                  </p>
                 </div>
-              ))}
-            </div>
-            <p className="need-compare-assumptions">
-              계산 가정: 은퇴까지 {formatNumber(rr.yearsToRetirement)}년 · 은퇴 후 {formatNumber(rr.retirementYears)}년({formatNumber(retirementMonths)}개월)
-              {rr.inflationRate != null ? ` · 물가상승률 연 ${formatPercent(rr.inflationRate)}` : ''}
-              {rr.assumedReturnRate != null ? ` · 예상 운용수익률 연 ${formatPercent(rr.assumedReturnRate)}` : ''}
-            </p>
+              </div>
+            )}
 
             <h3 className="ss-section-title">은퇴시점 필요자금 · 소득공백기간</h3>
             {rr.incomeGap.notCalculable ? (
@@ -677,8 +902,8 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                 </div>
                 <div className="ss-card-list">
                   <div className="ss-card-row">
-                    <div className="ss-row-label">월 필요생활비</div>
-                    <div className="ss-row-value-sm">{formatWon(rr.monthlyIncomeCompare.livingCostMonthly)}</div>
+                    <div className="ss-row-label">은퇴 시점 월 필요생활비</div>
+                    <div className="ss-row-value-sm">{formatWon(rr.retirementLivingCostAtRetirement)}</div>
                   </div>
                   <div className="ss-card-row">
                     <div className="ss-row-label">공백기간 연 필요금액</div>

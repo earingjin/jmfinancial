@@ -253,11 +253,11 @@ describe('buildAssetDonut', () => {
 });
 
 describe('buildDebtDonut / buildSavingsDonut', () => {
-  it('shows a prompt (not a fabricated split) when total debt exists but no breakdown was entered', () => {
+  it('shows a single total slice (not a fabricated category split) when total debt exists but no breakdown was entered', () => {
     const donut = buildDebtDonut([], 5000);
-    expect(donut.hasBreakdown).toBe(false);
+    expect(donut.hasBreakdown).toBe(true);
     expect(donut.isEmpty).toBe(false);
-    expect(donut.items).toEqual([]);
+    expect(donut.items).toEqual([{ key: 'total', label: '총부채', value: 5000 }]);
   });
 
   it('shows the empty (no debt) state when total debt is genuinely 0', () => {
@@ -357,14 +357,17 @@ describe('buildRetirementReadiness', () => {
     expect(readiness.retirementIncomeZeroReason).toContain('수령 기간');
   });
 
-  it('computes the total funding needed to bridge the income gap (annual living cost x gap years)', () => {
+  it('computes the total funding needed to bridge the income gap using the inflation-adjusted living cost at retirement (not today\'s cost)', () => {
     const scoped = input({ basic: { birthYear: 1985, retirementAge: 60 }, expense: { retirementLivingCost: 200 } });
     const { aggregates, simulation, indicators } = calc(scoped);
     const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
-    // gapYears=5 (60 -> 65), living cost 200/월 -> 2400/년 -> 12000(1억2000) over 5 years
+    // gapYears=5 (60 -> 65). 공백기간 생활비도 "은퇴생활 필요자금"과 동일하게
+    // simulation.retirementLivingCostAtRetirement(물가반영, requiredAtRetirement 계산에 쓰인 값)를
+    // 그대로 재사용해야 한다 - retirementLivingCostNow(오늘 기준)를 쓰면 안 된다.
     expect(readiness.incomeGap.gapYears).toBe(5);
-    expect(readiness.incomeGap.annualGapCost).toBe(2400);
-    expect(readiness.incomeGap.totalGapFundingNeeded).toBe(12000);
+    expect(simulation.retirementLivingCostAtRetirement).toBeGreaterThan(simulation.retirementLivingCostNow);
+    expect(readiness.incomeGap.annualGapCost).toBe(simulation.retirementLivingCostAtRetirement * 12);
+    expect(readiness.incomeGap.totalGapFundingNeeded).toBe(readiness.incomeGap.annualGapCost * 5);
   });
 
   it('does not fabricate a funding total when the gap itself is not calculable', () => {
