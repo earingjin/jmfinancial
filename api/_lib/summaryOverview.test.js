@@ -414,7 +414,17 @@ describe('buildFinancialOverviewDetail - grouped card (income / expense / balanc
     const { aggregates } = calc(scoped);
     const detail = buildFinancialOverviewDetail(scoped, aggregates);
     expect(detail.expense.fixedTotal).toBeCloseTo(detail.expense.livingHousingInsurance + detail.expense.savings, 6);
+    expect(detail.expense.incomeMinusExpense).toBeCloseTo(detail.income.monthlyTotal - detail.expense.fixedTotal, 6);
     expect(detail.expense.savings).toBe(aggregates.monthlySavings);
+  });
+
+  it('exposes real estate and total debt separately while preserving the legacy net value', () => {
+    const scoped = input({ assets: { realEstateAssets: { total: 1000 }, debtStatus: { totalBalance: 9000, monthlyRepayment: 40 } } });
+    const { aggregates } = calc(scoped);
+    const detail = buildFinancialOverviewDetail(scoped, aggregates);
+    expect(detail.balance.realEstate).toBe(aggregates.realEstateTotal);
+    expect(detail.balance.totalDebt).toBe(aggregates.totalDebt);
+    expect(detail.balance.realEstateNetOfDebt).toBe(detail.balance.realEstate - detail.balance.totalDebt);
   });
 
   it('the three balance buckets (liquid / financial+pension / realEstate-debt) always sum exactly to net worth', () => {

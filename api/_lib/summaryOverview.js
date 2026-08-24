@@ -305,8 +305,9 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
 // ---------------------------------------------------------------------------
 // 3-2. 재무 현황 요약 카드(수입/지출/자산·부채 3그룹) - "자산현황 세부내역" 카드 전용.
 // 은퇴 전 현재 시점 스냅샷이라 연금소득은 포함하지 않는다(급여·사업·기타소득만).
-// balance의 세 항목은 항상 순자산과 정확히 일치하도록 구성한다(현금성 + 금융·연금 +
-// (부동산-총부채) = 총자산-총부채 = 순자산 - 부채를 실물자산에서만 상계하는 단순화).
+// 소득-지출금액과 자산·부채 항목은 화면에서 공식을 다시 만들지 않도록 서버 집계값으로 구성한다.
+// realEstateNetOfDebt는 과거 저장 결과 호환을 위해 유지하되, 신규 화면은 부동산자산과 총부채를
+// 각각 표시한다.
 // ---------------------------------------------------------------------------
 
 export function buildFinancialOverviewDetail(input, aggregates) {
@@ -319,7 +320,9 @@ export function buildFinancialOverviewDetail(input, aggregates) {
   ]);
   const liquidMissing = allBlank(input, ['assets.liquidAssets.total']);
   const financialPensionMissing = allBlank(input, ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other', 'assets.pensionAssets']);
-  const realEstateDebtMissing = allBlank(input, ['assets.realEstateAssets.total', 'assets.debtStatus.totalBalance']);
+  const realEstateMissing = allBlank(input, ['assets.realEstateAssets.total']);
+  const totalDebtMissing = allBlank(input, ['assets.debtStatus.totalBalance']);
+  const realEstateDebtMissing = realEstateMissing && totalDebtMissing;
 
   const salary = aggregates.salaryMonthly;
   const salaryItems = [
@@ -338,6 +341,7 @@ export function buildFinancialOverviewDetail(input, aggregates) {
 
   const livingHousingInsurance = aggregates.totalExpenseMonthlyExSavings;
   const savings = aggregates.monthlySavings;
+  const fixedTotal = livingHousingInsurance + savings;
 
   const liquid = aggregates.liquidAssets;
   const financialAndPension = aggregates.financialAssetsTotal + aggregates.pensionAssets;
@@ -352,11 +356,14 @@ export function buildFinancialOverviewDetail(input, aggregates) {
     expense: {
       livingHousingInsurance, livingHousingInsuranceMissing: expenseMissing,
       savings, savingsMissing,
-      fixedTotal: livingHousingInsurance + savings,
+      fixedTotal,
+      incomeMinusExpense: monthlyTotal - fixedTotal,
     },
     balance: {
       liquid, liquidMissing,
       financialAndPension, financialAndPensionMissing: financialPensionMissing,
+      realEstate: aggregates.realEstateTotal, realEstateMissing,
+      totalDebt: aggregates.totalDebt, totalDebtMissing,
       realEstateNetOfDebt, realEstateNetOfDebtMissing: realEstateDebtMissing,
       netWorth: aggregates.netWorth,
     },

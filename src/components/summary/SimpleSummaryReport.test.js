@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getFinancialHealthStatus } from './SimpleSummaryReport.jsx';
+import { getFinancialHealthStatus } from './summaryPresentation';
 
 // getFinancialHealthStatus는 새 재무점수·임계값을 만들지 않고, 서버가 이미 계산한
 // ratioClass(good/caution/risk)만 세어 화면 문구를 고르는 순수 표시 헬퍼다.

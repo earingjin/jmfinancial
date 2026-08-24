@@ -102,22 +102,22 @@ export default function ConclusionPage({ summary, simulation, scenarioComparison
         <>
           <h3 className="card-title" style={{ margin: '24px 0 10px' }}>대응방안 적용 전 / 후 비교</h3>
           <table className="grade-table">
-            <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>적용 전</th><th style={{ textAlign: 'right' }}>적용 후</th></tr></thead>
+            <thead><tr><th>항목</th><th>적용 전</th><th>적용 후</th></tr></thead>
             <tbody>
               <tr>
                 <td>노후소득보장률</td>
-                <td className="num" style={{ textAlign: 'right' }}>{before.indicator9.notCalculable ? '산출 불가' : formatPercent(before.indicator9.value)}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{after.indicator9.notCalculable ? '산출 불가' : formatPercent(after.indicator9.value)}</td>
+                <td className="num">{before.indicator9.notCalculable ? '산출 불가' : formatPercent(before.indicator9.value)}</td>
+                <td className="num">{after.indicator9.notCalculable ? '산출 불가' : formatPercent(after.indicator9.value)}</td>
               </tr>
               <tr>
                 <td>은퇴자산 준비율</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatPercent(before.simulation.preparationRate)}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatPercent(after.simulation.preparationRate)}</td>
+                <td className="num">{formatPercent(before.simulation.preparationRate)}</td>
+                <td className="num">{formatPercent(after.simulation.preparationRate)}</td>
               </tr>
               <tr>
                 <td>은퇴자산 부족금액</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatWon(before.simulation.shortfall)}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatWon(after.simulation.shortfall)}</td>
+                <td className="num">{formatWon(before.simulation.shortfall)}</td>
+                <td className="num">{formatWon(after.simulation.shortfall)}</td>
               </tr>
             </tbody>
           </table>

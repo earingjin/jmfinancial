@@ -19,43 +19,43 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
 
       <h3 className="card-title" style={{ marginBottom: 8 }}>현재 총수입금액</h3>
       <table className="grade-table compact">
-        <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>본인</th><th style={{ textAlign: 'right' }}>배우자</th></tr></thead>
+        <thead><tr><th>항목</th><th>본인</th><th>배우자</th></tr></thead>
         <tbody>
           <tr>
             <td>1. 퇴직 전 급여</td>
-            <td className="num" colSpan={2} style={{ textAlign: 'right' }}>{formatWon(agg.salaryMonthly)} (가구 합산)</td>
+            <td className="num" colSpan={2}>{formatWon(agg.salaryMonthly)} (가구 합산)</td>
           </tr>
           <tr>
             <td>2. 퇴직금(일시금)</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.self.severanceLumpsum)}</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.spouse.severanceLumpsum)}</td>
+            <td className="num">{formatWon(byPerson.self.severanceLumpsum)}</td>
+            <td className="num">{formatWon(byPerson.spouse.severanceLumpsum)}</td>
           </tr>
           <tr>
             <td>3. 국민연금(월)</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.self.nationalPensionMonthly)}</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.spouse.nationalPensionMonthly)}</td>
+            <td className="num">{formatWon(byPerson.self.nationalPensionMonthly)}</td>
+            <td className="num">{formatWon(byPerson.spouse.nationalPensionMonthly)}</td>
           </tr>
           <tr>
             <td>4. 퇴직연금(월)</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.self.severancePensionMonthly)}</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.spouse.severancePensionMonthly)}</td>
+            <td className="num">{formatWon(byPerson.self.severancePensionMonthly)}</td>
+            <td className="num">{formatWon(byPerson.spouse.severancePensionMonthly)}</td>
           </tr>
           <tr>
             <td>5. 개인연금(월)</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.self.personalPensionMonthly)}</td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(byPerson.spouse.personalPensionMonthly)}</td>
+            <td className="num">{formatWon(byPerson.self.personalPensionMonthly)}</td>
+            <td className="num">{formatWon(byPerson.spouse.personalPensionMonthly)}</td>
           </tr>
           <tr>
             <td>6. 현금성자산</td>
-            <td className="num" colSpan={2} style={{ textAlign: 'right' }}>{formatWon(agg.liquidAssets)} (가구 합산)</td>
+            <td className="num" colSpan={2}>{formatWon(agg.liquidAssets)} (가구 합산)</td>
           </tr>
           <tr>
             <td>7. 기타수입(월)</td>
-            <td className="num" colSpan={2} style={{ textAlign: 'right' }}>{formatWon(agg.otherIncomeMonthly)} (가구 합산)</td>
+            <td className="num" colSpan={2}>{formatWon(agg.otherIncomeMonthly)} (가구 합산)</td>
           </tr>
           <tr className="total-row">
             <td>순자산</td>
-            <td className="num" colSpan={2} style={{ textAlign: 'right' }}>{formatWon(agg.netWorth)} (가구 합산)</td>
+            <td className="num" colSpan={2}>{formatWon(agg.netWorth)} (가구 합산)</td>
           </tr>
         </tbody>
       </table>
@@ -91,22 +91,22 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
       <h4 className="num-section-title" style={{ fontSize: 14 }}><span className="num-badge">5-2</span>생애재무목표</h4>
       <div className="cost-table-grid" style={{ marginTop: 10 }}>
         <table className="grade-table compact">
-          <thead><tr><th>재무목표</th><th style={{ textAlign: 'right' }}>필요자금</th></tr></thead>
+          <thead><tr><th>재무목표</th><th>필요자금</th></tr></thead>
           <tbody>
-            <tr><td>자녀결혼 지원</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(goals.byCategory.marriageSupport)}</td></tr>
-            <tr><td>자녀교육비</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(goals.byCategory.education)}</td></tr>
-            <tr><td>기타</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(goals.byCategory.other)}</td></tr>
-            <tr className="total-row"><td>가구합계</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(goals.totalGoalAmount)}</td></tr>
+            <tr><td>자녀결혼 지원</td><td className="num">{formatWon(goals.byCategory.marriageSupport)}</td></tr>
+            <tr><td>자녀교육비</td><td className="num">{formatWon(goals.byCategory.education)}</td></tr>
+            <tr><td>기타</td><td className="num">{formatWon(goals.byCategory.other)}</td></tr>
+            <tr className="total-row"><td>가구합계</td><td className="num">{formatWon(goals.totalGoalAmount)}</td></tr>
           </tbody>
         </table>
         <table className="grade-table compact">
-          <thead><tr><th>소계</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
+          <thead><tr><th>소계</th><th>금액</th></tr></thead>
           <tbody>
-            <tr><td>총 필요한 자금</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(goals.totalGoalAmount)}</td></tr>
-            <tr><td>현재 준비된 자금</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(goals.preparedAmount)}</td></tr>
+            <tr><td>총 필요한 자금</td><td className="num">{formatWon(goals.totalGoalAmount)}</td></tr>
+            <tr><td>현재 준비된 자금</td><td className="num">{formatWon(goals.preparedAmount)}</td></tr>
             <tr className="total-row">
               <td>계</td>
-              <td className="num" style={{ textAlign: 'right' }}>
+              <td className="num">
                 {goalGap >= 0 ? `+${formatWon(goalGap)}` : `-${formatWon(-goalGap)}`}
               </td>
             </tr>

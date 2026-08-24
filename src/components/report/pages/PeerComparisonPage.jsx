@@ -19,24 +19,21 @@ function AgeBracketChart({ label, ageBrackets, valueKey }) {
   if (!ageBrackets || ageBrackets.length === 0) {
     return (
       <div>
-        <div className="report-metric-chart-title"><span>{label}</span></div>
+        <div className="report-metric-chart-title"><strong>{label}</strong></div>
         <div className="fine-print">연령대별 비교 데이터 산출 불가(새로 진단하면 표시됩니다).</div>
       </div>
     );
   }
-  const { chartMax, axisTicks } = computeChartScale(ageBrackets.flatMap((b) => [b.average, b[valueKey]]));
+  const { chartMax } = computeChartScale(ageBrackets.flatMap((b) => [b.average, b[valueKey]]));
 
   return (
     <div>
-      <div className="report-metric-chart-title"><span>{label}</span></div>
+      <div className="report-metric-chart-title"><strong>{label}</strong></div>
       <div className="asset-chart-legend">
         <span><i className="asset-legend-swatch asset-legend-average" />평균</span>
         <span><i className="asset-legend-swatch asset-legend-net" />우리집</span>
       </div>
-      <div className="asset-chart-with-axis">
-        <div className="asset-chart-axis" aria-hidden="true">
-          {axisTicks.map((tick) => <span key={tick}>{formatNumber(tick)}</span>)}
-        </div>
+      <div className="asset-chart-with-axis asset-chart-with-axis--labels-hidden">
         <div className="asset-chart-plot">
           {ageBrackets.map((b) => (
             <div key={b.key} className={`asset-chart-group${b.isUserBracket ? ' is-current' : ''}`}>
@@ -122,58 +119,65 @@ export default function PeerComparisonPage({ peerComparison, pageNumber, totalPa
         아래 연령대별 평균값은 2025년도 금융가계복지데이터를 근거로 한 데이터입니다.
       </div>
 
-      <div className="asset-chart-layout">
-        <div className="asset-chart-main">
-          <div className="asset-chart-legend">
-            <span><i className="asset-legend-swatch asset-legend-average" />평균</span>
-            <span><i className="asset-legend-swatch asset-legend-net" />순자산</span>
-          </div>
-          <div className="asset-chart-with-axis">
-            <div className="asset-chart-axis" aria-hidden="true">
-              {axisTicks.map((tick) => <span key={tick}>{formatNumber(tick)}</span>)}
+      <div className="peer-chart-card">
+        <div className="report-metric-chart-title"><strong>순자산</strong></div>
+        <div className="asset-chart-layout">
+          <div className="asset-chart-main">
+            <div className="asset-chart-legend">
+              <span><i className="asset-legend-swatch asset-legend-average" />평균</span>
+              <span><i className="asset-legend-swatch asset-legend-net" />순자산</span>
             </div>
-            <div className="asset-chart-plot">
-              {ageBrackets.map((b) => (
-                <div key={b.key} className={`asset-chart-group${b.isUserBracket ? ' is-current' : ''}`}>
-                  <div className="asset-chart-bars" style={{ height: MAX_BAR_HEIGHT }}>
-                    <div className="asset-chart-bar-wrap">
-                      <span className="asset-chart-value">{formatNumber(b.average)}</span>
-                      <div className="asset-chart-bar asset-chart-bar--average" style={{ height: Math.max(3, (b.average / chartMax) * MAX_BAR_HEIGHT) }} />
-                    </div>
-                    {b.isUserBracket && (
+            <div className="asset-chart-with-axis">
+              <div className="asset-chart-axis" aria-hidden="true">
+                {axisTicks.map((tick) => <span key={tick}>{formatNumber(tick)}</span>)}
+              </div>
+              <div className="asset-chart-plot">
+                {ageBrackets.map((b) => (
+                  <div key={b.key} className={`asset-chart-group${b.isUserBracket ? ' is-current' : ''}`}>
+                    <div className="asset-chart-bars" style={{ height: MAX_BAR_HEIGHT }}>
                       <div className="asset-chart-bar-wrap">
-                        <AssetValueBar value={b.netWorth} tone="net" chartMax={chartMax} contextLabel={`${b.label} 순자산`} />
+                        <span className="asset-chart-value">{formatNumber(b.average)}</span>
+                        <div className="asset-chart-bar asset-chart-bar--average" style={{ height: Math.max(3, (b.average / chartMax) * MAX_BAR_HEIGHT) }} />
                       </div>
-                    )}
+                      {b.isUserBracket && (
+                        <div className="asset-chart-bar-wrap">
+                          <AssetValueBar value={b.netWorth} tone="net" chartMax={chartMax} contextLabel={`${b.label} 순자산`} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="asset-chart-label">{b.label}</div>
                   </div>
-                  <div className="asset-chart-label">{b.label}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="asset-chart-focus">
+            <div className="asset-focus-plot">
+              {[
+                { label: '연령평균', value: focusCompare.peerAverage, tone: 'average' },
+                { label: '현재_우리집', value: focusCompare.userNetWorth, tone: 'net' },
+                { label: '60세', value: focusCompare.referenceAverage, tone: 'average' },
+              ].map((item) => (
+                <div key={item.label} className="asset-focus-item">
+                  <div className="asset-focus-bar-area">
+                    <AssetValueBar value={item.value} tone={item.tone} chartMax={chartMax} contextLabel={item.label} />
+                  </div>
+                  <div className="asset-chart-label">{item.label}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
-
-        <div className="asset-chart-focus">
-          <div className="asset-focus-plot">
-            {[
-              { label: '연령평균', value: focusCompare.peerAverage, tone: 'average' },
-              { label: '현재_우리집', value: focusCompare.userNetWorth, tone: 'net' },
-              { label: '60세', value: focusCompare.referenceAverage, tone: 'average' },
-            ].map((item) => (
-              <div key={item.label} className="asset-focus-item">
-                <div className="asset-focus-bar-area">
-                  <AssetValueBar value={item.value} tone={item.tone} chartMax={chartMax} contextLabel={item.label} />
-                </div>
-                <div className="asset-chart-label">{item.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="report-metric-chart-row">
-        <AgeBracketChart label="연소득" ageBrackets={peerComparison.incomeAgeBrackets} valueKey="annualIncome" />
-        <AgeBracketChart label="금융자산" ageBrackets={peerComparison.financialAssetsAgeBrackets} valueKey="financialAssets" />
+        <div className="peer-chart-card">
+          <AgeBracketChart label="연소득" ageBrackets={peerComparison.incomeAgeBrackets} valueKey="annualIncome" />
+        </div>
+        <div className="peer-chart-card">
+          <AgeBracketChart label="금융자산" ageBrackets={peerComparison.financialAssetsAgeBrackets} valueKey="financialAssets" />
+        </div>
       </div>
 
       <table className="grade-table compact peer-report-compare-table">
