@@ -32,6 +32,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [showProgressHint, setShowProgressHint] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const progressRef = useRef(null);
   const restingViewportHeightRef = useRef(0);
   const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
@@ -92,6 +93,12 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
       window.removeEventListener('resize', updateHint);
     };
   }, []);
+  useEffect(() => {
+    const updateScrolledState = () => setIsScrolled(window.scrollY > 100);
+    updateScrolledState();
+    window.addEventListener('scroll', updateScrolledState, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrolledState);
+  }, []);
   const moveToStep = (next) => {
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
     setDraftStep(resolved);
@@ -141,7 +148,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   };
 
   return (
-    <div className={`wizard${isKeyboardOpen ? ' wizard--keyboard-open' : ''}`}>
+    <div className={`wizard${isKeyboardOpen ? ' wizard--keyboard-open' : ''}${isScrolled ? ' wizard--scrolled' : ''}`}>
       <div className={`wizard-draft-status ${draftState.status === 'saved' ? 'is-saved' : ''} ${draftState.status === 'error' ? 'is-error' : ''}`} role="status">
         <span>
           {draftState.status === 'saving' && '임시 저장 중…'}
@@ -169,6 +176,14 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
           ))}
         </div>
         {showProgressHint && <span className="wizard-progress-more" aria-hidden="true">›</span>}
+        <button
+          type="button"
+          className="wizard-sticky-save"
+          disabled={draftState.status === 'saving' || !draftState.dirty}
+          onClick={() => void saveCurrentDraft().catch(() => {})}
+        >
+          {draftState.status === 'saving' ? '저장 중…' : draftState.status === 'error' ? '다시 저장' : '임시저장'}
+        </button>
       </div>
 
       <div className="wizard-body">

@@ -207,6 +207,7 @@ body:has(.simple-summary) .web-brand-logo { position: absolute; }
   box-shadow: 0 4px 10px -6px rgba(15, 27, 51, 0.25);
 }
 .wizard-progress-more { display: none; }
+.wizard-sticky-save { display: none; }
 .wizard-progress-item {
   position: relative;
   flex: 1;
@@ -984,6 +985,23 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   .wizard-progress-item:not(:last-child)::after { width: 8px; left: calc(100% + 1px); }
   .wizard-progress-dot { width: 23px; height: 23px; margin-bottom: 2px; font-size: 11px; }
   .wizard-progress-icon { width: 35px; height: 33px; margin-bottom: 3px; }
+
+  /* 본문을 스크롤할 때는 아이콘을 덜어내고 단계명과 즉시 저장 기능만 고정한다. */
+  .wizard--scrolled .wizard-progress-wrap { display: flex; align-items: center; gap: 6px; }
+  .wizard--scrolled .wizard-progress { flex: 1 1 auto; min-width: 0; gap: 4px; padding: 5px 6px; }
+  .wizard--scrolled .wizard-progress-item { flex: 0 0 48px; min-width: 48px; padding: 3px 2px; }
+  .wizard--scrolled .wizard-progress-item:not(:last-child)::after,
+  .wizard--scrolled .wizard-progress-icon { display: none; }
+  .wizard--scrolled .wizard-progress-dot { width: 22px; height: 22px; margin-bottom: 1px; font-size: 10px; }
+  .wizard--scrolled .wizard-progress-label { font-size: 10px; line-height: 1.15; }
+  .wizard--scrolled .wizard-progress-more { display: none; }
+  .wizard--scrolled .wizard-sticky-save {
+    display: block; flex: 0 0 auto; min-height: 42px; padding: 8px 10px;
+    border: 1px solid #e89a4a; border-radius: 10px; background: #fffaf2;
+    color: #b55a08; font: inherit; font-size: 11px; font-weight: 800; white-space: nowrap;
+    box-shadow: 0 4px 10px -6px rgba(15, 27, 51, .25); cursor: pointer;
+  }
+  .wizard--scrolled .wizard-sticky-save:disabled { opacity: .55; cursor: default; }
 
   /* 가상 키보드가 열린 동안에는 단계 이동 정보는 남기되, 입력 영역을 우선한다. */
   .wizard--keyboard-open .wizard-draft-status { display: none; }
