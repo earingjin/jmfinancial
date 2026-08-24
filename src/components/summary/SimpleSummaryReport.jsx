@@ -114,7 +114,7 @@ function FinancialOverviewCard({ od, aggregates }) {
 
       <div className="detail-group">
         <DetailRow
-          label="소득 - 지출금액"
+          label="월 소득 합계 - 고정지출 합계"
           bold subtotal
           value={formatWon(od.expense.incomeMinusExpense)}
           missing={incomeMinusExpenseMissing}
