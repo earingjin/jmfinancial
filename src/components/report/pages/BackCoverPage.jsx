@@ -1,6 +1,6 @@
 import heroImage from '../../../assets/리포트 표지 디자인.png';
 import jmCareerLogo from '../../../assets/제이엠커리어 로고.png';
-import reworkLogo from '../../../assets/rework-logo.png';
+import aiDataCenterLogo from '../../../assets/ai데이터센터로고.png';
 import { REPORT_DISCLAIMERS } from './legalNotices';
 
 export default function BackCoverPage({ generatedAt }) {
@@ -36,7 +36,7 @@ export default function BackCoverPage({ generatedAt }) {
         </div>
       </div>
       <div className="cover-footer">
-        <img className="footer-logo" src={reworkLogo} alt="AI RE:WORK CENTER" />
+        <img className="footer-logo" src={aiDataCenterLogo} alt="AI 데이터센터" />
         <span className="cover-copyright">Copyright &copy; {year}. JMCAREER. All rights reserved.</span>
       </div>
     </div>
