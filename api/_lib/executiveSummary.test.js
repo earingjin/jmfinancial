@@ -129,20 +129,31 @@ describe('buildExecutiveRetirementFeedback', () => {
 });
 
 describe('buildExecutiveFinancialPositionFeedback', () => {
-  it('interprets assets, debt, and net worth without creating a new ratio', () => {
+  it('reuses the existing debt burden ratio and explains what the asset structure means', () => {
     const text = buildExecutiveFinancialPositionFeedback({
       aggregates: { totalAssets: 10000, totalDebt: 2500, netWorth: 7500 },
+      indicators: [{ key: 'debtBurden', rawValue: 25, notCalculable: false }],
     });
-    expect(text).toContain('전체 자산 10,000만원');
-    expect(text).toContain('부채 2,500만원');
-    expect(text).toContain('순자산은 7,500만원');
+    expect(text).toContain('부채가 차지하는 비중은 25%');
+    expect(text).toContain('7,500만원이 내 자산으로 남습니다');
+    expect(text).toContain('이자 부담이 큰 부채부터');
+  });
+
+  it('formats amounts of 100 million won or more in 억 and 만원 units', () => {
+    const text = buildExecutiveFinancialPositionFeedback({
+      aggregates: { totalAssets: 48800, totalDebt: 5000, netWorth: 43800 },
+      indicators: [{ key: 'debtBurden', rawValue: 10.2459, notCalculable: false }],
+    });
+    expect(text).toContain('10.2%');
+    expect(text).toContain('4억 3,800만원');
+    expect(text).not.toContain('43,800만원');
   });
 
   it('prioritizes debt repayment when net worth is negative', () => {
     const text = buildExecutiveFinancialPositionFeedback({
       aggregates: { totalAssets: 3000, totalDebt: 5000, netWorth: -2000 },
     });
-    expect(text).toContain('부채가 자산보다 2,000만원 많습니다');
+    expect(text).toContain('부채가 자산보다 2,000만원 많아');
     expect(text).toContain('상환 순서');
   });
 });

@@ -284,7 +284,7 @@ function PeerMetricRow({ label, metric, unit }) {
       <div className="peer-row-numbers">
         <span>{label} <b>{formatValue(value)}</b></span>
         <span>또래 가구 평균 {formatValue(average)}</span>
-        {diffPercent != null && <span className={diffClass}>{diffPercent > 0 ? '+' : ''}{diffPercent}%</span>}
+        {diffPercent != null && <span className={diffClass}>{diffPercent > 0 ? '+' : ''}{formatPercent(diffPercent)}</span>}
       </div>
     </div>
   );
@@ -345,7 +345,7 @@ function RetirementCashFlowChart({ outlook }) {
                   {formatWon(item.livingExpense)}
                 </text>
               )}
-              <text className="retirement-chart-age" x={x(item.age)} y={height - 18}>{index === 0 ? `은퇴 ${item.age}세` : `${item.age}세`}</text>
+              <text className="retirement-chart-age" x={x(item.age)} y={height - 18}>{index === 0 ? `은퇴 ${formatNumber(item.age)}세` : `${formatNumber(item.age)}세`}</text>
             </g>
           );
         })}
@@ -376,7 +376,7 @@ function FiveYearOutlookTable({ outlook }) {
         <tbody>
           {outlook.map((item) => (
             <tr key={item.age}>
-              <th scope="row">{item.age}세</th>
+              <th scope="row">{formatNumber(item.age)}세</th>
               <td data-label="예상 월 생활비"><span className="future-cell-value">{item.livingExpense == null ? '산출 불가' : formatWon(item.livingExpense)}</span></td>
               <td data-label="예상 월 총소득">
                 <span className="future-cell-value">
@@ -384,7 +384,7 @@ function FiveYearOutlookTable({ outlook }) {
                   {item.incomeLabel && <small className="future-income-label">{item.incomeLabel}</small>}
                 </span>
               </td>
-              <td data-label="충당률"><span className="future-cell-value">{item.coverageRate == null ? '산출 불가' : `${Math.round(item.coverageRate)}%`}</span></td>
+              <td data-label="충당률"><span className="future-cell-value">{item.coverageRate == null ? '산출 불가' : formatPercent(item.coverageRate)}</span></td>
               <td data-label="월 차이" className={item.balance == null ? '' : item.balance < 0 ? 'is-shortfall' : 'is-surplus'}>
                 <span className="future-cell-value">{item.balance == null ? '산출 불가' : item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}</span>
               </td>
@@ -452,11 +452,11 @@ function RetirementAssetProjectionChart({ projection }) {
     .filter((age) => age > retirementAge && age < lifeExpectancy && age !== depletionAge);
   const lifeValue = points.find((p) => p.age === lifeExpectancy)?.endingBalance ?? null;
   const milestones = [
-    { age: retirementAge, label: `은퇴 ${retirementAge}세`, value: points[0].startingBalance, kind: 'start' },
+    { age: retirementAge, label: `은퇴 ${formatNumber(retirementAge)}세`, value: points[0].startingBalance, kind: 'start' },
     ...candidateAges.map((age) => ({
-      age, label: `${age}세`, value: points.find((p) => p.age === age)?.endingBalance ?? null, kind: 'mid',
+      age, label: `${formatNumber(age)}세`, value: points.find((p) => p.age === age)?.endingBalance ?? null, kind: 'mid',
     })),
-    { age: lifeExpectancy, label: `기대수명 ${lifeExpectancy}세`, value: lifeValue, kind: 'life' },
+    { age: lifeExpectancy, label: `기대수명 ${formatNumber(lifeExpectancy)}세`, value: lifeValue, kind: 'life' },
   ].filter((m) => m.value != null);
 
   const depletionValue = depletionAge != null ? (points.find((p) => p.age === depletionAge)?.endingBalance ?? 0) : null;
@@ -486,8 +486,8 @@ function RetirementAssetProjectionChart({ projection }) {
     });
 
   const altText = (depletionAge != null
-    ? `은퇴 자산잔액 그래프: 은퇴 ${retirementAge}세 시작자산 ${formatWon(points[0].startingBalance)}, ${depletionAge}세에 자산 소진 예상, 기대수명 ${lifeExpectancy}세`
-    : `은퇴 자산잔액 그래프: 은퇴 ${retirementAge}세 시작자산 ${formatWon(points[0].startingBalance)}, 기대수명 ${lifeExpectancy}세까지 유지`)
+    ? `은퇴 자산잔액 그래프: 은퇴 ${formatNumber(retirementAge)}세 시작자산 ${formatWon(points[0].startingBalance)}, ${formatNumber(depletionAge)}세에 자산 소진 예상, 기대수명 ${formatNumber(lifeExpectancy)}세`
+    : `은퇴 자산잔액 그래프: 은퇴 ${formatNumber(retirementAge)}세 시작자산 ${formatWon(points[0].startingBalance)}, 기대수명 ${formatNumber(lifeExpectancy)}세까지 유지`)
     + (lumpSumMarkers.length > 0 ? `, 목돈지출 ${lumpSumMarkers.length}건 표시(아래 예상 목돈지출 목록 참고)` : '');
 
   return (
@@ -545,7 +545,7 @@ function RetirementAssetProjectionChart({ projection }) {
               style={{ textAnchor: edgeAnchor(depletionAge) }}
               x={x(depletionAge) + edgeDx(depletionAge)} y={height - 6}
             >
-              {depletionAge}세
+              {formatNumber(depletionAge)}세
             </text>
           </g>
         )}
@@ -746,7 +746,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         <h2 id="ss-h-peer" className="simple-summary-title">또래와 비교한 나의 위치</h2>
         <p className="simple-summary-subtitle">같은 연령대와 비교해 현재 재무 수준을 확인해 보세요.</p>
         <div className="peer-age-summary" aria-label="또래 비교 연령 기준">
-          <span>내 연령 <strong>{peerUserAge != null ? `${peerUserAge}세` : '미입력'}</strong></span>
+          <span>내 연령 <strong>{peerUserAge != null ? `${formatNumber(peerUserAge)}세` : '미입력'}</strong></span>
           <span>비교 또래 연령군 <strong>{peerBracketLabel}</strong></span>
         </div>
         {peerComparison.benchmarkMeta && (
@@ -773,11 +773,11 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
             <div className="overview-card-grid retirement-card-grid">
               <div className="overview-card">
                 <div className="overview-card-label">예상 은퇴 나이</div>
-                <div className="overview-card-value">{rr.retirementAge}세</div>
+                <div className="overview-card-value">{formatNumber(rr.retirementAge)}세</div>
               </div>
               <div className="overview-card">
                 <div className="overview-card-label">은퇴까지 남은 기간</div>
-                <div className="overview-card-value">{rr.yearsToRetirement}년</div>
+                <div className="overview-card-value">{formatNumber(rr.yearsToRetirement)}년</div>
               </div>
               <div className="overview-card">
                 <div className="overview-card-label">은퇴 후 생활 기간</div>
@@ -936,15 +936,15 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               <div className="detail-card gap-timeline-card">
                 <div className="gap-timeline">
                   <div className="gap-timeline-point">
-                    <div className="gap-timeline-age">{rr.retirementAge}세</div>
+                    <div className="gap-timeline-age">{formatNumber(rr.retirementAge)}세</div>
                     <div className="gap-timeline-label">정년(예정)</div>
                   </div>
                   <div className="gap-timeline-track">
-                    <div className="gap-timeline-badge">{rr.incomeGap.gapYears}년 공백</div>
+                    <div className="gap-timeline-badge">{formatNumber(rr.incomeGap.gapYears)}년 공백</div>
                     <div className="gap-timeline-line" aria-hidden="true" />
                   </div>
                   <div className="gap-timeline-point">
-                    <div className="gap-timeline-age">{rr.incomeGap.nationalPensionStartAge}세</div>
+                    <div className="gap-timeline-age">{formatNumber(rr.incomeGap.nationalPensionStartAge)}세</div>
                     <div className="gap-timeline-label">국민연금 개시</div>
                   </div>
                 </div>
@@ -958,7 +958,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                     <div className="ss-row-value-sm">{formatWon(rr.incomeGap.annualGapCost)}</div>
                   </div>
                   <div className="ss-card-row ss-total-row">
-                    <div className="ss-row-label"><b>{rr.incomeGap.gapYears}년간 총 필요금액</b></div>
+                    <div className="ss-row-label"><b>{formatNumber(rr.incomeGap.gapYears)}년간 총 필요금액</b></div>
                     <div className="ss-row-value-sm gap-total-value">{formatWon(rr.incomeGap.totalGapFundingNeeded)}</div>
                   </div>
                 </div>
@@ -966,7 +966,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               </div>
             ) : (
               <p className="ss-gap-note">
-                은퇴 시점({rr.retirementAge}세)에 이미 국민연금 수급개시연령({rr.incomeGap.nationalPensionStartAge}세)을 지나 있어
+                은퇴 시점({formatNumber(rr.retirementAge)}세)에 이미 국민연금 수급개시연령({formatNumber(rr.incomeGap.nationalPensionStartAge)}세)을 지나 있어
                 별도의 소득공백기간이 없습니다.
               </p>
             )}
@@ -991,7 +991,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               <div className="overview-card overview-card--highlight">
                 <div className="overview-card-label">{assetProjection.assetsRemainAtLifeExpectancy ? '예상 자산 유지' : '최초 자산 소진 예상'}</div>
                 <div className="overview-card-value">
-                  {assetProjection.assetsRemainAtLifeExpectancy ? '기대수명까지' : `${assetProjection.depletionAge}세`}
+                  {assetProjection.assetsRemainAtLifeExpectancy ? '기대수명까지' : `${formatNumber(assetProjection.depletionAge)}세`}
                 </div>
                 {!assetProjection.assetsRemainAtLifeExpectancy && assetProjection.recoveredAfterDepletion && (
                   <p className="overview-card-formula">이후 소득 증가로 다시 회복될 것으로 예상됩니다.</p>
@@ -999,7 +999,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               </div>
               <div className="overview-card">
                 <div className="overview-card-label">기대수명</div>
-                <div className="overview-card-value">{assetProjection.lifeExpectancy}세</div>
+                <div className="overview-card-value">{formatNumber(assetProjection.lifeExpectancy)}세</div>
               </div>
             </div>
 
@@ -1018,7 +1018,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                   .flatMap((p) => p.lumpSumEvents.map((ev, i) => ({ ...ev, age: p.age, key: `${p.age}-${i}` })))
                   .map((ev) => (
                     <div className="asset-lumpsum-summary-row" key={ev.key}>
-                      <span className="asset-lumpsum-age">{ev.age}세</span>
+                      <span className="asset-lumpsum-age">{formatNumber(ev.age)}세</span>
                       <span className="asset-lumpsum-name">{ev.name}</span>
                       <span className="asset-lumpsum-amount">{formatWon(ev.amount)}</span>
                     </div>
@@ -1084,9 +1084,9 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
             <div className="future-card-grid">
               {future.targets.map((item) => (
                 <article className={`future-card future-card--${item.status}`} key={item.age}>
-                  <div className="future-card-age">{item.age}세</div>
+                  <div className="future-card-age">{formatNumber(item.age)}세</div>
                   <span className="future-card-label">연금소득 기준 생활비 충당률</span>
-                  <strong className="future-card-rate">{item.coverageRate == null ? '산출 불가' : `${Math.round(item.coverageRate)}%`}</strong>
+                  <strong className="future-card-rate">{item.coverageRate == null ? '산출 불가' : formatPercent(item.coverageRate)}</strong>
                   <dl>
                     <div><dt>예상 생활비</dt><dd>{item.livingExpense == null ? '데이터 부족' : formatWon(item.livingExpense)}</dd></div>
                     <div><dt>예상 연금소득</dt><dd>{item.pensionIncome == null ? '산출 불가' : formatWon(item.pensionIncome)}</dd></div>
@@ -1149,7 +1149,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               {future.purchasingPower.map((item, index) => (
                 <div className="future-purchasing-step" key={item.years}>
                   {index > 0 && <span className="future-flow-arrow" aria-hidden="true">→</span>}
-                  <span className="future-purchasing-label">{item.years === 0 ? '현재 순자산' : `${item.years}년 후 필요금액`}</span>
+                  <span className="future-purchasing-label">{item.years === 0 ? '현재 순자산' : `${formatNumber(item.years)}년 후 필요금액`}</span>
                   <strong>{formatWon(item.requiredAmount)}</strong>
                   {item.years > 0 && <small>동일 구매력 유지 목표</small>}
                 </div>

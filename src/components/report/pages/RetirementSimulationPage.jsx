@@ -1,7 +1,7 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import AIFeedbackBox from './AIFeedbackBox';
-import { formatWon, formatPercent, round1 } from '../../../utils/format';
+import { formatNumber, formatWon, formatPercent } from '../../../utils/format';
 
 // 국민연금 수급개시연령은 출생연도별로 법정 고정값이다(계산치가 아닌 참고 자료).
 // 정년(고정 60세)과 수급개시연령 사이의 "소득공백기간"을 함께 보여준다.
@@ -19,11 +19,12 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
   const pensionCohort = PENSION_COHORTS.find((c) => birthYear >= c.from && birthYear <= c.to);
 
   const bars = [
-    { label: `현재(${simulation.currentAge}세)\n현금·금융·연금자산`, value: currentReadyAssets, color: '#d9c7a3' },
-    { label: `은퇴시점(${retirementAge}세)\n자체 준비자산`, value: simulation.readyAssetsAtRetirement, color: 'var(--navy-700)' },
-    { label: `은퇴시점(${retirementAge}세)\n필요 준비자산`, value: simulation.requiredAtRetirement, color: 'var(--red)' },
+    { label: `현재(${formatNumber(simulation.currentAge)}세)\n현금·금융·연금자산`, value: currentReadyAssets, color: '#d9c7a3' },
+    { label: `은퇴시점(${formatNumber(retirementAge)}세)\n자체 준비자산`, value: simulation.readyAssetsAtRetirement, color: 'var(--navy-700)' },
+    { label: `은퇴시점(${formatNumber(retirementAge)}세)\n필요 준비자산`, value: simulation.requiredAtRetirement, color: 'var(--red)' },
   ];
   const maxBarValue = Math.max(...bars.map((b) => b.value), 1);
+  const chartMaxValue = maxBarValue * 1.4;
   const MAX_BAR_HEIGHT = 90;
 
   return (
@@ -35,7 +36,7 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
         <div className="lead">부족할 것으로 예상돼요</div>
       </div>
       <div className="shortfall-sub">
-        {retirementAge}세부터 {round1(retirementAge + simulation.retirementYears)}세까지 매년 목표 생활비(월 {formatWon(retirementLivingCost)})를 감당하려면<br />
+        {formatNumber(retirementAge)}세부터 {formatNumber(retirementAge + simulation.retirementYears)}세까지 매년 목표 생활비(월 {formatWon(retirementLivingCost)})를 감당하려면<br />
         은퇴시점에 준비자산 {formatWon(simulation.requiredAtRetirement)}이 필요해요
       </div>
 
@@ -43,7 +44,7 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
         {bars.map((bar) => (
           <div className="bar-col" key={bar.label}>
             <div className="bar-value-tag">{formatWon(bar.value)}</div>
-            <div className="bar-fill" style={{ height: `${Math.max(4, (bar.value / maxBarValue) * MAX_BAR_HEIGHT)}px`, background: bar.color }} />
+            <div className="bar-fill" style={{ height: `${Math.max(4, (bar.value / chartMaxValue) * MAX_BAR_HEIGHT)}px`, background: bar.color }} />
             <div className="bar-caption">{bar.label.split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}</div>
           </div>
         ))}

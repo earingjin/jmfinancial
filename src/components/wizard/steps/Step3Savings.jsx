@@ -15,7 +15,7 @@ const SAVINGS_CATEGORIES = [
   { key: 'variableAnnuity', label: '변액연금', assetLink: { type: 'pensionBreakdown', field: 'variableAnnuity' }, assetLinkLabel: '연금자산 > 변액연금' },
   { key: 'pensionSavings', label: '연금저축', assetLink: { type: 'pensionBreakdown', field: 'pensionSavingsAccount' }, assetLinkLabel: '연금자산 > 연금저축계좌' },
   { key: 'irp', label: 'IRP', assetLink: { type: 'pensionBreakdown', field: 'irp' }, assetLinkLabel: '연금자산 > IRP개인퇴직계좌' },
-  { key: 'subscription', label: '청약', assetLink: { type: 'liquidCustomItem', name: '청약' }, assetLinkLabel: '현금성 자산의 "청약" 추가 항목' },
+  { key: 'subscription', label: '청약', assetLink: { type: 'liquidBreakdown', field: 'subscription' }, assetLinkLabel: '현금성 자산 > 청약' },
   { key: 'stocks', label: '주식', assetLink: { type: 'direct', path: 'assets.financialAssets.stocks' }, assetLinkLabel: '금융자산 > 주식' },
   { key: 'parkingAccount', label: '파킹통장', assetLink: { type: 'liquidCustomItem', name: '파킹통장' }, assetLinkLabel: '현금성 자산의 "파킹통장" 추가 항목' },
 ];

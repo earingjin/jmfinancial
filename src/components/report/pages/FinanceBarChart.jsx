@@ -1,4 +1,4 @@
-import { formatWon, formatNumber } from '../../../utils/format';
+import { formatWon } from '../../../utils/format';
 
 function getNiceScale(maxValue, tickCount = 4) {
   const rawStep = Math.max(maxValue, 1) / tickCount;
@@ -12,7 +12,7 @@ function getNiceScale(maxValue, tickCount = 4) {
   return { axisMax, ticks: Array.from({ length: tickCount + 1 }, (_, index) => axisMax - (step * index)) };
 }
 
-export default function FinanceBarChart({ bars, tickStep, tickCount = 4, zeroLabel = '0', showValues = false, headroom = 0 }) {
+export default function FinanceBarChart({ bars, tickStep, tickCount = 4, showValues = false, headroom = 0.4 }) {
   const maxValue = Math.max(...bars.map((b) => Math.max(0, b.value)), 1);
   const safeHeadroom = Math.max(0, headroom);
   const scaledMaxValue = maxValue * (1 + safeHeadroom);
@@ -39,9 +39,6 @@ export default function FinanceBarChart({ bars, tickStep, tickCount = 4, zeroLab
     <div className="finance-bar-chart">
       <div className="finance-chart-unit">(단위: 만원)</div>
       <div className="finance-chart-body">
-        <div className="finance-chart-axis" aria-hidden="true">
-          {ticks.map((tick) => <span key={tick}>{tick === 0 ? zeroLabel : formatNumber(tick)}</span>)}
-        </div>
         <div className="finance-chart-plot">
           <div className="finance-chart-grid" aria-hidden="true">
             {ticks.map((tick) => <i key={tick} />)}

@@ -1,6 +1,6 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
-import { formatWon, formatPercent } from '../../../utils/format';
+import { formatNumber, formatWon, formatPercent } from '../../../utils/format';
 import { formatAssetProjectionOutlook, formatAssetProjectionReason } from '../../summary/summaryPresentation';
 
 // 웹 요약 화면의 RetirementAssetProjectionChart와 동일한 규칙을 그대로 옮긴다: x축 나이 N은
@@ -24,10 +24,8 @@ function AssetProjectionChart({ projection }) {
   const maxAge = lifeExpectancy;
   const dataMax = Math.max(...chartPoints.map((p) => p.value), 1);
   const dataMin = Math.min(...chartPoints.map((p) => p.value), 0);
-  const dataRange = dataMax - dataMin;
-  const padding = dataRange > 0 ? dataRange * 0.15 : dataMax * 0.05;
-  const minValue = depletionAge != null ? 0 : Math.max(0, dataMin - padding);
-  const maxValue = dataMax + padding;
+  const minValue = depletionAge != null ? 0 : Math.max(0, dataMin);
+  const maxValue = dataMax * 1.4;
   const x = (age) => plot.left + ((age - minAge) / Math.max(1, maxAge - minAge)) * plotWidth;
   const y = (value) => plot.top + plotHeight - ((Math.max(minValue, value) - minValue) / (maxValue - minValue)) * plotHeight;
 
@@ -65,7 +63,7 @@ function AssetProjectionChart({ projection }) {
                 {formatWon(value)}
               </text>
               <text className="age-label" style={{ textAnchor: edgeAnchor(age) }} x={x(age) + edgeDx(age)} y={height - 13}>
-                {age === minAge ? `은퇴 ${age}세` : age === maxAge ? `기대수명 ${age}세` : `${age}세`}
+                {age === minAge ? `은퇴 ${formatNumber(age)}세` : age === maxAge ? `기대수명 ${formatNumber(age)}세` : `${formatNumber(age)}세`}
               </text>
             </g>
           );
@@ -77,7 +75,7 @@ function AssetProjectionChart({ projection }) {
               ⚠ 자산 소진
             </text>
             <text className="age-label" style={{ textAnchor: edgeAnchor(depletionAge) }} x={x(depletionAge) + edgeDx(depletionAge)} y={height - 13}>
-              {depletionAge}세
+              {formatNumber(depletionAge)}세
             </text>
           </g>
         )}
@@ -116,11 +114,11 @@ export default function RetirementAssetProjectionReportPage({ retirementAssetPro
             </div>
             <div className="is-highlight">
               <span>{projection.assetsRemainAtLifeExpectancy ? '예상 자산 유지' : '최초 자산 소진 예상'}</span>
-              <strong>{projection.assetsRemainAtLifeExpectancy ? '기대수명까지' : `${projection.depletionAge}세`}</strong>
+              <strong>{projection.assetsRemainAtLifeExpectancy ? '기대수명까지' : `${formatNumber(projection.depletionAge)}세`}</strong>
             </div>
             <div>
               <span>기대수명</span>
-              <strong>{projection.lifeExpectancy}세</strong>
+              <strong>{formatNumber(projection.lifeExpectancy)}세</strong>
             </div>
           </div>
 
@@ -138,7 +136,7 @@ export default function RetirementAssetProjectionReportPage({ retirementAssetPro
                 <tbody>
                   {lumpSumEvents.map((ev) => (
                     <tr key={ev.key}>
-                      <td className="num">{ev.age}세</td>
+                      <td className="num">{formatNumber(ev.age)}세</td>
                       <td>{ev.name}</td>
                       <td className="num">{formatWon(ev.amount)}</td>
                     </tr>

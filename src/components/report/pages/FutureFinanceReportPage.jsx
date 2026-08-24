@@ -1,6 +1,6 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
-import { formatWon } from '../../../utils/format';
+import { formatNumber, formatPercent, formatWon } from '../../../utils/format';
 
 export default function FutureFinanceReportPage({ futureFinance, pageNumber, totalPages }) {
   const targets = futureFinance?.targets || [];
@@ -23,9 +23,9 @@ export default function FutureFinanceReportPage({ futureFinance, pageNumber, tot
           <div className="report-future-card-grid">
             {targets.map((item) => (
               <article className="report-future-card" key={item.age}>
-                <strong>{item.age}세</strong>
+                <strong>{formatNumber(item.age)}세</strong>
                 <span>연금소득 기준 생활비 충당률</span>
-                <b>{item.coverageRate == null ? '산출 불가' : `${Math.round(item.coverageRate)}%`}</b>
+                <b>{item.coverageRate == null ? '산출 불가' : formatPercent(item.coverageRate)}</b>
                 <dl>
                   <div><dt>예상 월 생활비</dt><dd>{item.livingExpense == null ? '-' : formatWon(item.livingExpense)}</dd></div>
                   <div><dt>예상 월 연금소득</dt><dd>{item.pensionIncome == null ? '-' : formatWon(item.pensionIncome)}</dd></div>
@@ -45,7 +45,7 @@ export default function FutureFinanceReportPage({ futureFinance, pageNumber, tot
           <div className="report-purchasing-grid">
             {purchasingPower.map((item) => (
               <div key={item.years}>
-                <span>{item.years === 0 ? '현재 순자산' : `${item.years}년 후`}</span>
+                <span>{item.years === 0 ? '현재 순자산' : `${formatNumber(item.years)}년 후`}</span>
                 <strong>{formatWon(item.requiredAmount)}</strong>
               </div>
             ))}

@@ -13,6 +13,7 @@ const LIQUID_ASSET_CATEGORIES = [
   { key: 'deposit', label: '예금' },
   { key: 'savings', label: '적금' },
   { key: 'cma', label: 'CMA' },
+  { key: 'subscription', label: '청약' },
   { key: 'emergencyFund', label: '비상금' },
 ];
 

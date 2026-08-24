@@ -127,7 +127,10 @@ export default async function handler(req, res) {
       indicators: enriched.indicators,
       aggregates,
     });
-    const financialPositionFeedback = buildExecutiveFinancialPositionFeedback({ aggregates });
+    const financialPositionFeedback = buildExecutiveFinancialPositionFeedback({
+      aggregates,
+      indicators: enriched.indicators,
+    });
     const savingsInvestmentFeedback = buildSavingsInvestmentFeedback({
       indicators: enriched.indicators,
       age: getCurrentAge(input),

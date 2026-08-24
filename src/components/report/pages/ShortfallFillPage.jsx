@@ -1,6 +1,6 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
-import { formatWon } from '../../../utils/format';
+import { formatNumber, formatWon } from '../../../utils/format';
 
 export default function ShortfallFillPage({ simulation, aggregates: agg, retirementReadiness, pageNumber, totalPages }) {
   const byPerson = agg.retirementIncomeByPerson;
@@ -83,8 +83,8 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
       {retirementReadiness?.incomeGap && !retirementReadiness.incomeGap.notCalculable && (
         <div className="report-income-gap-box">
           <strong>정년 이후 국민연금 수령 전 소득공백</strong>
-          <span>{retirementReadiness.retirementAge}세 은퇴 → {retirementReadiness.incomeGap.nationalPensionStartAge}세 국민연금 개시</span>
-          <span>공백기간 연 필요금액 {formatWon(retirementReadiness.incomeGap.annualGapCost)} × {retirementReadiness.incomeGap.gapYears}년 = 총 {formatWon(retirementReadiness.incomeGap.totalGapFundingNeeded)}</span>
+          <span>{formatNumber(retirementReadiness.retirementAge)}세 은퇴 → {formatNumber(retirementReadiness.incomeGap.nationalPensionStartAge)}세 국민연금 개시</span>
+          <span>공백기간 연 필요금액 {formatWon(retirementReadiness.incomeGap.annualGapCost)} × {formatNumber(retirementReadiness.incomeGap.gapYears)}년 = 총 {formatWon(retirementReadiness.incomeGap.totalGapFundingNeeded)}</span>
         </div>
       )}
 
