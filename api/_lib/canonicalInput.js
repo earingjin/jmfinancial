@@ -2,7 +2,7 @@ const n = (value) => Number(value) || 0;
 const sum = (items, pick) => (items || []).reduce((total, item) => total + n(pick(item)), 0);
 
 const LIVING_KEYS = ['rent', 'maintenance', 'utilities', 'fuel', 'carInsurance', 'clothing', 'fourInsurances', 'food', 'communication', 'medical', 'subscription'];
-const LIQUID_KEYS = ['deposit', 'savings', 'cma', 'emergencyFund'];
+const LIQUID_KEYS = ['deposit', 'savings', 'cma', 'subscription', 'emergencyFund'];
 const SAVINGS_KEYS = ['installment', 'isa', 'variableAnnuity', 'pensionSavings', 'irp', 'subscription', 'stocks', 'parkingAccount'];
 const DEBT_KEYS = ['mortgage', 'depositLoan', 'businessLoan', 'buildingLoan', 'carLoan', 'studentLoan', 'otherLoan'];
 
@@ -34,6 +34,13 @@ export function buildCanonicalInput(input) {
   result.expense.healthInsurance.monthly = sum(result.expense.healthInsurance.items, (item) => item.monthly);
 
   const liquid = result.assets.liquidAssets;
+  // 과거 저장 데이터에서는 청약이 기본 항목이 아니라 customItems의 이름 기반 항목이었다.
+  // 신규 기본 필드로 한 번만 옮겨 합계 중복을 막고, 이후 화면과 서버가 같은 구조를 사용하게 한다.
+  const legacySubscription = (liquid.customItems || []).find((item) => item.name === '청약');
+  if (!n(liquid.breakdown.subscription) && legacySubscription) {
+    liquid.breakdown.subscription = n(legacySubscription.amount);
+  }
+  liquid.customItems = (liquid.customItems || []).filter((item) => item.name !== '청약');
   liquid.total = LIQUID_KEYS.reduce((total, key) => total + n(liquid.breakdown[key]), 0) + sum(liquid.customItems, (item) => item.amount);
 
   const financial = result.assets.financialAssets;

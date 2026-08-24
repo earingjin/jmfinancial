@@ -1,7 +1,7 @@
 import PageFrame from './PageFrame';
 import AIFeedbackBox from './AIFeedbackBox';
 import FinanceBarChart from './FinanceBarChart';
-import { formatWon, formatPercent, round1 } from '../../../utils/format';
+import { formatNumber, formatWon, formatPercent, round1 } from '../../../utils/format';
 
 // 카드별 등급(우수/양호/보통/위험) 판정 기준은 아직 정의되어 있지 않아 자리표시자("-")로 남겨둔다.
 // 실제 판정 로직이 마련되면 이 자리에 값을 채워 넣는다.
@@ -64,7 +64,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
     ? '산출 불가'
     : retirementAssetProjection.assetsRemainAtLifeExpectancy
       ? '기대수명까지 유지'
-      : `${retirementAssetProjection.depletionAge}세 소진 예상`;
+      : `${formatNumber(retirementAssetProjection.depletionAge)}세 소진 예상`;
   const retirementFeedback = fb.retirement || {};
   const retirementStatusInterpretation = retirementFeedback.cashFlow || (simulation.shortfall > 0
     ? `현재 계획에서는 은퇴 시 필요한 자금보다 ${formatWon(simulation.shortfall)} 부족할 것으로 예상됩니다. 지금의 저축을 유지할 수 있는지 확인하고 추가 준비 계획을 살펴보세요.`
@@ -73,7 +73,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
     ? '현재 정보만으로는 은퇴 후 자산이 언제까지 유지되는지 판단하기 어렵습니다. 관련 정보를 확인한 뒤 다시 점검해보세요.'
     : retirementAssetProjection.assetsRemainAtLifeExpectancy
       ? '예상 소득과 생활비를 반영해도 기대수명까지 준비자산이 남을 전망입니다. 지금의 관리 흐름을 유지하며 정기적으로 점검하세요.'
-      : `현재 계획대로라면 준비자산이 ${retirementAssetProjection.depletionAge}세 무렵 소진될 것으로 예상됩니다. 생활비와 목돈지출, 추가 저축 중 조정 가능한 항목을 살펴보세요.`);
+      : `현재 계획대로라면 준비자산이 ${formatNumber(retirementAssetProjection.depletionAge)}세 무렵 소진될 것으로 예상됩니다. 생활비와 목돈지출, 추가 저축 중 조정 가능한 항목을 살펴보세요.`);
 
   return (
     <PageFrame eyebrow="Executive Summary" title="핵심 이슈 & 종합 결과" pageNumber={pageNumber} totalPages={totalPages}>
@@ -89,21 +89,21 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
         <tbody>
           <tr>
             <td>본인</td>
-            <td className="num">{familyAges.self.age ? `${familyAges.self.age}세` : '-'}</td>
-            <td className="num">{retirementAge ? `${retirementAge}세` : '-'}</td>
-            <td className="num">{retirementEndAge ? `${retirementEndAge}세` : '-'}</td>
+            <td className="num">{familyAges.self.age ? `${formatNumber(familyAges.self.age)}세` : '-'}</td>
+            <td className="num">{retirementAge ? `${formatNumber(retirementAge)}세` : '-'}</td>
+            <td className="num">{retirementEndAge ? `${formatNumber(retirementEndAge)}세` : '-'}</td>
           </tr>
           <tr>
             <td>배우자</td>
-            <td className="num">{familyAges.spouse?.age != null ? `${familyAges.spouse.age}세` : '-'}</td>
-            <td className="num">{familyAges.spouse?.retirementAge != null ? `${familyAges.spouse.retirementAge}세` : '-'}</td>
-            <td className="num">{familyAges.spouse?.lifeExpectancy != null ? `${familyAges.spouse.lifeExpectancy}세` : '-'}</td>
+            <td className="num">{familyAges.spouse?.age != null ? `${formatNumber(familyAges.spouse.age)}세` : '-'}</td>
+            <td className="num">{familyAges.spouse?.retirementAge != null ? `${formatNumber(familyAges.spouse.retirementAge)}세` : '-'}</td>
+            <td className="num">{familyAges.spouse?.lifeExpectancy != null ? `${formatNumber(familyAges.spouse.lifeExpectancy)}세` : '-'}</td>
           </tr>
           {/* 자녀를 입력하지 않았으면 빈 "자녀1/2/3" 행을 만들지 않는다 - 실제로 입력된 자녀 수만큼만 표시 */}
           {familyAges.children.map((child, i) => (
             <tr key={i}>
               <td>자녀{i + 1}</td>
-              <td className="num">{child?.age != null ? `${child.age}세` : '-'}</td>
+              <td className="num">{child?.age != null ? `${formatNumber(child.age)}세` : '-'}</td>
               <td>-</td>
               <td>-</td>
             </tr>

@@ -460,7 +460,9 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <WebBrandLogo />
+      <div className="web-brand-bar">
+        <WebBrandLogo />
+      </div>
       {isAdminRoute ? <AdminRoute /> : <AuthGatedApp authView={authView} onAuthViewChange={changeAuthView} />}
     </AuthProvider>
   );

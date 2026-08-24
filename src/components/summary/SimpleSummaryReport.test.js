@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAssetProjectionReason, getFinancialHealthStatus } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatAssetProjectionReason, getFinancialHealthStatus } from './summaryPresentation';
 
 // getFinancialHealthStatus는 새 재무점수·임계값을 만들지 않고, 서버가 이미 계산한
 // ratioClass(good/caution/risk)만 세어 화면 문구를 고르는 순수 표시 헬퍼다.
@@ -79,5 +79,19 @@ describe('formatAssetProjectionReason', () => {
     expect(text).toContain('생활비');
     expect(text).toContain('연 수익률 4%');
     expect(text).toContain('물가상승률 2%');
+  });
+});
+
+describe('formatAssetProjectionOutlook', () => {
+  it('rounds floating-point age differences to one decimal place for display', () => {
+    const text = formatAssetProjectionOutlook({
+      assetsRemainAtLifeExpectancy: false,
+      recoveredAfterDepletion: false,
+      lifeExpectancy: 84.6,
+      depletionAge: 84.00000000000001,
+      lumpSumExpenseIncluded: false,
+    });
+    expect(text).toContain('약 0.6년 먼저');
+    expect(text).not.toContain('0.599999');
   });
 });

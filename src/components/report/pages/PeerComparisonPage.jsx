@@ -1,15 +1,14 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
-import { formatNumber, formatWon } from '../../../utils/format';
+import { formatNumber, formatPercent, formatWon } from '../../../utils/format';
 import { getPeerAssetBarDisplay } from './peerAssetBarDisplay';
 
 const MAX_BAR_HEIGHT = 150;
 
 function computeChartScale(values) {
   const maxValue = Math.max(...values.filter((v) => Number.isFinite(v)), 1);
-  const chartMax = Math.max(10000, Math.ceil(maxValue / 10000) * 10000);
-  const axisTicks = Array.from({ length: 7 }, (_, i) => Math.round(chartMax - (chartMax / 6) * i));
-  return { chartMax, axisTicks };
+  const chartMax = maxValue * 1.4;
+  return { chartMax };
 }
 
 // 순자산과 같은 연령대별 비교 차트(전 연령대 평균 + 본인 구간 실제값)를 연소득·금융자산에도 그대로 재사용한다.
@@ -19,7 +18,7 @@ function AgeBracketChart({ label, ageBrackets, valueKey }) {
   if (!ageBrackets || ageBrackets.length === 0) {
     return (
       <div>
-        <div className="report-metric-chart-title"><strong>{label}</strong></div>
+        <div className="report-metric-chart-title"><strong>{label}</strong><span>(단위: 만원)</span></div>
         <div className="fine-print">연령대별 비교 데이터 산출 불가(새로 진단하면 표시됩니다).</div>
       </div>
     );
@@ -28,7 +27,7 @@ function AgeBracketChart({ label, ageBrackets, valueKey }) {
 
   return (
     <div>
-      <div className="report-metric-chart-title"><strong>{label}</strong></div>
+      <div className="report-metric-chart-title"><strong>{label}</strong><span>(단위: 만원)</span></div>
       <div className="asset-chart-legend">
         <span><i className="asset-legend-swatch asset-legend-average" />평균</span>
         <span><i className="asset-legend-swatch asset-legend-net" />우리집</span>
@@ -103,8 +102,7 @@ export default function PeerComparisonPage({ peerComparison, feedback, pageNumbe
     focusCompare.referenceAverage,
     1,
   );
-  const chartMax = Math.max(10000, Math.ceil(maxValue / 10000) * 10000);
-  const axisTicks = Array.from({ length: 7 }, (_, i) => Math.round(chartMax - (chartMax / 6) * i));
+  const { chartMax } = computeChartScale([maxValue]);
 
   return (
     <PageFrame eyebrow="Peer Comparison" pageNumber={pageNumber} totalPages={totalPages}>
@@ -120,17 +118,14 @@ export default function PeerComparisonPage({ peerComparison, feedback, pageNumbe
       </div>
 
       <div className="peer-chart-card">
-        <div className="report-metric-chart-title"><strong>순자산</strong></div>
+        <div className="report-metric-chart-title"><strong>순자산</strong><span>(단위: 만원)</span></div>
         <div className="asset-chart-layout">
           <div className="asset-chart-main">
             <div className="asset-chart-legend">
               <span><i className="asset-legend-swatch asset-legend-average" />평균</span>
               <span><i className="asset-legend-swatch asset-legend-net" />우리집</span>
             </div>
-            <div className="asset-chart-with-axis">
-              <div className="asset-chart-axis" aria-hidden="true">
-                {axisTicks.map((tick) => <span key={tick}>{formatNumber(tick)}</span>)}
-              </div>
+            <div className="asset-chart-with-axis asset-chart-with-axis--labels-hidden">
               <div className="asset-chart-plot">
                 {ageBrackets.map((b) => (
                   <div key={b.key} className={`asset-chart-group${b.isUserBracket ? ' is-current' : ''}`}>
@@ -188,7 +183,7 @@ export default function PeerComparisonPage({ peerComparison, feedback, pageNumbe
               <td>{label}</td>
               <td className="num">{metric?.value == null ? '-' : formatWon(metric.value)}</td>
               <td className="num">{metric?.average == null ? '-' : formatWon(metric.average)}</td>
-              <td className="num">{metric?.diffPercent == null ? '-' : `${metric.diffPercent > 0 ? '+' : ''}${metric.diffPercent}%`}</td>
+              <td className="num">{metric?.diffPercent == null ? '-' : `${metric.diffPercent > 0 ? '+' : ''}${formatPercent(metric.diffPercent)}`}</td>
               <td>{metric?.percentileLabel || '-'}</td>
             </tr>
           ))}

@@ -668,7 +668,7 @@
   position: relative;
   height: 10px;
   /* 평균 라벨이 막대 위에 떠 있을 공간을 미리 비워둔다(라벨은 overflow: visible로 넘쳐도 잘리지 않음). */
-  margin-top: 22px;
+  margin-top: 40px;
   background: var(--paper);
   border-radius: 6px;
   overflow: visible;

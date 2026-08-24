@@ -141,6 +141,7 @@ export const initialFormData = {
         deposit: '',         // 예금
         savings: '',         // 적금
         cma: '',             // CMA
+        subscription: '',    // 청약
         emergencyFund: '',   // 비상금
       },
       customItems: [],       // [{ name, amount }] 기본 항목 외 사용자가 추가한 현금성 자산

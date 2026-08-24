@@ -49,4 +49,27 @@ describe('buildCanonicalInput', () => {
     source.assets.currentLivingCost.inputMode = 'simple';
     expect(buildCanonicalInput(source).assets.currentLivingCost).toMatchObject({ monthly: 9999, annual: 9999 });
   });
+
+  it('includes subscription savings in liquid assets exactly once', () => {
+    const source = input();
+    source.assets.liquidAssets.breakdown.subscription = 300;
+    source.assets.liquidAssets.customItems = [{ name: '청약', amount: 300 }];
+
+    const result = buildCanonicalInput(source);
+
+    expect(result.assets.liquidAssets.breakdown.subscription).toBe(300);
+    expect(result.assets.liquidAssets.customItems).toEqual([]);
+    expect(result.assets.liquidAssets.total).toBe(400);
+  });
+
+  it('moves a legacy subscription custom item into the preset field', () => {
+    const source = input();
+    source.assets.liquidAssets.customItems = [{ name: '청약', amount: 250 }];
+
+    const result = buildCanonicalInput(source);
+
+    expect(result.assets.liquidAssets.breakdown.subscription).toBe(250);
+    expect(result.assets.liquidAssets.customItems).toEqual([]);
+    expect(result.assets.liquidAssets.total).toBe(350);
+  });
 });

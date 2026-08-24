@@ -19,7 +19,7 @@ body {
 .num { font-variant-numeric: tabular-nums; }
 .dim { color: var(--ink-soft); font-size: 12.5px; }
 
-.app-shell { min-height: 100vh; min-height: 100dvh; position: relative; }
+.app-shell { min-height: calc(100vh - 64px); min-height: calc(100dvh - 64px); position: relative; }
 
 /* ---------- 진단(마법사/로딩) 화면 전문 리포트 배경 ---------- */
 .app-shell--diagnosis::before {
@@ -66,12 +66,23 @@ body {
 /* 위저드 카드가 놓이는 .app-main과 같은 max-width(880px)를 그대로 써서 화면 전환 시
    본문 폭이 갑자기 바뀌지 않게 한다. */
 .app-main--home { max-width: none; margin: 0; padding: 0; }
-.web-brand-logo {
-  position: absolute; z-index: 50; top: max(16px, env(safe-area-inset-top)); left: 18px;
-  width: clamp(132px, 15vw, 152px); height: auto;
+.web-brand-bar {
+  position: relative;
+  z-index: 50;
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  padding: max(10px, env(safe-area-inset-top)) 18px 8px;
+  background: var(--paper);
 }
-body:has(.report-print-mode) .web-brand-logo { display: none; }
-.home-intro { transform: translateY(-72px); }
+.web-brand-logo {
+  position: static;
+  display: block;
+  width: clamp(132px, 15vw, 152px);
+  height: auto;
+}
+body:has(.report-print-mode) .web-brand-bar { display: none; }
+.home-intro { transform: none; }
 .home-welcome-page .welcome-panel h1 {
   font-weight: 800; letter-spacing: -.055em;
 }
@@ -543,9 +554,9 @@ body:has(.report-print-mode) .web-brand-logo { display: none; }
 .app-shell--diagnosis .checkbox-pill.is-navy.is-active { background: #ff8612; border-color: #ff8612; }
 
 /* ---------- 최초 접속 웰컴 ---------- */
-.welcome-page { min-height: 100svh; display: grid; place-items: center; background: #f4eee7; }
+.welcome-page { min-height: calc(100svh - 64px); display: grid; place-items: center; background: #f4eee7; }
 .welcome-shell {
-  position: relative; width: 100%; min-height: 100svh; display: flex; flex-direction: column;
+  position: relative; width: 100%; min-height: calc(100svh - 64px); display: flex; flex-direction: column;
   justify-content: flex-end; overflow: hidden; background: #fffaf5;
 }
 .welcome-visual { position: absolute; inset: 0; overflow: hidden; background: #fffaf5; }
@@ -579,7 +590,7 @@ body:has(.report-print-mode) .web-brand-logo { display: none; }
 @media (min-width: 600px) {
   .welcome-page { padding: 28px; }
   .welcome-shell {
-    width: min(460px, 100%); min-height: min(820px, calc(100svh - 56px));
+    width: min(460px, 100%); min-height: min(820px, calc(100svh - 120px));
     max-height: 880px; border-radius: 28px;
   }
 }
@@ -596,7 +607,7 @@ body:has(.report-print-mode) .web-brand-logo { display: none; }
 }
 @media (max-width: 599px) {
   .welcome-page {
-    height: 100svh;
+    height: calc(100svh - 64px);
     min-height: 0;
     overflow: hidden;
   }
@@ -605,28 +616,30 @@ body:has(.report-print-mode) .web-brand-logo { display: none; }
     min-height: 0;
   }
   .welcome-panel { padding-right: 50px; padding-left: 50px; }
-  .home-welcome-page { height: auto; min-height: 100svh; overflow-y: auto; }
-  .home-welcome-page .welcome-shell { height: auto; min-height: 100svh; overflow: visible; }
+  .home-welcome-page { height: auto; min-height: calc(100svh - 64px); overflow-y: auto; }
+  .home-welcome-page .welcome-shell { height: auto; min-height: calc(100svh - 64px); overflow: visible; }
   .home-welcome-page .welcome-panel { padding-right: 24px; padding-left: 24px; }
   .web-brand-logo { width: 126px; }
   .welcome-actions button { min-height: 50px; }
 }
 
 @media print {
-  .web-brand-logo { display: none !important; }
+  .web-brand-bar { display: none !important; }
 }
 
 /* ---------- 로그인/회원가입 (프리인덱스) ---------- */
 .auth-gate {
   position: relative;
-  min-height: 100vh;
+  min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
   background: linear-gradient(160deg, var(--paper) 0%, var(--amber-soft) 55%, var(--amber) 100%);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .auth-page-heading {
   position: relative;
@@ -1437,7 +1450,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .summary-card-row .num { color: var(--ink); font-weight: 600; }
 .summary-card-row.total { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; font-weight: 800; color: var(--navy-900); }
 .summary-card-row.total .num { color: var(--navy-900); font-weight: 800; }
-.summary-card-reason { margin: 8px 0 0; padding: 8px 0 0; border: 0; border-top: 1px solid #ead4af; border-radius: 0; background: transparent; color: var(--ink); font-size: 11.5px; font-weight: 600; line-height: 1.58; word-break: keep-all; overflow-wrap: break-word; }
+.summary-card-reason { margin: 8px 0 0; padding: 8px 0 0; border: 0; border-top: 1px solid #ead4af; border-radius: 0; background: transparent; color: var(--ink-soft); font-size: 11.5px; font-weight: 600; line-height: 1.58; word-break: keep-all; overflow-wrap: break-word; }
 .executive-part--retirement .summary-card { padding: 12px; }
 .executive-part--retirement .summary-card-title-row { margin-bottom: 7px; }
 .summary-card-feedback-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -1477,6 +1490,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .executive-feedback .fb-box {
   min-height: 0;
   box-sizing: border-box;
+  color: var(--ink-soft);
   overflow-wrap: anywhere;
   word-break: keep-all;
   line-height: 1.5;
@@ -1503,7 +1517,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .finance-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .finance-bar-chart { margin: 10px 0 6px; color: var(--ink); }
 .finance-chart-unit { height: 16px; margin-bottom: 2px; font-size: 10px; font-weight: 700; color: var(--ink-soft); }
-.finance-chart-body { display: grid; grid-template-columns: 48px minmax(0, 1fr); height: 144px; }
+.finance-chart-body { display: grid; grid-template-columns: minmax(0, 1fr); height: 144px; }
 .finance-chart-axis { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; height: 112px; padding-right: 7px; font-size: 9.5px; line-height: 1; color: var(--ink); }
 .finance-chart-plot { position: relative; min-width: 0; }
 .finance-chart-grid { position: absolute; inset: 0 0 32px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
@@ -1558,9 +1572,10 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .retirement-achievement-row.is-strong { color: var(--navy-900); font-weight: 800; }
 .retirement-achievement-row.is-strong b { font-size: 13.5px; }
 .report-cashflow-chart-note {
-  margin: 10px 0 0;
-  padding: 10px 13px;
+  margin: 16px 0 0;
+  padding: 12px 13px 10px;
   border: 1px solid #ead4af;
+  border-top-color: #d9b77e;
   border-radius: 8px;
   background: rgba(255, 248, 237, .78);
   color: var(--ink-soft);
@@ -1712,7 +1727,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   margin: 3px 0 0;
   padding: 8px 0 0;
   border-top: 1px solid var(--line);
-  color: var(--ink);
+  color: var(--ink-soft);
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.55;
@@ -1861,7 +1876,13 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .report-composition-grid .donut-legend li { gap: 6px; padding: 2px 0; font-size: 10px; }
 .report-composition-grid .donut-legend-dot { width: 9px; height: 9px; }
 .report-composition-grid .donut-footnote {
-  margin: 6px 0 0; color: #bd5a16; font-size: 11.5px; font-weight: 700; line-height: 1.5;
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid #ead4af;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.5;
 }
-.report-composition-grid .donut-footnote--warning { color: #b43e25; }
+.report-composition-grid .donut-footnote--warning { color: var(--ink-soft); }
 .report-composition-grid .donut-empty-message { max-width: 110px; font-size: 11px; }

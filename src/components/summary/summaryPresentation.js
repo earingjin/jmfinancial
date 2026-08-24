@@ -1,6 +1,6 @@
 // api/_lib/indicators.js의 판정 문구는 그대로 두고, 결과 화면의 상태 배지에만
 // 사용자가 이해하기 쉬운 표시 문구를 적용한다. 점수와 ratioClass에는 관여하지 않는다.
-import { formatPercent, formatWon } from '../../utils/format';
+import { formatNumber, formatPercent, formatWon } from '../../utils/format';
 
 const FHS_STATUS_BADGE_LABELS = {
   '매우 우수': '안정적',
@@ -55,11 +55,11 @@ export function formatAssetProjectionOutlook(projection) {
     return `${prefix}${projection.lumpSumExpenseIncluded ? '기대수명까지 준비자산이 남을 것으로 예상됩니다.' : '현재 계획을 유지하면 기대수명까지 준비자산이 남을 것으로 예상됩니다.'}`;
   }
   if (projection.recoveredAfterDepletion) {
-    return `${prefix}${projection.depletionAge}세경 준비자산이 일시적으로 부족해지지만, 이후 소득 증가로 다시 쌓일 것으로 예상됩니다.`;
+    return `${prefix}${formatNumber(projection.depletionAge)}세경 준비자산이 일시적으로 부족해지지만, 이후 소득 증가로 다시 쌓일 것으로 예상됩니다.`;
   }
   const diff = projection.lifeExpectancy - projection.depletionAge;
   return diff > 0
-    ? `${prefix}기대수명보다 약 ${diff}년 먼저 준비자산이 소진될 것으로 예상됩니다.`
+    ? `${prefix}기대수명보다 약 ${formatNumber(diff)}년 먼저 준비자산이 소진될 것으로 예상됩니다.`
     : `${prefix}현재 계획 기준 자산이 기대수명 무렵 소진될 것으로 예상됩니다.`;
 }
 

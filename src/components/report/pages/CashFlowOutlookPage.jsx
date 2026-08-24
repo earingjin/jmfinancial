@@ -2,7 +2,7 @@ import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import FinanceBarChart from './FinanceBarChart';
 import { buildPieSegments } from '../../../utils/pieChart';
-import { formatWon, formatPercent } from '../../../utils/format';
+import { formatNumber, formatWon, formatPercent } from '../../../utils/format';
 
 function round1(v) {
   return Math.round(v * 10) / 10;
@@ -25,7 +25,7 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, feedb
   ]);
 
   const bars = [
-    { label: `현재(${simulation.currentAge}세)\n월 소득`, value: currentIncome, color: 'var(--navy-700)' },
+    { label: `현재(${formatNumber(simulation.currentAge)}세)\n월 소득`, value: currentIncome, color: 'var(--navy-700)' },
     { label: '월 저축\n투자금액', value: currentSavings, color: 'var(--navy-600)' },
     { label: '현재 생활비', value: currentLivingCost, color: 'var(--red)' },
     { label: '노후 월생활비', value: retirementLivingCost, color: 'var(--red)' },

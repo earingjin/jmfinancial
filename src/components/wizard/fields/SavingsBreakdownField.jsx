@@ -8,7 +8,7 @@ import TotalAmountBox from './TotalAmountBox';
 // Step4Assets.jsx의 LIQUID_ASSET_CATEGORIES(assets.liquidAssets.breakdown)와 반드시 동일한 키
 // 목록을 유지한다 - 여기 없는 항목이 있으면 저축 쪽에서 다른 항목을 수정할 때마다 그 항목 금액이
 // 총액 재계산에서 빠져 조용히 0으로 취급된다.
-const LIQUID_PRESET_KEYS = ['deposit', 'savings', 'cma', 'emergencyFund'];
+const LIQUID_PRESET_KEYS = ['deposit', 'savings', 'cma', 'subscription', 'emergencyFund'];
 // pensionAssetsBreakdown의 숫자 항목만 명시적으로 나열한다(otherItems는 배열이라 합산 대상이 아님 -
 // "기타" 총액은 이미 그 배열의 합으로 계산되어 있는 값이라 여기서 다시 더하면 이중 계산이 된다).
 const PENSION_BREAKDOWN_NUMERIC_KEYS = ['variableAnnuity', 'pensionSavingsAccount', 'irp', 'other'];

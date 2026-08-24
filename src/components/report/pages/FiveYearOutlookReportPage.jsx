@@ -1,6 +1,6 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
-import { formatWon } from '../../../utils/format';
+import { formatNumber, formatPercent, formatWon } from '../../../utils/format';
 
 function CashFlowLineChart({ outlook, pensionStartAge }) {
   const width = 690;
@@ -10,7 +10,8 @@ function CashFlowLineChart({ outlook, pensionStartAge }) {
   const plotHeight = height - plot.top - plot.bottom;
   const minAge = outlook[0].age;
   const maxAge = outlook.at(-1).age;
-  const maxValue = Math.max(...outlook.flatMap((item) => [item.livingExpense || 0, item.totalIncome || 0]), 1);
+  const highestValue = Math.max(...outlook.flatMap((item) => [item.livingExpense || 0, item.totalIncome || 0]), 1);
+  const maxValue = highestValue * 1.4;
   const x = (age) => plot.left + ((age - minAge) / Math.max(1, maxAge - minAge)) * plotWidth;
   const y = (value) => plot.top + plotHeight - (Math.max(0, value) / maxValue) * plotHeight;
   const expensePoints = outlook.map((item) => `${x(item.age)},${y(item.livingExpense || 0)}`).join(' ');
@@ -71,7 +72,7 @@ function CashFlowLineChart({ outlook, pensionStartAge }) {
             >
               {formatWon(item.totalIncome || 0)}
             </text>
-            <text className="age-label" x={x(item.age)} y={height - 13}>{item.age}세</text>
+            <text className="age-label" x={x(item.age)} y={height - 13}>{formatNumber(item.age)}세</text>
           </g>
         ))}
       </svg>
@@ -101,13 +102,13 @@ export default function FiveYearOutlookReportPage({ futureFinance, pageNumber, t
             <tbody>
               {outlook.map((item) => (
                 <tr key={item.age}>
-                  <td className="num">{item.age}세</td>
+                  <td className="num">{formatNumber(item.age)}세</td>
                   <td className="num">{item.livingExpense == null ? '산출 불가' : formatWon(item.livingExpense)}</td>
                   <td className="num">
                     {item.totalIncome == null ? '산출 불가' : formatWon(item.totalIncome)}
                     {item.incomeLabel && <small>{item.incomeLabel}</small>}
                   </td>
-                  <td className="num">{item.coverageRate == null ? '산출 불가' : `${Math.round(item.coverageRate)}%`}</td>
+                  <td className="num">{item.coverageRate == null ? '산출 불가' : formatPercent(item.coverageRate)}</td>
                   <td className={`num ${item.balance < 0 ? 'is-shortfall' : ''}`}>{item.balance == null ? '산출 불가' : item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}</td>
                 </tr>
               ))}

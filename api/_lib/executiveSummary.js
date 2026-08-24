@@ -76,10 +76,22 @@ export function buildFinancialCashFlowFeedback({ indicators, aggregates }) {
 
 // 결과요약 재무상태표용 피드백. 서버에서 이미 집계한 자산·부채·순자산을 그대로 해석하며
 // 새로운 비율이나 등급 기준을 만들지 않는다.
-export function buildExecutiveFinancialPositionFeedback({ aggregates }) {
+function formatKoreanWon(value) {
+  const amount = Math.round(Math.abs(value) * 10) / 10;
+  if (amount < 10000) return `${amount.toLocaleString('ko-KR')}만원`;
+
+  const eok = Math.floor(amount / 10000);
+  const remainder = Math.round((amount - eok * 10000) * 10) / 10;
+  return remainder > 0
+    ? `${eok.toLocaleString('ko-KR')}억 ${remainder.toLocaleString('ko-KR')}만원`
+    : `${eok.toLocaleString('ko-KR')}억원`;
+}
+
+export function buildExecutiveFinancialPositionFeedback({ aggregates, indicators = [] }) {
   const totalAssets = aggregates?.totalAssets;
   const totalDebt = aggregates?.totalDebt;
   const netWorth = aggregates?.netWorth;
+  const debtBurden = indicators.find((indicator) => indicator.key === 'debtBurden');
 
   if (![totalAssets, totalDebt, netWorth].every(Number.isFinite)) {
     return '현재 입력 정보만으로는 자산과 부채의 관계를 판단하기 어렵습니다. 자산과 부채 정보를 확인한 뒤 다시 점검해보세요.';
@@ -88,12 +100,15 @@ export function buildExecutiveFinancialPositionFeedback({ aggregates }) {
     return '현재 입력된 자산과 부채가 없어 재무상태를 판단하기 어렵습니다. 보유 자산과 갚아야 할 부채를 확인해 입력해보세요.';
   }
   if (netWorth < 0) {
-    return `현재는 부채가 자산보다 ${Math.abs(netWorth).toLocaleString('ko-KR')}만원 많습니다. 추가 자산 마련보다 금리가 높거나 부담이 큰 부채부터 상환 순서를 정해 관리하는 것이 좋습니다.`;
+    return `부채가 자산보다 ${formatKoreanWon(netWorth)} 많아, 보유 자산을 모두 사용해도 부채가 남는 구조입니다. 추가 자산 마련보다 금리가 높거나 부담이 큰 부채부터 상환 순서를 정해 줄이는 것이 좋습니다.`;
   }
   if (totalDebt === 0) {
-    return `전체 자산 ${totalAssets.toLocaleString('ko-KR')}만원이 모두 순자산으로 남아 있습니다. 현재 자산을 생활 목적과 장기 목표에 맞게 나누어 관리해보세요.`;
+    return `부채가 없어 ${formatKoreanWon(netWorth)}이 모두 내 자산으로 남아 있습니다. 이 자산을 비상자금, 가까운 시일에 쓸 돈, 장기적으로 불릴 돈으로 나누어 관리해보세요.`;
   }
-  return `전체 자산 ${totalAssets.toLocaleString('ko-KR')}만원에서 부채 ${totalDebt.toLocaleString('ko-KR')}만원을 제외한 순자산은 ${netWorth.toLocaleString('ko-KR')}만원입니다. 부채 상환과 자산 축적을 함께 점검해 순자산이 꾸준히 늘어나는지 확인하세요.`;
+  const debtRatioText = !debtBurden?.notCalculable && Number.isFinite(debtBurden?.rawValue)
+    ? `전체 자산에서 부채가 차지하는 비중은 ${round1(debtBurden.rawValue)}%이며, `
+    : '';
+  return `${debtRatioText}부채를 제외하고 ${formatKoreanWon(netWorth)}이 내 자산으로 남습니다. 자산을 늘리는 것과 함께 대출 금리와 상환 부담을 점검해, 이자 부담이 큰 부채부터 줄이면 순자산을 더 빠르게 키울 수 있습니다.`;
 }
 
 // 기존 은퇴 시뮬레이션과 연도별 자산 전망 결과를 사용해 2페이지 카드용 해석만 만든다.
@@ -120,7 +135,7 @@ export function buildExecutiveRetirementFeedback({ simulation, retirementAssetPr
   } else if (retirementAssetProjection.assetsRemainAtLifeExpectancy) {
     assetGoal = '예상 소득과 생활비, 목돈지출을 반영해도 기대수명까지 준비자산이 남을 전망입니다. 지금의 저축과 생활비 관리 흐름을 유지하되, 실제 지출 변화에 맞춰 정기적으로 점검하세요.';
   } else {
-    assetGoal = `현재 계획대로라면 준비자산이 ${retirementAssetProjection.depletionAge}세 무렵 소진될 것으로 예상됩니다. 기대수명까지 이어질 수 있도록 노후 생활비, 목돈지출, 추가 저축 중 조정 가능한 항목을 먼저 살펴보세요.`;
+    assetGoal = `현재 계획대로라면 준비자산이 ${round1(retirementAssetProjection.depletionAge)}세 무렵 소진될 것으로 예상됩니다. 기대수명까지 이어질 수 있도록 노후 생활비, 목돈지출, 추가 저축 중 조정 가능한 항목을 먼저 살펴보세요.`;
   }
 
   return { cashFlow, assetGoal };
