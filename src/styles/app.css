@@ -1126,7 +1126,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   display: flex; justify-content: space-between; align-items: center; flex: 0 0 auto;
   padding: 12px 42px; margin-bottom: 21px; color: var(--ink-soft); font-size: 11px;
 }
-.footer-logo { height: 17px; width: auto; display: block; }
+.footer-logo { height: 30px; width: auto; display: block; }
 .footer-copyright { white-space: nowrap; font-size: 9px; }
 .footer-pageno { color: var(--ink-soft); opacity: .75; }
 
