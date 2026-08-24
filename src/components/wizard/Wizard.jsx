@@ -31,7 +31,9 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [showProgressHint, setShowProgressHint] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const progressRef = useRef(null);
+  const restingViewportHeightRef = useRef(0);
   const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
   const { Component, key: currentStepKey } = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
@@ -41,6 +43,42 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   useEffect(() => {
     onStepChange?.(stepIndex);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // 모바일 브라우저에서 가상 키보드가 열린 동안 상단 진행 영역을 축소해 입력칸에 쓸 세로 공간을 확보한다.
+  // visualViewport를 지원하지 않는 브라우저에서는 포커스 자동 스크롤만 적용된다.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return undefined;
+    restingViewportHeightRef.current = viewport.height;
+    const updateKeyboardState = () => {
+      const keyboardHeight = restingViewportHeightRef.current - viewport.height;
+      const keyboardOpen = keyboardHeight > 150;
+      if (!keyboardOpen && viewport.height > restingViewportHeightRef.current) {
+        restingViewportHeightRef.current = viewport.height;
+      }
+      setIsKeyboardOpen(keyboardOpen);
+    };
+    updateKeyboardState();
+    viewport.addEventListener('resize', updateKeyboardState);
+    const resetViewportHeight = () => {
+      restingViewportHeightRef.current = viewport.height;
+      setIsKeyboardOpen(false);
+    };
+    window.addEventListener('orientationchange', resetViewportHeight);
+    return () => {
+      viewport.removeEventListener('resize', updateKeyboardState);
+      window.removeEventListener('orientationchange', resetViewportHeight);
+    };
+  }, []);
+  // 포커스된 입력칸을 보이는 화면 중앙으로 이동해 가상 키보드에 가려지는 일을 줄인다.
+  useEffect(() => {
+    const scrollFocusedFieldIntoView = (event) => {
+      const field = event.target;
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement)) return;
+      window.setTimeout(() => field.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }), 150);
+    };
+    document.addEventListener('focusin', scrollFocusedFieldIntoView);
+    return () => document.removeEventListener('focusin', scrollFocusedFieldIntoView);
   }, []);
   useEffect(() => {
     const progress = progressRef.current;
@@ -103,7 +141,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   };
 
   return (
-    <div className="wizard">
+    <div className={`wizard${isKeyboardOpen ? ' wizard--keyboard-open' : ''}`}>
       <div className={`wizard-draft-status ${draftState.status === 'saved' ? 'is-saved' : ''} ${draftState.status === 'error' ? 'is-error' : ''}`} role="status">
         <span>
           {draftState.status === 'saving' && '임시 저장 중…'}

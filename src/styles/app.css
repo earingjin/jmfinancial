@@ -19,7 +19,7 @@ body {
 .num { font-variant-numeric: tabular-nums; }
 .dim { color: var(--ink-soft); font-size: 12.5px; }
 
-.app-shell { min-height: 100vh; position: relative; }
+.app-shell { min-height: 100vh; min-height: 100dvh; position: relative; }
 
 /* ---------- 진단(마법사/로딩) 화면 전문 리포트 배경 ---------- */
 .app-shell--diagnosis::before {
@@ -984,6 +984,17 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   .wizard-progress-item:not(:last-child)::after { width: 8px; left: calc(100% + 1px); }
   .wizard-progress-dot { width: 23px; height: 23px; margin-bottom: 2px; font-size: 11px; }
   .wizard-progress-icon { width: 35px; height: 33px; margin-bottom: 3px; }
+
+  /* 가상 키보드가 열린 동안에는 단계 이동 정보는 남기되, 입력 영역을 우선한다. */
+  .wizard--keyboard-open .wizard-draft-status { display: none; }
+  .wizard--keyboard-open .wizard-progress-wrap { position: static; margin-bottom: 8px; }
+  .wizard--keyboard-open .wizard-progress { gap: 5px; padding: 5px 8px; }
+  .wizard--keyboard-open .wizard-progress-item { flex: 0 0 36px; min-width: 36px; padding: 3px; }
+  .wizard--keyboard-open .wizard-progress-item:not(:last-child)::after,
+  .wizard--keyboard-open .wizard-progress-icon,
+  .wizard--keyboard-open .wizard-progress-label { display: none; }
+  .wizard--keyboard-open .wizard-progress-dot { width: 24px; height: 24px; margin: 0; }
+  .wizard--keyboard-open .wizard-progress-more { display: none; }
 
   .wizard-body { padding: 18px 16px; }
   .wizard-nav { gap: 10px; }
