@@ -1,7 +1,7 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import { formatWon, formatPercent } from '../../../utils/format';
-import { formatAssetProjectionOutlook } from '../../summary/summaryPresentation';
+import { formatAssetProjectionOutlook, formatAssetProjectionReason } from '../../summary/summaryPresentation';
 
 // 웹 요약 화면의 RetirementAssetProjectionChart와 동일한 규칙을 그대로 옮긴다: x축 나이 N은
 // 항상 points[].age===N인 해의 "연말 잔액"이고(depletionAge 텍스트와 그래프의 0원 지점이
@@ -15,8 +15,9 @@ function AssetProjectionChart({ projection }) {
   ];
 
   const width = 690;
-  const height = 230;
-  const plot = { left: 24, right: 24, top: 22, bottom: 34 };
+  // 예상 목돈지출 표가 길어져도 고정 A4 페이지 안에 들어오도록 그래프 세로 공간을 압축한다.
+  const height = 190;
+  const plot = { left: 24, right: 24, top: 18, bottom: 30 };
   const plotWidth = width - plot.left - plot.right;
   const plotHeight = height - plot.top - plot.bottom;
   const minAge = retirementAge;
@@ -63,7 +64,7 @@ function AssetProjectionChart({ projection }) {
               <text className="asset-value" style={{ textAnchor: edgeAnchor(age) }} x={x(age) + edgeDx(age)} y={Math.max(10, y(value) - 8)}>
                 {formatWon(value)}
               </text>
-              <text className="age-label" style={{ textAnchor: edgeAnchor(age) }} x={x(age) + edgeDx(age)} y={height - 16}>
+              <text className="age-label" style={{ textAnchor: edgeAnchor(age) }} x={x(age) + edgeDx(age)} y={height - 13}>
                 {age === minAge ? `은퇴 ${age}세` : age === maxAge ? `기대수명 ${age}세` : `${age}세`}
               </text>
             </g>
@@ -75,7 +76,7 @@ function AssetProjectionChart({ projection }) {
             <text className="depletion-label" style={{ textAnchor: edgeAnchor(depletionAge) }} x={x(depletionAge) + edgeDx(depletionAge)} y={Math.max(10, y(0) - 8)}>
               ⚠ 자산 소진
             </text>
-            <text className="age-label" style={{ textAnchor: edgeAnchor(depletionAge) }} x={x(depletionAge) + edgeDx(depletionAge)} y={height - 16}>
+            <text className="age-label" style={{ textAnchor: edgeAnchor(depletionAge) }} x={x(depletionAge) + edgeDx(depletionAge)} y={height - 13}>
               {depletionAge}세
             </text>
           </g>
@@ -124,12 +125,15 @@ export default function RetirementAssetProjectionReportPage({ retirementAssetPro
           </div>
 
           <AssetProjectionChart projection={projection} />
-          <p className="fine-print report-chart-help">{formatAssetProjectionOutlook(projection)}</p>
+          <div className="fine-print report-chart-help report-asset-projection-feedback">
+            <strong>{formatAssetProjectionOutlook(projection)}</strong>
+            <span>{formatAssetProjectionReason(projection)}</span>
+          </div>
 
           {lumpSumEvents.length > 0 && (
             <>
               <h3 className="card-title report-subsection-title">예상 목돈지출</h3>
-              <table className="grade-table compact">
+              <table className="grade-table compact report-lump-sum-table">
                 <thead><tr><th>나이</th><th>지출 용도</th><th>금액</th></tr></thead>
                 <tbody>
                   {lumpSumEvents.map((ev) => (

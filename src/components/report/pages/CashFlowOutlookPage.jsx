@@ -8,7 +8,7 @@ function round1(v) {
   return Math.round(v * 10) / 10;
 }
 
-export default function CashFlowOutlookPage({ aggregates: agg, simulation, pageNumber, totalPages }) {
+export default function CashFlowOutlookPage({ aggregates: agg, simulation, feedback, pageNumber, totalPages }) {
   const currentIncome = agg.monthlyIncome;
   const currentSavings = agg.monthlySavings;
   const currentLivingCost = agg.totalExpenseMonthlyExSavings;
@@ -43,7 +43,7 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, pageN
       <FinanceBarChart bars={bars} zeroLabel="-" showValues />
 
       <div className="fine-print report-cashflow-chart-note">
-        막대그래프는 현재 월 소득을 기준으로 저축·생활비의 크기와 은퇴 후 월생활비를 비교합니다. 노후 목돈은 은퇴시점부터 목표 생활비를 감당하기 위한 준비자산 총액입니다.
+        {feedback || '현재 소득과 생활비 정보를 확인하면 저축 여력과 노후 생활비 목표에 대한 안내를 확인할 수 있습니다.'}
       </div>
 
       <div style={{ marginTop: 22 }}>

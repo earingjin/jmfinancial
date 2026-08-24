@@ -67,7 +67,7 @@ const CURRENT_LIVING_COST_CATEGORIES = [
   { key: 'maintenance', label: '관리비' },
   { key: 'utilities', label: '공과금' },
   { key: 'fuel', label: '유류비' },
-  { key: 'carInsurance', label: '차 보험료' },
+  { key: 'carInsurance', label: '보험료' },
   { key: 'clothing', label: '의류비' },
   { key: 'fourInsurances', label: '4대보험' },
   { key: 'food', label: '식비' },

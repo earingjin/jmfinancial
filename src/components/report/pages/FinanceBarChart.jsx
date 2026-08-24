@@ -12,17 +12,27 @@ function getNiceScale(maxValue, tickCount = 4) {
   return { axisMax, ticks: Array.from({ length: tickCount + 1 }, (_, index) => axisMax - (step * index)) };
 }
 
-export default function FinanceBarChart({ bars, tickStep, tickCount = 4, zeroLabel = '0', showValues = false }) {
+export default function FinanceBarChart({ bars, tickStep, tickCount = 4, zeroLabel = '0', showValues = false, headroom = 0 }) {
   const maxValue = Math.max(...bars.map((b) => Math.max(0, b.value)), 1);
-  const scale = tickStep
+  const safeHeadroom = Math.max(0, headroom);
+  const scaledMaxValue = maxValue * (1 + safeHeadroom);
+  const scale = safeHeadroom > 0
     ? {
-        axisMax: Math.max(tickStep, Math.ceil(maxValue / tickStep) * tickStep),
+        axisMax: scaledMaxValue,
         ticks: Array.from(
-          { length: Math.max(1, Math.ceil(maxValue / tickStep)) + 1 },
-          (_, index) => (Math.max(1, Math.ceil(maxValue / tickStep)) - index) * tickStep,
+          { length: tickCount + 1 },
+          (_, index) => scaledMaxValue * ((tickCount - index) / tickCount),
         ),
       }
-    : getNiceScale(maxValue, tickCount);
+    : tickStep
+    ? {
+        axisMax: Math.max(tickStep, Math.ceil(scaledMaxValue / tickStep) * tickStep),
+        ticks: Array.from(
+          { length: Math.max(1, Math.ceil(scaledMaxValue / tickStep)) + 1 },
+          (_, index) => (Math.max(1, Math.ceil(scaledMaxValue / tickStep)) - index) * tickStep,
+        ),
+      }
+    : getNiceScale(scaledMaxValue, tickCount);
   const { axisMax, ticks } = scale;
 
   return (
@@ -37,26 +47,32 @@ export default function FinanceBarChart({ bars, tickStep, tickCount = 4, zeroLab
             {ticks.map((tick) => <i key={tick} />)}
           </div>
           <div className="finance-chart-bars">
-            {bars.map((bar) => (
-              <div className="finance-chart-col" key={bar.label}>
-                {showValues && (
-                  <span
-                    className="finance-chart-value"
-                    style={{ bottom: `${Math.max(0, (Math.max(0, bar.value) / axisMax) * 100)}%` }}
-                  >
-                    {formatWon(bar.value)}
-                  </span>
-                )}
-                <div
-                  className="finance-chart-fill"
-                  style={{ height: `${Math.max(2, (Math.max(0, bar.value) / axisMax) * 100)}%`, background: bar.color }}
-                  title={formatWon(bar.value)}
-                />
-                <div className="finance-chart-caption">
-                  {bar.label.split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}
+            {bars.map((bar) => {
+              const barHeight = Math.max(0, (Math.max(0, bar.value) / axisMax) * 100);
+              // 막대가 축 최댓값에 닿아도 값 라벨이 차트 바깥(표·제목 영역)으로 올라가지 않도록,
+              // 상단 12% 안에서는 라벨을 차트 안쪽에 표시한다.
+              const valueLabelBottom = Math.min(88, barHeight);
+              return (
+                <div className="finance-chart-col" key={bar.label}>
+                  {showValues && (
+                    <span
+                      className="finance-chart-value"
+                      style={{ bottom: `${valueLabelBottom}%` }}
+                    >
+                      {formatWon(bar.value)}
+                    </span>
+                  )}
+                  <div
+                    className="finance-chart-fill"
+                    style={{ height: `${Math.max(2, barHeight)}%`, background: bar.color }}
+                    title={formatWon(bar.value)}
+                  />
+                  <div className="finance-chart-caption">
+                    {bar.label.split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

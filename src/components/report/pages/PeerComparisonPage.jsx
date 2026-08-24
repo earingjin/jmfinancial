@@ -88,7 +88,7 @@ function AssetValueBar({ value, tone, chartMax, contextLabel }) {
 // 진단 결과에서는 두 섹션을 합친 내용이 인쇄 페이지 높이(고정 A4, overflow:hidden)를 넘어
 // 아래쪽(이 섹션)이 통째로 잘려 보이지 않는 문제가 있었다. 데이터 양에 따라 넘칠 수 있는
 // 섹션이라 별도 페이지로 분리해, 내용이 얼마나 많든 잘리지 않게 한다.
-export default function PeerComparisonPage({ peerComparison, pageNumber, totalPages }) {
+export default function PeerComparisonPage({ peerComparison, feedback, pageNumber, totalPages }) {
   const { ageBrackets, focusCompare } = peerComparison;
   const comparisonRows = [
     { key: 'netWorth', label: '순자산', metric: peerComparison.netWorth },
@@ -125,7 +125,7 @@ export default function PeerComparisonPage({ peerComparison, pageNumber, totalPa
           <div className="asset-chart-main">
             <div className="asset-chart-legend">
               <span><i className="asset-legend-swatch asset-legend-average" />평균</span>
-              <span><i className="asset-legend-swatch asset-legend-net" />순자산</span>
+              <span><i className="asset-legend-swatch asset-legend-net" />우리집</span>
             </div>
             <div className="asset-chart-with-axis">
               <div className="asset-chart-axis" aria-hidden="true">
@@ -194,6 +194,10 @@ export default function PeerComparisonPage({ peerComparison, pageNumber, totalPa
           ))}
         </tbody>
       </table>
+      <section className="peer-feedback-card">
+        <strong>또래 비교 안내</strong>
+        <p>{feedback || '자산과 소득 정보를 다시 확인하면 또래 가구와의 비교 안내를 확인할 수 있습니다.'}</p>
+      </section>
       {peerComparison.benchmarkMeta && (
         <div className="fine-print peer-report-source">
           {peerComparison.benchmarkMeta.source}({peerComparison.benchmarkMeta.agency}) · {peerComparison.benchmarkMeta.ageBasis} 평균 · 자산·부채 {peerComparison.benchmarkMeta.assetAndDebtAsOf} 기준 · 소득 {peerComparison.benchmarkMeta.incomeYear}년 기준

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PEER_AGE_BRACKETS, getPeerBracket } from './peerBenchmarks.js';
+import { PEER_AGE_BRACKETS, getAgeSavingsRateGuideline, getPeerBracket } from './peerBenchmarks.js';
 
 describe('getPeerBracket - age bracket boundaries must be continuous and mutually exclusive', () => {
   it('29세는 29세이하 구간, 30세는 30~39세 구간으로 판정한다 (T, T+1)', () => {
@@ -38,5 +38,24 @@ describe('getPeerBracket - age bracket boundaries must be continuous and mutuall
     expect(byKey['40to49']).toMatchObject({ totalAssets: 62714, financialAssets: 16401, totalDebt: 14325, netWorth: 48389, annualIncome: 9333 });
     expect(byKey['50to59']).toMatchObject({ totalAssets: 66205, financialAssets: 16507, totalDebt: 11044, netWorth: 55161, annualIncome: 9416 });
     expect(byKey['60plus']).toMatchObject({ totalAssets: 60095, financialAssets: 11236, totalDebt: 6504, netWorth: 53591, annualIncome: 5767 });
+  });
+});
+
+describe('getAgeSavingsRateGuideline', () => {
+  it.each([
+    [29, 50],
+    [30, 30],
+    [39, 30],
+    [40, 20],
+    [49, 20],
+    [50, 10],
+    [64, 10],
+    [65, 5],
+  ])('uses the approved age guideline at age %i', (age, expectedRate) => {
+    expect(getAgeSavingsRateGuideline(age)?.rate).toBe(expectedRate);
+  });
+
+  it('does not guess when age is unavailable', () => {
+    expect(getAgeSavingsRateGuideline(Number.NaN)).toBeNull();
   });
 });

@@ -419,6 +419,14 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
 
   const recoveredAfterDepletion = depletionAge !== null
     && points.some((p) => p.age > depletionAge && p.endingBalance > 0);
+  const endingAssets = points[points.length - 1]?.endingBalance ?? simulation.readyAssetsAtRetirement;
+  const totalIncome = points.reduce((sum, point) => sum + point.income, 0);
+  const totalInvestmentReturn = points.reduce((sum, point) => sum + point.investmentReturn, 0);
+  const totalLivingExpense = points.reduce((sum, point) => sum + point.livingExpense, 0);
+  const totalLumpSumExpense = points.reduce((sum, point) => sum + point.lumpSumExpense, 0);
+  const startingAssets = round(simulation.readyAssetsAtRetirement);
+  const assetChange = round(endingAssets - startingAssets);
+  const assetChangeRate = startingAssets > 0 ? round((assetChange / startingAssets) * 100) : null;
 
   return {
     notCalculable: false,
@@ -433,6 +441,17 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
     recoveredAfterDepletion,
     lumpSumExpenseIncluded,
     lumpSumExpenseNote: lumpSumExpenseIncluded ? LUMP_SUM_EXPENSE_NOTE_INCLUDED : LUMP_SUM_EXPENSE_NOTE_EXCLUDED,
+    explanation: {
+      endingAssets: round(endingAssets),
+      assetChange,
+      assetChangeRate,
+      totalIncome: round(totalIncome),
+      totalInvestmentReturn: round(totalInvestmentReturn),
+      totalLivingExpense: round(totalLivingExpense),
+      totalLumpSumExpense: round(totalLumpSumExpense),
+      totalInflow: round(totalIncome + totalInvestmentReturn),
+      totalOutflow: round(totalLivingExpense + totalLumpSumExpense),
+    },
     points,
   };
 }

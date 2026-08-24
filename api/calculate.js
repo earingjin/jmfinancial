@@ -5,7 +5,7 @@ import { buildPeerComparison } from './_lib/peerComparison.js';
 import { validateInput } from './_lib/validate.js';
 import { buildFamilyAges, getCurrentAge } from './_lib/aggregate.js';
 import { enrichIndicators, enrichSimulation } from './_lib/reportEnrichment.js';
-import { buildComprehensiveIssues } from './_lib/executiveSummary.js';
+import { buildCashFlowOutlookFeedback, buildComprehensiveIssues, buildExecutiveFinancialPositionFeedback, buildExecutiveRetirementFeedback, buildFinancialCashFlowFeedback, buildPeerComparisonFeedback, buildSavingsInvestmentFeedback } from './_lib/executiveSummary.js';
 import { buildSimpleSummary } from './_lib/simpleSummary.js';
 import { buildSavingsBreakdown, buildDebtBreakdown, buildLivingExpenseItems, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './_lib/reportBreakdowns.js';
 import { buildWebSummary, allBlankLeaf } from './_lib/summaryOverview.js';
@@ -123,6 +123,21 @@ export default async function handler(req, res) {
       simulation: enrichedSimulation,
       summary: { totalScore, grade, notCalculable, missingInputs },
     });
+    const financialStatusFeedback = buildFinancialCashFlowFeedback({
+      indicators: enriched.indicators,
+      aggregates,
+    });
+    const financialPositionFeedback = buildExecutiveFinancialPositionFeedback({ aggregates });
+    const savingsInvestmentFeedback = buildSavingsInvestmentFeedback({
+      indicators: enriched.indicators,
+      age: getCurrentAge(input),
+    });
+    const cashFlowOutlookFeedback = buildCashFlowOutlookFeedback({
+      indicators: enriched.indicators,
+      aggregates,
+      simulation,
+    });
+    const peerComparisonFeedback = buildPeerComparisonFeedback({ peerComparison });
     const simpleSummary = buildSimpleSummary({ input, aggregates, simulation });
     const savingsBreakdown = buildSavingsBreakdown(input);
     const debtBreakdown = buildDebtBreakdown(input);
@@ -137,6 +152,10 @@ export default async function handler(req, res) {
     const webSummary = buildWebSummary({
       input, aggregates, simulation: enrichedSimulation, indicators: enriched.indicators,
       savingsBreakdown, debtBreakdown, livingExpenseItems, otherLiquidAssetItems,
+    });
+    const executiveRetirementFeedback = buildExecutiveRetirementFeedback({
+      simulation: enrichedSimulation,
+      retirementAssetProjection: webSummary?.futureFinance?.retirementAssetProjection,
     });
 
     // 응답을 평문 JSON으로 그대로 내려보내지 않고 스크램블한다. F12 → Network 탭에서
@@ -165,6 +184,18 @@ export default async function handler(req, res) {
       peerComparison,
       familyAges: buildFamilyAges(input),
       comprehensiveIssues,
+      aiFeedback: {
+        executiveSummary: {
+          financialPosition: financialPositionFeedback,
+          financialStatus: financialStatusFeedback,
+          retirement: executiveRetirementFeedback,
+        },
+        financialStatus: {
+          savingsInvestment: savingsInvestmentFeedback,
+        },
+        cashFlowOutlook: cashFlowOutlookFeedback,
+        peerComparison: peerComparisonFeedback,
+      },
       simpleSummary,
       savingsBreakdown,
       debtBreakdown,

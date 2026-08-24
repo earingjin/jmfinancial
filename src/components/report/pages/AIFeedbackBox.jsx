@@ -13,8 +13,7 @@ export default function AIFeedbackBox({ text }) {
 
   return (
     <>
-      <span className="tab-label">Feedback</span>
-      <div className="fb-box" style={{ padding: '14px 18px', fontSize: 13, color: 'var(--ink)' }}>
+      <div className="fb-box" style={{ padding: '10px 14px', fontSize: 13, color: 'var(--ink)' }}>
         {Array.isArray(text) ? (
           <ul className="fb-bullet-list">
             {text.map((item, i) => (

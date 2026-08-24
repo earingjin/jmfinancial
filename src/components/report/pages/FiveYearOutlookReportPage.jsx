@@ -2,10 +2,10 @@ import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import { formatWon } from '../../../utils/format';
 
-function CashFlowLineChart({ outlook }) {
+function CashFlowLineChart({ outlook, pensionStartAge }) {
   const width = 690;
   const height = 250;
-  const plot = { left: 48, right: 18, top: 18, bottom: 38 };
+  const plot = { left: 24, right: 18, top: 24, bottom: 38 };
   const plotWidth = width - plot.left - plot.right;
   const plotHeight = height - plot.top - plot.bottom;
   const minAge = outlook[0].age;
@@ -16,21 +16,61 @@ function CashFlowLineChart({ outlook }) {
   const expensePoints = outlook.map((item) => `${x(item.age)},${y(item.livingExpense || 0)}`).join(' ');
   const incomePoints = outlook.map((item) => `${x(item.age)},${y(item.totalIncome || 0)}`).join(' ');
   const gapPoints = [...outlook.map((item) => `${x(item.age)},${y(item.livingExpense || 0)}`), ...[...outlook].reverse().map((item) => `${x(item.age)},${y(item.totalIncome || 0)}`)].join(' ');
+  const labelY = (pointY, offset) => Math.max(12, Math.min(height - plot.bottom - 6, pointY + offset));
+  const incomeLabelOffset = (pointY, index) => (
+    pointY > height - plot.bottom - 24
+      ? (index % 2 === 0 ? -28 : -36)
+      : (index % 2 === 0 ? 15 : 23)
+  );
+  const labelAnchor = (index) => (index === 0 ? 'start' : index === outlook.length - 1 ? 'end' : 'middle');
+  const labelDx = (index) => (index === 0 ? 4 : index === outlook.length - 1 ? -4 : 0);
+  const pensionStartIsVisible = Number.isFinite(pensionStartAge) && pensionStartAge >= minAge && pensionStartAge <= maxAge;
+  const pensionLabelAnchor = pensionStartAge <= minAge ? 'start' : pensionStartAge >= maxAge ? 'end' : 'middle';
+  const pensionLabelDx = pensionStartAge <= minAge ? 4 : pensionStartAge >= maxAge ? -4 : 0;
 
   return (
     <div className="report-cashflow-chart">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="은퇴 후 예상 월 생활비와 예상 월 총소득 비교">
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const tickY = plot.top + plotHeight - ratio * plotHeight;
-          return <g key={ratio}><line x1={plot.left} x2={width - plot.right} y1={tickY} y2={tickY} /><text x={plot.left - 7} y={tickY + 4}>{Math.round(maxValue * ratio)}만</text></g>;
+          return <line key={ratio} x1={plot.left} x2={width - plot.right} y1={tickY} y2={tickY} />;
         })}
         <polygon points={gapPoints} />
+        {pensionStartIsVisible && (
+          <g className="pension-start-marker">
+            <line className="pension-start-line" x1={x(pensionStartAge)} x2={x(pensionStartAge)} y1={plot.top} y2={plot.top + plotHeight} />
+            <text
+              className="pension-start-label"
+              style={{ textAnchor: pensionLabelAnchor }}
+              x={x(pensionStartAge) + pensionLabelDx}
+              y={height - 27}
+            >
+              연금 수령 시작
+            </text>
+          </g>
+        )}
         <polyline className="expense-line" points={expensePoints} />
         <polyline className="income-line" points={incomePoints} />
-        {outlook.map((item) => (
+        {outlook.map((item, index) => (
           <g key={item.age}>
             <circle className="expense-dot" cx={x(item.age)} cy={y(item.livingExpense || 0)} r="3.5" />
             <circle className="income-dot" cx={x(item.age)} cy={y(item.totalIncome || 0)} r="3.5" />
+            <text
+              className="cashflow-point-value cashflow-point-value--expense"
+              style={{ textAnchor: labelAnchor(index) }}
+              x={x(item.age) + labelDx(index)}
+              y={labelY(y(item.livingExpense || 0), index % 2 === 0 ? -10 : -18)}
+            >
+              {formatWon(item.livingExpense || 0)}
+            </text>
+            <text
+              className="cashflow-point-value cashflow-point-value--income"
+              style={{ textAnchor: labelAnchor(index) }}
+              x={x(item.age) + labelDx(index)}
+              y={labelY(y(item.totalIncome || 0), incomeLabelOffset(y(item.totalIncome || 0), index))}
+            >
+              {formatWon(item.totalIncome || 0)}
+            </text>
             <text className="age-label" x={x(item.age)} y={height - 13}>{item.age}세</text>
           </g>
         ))}
@@ -54,7 +94,7 @@ export default function FiveYearOutlookReportPage({ futureFinance, pageNumber, t
 
       {outlook.length > 0 ? (
         <>
-          {chartOutlook.length > 0 && <CashFlowLineChart outlook={chartOutlook} />}
+          {chartOutlook.length > 0 && <CashFlowLineChart outlook={chartOutlook} pensionStartAge={futureFinance?.nationalPensionStartAge} />}
           <p className="fine-print report-chart-help">주황색은 예상 월 생활비, 초록색은 예상 월 총소득입니다. 두 선 사이가 넓을수록 매월 예상되는 부족액 또는 여유금액이 큽니다.</p>
           <table className="grade-table compact report-outlook-table">
             <thead><tr><th>나이</th><th>예상 월 생활비</th><th>예상 월 총소득</th><th>충당률</th><th>월 차이</th></tr></thead>

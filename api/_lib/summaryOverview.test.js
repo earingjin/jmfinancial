@@ -274,6 +274,39 @@ describe('buildDebtDonut / buildSavingsDonut', () => {
   });
 });
 
+describe('page 4 composition feedback', () => {
+  it('explains what the largest expense means and suggests a next check', () => {
+    const { aggregates } = calc(input());
+    const feedback = buildExpenseDonut(aggregates).feedback;
+    expect(feedback).toMatch(/월 지출의 .*%/);
+    expect(feedback).toContain('전체 지출을 줄이는 효과');
+    expect(feedback).toContain('먼저 살펴보세요');
+  });
+
+  it('explains the liquidity implication when real estate dominates assets', () => {
+    const { aggregates } = calc(input());
+    const feedback = buildAssetDonut(aggregates).feedback;
+    expect(feedback).toMatch(/전체 자산의 .*%가 부동산/);
+    expect(feedback).toContain('바로 사용할 수 있는 돈');
+    expect(feedback).toContain('현금성 자산');
+  });
+
+  it('turns debt and savings composition into practical guidance', () => {
+    const debtFeedback = buildDebtDonut([
+      { key: 'mortgage', label: '주택담보대출', value: 800 },
+      { key: 'credit', label: '신용대출', value: 200 },
+    ], 1000).feedback;
+    const savingsFeedback = buildSavingsDonut([
+      { key: 'installment', label: '적금', value: 80 },
+      { key: 'fund', label: '펀드', value: 20 },
+    ], 100).feedback;
+    expect(debtFeedback).toContain('80%가 주택담보대출');
+    expect(debtFeedback).toContain('금리와 남은 상환기간');
+    expect(savingsFeedback).toContain('80%가 적금');
+    expect(savingsFeedback).toContain('저축 목적과 사용할 시점');
+  });
+});
+
 describe('buildRetirementReadiness', () => {
   it('computes the standard fields when retirement age and living cost are present', () => {
     const scoped = input();

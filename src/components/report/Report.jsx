@@ -74,6 +74,7 @@ export default function Report({ result, onRestart, onBack, onHome, clientName, 
         aggregates={aggregates}
         savingsBreakdown={savingsBreakdown}
         overviewDetail={webSummary?.overviewDetail}
+        savingsInvestmentFeedback={aiFeedback.financialStatus?.savingsInvestment}
         pageNumber={nextPage()}
         totalPages={totalPages}
       />
@@ -96,6 +97,7 @@ export default function Report({ result, onRestart, onBack, onHome, clientName, 
 
       <PeerComparisonPage
         peerComparison={peerComparison}
+        feedback={aiFeedback.peerComparison}
         pageNumber={nextPage()}
         totalPages={totalPages}
       />
@@ -103,6 +105,7 @@ export default function Report({ result, onRestart, onBack, onHome, clientName, 
       <CashFlowOutlookPage
         aggregates={aggregates}
         simulation={simulation}
+        feedback={aiFeedback.cashFlowOutlook}
         pageNumber={nextPage()}
         totalPages={totalPages}
       />
