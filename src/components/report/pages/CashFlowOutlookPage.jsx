@@ -40,7 +40,7 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, pageN
         미래 노후 생활비에도 그대로 영향을 준다는 것을 기억하며 현재 소비를 관리해주세요.
       </p>
 
-      <FinanceBarChart bars={bars} zeroLabel="-" />
+      <FinanceBarChart bars={bars} zeroLabel="-" showValues />
 
       <div className="fine-print report-cashflow-chart-note">
         막대그래프는 현재 월 소득을 기준으로 저축·생활비의 크기와 은퇴 후 월생활비를 비교합니다. 노후 목돈은 은퇴시점부터 목표 생활비를 감당하기 위한 준비자산 총액입니다.
@@ -48,21 +48,6 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, pageN
 
       <div style={{ marginTop: 22 }}>
         <SectionBadge label="은퇴자산 종합분석결과" />
-      </div>
-
-      <h3 className="card-title" style={{ marginBottom: 8 }}>■ 은퇴부족자금</h3>
-      <table className="grade-table compact" style={{ marginBottom: 14 }}>
-        <tbody>
-          <tr><td>현재 준비자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(simulation.currentReadyAssets)}</td></tr>
-          <tr><td>현재 자산의 은퇴 시점 예상금액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(simulation.currentAssetsAtRetirement)}</td></tr>
-          <tr><td>은퇴 전까지 추가 저축 예상금액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(simulation.futureSavingsAtRetirement)}</td></tr>
-          <tr><td>은퇴 시 필요한 총금액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(retirementLumpSum)}</td></tr>
-          <tr><td>은퇴 시까지 준비 가능한 금액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(simulation.readyAssetsAtRetirement)}</td></tr>
-          <tr><td>은퇴 시점에서 부족한 금액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(simulation.shortfall)}</td></tr>
-        </tbody>
-      </table>
-      <div className="fine-print" style={{ marginBottom: 14 }}>
-        준비 가능 금액은 현재 준비자산과 은퇴 전까지의 추가 저축을 각각 기존 예상 운용수익률로 반영한 값입니다.
       </div>
 
       <h3 className="card-title" style={{ marginBottom: 8 }}>■ 은퇴자금 달성률</h3>
@@ -84,8 +69,31 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, pageN
         </div>
         <div className="retirement-achievement-copy">
           <strong>은퇴자금 준비율 {formatPercent(readyPercent)}</strong>
-          <span>필요자금과 준비자금의 금액은 위 은퇴부족자금 표에서 확인할 수 있습니다.</span>
+          <span>필요자금과 준비자금의 금액은 아래 은퇴부족자금 표에서 확인할 수 있습니다.</span>
+          <div className="retirement-achievement-rows">
+            <div className="retirement-achievement-row" style={{ color: 'var(--ink-soft)' }}>
+              <span>은퇴 시 필요한 총금액</span><b>{formatWon(retirementLumpSum)}</b>
+            </div>
+            <div className="retirement-achievement-row is-strong">
+              <span>은퇴 시까지 준비 가능한 금액</span><b>{formatWon(simulation.readyAssetsAtRetirement)}</b>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <h3 className="card-title" style={{ marginTop: 22, marginBottom: 8 }}>■ 은퇴부족자금</h3>
+      <table className="grade-table compact retirement-shortfall-table" style={{ marginBottom: 14 }}>
+        <tbody>
+          <tr style={{ color: 'var(--ink-soft)' }}><td>현재 준비자산</td><td className="num">{formatWon(simulation.currentReadyAssets)}</td></tr>
+          <tr><td>현재 자산의 은퇴 시점 예상금액</td><td className="num">{formatWon(simulation.currentAssetsAtRetirement)}</td></tr>
+          <tr><td>은퇴 전까지 추가 저축 예상금액</td><td className="num">{formatWon(simulation.futureSavingsAtRetirement)}</td></tr>
+          <tr style={{ color: 'var(--ink-soft)' }}><td>은퇴 시 필요한 총금액</td><td className="num">{formatWon(retirementLumpSum)}</td></tr>
+          <tr><td>은퇴 시까지 준비 가능한 금액</td><td className="num">{formatWon(simulation.readyAssetsAtRetirement)}</td></tr>
+          <tr className="total-row"><td>은퇴 시점에서 부족한 금액</td><td className="num is-shortfall">{formatWon(simulation.shortfall)}</td></tr>
+        </tbody>
+      </table>
+      <div className="fine-print" style={{ marginBottom: 14 }}>
+        준비 가능 금액은 현재 준비자산과 은퇴 전까지의 추가 저축을 각각 기존 예상 운용수익률로 반영한 값입니다.
       </div>
     </PageFrame>
   );

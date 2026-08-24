@@ -12,7 +12,7 @@ function getNiceScale(maxValue, tickCount = 4) {
   return { axisMax, ticks: Array.from({ length: tickCount + 1 }, (_, index) => axisMax - (step * index)) };
 }
 
-export default function FinanceBarChart({ bars, tickStep, tickCount = 4, zeroLabel = '0' }) {
+export default function FinanceBarChart({ bars, tickStep, tickCount = 4, zeroLabel = '0', showValues = false }) {
   const maxValue = Math.max(...bars.map((b) => Math.max(0, b.value)), 1);
   const scale = tickStep
     ? {
@@ -39,6 +39,14 @@ export default function FinanceBarChart({ bars, tickStep, tickCount = 4, zeroLab
           <div className="finance-chart-bars">
             {bars.map((bar) => (
               <div className="finance-chart-col" key={bar.label}>
+                {showValues && (
+                  <span
+                    className="finance-chart-value"
+                    style={{ bottom: `${Math.max(0, (Math.max(0, bar.value) / axisMax) * 100)}%` }}
+                  >
+                    {formatWon(bar.value)}
+                  </span>
+                )}
                 <div
                   className="finance-chart-fill"
                   style={{ height: `${Math.max(2, (Math.max(0, bar.value) / axisMax) * 100)}%`, background: bar.color }}

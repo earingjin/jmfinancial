@@ -230,6 +230,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
             result={result}
             onRestart={restart}
             onBack={() => setPhase('summary')}
+            onHome={goHome}
             clientName={user?.user_metadata?.name}
             scenariosInput={submittedScenariosInput}
           />

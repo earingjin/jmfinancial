@@ -65,12 +65,12 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
         <thead>
           <tr>
             <th>출생연도</th>
-            <th style={{ textAlign: 'right' }}>정년</th>
-            <th style={{ textAlign: 'right' }}>국민연금 수급개시</th>
-            <th style={{ textAlign: 'right' }}>소득공백기간</th>
-            <th style={{ textAlign: 'right' }}>필요 금액(월)</th>
-            <th style={{ textAlign: 'right' }}>필요 금액(년)</th>
-            <th style={{ textAlign: 'right' }}>총 필요 금액</th>
+            <th>정년</th>
+            <th>국민연금 수급개시</th>
+            <th>소득공백기간</th>
+            <th>필요 금액(월)</th>
+            <th>필요 금액(년)</th>
+            <th>총 필요 금액</th>
           </tr>
         </thead>
         <tbody>
@@ -80,12 +80,12 @@ export default function RetirementSimulationPage({ simulation, aggregates: agg, 
             return (
               <tr key={c.range} className={pensionCohort?.range === c.range ? 'grade-current' : ''}>
                 <td>{c.range}{pensionCohort?.range === c.range ? ' ← 귀하' : ''}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{c.retireAge}세</td>
-                <td className="num" style={{ textAlign: 'right' }}>{c.pensionAge}세</td>
-                <td className="num" style={{ textAlign: 'right' }}>{c.gapYears}년</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatWon(retirementLivingCost)}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatWon(annualNeeded)}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{formatWon(totalNeeded)}</td>
+                <td className="num">{c.retireAge}세</td>
+                <td className="num">{c.pensionAge}세</td>
+                <td className="num">{c.gapYears}년</td>
+                <td className="num">{formatWon(retirementLivingCost)}</td>
+                <td className="num">{formatWon(annualNeeded)}</td>
+                <td className="num">{formatWon(totalNeeded)}</td>
               </tr>
             );
           })}

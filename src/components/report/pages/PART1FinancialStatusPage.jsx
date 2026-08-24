@@ -22,22 +22,22 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
       <section className="report-detail-panel">
       <h3 className="card-title">① 수입 현황 <small>(월평균, 만원)</small></h3>
       <table className="grade-table compact">
-        <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
+        <thead><tr><th>항목</th><th>금액</th></tr></thead>
         <tbody>
           {overviewDetail?.income?.salaryItems?.length ? overviewDetail.income.salaryItems.map((item) => (
-            <tr key={item.key}><td>{item.label}</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(item.value)}</td></tr>
-          )) : <tr><td>급여</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.salaryMonthly)}</td></tr>}
-          <tr><td>사업소득</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.businessMonthly)}</td></tr>
+            <tr key={item.key}><td>{item.label}</td><td className="num">{formatWon(item.value)}</td></tr>
+          )) : <tr><td>급여</td><td className="num">{formatWon(agg.salaryMonthly)}</td></tr>}
+          <tr><td>사업소득</td><td className="num">{formatWon(agg.businessMonthly)}</td></tr>
           <tr>
             <td>국민연금 · 퇴직연금 · 개인연금</td>
-            <td className="num" style={{ textAlign: 'right' }}>
+            <td className="num">
               {formatWon(agg.monthlyRetirementIncome)}
               {agg.monthlyRetirementIncome === 0 && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (미수령)</span>}
             </td>
           </tr>
-          <tr><td>기타(임대소득 · 배당금 등)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.otherIncomeMonthly)}</td></tr>
-          <tr className="total-row"><td>가구 합계(월평균)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.householdMonthlyIncomeTotal)}</td></tr>
-          <tr><td>가구 합계(연평균)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.householdMonthlyIncomeTotal * 12)}</td></tr>
+          <tr><td>기타(임대소득 · 배당금 등)</td><td className="num">{formatWon(agg.otherIncomeMonthly)}</td></tr>
+          <tr className="total-row"><td>가구 합계(월평균)</td><td className="num">{formatWon(agg.householdMonthlyIncomeTotal)}</td></tr>
+          <tr><td>가구 합계(연평균)</td><td className="num">{formatWon(agg.householdMonthlyIncomeTotal * 12)}</td></tr>
         </tbody>
       </table>
       <div className="indicator-feedback" style={{ marginBottom: 8 }}>
@@ -49,17 +49,17 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
       <section className="report-detail-panel">
       <h3 className="card-title">② 저축 / 투자 현황 <small>(월평균, 만원)</small></h3>
       <table className="grade-table compact">
-        <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
+        <thead><tr><th>항목</th><th>금액</th></tr></thead>
         <tbody>
           {hasSavingsBreakdown ? (
             savingsRows.map((item) => (
-              <tr key={item.key}><td>{item.label}</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(item.value)}</td></tr>
+              <tr key={item.key}><td>{item.label}</td><td className="num">{formatWon(item.value)}</td></tr>
             ))
           ) : (
-            <tr><td>저축 · 투자액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlySavings)}</td></tr>
+            <tr><td>저축 · 투자액</td><td className="num">{formatWon(agg.monthlySavings)}</td></tr>
           )}
           {hasSavingsBreakdown && (
-            <tr className="total-row"><td>저축 · 투자액 합계(월평균)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlySavings)}</td></tr>
+            <tr className="total-row"><td>저축 · 투자액 합계(월평균)</td><td className="num">{formatWon(agg.monthlySavings)}</td></tr>
           )}
           <tr>
             <td>
@@ -68,7 +68,7 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
                 {agg.retirementIncludedInSavings ? ' (위 합계에 포함된 금액)' : ' (위 합계에 별도로 합산된 금액)'}
               </span>
             </td>
-            <td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.retirementSavingsAnnual)}</td>
+            <td className="num">{formatWon(agg.retirementSavingsAnnual)}</td>
           </tr>
         </tbody>
       </table>

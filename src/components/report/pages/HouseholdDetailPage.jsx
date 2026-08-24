@@ -27,23 +27,23 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, debtB
     <PageFrame eyebrow="Household Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
       <SectionBadge number="3" label="자산·부채 현황" />
       <h3 className="card-title" style={{ marginBottom: 6 }}>① 지출 현황 — 고정지출 (5개 항목, 월평균, 만원)</h3>
-      <table className="grade-table compact">
-        <thead><tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
+      <table className="grade-table household-detail-table">
+        <thead><tr><th>항목</th><th>금액</th></tr></thead>
         <tbody>
-          <tr><td>생활비(식비 · 생필품 등)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlyLivingCost)}</td></tr>
+          <tr><td>생활비(식비 · 생필품 등)</td><td className="num">{formatWon(agg.monthlyLivingCost)}</td></tr>
           {/* 생활비 세부의 "기타지출" 종류별 항목 - 이미 위 생활비 합계에 포함된 값을 항목별로
               풀어서 보여줄 뿐이므로 고정지출 합계 계산에는 영향이 없다. */}
           {(otherLivingExpenseItems || []).map((item) => (
             <tr key={item.key}>
               <td style={{ paddingLeft: 20, color: 'var(--ink-soft)', fontSize: 11 }}>└ {item.label}(기타지출)</td>
-              <td className="num" style={{ textAlign: 'right', color: 'var(--ink-soft)', fontSize: 11 }}>{formatWon(item.value)}</td>
+              <td className="num" style={{ color: 'var(--ink-soft)', fontSize: 11 }}>{formatWon(item.value)}</td>
             </tr>
           ))}
-          <tr><td>주거비(관리비 · 공과금 · 통신비)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlyHousingCost)}</td></tr>
-          <tr><td>보장성보험료</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlyInsurancePremium)}</td></tr>
-          <tr><td>부채상환액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlyDebtRepayment)}</td></tr>
-          <tr><td>저축 · 투자액</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.monthlySavings)}</td></tr>
-          <tr className="total-row"><td>고정지출 합계(월평균)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(fixedExpenseWithSavings)}</td></tr>
+          <tr><td>주거비(관리비 · 공과금 · 통신비)</td><td className="num">{formatWon(agg.monthlyHousingCost)}</td></tr>
+          <tr><td>보장성보험료</td><td className="num">{formatWon(agg.monthlyInsurancePremium)}</td></tr>
+          <tr><td>부채상환액</td><td className="num">{formatWon(agg.monthlyDebtRepayment)}</td></tr>
+          <tr><td>저축 · 투자액</td><td className="num">{formatWon(agg.monthlySavings)}</td></tr>
+          <tr className="total-row"><td>고정지출 합계(월평균)</td><td className="num">{formatWon(fixedExpenseWithSavings)}</td></tr>
         </tbody>
       </table>
       <div className="fine-print" style={{ marginBottom: 8 }}>
@@ -58,9 +58,9 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, debtB
         )}
       </div>
 
-      <h3 className="card-title" style={{ marginBottom: 6 }}>② 자산 · 부채 현황 (만원)</h3>
-      <table className="grade-table compact">
-        <thead><tr><th>자산</th><th style={{ textAlign: 'right' }}>금액</th><th>부채</th><th style={{ textAlign: 'right' }}>금액</th></tr></thead>
+      <h3 className="card-title" style={{ marginTop: 40, marginBottom: 6 }}>② 자산 · 부채 현황 (만원)</h3>
+      <table className="grade-table household-detail-table">
+        <thead><tr><th>자산</th><th>금액</th><th>부채</th><th>금액</th></tr></thead>
         <tbody>
           {Array.from({ length: detailRowCount }, (_, index) => {
             const asset = assetRows[index];
@@ -68,17 +68,17 @@ export default function HouseholdDetailPage({ aggregates: agg, indicators, debtB
             return (
               <tr key={debt?.key || `asset-${index}`} className={debt?.isTotal ? 'debt-total-row' : undefined}>
                 <td style={asset?.isSub ? { color: 'var(--ink-soft)', fontSize: 11 } : undefined}>{asset?.label || ''}</td>
-                <td className="num" style={{ textAlign: 'right', ...(asset?.isSub ? { color: 'var(--ink-soft)', fontSize: 11 } : {}) }}>
+                <td className="num" style={asset?.isSub ? { color: 'var(--ink-soft)', fontSize: 11 } : undefined}>
                   {asset ? formatWon(asset.value) : ''}
                 </td>
                 <td>{debt?.label || ''}</td>
-                <td className="num" style={{ textAlign: 'right' }}>{debt ? formatWon(debt.value) : ''}</td>
+                <td className="num">{debt ? formatWon(debt.value) : ''}</td>
               </tr>
             );
           })}
           <tr className="total-row">
-            <td>총자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.totalAssets)}</td>
-            <td>순자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(agg.netWorth)}</td>
+            <td>총자산</td><td className="num">{formatWon(agg.totalAssets)}</td>
+            <td>순자산</td><td className="num">{formatWon(agg.netWorth)}</td>
           </tr>
         </tbody>
       </table>

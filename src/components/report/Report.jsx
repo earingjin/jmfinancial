@@ -14,7 +14,7 @@ import RetirementAssetProjectionReportPage from './pages/RetirementAssetProjecti
 
 const SHOW_RESPONSE_CONTENT = false;
 
-export default function Report({ result, onRestart, onBack, clientName, scenariosInput }) {
+export default function Report({ result, onRestart, onBack, onHome, clientName, scenariosInput }) {
   const {
     generatedAt, indicators, aggregates, simulation, scenarioComparison, peerComparison, familyAges,
     savingsBreakdown, debtBreakdown, otherLivingExpenseItems, otherLiquidAssetItems, webSummary,
@@ -46,8 +46,8 @@ export default function Report({ result, onRestart, onBack, clientName, scenario
         <button type="button" className="btn-primary" onClick={openPrintDialog}>
           PDF로 저장
         </button>
-        <button type="button" className="btn-secondary" onClick={openPrintDialog}>
-          인쇄
+        <button type="button" className="btn-secondary" onClick={onHome}>
+          홈 화면으로 가기
         </button>
         <button type="button" className="btn-secondary" onClick={onRestart}>
           다시 입력하기

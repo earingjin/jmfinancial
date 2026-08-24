@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
+import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, getFinancialHealthStatus } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -63,9 +64,9 @@ function getRetirementStatus(readiness) {
 }
 
 // 상세내역 카드의 한 줄. 입력 누락(missing)이면 "입력 필요"를, 아니면 0이라도 그대로 보여준다.
-function DetailRow({ label, value, missing, bold, highlight, valueColor }) {
+function DetailRow({ label, value, missing, bold, subtotal, highlight, valueColor }) {
   return (
-    <div className={`detail-row${bold ? ' detail-row--total' : ''}${highlight ? ' detail-row--highlight' : ''}`}>
+    <div className={`detail-row${bold ? ' detail-row--total' : ''}${subtotal ? ' detail-row--subtotal' : ''}${highlight ? ' detail-row--highlight' : ''}`}>
       <span className="detail-row-label">{label}</span>
       <span className="detail-row-value" style={valueColor ? { color: valueColor } : undefined}>
         {missing ? <span className="overview-card-missing">입력 필요</span> : value}
@@ -76,7 +77,11 @@ function DetailRow({ label, value, missing, bold, highlight, valueColor }) {
 
 // "종합 결과"의 현재 재무상태 세부 내역 드롭다운에서 보여주는 수입·지출·자산 내역(od는 server가
 // 이미 계산한 값을 표시만 한다).
-function FinancialOverviewCard({ od }) {
+function FinancialOverviewCard({ od, aggregates }) {
+  const incomeMinusExpenseMissing = !Number.isFinite(od.expense.incomeMinusExpense);
+  const realEstate = Number.isFinite(od.balance.realEstate) ? od.balance.realEstate : aggregates.realEstateTotal;
+  const totalDebt = Number.isFinite(od.balance.totalDebt) ? od.balance.totalDebt : aggregates.totalDebt;
+
   return (
     <div className="detail-card">
       <div className="detail-card-header">
@@ -95,7 +100,7 @@ function FinancialOverviewCard({ od }) {
         )}
         <DetailRow label="사업·기타소득" value={formatWon(od.income.businessAndOther)} missing={od.income.businessAndOtherMissing} />
         <DetailRow
-          label="합계" bold
+          label="합계" bold subtotal
           value={<>{formatWon(od.income.monthlyTotal)} · 연 {formatWon(od.income.annualTotal)}</>}
         />
       </div>
@@ -104,7 +109,17 @@ function FinancialOverviewCard({ od }) {
         <div className="detail-group-head">지출 <span className="detail-group-tag">월평균</span></div>
         <DetailRow label="생활비·주거비·보험" value={formatWon(od.expense.livingHousingInsurance)} missing={od.expense.livingHousingInsuranceMissing} />
         <DetailRow label="저축·투자" value={formatWon(od.expense.savings)} missing={od.expense.savingsMissing} />
-        <DetailRow label="고정지출 합계" bold value={formatWon(od.expense.fixedTotal)} />
+        <DetailRow label="고정지출 합계" bold subtotal value={formatWon(od.expense.fixedTotal)} />
+      </div>
+
+      <div className="detail-group">
+        <DetailRow
+          label="소득 - 지출금액"
+          bold subtotal
+          value={formatWon(od.expense.incomeMinusExpense)}
+          missing={incomeMinusExpenseMissing}
+          valueColor={od.expense.incomeMinusExpense < 0 ? 'var(--red)' : undefined}
+        />
       </div>
 
       <div className="detail-group">
@@ -112,10 +127,15 @@ function FinancialOverviewCard({ od }) {
         <DetailRow label="현금성자산" value={formatWon(od.balance.liquid)} missing={od.balance.liquidMissing} />
         <DetailRow label="금융·연금자산" value={formatWon(od.balance.financialAndPension)} missing={od.balance.financialAndPensionMissing} />
         <DetailRow
-          label="부동산·총부채"
-          value={formatWon(od.balance.realEstateNetOfDebt)}
-          missing={od.balance.realEstateNetOfDebtMissing}
-          valueColor={od.balance.realEstateNetOfDebt < 0 ? 'var(--red)' : undefined}
+          label="부동산자산"
+          value={formatWon(realEstate)}
+          missing={od.balance.realEstateMissing}
+        />
+        <DetailRow
+          label="총부채"
+          value={formatWon(totalDebt)}
+          missing={od.balance.totalDebtMissing}
+          valueColor={totalDebt > 0 ? 'var(--red)' : undefined}
         />
         <DetailRow
           label="순자산" bold highlight
@@ -138,56 +158,6 @@ const FHS_REP_LABELS = { household: '매달 소득 중 지출 비율', emergency
 // 표시 문구만 바꾸는 것이라 계산에는 영향이 없다.
 function formatIndicatorValue(indicator) {
   return indicator.key === 'emergency' ? `${formatNumber(indicator.value)}개월` : formatPercent(indicator.value);
-}
-
-// api/_lib/indicators.js의 판정 문구(매우 우수/우수/양호/보통/주의/위험)는 배점 근거이므로
-// 그대로 두고, "현재 재무상태" 카드의 상태 배지에만 사용자가 요청한 더 쉬운 문구로 바꿔
-// 보여준다 - 점수·ratioClass(배지 색상 판단 기준)는 전혀 건드리지 않는다. 인접한 두 단계인
-// "우수"·"양호"는 배지에서는 하나의 "양호"로 합쳐 보여준다.
-const FHS_STATUS_BADGE_LABELS = {
-  '매우 우수': '안정적',
-  '우수': '양호',
-  '양호': '양호',
-  '보통': '점검 필요',
-  '주의': '개선 필요',
-  '위험': '우선 개선',
-};
-function formatIndicatorStatusBadge(indicator) {
-  return FHS_STATUS_BADGE_LABELS[indicator.status] || indicator.status;
-}
-// 새 재무점수·임계값을 만들지 않고, 이미 서버가 계산해 내려주는 ratioClass(good/caution/risk,
-// indicatorMeta.js의 점수비율 기준)만 세어 3가지 안내 문구 중 하나를 고르는 "표시 문구 선택기"다.
-// FHS 원 점수·등급에는 전혀 관여하지 않는다.
-export function getFinancialHealthStatus(reps) {
-  const known = (reps || []).filter((r) => r && !r.notCalculable);
-  if (known.length === 0) {
-    return {
-      icon: '🤔',
-      title: '현재 재무상태를 확인하려면 정보가 조금 더 필요합니다.',
-      detail: '가계수지·비상예비금·부채상환 정보를 입력하면 확인할 수 있습니다.',
-    };
-  }
-  const riskCount = known.filter((r) => r.ratioClass === 'risk').length;
-  const cautionCount = known.filter((r) => r.ratioClass === 'caution').length;
-  if (riskCount === 0 && cautionCount === 0) {
-    return {
-      icon: '😊',
-      title: '현재 재무상태가 전반적으로 안정적입니다.',
-      detail: '수입과 지출의 균형, 비상자금과 부채 수준이 비교적 안정적으로 관리되고 있습니다.',
-    };
-  }
-  if (riskCount >= 2) {
-    return {
-      icon: '😥',
-      title: '현재 재무구조에서 우선 점검할 부분이 있습니다.',
-      detail: '지출·비상자금·부채 중 취약한 항목부터 순서대로 점검할 필요가 있습니다.',
-    };
-  }
-  return {
-    icon: '🙂',
-    title: '현재 재무상태는 대체로 안정적이지만 일부 점검이 필요합니다.',
-    detail: '지출·비상자금·부채 중 보완이 필요한 항목을 확인해 보세요.',
-  };
 }
 
 // "종합 결과"의 왼쪽 카드 - 가계수지/비상예비금/DSR 3개 대표지표와 FHS 총점을 보여준다.
@@ -305,14 +275,14 @@ function PeerMetricRow({ label, metric, unit }) {
         <span className="peer-row-label">{label}</span>
         <span className="peer-row-tag">{displayPercentileLabel}</span>
       </div>
-      <div className="peer-bar-track" role="img" aria-label={`${label} 내 값 ${formatValue(value)}, 또래 가구 평균 ${formatValue(average)}`}>
+      <div className="peer-bar-track" role="img" aria-label={`${label} ${formatValue(value)}, 또래 가구 평균 ${formatValue(average)}`}>
         <div className="peer-bar-fill" style={{ width: `${userPct}%` }} />
         <div className="peer-bar-avg-marker" style={{ left: `${avgPct}%` }}>
           <span className="peer-bar-avg-label">평균 {formatValue(average)}</span>
         </div>
       </div>
       <div className="peer-row-numbers">
-        <span>내 값 <b>{formatValue(value)}</b></span>
+        <span>{label} <b>{formatValue(value)}</b></span>
         <span>또래 가구 평균 {formatValue(average)}</span>
         {diffPercent != null && <span className={diffClass}>{diffPercent > 0 ? '+' : ''}{diffPercent}%</span>}
       </div>
@@ -426,24 +396,6 @@ function FiveYearOutlookTable({ outlook }) {
   );
 }
 
-// 자산이 소진되는 경우와 기대수명까지 남는 경우를 각각 공포감을 주지 않는 문장으로 안내한다.
-// 새 재무 판단 기준을 만들지 않는다 - depletionAge/lifeExpectancy/recoveredAfterDepletion은
-// 이미 서버가 계산한 값이다. depletionAge는 "최초 소진 예상 나이"일 뿐 이후 회복 여부는
-// recoveredAfterDepletion으로 별도 판단한다(회복돼도 "최초 소진 없었음"으로 바뀌지 않는다).
-export function formatAssetProjectionOutlook(projection) {
-  const prefix = projection.lumpSumExpenseIncluded ? '예상 목돈지출을 포함하면 ' : '';
-  if (projection.assetsRemainAtLifeExpectancy) {
-    return `${prefix}${projection.lumpSumExpenseIncluded ? '기대수명까지 준비자산이 남을 것으로 예상됩니다.' : '현재 계획을 유지하면 기대수명까지 준비자산이 남을 것으로 예상됩니다.'}`;
-  }
-  if (projection.recoveredAfterDepletion) {
-    return `${prefix}${projection.depletionAge}세경 준비자산이 일시적으로 부족해지지만, 이후 소득 증가로 다시 쌓일 것으로 예상됩니다.`;
-  }
-  const diff = projection.lifeExpectancy - projection.depletionAge;
-  return diff > 0
-    ? `${prefix}기대수명보다 약 ${diff}년 먼저 준비자산이 소진될 것으로 예상됩니다.`
-    : `${prefix}현재 계획 기준 자산이 기대수명 무렵 소진될 것으로 예상됩니다.`;
-}
-
 // 은퇴 후 자산잔액 시뮬레이션(webSummary.futureFinance.retirementAssetProjection)을 그리는
 // 메인 그래프. x축의 나이 N은 항상 points[].age===N인 해의 연말 잔액(endingBalance)을
 // 가리킨다 - depletionAge(카드·문구에 쓰는 텍스트)와 그래프가 0원에 닿는 나이가 반드시
@@ -512,9 +464,26 @@ function RetirementAssetProjectionChart({ projection }) {
   // 발생 시점이 명확한 목돈지출(expense.retirementLumpSumExpenses)만 그래프 위에 이벤트로
   // 표시한다 - 그래프는 금액 위주로만 간결하게 보여주고, 항목명은 hover에만 의존하지 않도록
   // 그래프 아래 "예상 목돈지출" 요약 목록에서 항상 확인할 수 있게 한다(모바일 포함).
+  // 목돈지출 시점이 이정표(70/75/80/85세 등)나 다른 목돈지출 시점과 가까우면 라벨이 겹치므로,
+  // 겹치는 항목은 한 단씩 더 위로 쌓아(lane) 항상 최소 간격을 두게 한다.
+  const LABEL_MIN_GAP = 60;
+  const milestoneXs = milestones.map((m) => x(m.age));
+  const lumpSumLaneLastX = [];
   const lumpSumMarkers = points
     .filter((p) => p.lumpSumEvents?.length > 0)
-    .map((p) => ({ age: p.age, amount: p.lumpSumExpense, y: y(p.endingBalance) }));
+    .map((p) => ({ age: p.age, amount: p.lumpSumExpense, y: y(p.endingBalance) }))
+    .sort((a, b) => a.age - b.age)
+    .map((m) => {
+      const mx = x(m.age);
+      const laneConflicts = (candidateLane) => {
+        if (candidateLane === 0 && milestoneXs.some((mmx) => Math.abs(mmx - mx) < LABEL_MIN_GAP)) return true;
+        return (lumpSumLaneLastX[candidateLane] ?? -Infinity) > mx - LABEL_MIN_GAP;
+      };
+      let lane = 0;
+      while (laneConflicts(lane)) lane++;
+      lumpSumLaneLastX[lane] = mx;
+      return { age: m.age, amount: m.amount, y: m.y, lane };
+    });
 
   const altText = (depletionAge != null
     ? `은퇴 자산잔액 그래프: 은퇴 ${retirementAge}세 시작자산 ${formatWon(points[0].startingBalance)}, ${depletionAge}세에 자산 소진 예상, 기대수명 ${lifeExpectancy}세`
@@ -581,7 +550,7 @@ function RetirementAssetProjectionChart({ projection }) {
           </g>
         )}
         {lumpSumMarkers.map((m) => {
-          const markerY = Math.max(plot.top + 12, m.y - 24);
+          const markerY = Math.max(plot.top + 12, m.y - 24 - m.lane * 26);
           return (
             <g key={`lumpsum-${m.age}`}>
               <line className="asset-projection-lumpsum-line" x1={x(m.age)} x2={x(m.age)} y1={markerY + 8} y2={m.y} />
@@ -680,7 +649,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
 
           <details className="retirement-calculation summary-grid-area--details1">
             <summary>현재 재무상태 세부 내역</summary>
-            <FinancialOverviewCard od={od} />
+            <FinancialOverviewCard od={od} aggregates={aggregates} />
           </details>
 
           <div className="summary-grid-area--card2">
