@@ -1,15 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { FormProvider } from './state/FormContext';
 import { AuthProvider } from './state/AuthContext';
 import { useAuth } from './state/authState';
 import AuthGate from './components/auth/AuthGate';
 import WelcomeScreen from './components/welcome/WelcomeScreen';
-import AdminDashboard from './components/admin/AdminDashboard';
 import HomeScreen from './components/home/HomeScreen';
 import HistoryList from './components/home/HistoryList';
-import Wizard from './components/wizard/Wizard';
-import Report from './components/report/Report';
-import SimpleSummaryReport from './components/summary/SimpleSummaryReport';
 import AppCopyright from './components/AppCopyright';
 import WebBrandLogo from './components/WebBrandLogo';
 import { deobfuscate } from './utils/obfuscate';
@@ -18,6 +14,22 @@ import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, migrateLegacyDraft
 import { completePlannerSubmission, createSubmissionId } from './services/plannerSubmission';
 import './styles/tokens.css';
 import './styles/app.css';
+
+// 첫 화면에서 사용하지 않는 큰 화면은 실제 진입 시에만 내려받는다.
+// 진단·계산 상태와 서버 계산 경계에는 영향을 주지 않는 표시 컴포넌트 분리다.
+const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
+const Report = lazy(() => import('./components/report/Report'));
+const SimpleSummaryReport = lazy(() => import('./components/summary/SimpleSummaryReport'));
+const Wizard = lazy(() => import('./components/wizard/Wizard'));
+
+function LazyScreenFallback() {
+  return (
+    <div className="loading-state">
+      <div className="spinner" />
+      <p>화면을 불러오는 중...</p>
+    </div>
+  );
+}
 
 function AppContent({ initialDraft = null, startWithWizard = false }) {
   const { user, signOut, deleteAccount } = useAuth();
@@ -184,7 +196,11 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         )}
 
         <FormProvider userId={user.id} initialDraft={initialDraft}>
-          {phase === 'wizard' && <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={wizardStep} onStepChange={setWizardStep} />}
+          {phase === 'wizard' && (
+            <Suspense fallback={<LazyScreenFallback />}>
+              <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={wizardStep} onStepChange={setWizardStep} />
+            </Suspense>
+          )}
         </FormProvider>
 
         {phase === 'loading' && (
@@ -216,24 +232,28 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         )}
 
         {phase === 'summary' && result && (
-          <SimpleSummaryReport
-            result={result}
-            onBack={handleSummaryBack}
-            onHome={goHome}
-            onDownload={goToReport}
-            onShare={goToReport}
-          />
+          <Suspense fallback={<LazyScreenFallback />}>
+            <SimpleSummaryReport
+              result={result}
+              onBack={handleSummaryBack}
+              onHome={goHome}
+              onDownload={goToReport}
+              onShare={goToReport}
+            />
+          </Suspense>
         )}
 
         {phase === 'report' && result && (
-          <Report
-            result={result}
-            onRestart={restart}
-            onBack={() => setPhase('summary')}
-            onHome={goHome}
-            clientName={user?.user_metadata?.name}
-            scenariosInput={submittedScenariosInput}
-          />
+          <Suspense fallback={<LazyScreenFallback />}>
+            <Report
+              result={result}
+              onRestart={restart}
+              onBack={() => setPhase('summary')}
+              onHome={goHome}
+              clientName={user?.user_metadata?.name}
+              scenariosInput={submittedScenariosInput}
+            />
+          </Suspense>
         )}
       </main>
       {phase !== 'report' && phase !== 'home' && <AppCopyright />}
@@ -409,7 +429,11 @@ function AdminRoute() {
     );
   }
 
-  return <AdminDashboard onSignOut={signOut} />;
+  return (
+    <Suspense fallback={<LazyScreenFallback />}>
+      <AdminDashboard onSignOut={signOut} />
+    </Suspense>
+  );
 }
 
 export default function App() {

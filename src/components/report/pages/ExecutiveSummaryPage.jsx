@@ -7,7 +7,7 @@ import { formatWon, formatPercent, round1 } from '../../../utils/format';
 // 실제 판정 로직이 마련되면 이 자리에 값을 채워 넣는다.
 const RATING_PLACEHOLDER = '-';
 
-function ExecutiveFinanceSummary({ agg }) {
+function ExecutiveFinanceSummary({ agg, financialPositionFeedback, cashFlowFeedback }) {
   const assetBars = [
     { label: '자산', value: agg.totalAssets, color: 'var(--navy-700)' },
     { label: '부채', value: agg.totalDebt, color: 'var(--red)' },
@@ -16,7 +16,7 @@ function ExecutiveFinanceSummary({ agg }) {
   const cashFlowBars = [
     { label: '수입', value: agg.householdMonthlyIncomeTotal, color: 'var(--navy-700)' },
     { label: '지출', value: agg.totalExpenseMonthlyExSavings, color: 'var(--red)' },
-    { label: '순저축액', value: agg.monthlySavings, color: 'var(--teal)' },
+    { label: '월저축액', value: agg.monthlySavings, color: 'var(--teal)' },
   ];
 
   return (
@@ -30,7 +30,10 @@ function ExecutiveFinanceSummary({ agg }) {
             <tr className="total-row"><td>순자산</td><td className="num">{formatWon(agg.netWorth)}</td></tr>
           </tbody>
         </table>
-        <FinanceBarChart bars={assetBars} tickCount={2} />
+        <FinanceBarChart bars={assetBars} tickCount={2} showValues headroom={0.4} />
+        <p className="executive-finance-feedback">
+          {financialPositionFeedback || '자산과 부채 정보를 확인하면 현재 순자산이 어떤 상태인지 안내를 확인할 수 있습니다.'}
+        </p>
       </div>
       <div>
         <table className="grade-table compact">
@@ -38,10 +41,13 @@ function ExecutiveFinanceSummary({ agg }) {
           <tbody>
             <tr><td>수입</td><td className="num">{formatWon(agg.householdMonthlyIncomeTotal)}</td></tr>
             <tr><td>지출</td><td className="num">{formatWon(agg.totalExpenseMonthlyExSavings)}</td></tr>
-            <tr className="total-row"><td>순저축액</td><td className="num">{formatWon(agg.monthlySavings)}</td></tr>
+            <tr className="total-row"><td>월저축액</td><td className="num">{formatWon(agg.monthlySavings)}</td></tr>
           </tbody>
         </table>
-        <FinanceBarChart bars={cashFlowBars} tickCount={2} zeroLabel="-" />
+        <FinanceBarChart bars={cashFlowBars} tickCount={2} zeroLabel="-" showValues headroom={0.4} />
+        <p className="executive-finance-feedback">
+          {cashFlowFeedback || '소득과 지출, 저축 정보를 확인하면 현재 현금흐름에 대한 안내를 확인할 수 있습니다.'}
+        </p>
       </div>
     </div>
   );
@@ -59,6 +65,15 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
     : retirementAssetProjection.assetsRemainAtLifeExpectancy
       ? '기대수명까지 유지'
       : `${retirementAssetProjection.depletionAge}세 소진 예상`;
+  const retirementFeedback = fb.retirement || {};
+  const retirementStatusInterpretation = retirementFeedback.cashFlow || (simulation.shortfall > 0
+    ? `현재 계획에서는 은퇴 시 필요한 자금보다 ${formatWon(simulation.shortfall)} 부족할 것으로 예상됩니다. 지금의 저축을 유지할 수 있는지 확인하고 추가 준비 계획을 살펴보세요.`
+    : '현재 계획대로라면 준비 가능한 자산으로 은퇴생활비를 충당할 수 있습니다. 실제 생활비 변화에 맞춰 정기적으로 다시 확인해보세요.');
+  const assetDepletionInterpretation = retirementFeedback.assetGoal || (!retirementAssetProjection || retirementAssetProjection.notCalculable
+    ? '현재 정보만으로는 은퇴 후 자산이 언제까지 유지되는지 판단하기 어렵습니다. 관련 정보를 확인한 뒤 다시 점검해보세요.'
+    : retirementAssetProjection.assetsRemainAtLifeExpectancy
+      ? '예상 소득과 생활비를 반영해도 기대수명까지 준비자산이 남을 전망입니다. 지금의 관리 흐름을 유지하며 정기적으로 점검하세요.'
+      : `현재 계획대로라면 준비자산이 ${retirementAssetProjection.depletionAge}세 무렵 소진될 것으로 예상됩니다. 생활비와 목돈지출, 추가 저축 중 조정 가능한 항목을 살펴보세요.`);
 
   return (
     <PageFrame eyebrow="Executive Summary" title="핵심 이슈 & 종합 결과" pageNumber={pageNumber} totalPages={totalPages}>
@@ -67,10 +82,9 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
         쉽게 파악할 수 있도록 종합 정리하여 드립니다. 이를 참고하여 우리집의 투명한 자산계획과 관리를 이어나가시길 바랍니다.
       </p>
 
-      <h3 className="num-section-title"><span className="num-badge">1</span>고객정보</h3>
-      <table className="grade-table" style={{ marginBottom: 8 }}>
+      <table className="grade-table executive-customer-table" style={{ marginBottom: 8 }}>
         <thead>
-          <tr><th>구분</th><th>연령</th><th>은퇴(예정)연령</th><th>기대여명</th></tr>
+          <tr><th>고객 구분</th><th>연령</th><th>은퇴(예정)연령</th><th>기대여명</th></tr>
         </thead>
         <tbody>
           <tr>
@@ -97,15 +111,17 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
         </tbody>
       </table>
 
-      <h3 className="num-section-title executive-results-title"><span className="num-badge">2</span>결과요약</h3>
+      <section className="executive-part executive-part--finance">
+        <div className="subsection-head executive-part-head executive-part-head--finance">PART1 재무</div>
+        <ExecutiveFinanceSummary
+          agg={agg}
+          financialPositionFeedback={fb.financialPosition}
+          cashFlowFeedback={fb.financialStatus}
+        />
+      </section>
 
-      <div className="subsection-head" style={{ fontSize: 14, margin: '4px 0 6px' }}>PART1 재무</div>
-      <ExecutiveFinanceSummary agg={agg} />
-      <div className="executive-feedback" style={{ marginBottom: 8 }}>
-        <AIFeedbackBox text={fb.financialStatus} />
-      </div>
-
-      <div className="subsection-head" style={{ fontSize: 14, margin: '4px 0 6px' }}>PART2 노후</div>
+      <section className="executive-part executive-part--retirement">
+        <div className="subsection-head executive-part-head executive-part-head--retirement">PART2 노후</div>
       <div className="summary-card-grid" style={{ marginBottom: 6 }}>
         <div className="summary-card">
           <div className="summary-card-title-row">
@@ -114,6 +130,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
           </div>
           <div className="summary-card-row"><span>노후기간</span><span className="num">{round1(simulation.retirementYears)}년</span></div>
           <div className="summary-card-row total"><span>적정상태</span><span className="num" style={{ color: simulation.shortfall > 0 ? 'var(--red)' : 'var(--teal)' }}>{retirementStatus}</span></div>
+          <p className="summary-card-reason">{retirementStatusInterpretation}</p>
         </div>
         <div className="summary-card">
           <div className="summary-card-title-row">
@@ -122,13 +139,14 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
           </div>
           <div className="summary-card-row"><span>월평균 지출</span><span className="num">{formatWon(simulation.retirementLivingCostNow)}</span></div>
           <div className="summary-card-row total"><span>자산소진</span><span className="num">{assetDepletionLabel}</span></div>
+          <p className="summary-card-reason">{assetDepletionInterpretation}</p>
         </div>
       </div>
       <div className="executive-feedback">
         <AIFeedbackBox text={fb.retirementCashFlow} />
-      </div>
+        </div>
 
-      {retirementReadiness && !retirementReadiness.notCalculable && (
+        {retirementReadiness && !retirementReadiness.notCalculable && (
         <div className="executive-calculation-summary">
           <div className="executive-calculation-heading"><strong>은퇴자금 계산 근거</strong><small>입력값과 기존 은퇴 시뮬레이션 결과를 단계별로 정리했습니다.</small></div>
           <div className="executive-calculation-step"><i>1</i><span>은퇴 시점 월 생활비</span><b>{formatWon(retirementReadiness.retirementLivingCostAtRetirement)}</b></div>
@@ -138,7 +156,8 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
           <div className="executive-calculation-step is-result"><i>3</i><span>예상 부족자금</span><b>{formatWon(retirementReadiness.shortfall)}</b></div>
           <p>물가상승률 연 {formatPercent(retirementReadiness.inflationRate)} · 예상 운용수익률 연 {formatPercent(retirementReadiness.assumedReturnRate)}</p>
         </div>
-      )}
+        )}
+      </section>
     </PageFrame>
   );
 }

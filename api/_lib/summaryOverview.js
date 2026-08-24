@@ -136,6 +136,11 @@ export function buildIncomeDonut(input, aggregates) {
     isOverspending,
     overspendAmount: isOverspending ? safe(-unassignedRaw) : 0,
     items,
+    feedback: isOverspending
+      ? `지출과 저축을 합하면 소득보다 매월 ${formatFeedbackWon(-unassignedRaw)} 많습니다. 이런 흐름이 계속되면 저축을 하고 있어도 전체 자산이 줄어들 수 있으므로, 일시적인 지출이나 다른 소득이 빠진 것은 아닌지 먼저 확인해보세요.`
+      : unassignedRaw > 0
+        ? `지출과 저축을 제외하고 매월 ${formatFeedbackWon(unassignedRaw)}의 여유가 있습니다. 이 금액을 비상자금이나 목적 저축으로 정해두면 남는 돈이 자연스럽게 자산으로 이어질 수 있습니다.`
+        : '월소득이 생활비와 저축에 모두 사용되고 있어 예상하지 못한 지출에 대응할 여유가 크지 않습니다. 매달 소액이라도 별도의 여유자금을 마련해두는 것이 좋습니다.',
   };
 }
 
@@ -164,6 +169,7 @@ export function buildExpenseDonut(aggregates, livingExpenseItems = []) {
   return {
     total: safe(aggregates.totalExpenseMonthlyExSavings),
     items,
+    feedback: buildCompositionFeedback('expense', items),
   };
 }
 
@@ -173,20 +179,22 @@ export function buildExpenseDonut(aggregates, livingExpenseItems = []) {
 export function buildAssetDonut(aggregates, otherLiquidAssetItems = []) {
   const otherLiquidTotal = otherLiquidAssetItems.reduce((s, it) => s + (Number(it.value) || 0), 0);
   const hasOtherLiquidItems = otherLiquidAssetItems.length > 0;
+  const items = [
+    {
+      key: 'liquid',
+      label: hasOtherLiquidItems ? '현금성자산(기타 제외)' : '현금성자산',
+      value: safe(aggregates.liquidAssets - otherLiquidTotal),
+    },
+    ...otherLiquidAssetItems.map((it) => ({ key: it.key, label: it.label, value: safe(it.value) })),
+    { key: 'financial', label: '투자 금융자산', value: safe(aggregates.financialAssetsTotal) },
+    { key: 'pension', label: '연금자산', value: safe(aggregates.pensionAssets) },
+    { key: 'realEstate', label: '부동산자산', value: safe(aggregates.realEstateTotal) },
+    { key: 'otherAssets', label: '기타 자산', value: safe(aggregates.otherAssetsTotal) },
+  ];
   return {
     total: safe(aggregates.totalAssets),
-    items: [
-      {
-        key: 'liquid',
-        label: hasOtherLiquidItems ? '현금성자산(기타 제외)' : '현금성자산',
-        value: safe(aggregates.liquidAssets - otherLiquidTotal),
-      },
-      ...otherLiquidAssetItems.map((it) => ({ key: it.key, label: it.label, value: safe(it.value) })),
-      { key: 'financial', label: '투자 금융자산', value: safe(aggregates.financialAssetsTotal) },
-      { key: 'pension', label: '연금자산', value: safe(aggregates.pensionAssets) },
-      { key: 'realEstate', label: '부동산자산', value: safe(aggregates.realEstateTotal) },
-      { key: 'otherAssets', label: '기타 자산', value: safe(aggregates.otherAssetsTotal) },
-    ],
+    items,
+    feedback: buildCompositionFeedback('assets', items),
   };
 }
 
@@ -207,13 +215,52 @@ function buildBreakdownDonut(breakdownItems, total) {
 export function buildDebtDonut(debtBreakdown, totalDebt) {
   const total = safe(totalDebt);
   if (debtBreakdown.length === 0 && total > 0) {
-    return buildBreakdownDonut([{ key: 'total', label: '총부채', value: total }], total);
+    const result = buildBreakdownDonut([{ key: 'total', label: '총부채', value: total }], total);
+    return { ...result, feedback: '부채 총액만 입력되어 어떤 부채가 가장 큰 부담인지 구분하기 어렵습니다. 대출별 금리와 남은 상환기간을 확인하면 먼저 갚을 부채를 정하는 데 도움이 됩니다.' };
   }
-  return buildBreakdownDonut(debtBreakdown, total);
+  const result = buildBreakdownDonut(debtBreakdown, total);
+  return { ...result, feedback: total > 0 ? buildCompositionFeedback('debt', result.items) : '현재 부채가 없어 매달 상환 부담 없이 소득을 저축과 생활비에 활용할 수 있습니다.' };
 }
 
 export function buildSavingsDonut(savingsBreakdown, totalSavings) {
-  return buildBreakdownDonut(savingsBreakdown, totalSavings);
+  const result = buildBreakdownDonut(savingsBreakdown, totalSavings);
+  return { ...result, feedback: result.total > 0 ? buildCompositionFeedback('savings', result.items) : '현재 저축·투자액이 없어 소득이 미래 자산으로 이어지지 않고 있습니다. 부담되지 않는 금액부터 매달 먼저 저축하는 방법을 검토해보세요.' };
+}
+
+function buildCompositionFeedback(category, items) {
+  const positiveItems = items.filter((item) => item.value > 0);
+  const total = positiveItems.reduce((sum, item) => sum + item.value, 0);
+  const largest = [...positiveItems].sort((a, b) => b.value - a.value)[0];
+  if (!largest || total <= 0) return '입력된 세부 내역이 없어 현재 구성을 해석하기 어렵습니다.';
+
+  const share = Math.round((largest.value / total) * 1000) / 10;
+  if (category === 'expense') {
+    return `월 지출의 ${share}%가 ${largest.label}에 쓰이고 있어, 이 항목을 조정할 때 전체 지출을 줄이는 효과가 가장 큽니다. 매달 반복되는 비용 중 줄일 수 있는 부분이 있는지 먼저 살펴보세요.`;
+  }
+  if (category === 'assets') {
+    if (largest.key === 'realEstate') {
+      return `전체 자산의 ${share}%가 부동산에 있어 자산 규모에 비해 급할 때 바로 사용할 수 있는 돈은 부족할 수 있습니다. 비상시에 쓸 현금성 자산도 함께 확보되어 있는지 확인해보세요.`;
+    }
+    if (largest.key === 'liquid') {
+      return `전체 자산의 ${share}%가 현금성 자산이라 갑작스러운 지출에는 대응하기 쉬운 편입니다. 당장 쓸 계획이 없는 금액은 사용 시점에 맞춰 저축·투자로 나누는 것도 검토해보세요.`;
+    }
+    if (largest.key === 'financial') {
+      return `전체 자산의 ${share}%가 투자 금융자산이라 시장 변화에 따라 자산 가치가 달라질 수 있습니다. 사용할 시점과 감당할 수 있는 변동 폭에 맞게 투자 구성을 점검해보세요.`;
+    }
+    if (largest.key === 'pension') {
+      return `전체 자산의 ${share}%가 연금자산으로 노후 준비에 집중되어 있습니다. 은퇴 전에 필요한 목돈을 위한 자산도 별도로 마련되어 있는지 확인해보세요.`;
+    }
+    return `전체 자산의 ${share}%가 ${largest.label}에 집중되어 있습니다. 필요할 때 현금으로 바꾸기 쉬운지와 가치 변동 가능성을 함께 점검해보세요.`;
+  }
+  if (category === 'debt') {
+    return `전체 부채의 ${share}%가 ${largest.label}에 집중되어 있습니다. 이 부채의 금리와 남은 상환기간을 확인해 먼저 줄이는 것이 유리한지 점검해보세요.`;
+  }
+  return `월 저축·투자액의 ${share}%가 ${largest.label}에 들어가고 있습니다. 비중이 큰 만큼 저축 목적과 사용할 시점에 맞는 상품인지 확인하고, 단기간에 쓸 여유자금도 함께 나눠 준비해보세요.`;
+}
+
+function formatFeedbackWon(value) {
+  const rounded = Math.round(safe(value) * 10) / 10;
+  return `${rounded.toLocaleString('ko-KR')}만원`;
 }
 
 // ---------------------------------------------------------------------------

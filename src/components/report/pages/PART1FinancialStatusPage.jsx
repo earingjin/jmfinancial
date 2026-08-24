@@ -1,17 +1,10 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
-import FinanceBarChart from './FinanceBarChart';
 import { formatWon } from '../../../utils/format';
 
-export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreakdown, overviewDetail, pageNumber, totalPages }) {
+export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreakdown, overviewDetail, savingsInvestmentFeedback, pageNumber, totalPages }) {
   const savingsRows = savingsBreakdown || [];
   const hasSavingsBreakdown = savingsRows.length > 0;
-  const SAVINGS_CHART_COLORS = ['var(--navy-700)', 'var(--teal)', 'var(--gold)', 'var(--navy-600)', 'var(--amber)', 'var(--navy-800)', 'var(--teal-soft)', 'var(--red)'];
-  const savingsBars = savingsRows.map((item, i) => ({
-    label: item.label,
-    value: item.value,
-    color: SAVINGS_CHART_COLORS[i % SAVINGS_CHART_COLORS.length],
-  }));
 
   return (
     <PageFrame eyebrow="Household Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
@@ -42,7 +35,7 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
       </table>
       <div className="indicator-feedback" style={{ marginBottom: 8 }}>
         귀하의 월평균 수입은 {formatWon(agg.monthlyIncome)}이고, 연간 수입은 {formatWon(agg.annualIncome)}입니다.
-        이 금액은 가계수지지표 · 총저축성향지표 산출의 기준(총소득)으로 활용됩니다.
+        이 금액은 소득에 비해 지출과 저축이 어느 정도인지 확인하는 기준으로 사용됩니다.
       </div>
       </section>
 
@@ -72,12 +65,17 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
           </tr>
         </tbody>
       </table>
-      {hasSavingsBreakdown && <div className="report-savings-chart"><FinanceBarChart bars={savingsBars} zeroLabel="-" /></div>}
-      <div className="fine-print" style={{ marginBottom: 8 }}>
-        저축 · 투자액 {formatWon(agg.monthlySavings)}은 소멸성 지출이 아닌 자산증가로 분류되어, 가계수지지표 계산 시 총지출에서 제외되고 총저축성향지표 계산에 활용됩니다.
+      <div className="indicator-feedback" style={{ marginBottom: 8 }}>
+        저축 · 투자액 {formatWon(agg.monthlySavings)}은 생활비처럼 소비되는 돈이 아니라 자산을 늘리는 금액으로 봅니다.
+        따라서 월 지출에는 포함하지 않고, 소득 중 얼마를 저축하고 있는지 확인할 때 사용합니다.
       </div>
       </section>
       </div>
+
+      <section className="report-savings-rate-feedback">
+        <strong>수입 대비 저축·투자 비율</strong>
+        <p>{savingsInvestmentFeedback || '소득과 저축 정보를 다시 확인하면 저축·투자 비율에 대한 안내를 확인할 수 있습니다.'}</p>
+      </section>
 
       <section className="report-key-note" aria-label="사용자 메모 영역">
         <div className="report-key-note-heading">

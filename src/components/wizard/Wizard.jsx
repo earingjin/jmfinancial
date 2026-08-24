@@ -101,6 +101,12 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   }, []);
   const moveToStep = (next) => {
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
+    if (resolved !== stepIndex) {
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLElement) activeElement.blur();
+      window.scrollTo(0, 0);
+      setIsScrolled(false);
+    }
     setDraftStep(resolved);
     setStepIndexState(resolved);
     onStepChange?.(resolved);

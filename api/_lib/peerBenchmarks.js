@@ -26,3 +26,19 @@ export function getPeerBracket(age) {
   if (!Number.isFinite(age)) return PEER_AGE_BRACKETS[0];
   return PEER_AGE_BRACKETS.find((b) => age <= b.maxAge) || PEER_AGE_BRACKETS[PEER_AGE_BRACKETS.length - 1];
 }
+
+// 한국형 가계재무비율 가이드라인(양세정·주소현·차경욱·김민정, 2013)의
+// 연령대별 총저축/총소득 권장 수준. 실제 또래 평균이 아니므로 사용자 문구에서도
+// 반드시 "같은 연령대의 권장 수준"으로 안내한다.
+export const AGE_SAVINGS_RATE_GUIDELINES = [
+  { label: '20대 이하', maxAge: 29, rate: 50 },
+  { label: '30대', maxAge: 39, rate: 30 },
+  { label: '40대', maxAge: 49, rate: 20 },
+  { label: '50~64세', maxAge: 64, rate: 10 },
+  { label: '65세 이상', maxAge: Infinity, rate: 5 },
+];
+
+export function getAgeSavingsRateGuideline(age) {
+  if (!Number.isFinite(age) || age < 0) return null;
+  return AGE_SAVINGS_RATE_GUIDELINES.find((guideline) => age <= guideline.maxAge) || null;
+}

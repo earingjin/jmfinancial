@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getFinancialHealthStatus } from './summaryPresentation';
+import { formatAssetProjectionReason, getFinancialHealthStatus } from './summaryPresentation';
 
 // getFinancialHealthStatus는 새 재무점수·임계값을 만들지 않고, 서버가 이미 계산한
 // ratioClass(good/caution/risk)만 세어 화면 문구를 고르는 순수 표시 헬퍼다.
@@ -38,5 +38,46 @@ describe('getFinancialHealthStatus', () => {
   it('notCalculable 지표는 카운트에서 제외하고 나머지 known 지표만으로 판정한다', () => {
     // na 1개 + good 2개 → known은 good만 2개 → 안정 문구
     expect(getFinancialHealthStatus([na, good, good]).icon).toBe('😊');
+  });
+});
+
+describe('formatAssetProjectionReason', () => {
+  it('explains a declining balance as spending the prepared assets', () => {
+    const text = formatAssetProjectionReason({
+      points: [{ startingBalance: 1000, endingBalance: 900 }, { startingBalance: 900, endingBalance: 700 }],
+    });
+    expect(text).toContain('준비자산에서 꺼내 쓰기 때문에');
+  });
+
+  it('explains a growing balance as income and returns exceeding spending', () => {
+    const text = formatAssetProjectionReason({
+      points: [{ startingBalance: 1000, endingBalance: 1100 }, { startingBalance: 1100, endingBalance: 1200 }],
+    });
+    expect(text).toContain('남는 금액이 자산에 더해지기 때문에');
+  });
+
+  it('includes amounts, change rate, and assumptions when detailed totals are available', () => {
+    const text = formatAssetProjectionReason({
+      assumedReturnRate: 4,
+      inflationRate: 2,
+      points: [{ startingBalance: 10000, endingBalance: 9000 }, { startingBalance: 9000, endingBalance: 8000 }],
+      explanation: {
+        endingAssets: 8000,
+        assetChange: -2000,
+        assetChangeRate: -20,
+        totalIncome: 5000,
+        totalInvestmentReturn: 1000,
+        totalLivingExpense: 7500,
+        totalLumpSumExpense: 500,
+        totalInflow: 6000,
+        totalOutflow: 8000,
+      },
+    });
+    expect(text).toContain('20%');
+    expect(text).toContain('소득');
+    expect(text).toContain('운용수익');
+    expect(text).toContain('생활비');
+    expect(text).toContain('연 수익률 4%');
+    expect(text).toContain('물가상승률 2%');
   });
 });

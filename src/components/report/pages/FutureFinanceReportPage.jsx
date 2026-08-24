@@ -5,6 +5,10 @@ import { formatWon } from '../../../utils/format';
 export default function FutureFinanceReportPage({ futureFinance, pageNumber, totalPages }) {
   const targets = futureFinance?.targets || [];
   const purchasingPower = futureFinance?.purchasingPower || [];
+  const currentPurchasingPower = purchasingPower.find((item) => item.years === 0);
+  const tenYearPurchasingPower = purchasingPower.find((item) => item.years === 10);
+  const twentyYearPurchasingPower = purchasingPower.find((item) => item.years === 20);
+  const inflationRate = futureFinance?.assumptions?.inflationRate;
 
   return (
     <PageFrame eyebrow="Future Finance" pageNumber={pageNumber} totalPages={totalPages}>
@@ -34,18 +38,26 @@ export default function FutureFinanceReportPage({ futureFinance, pageNumber, tot
 
           {futureFinance.diagnosis && <div className="report-diagnosis-box">{futureFinance.diagnosis}</div>}
 
-          <h3 className="card-title report-subsection-title">현재 순자산의 구매력 유지 기준</h3>
+          <h3 className="card-title report-subsection-title">지금과 같은 생활 수준을 유지하려면 필요한 자산</h3>
           <p className="fine-print report-inline-note">
             미래 순자산 예상액이 아니라, 현재 순자산과 같은 구매력을 유지하기 위해 필요한 기준 금액입니다.
           </p>
           <div className="report-purchasing-grid">
             {purchasingPower.map((item) => (
               <div key={item.years}>
-                <span>{item.years === 0 ? '현재' : `${item.years}년 후`}</span>
+                <span>{item.years === 0 ? '현재 순자산' : `${item.years}년 후`}</span>
                 <strong>{formatWon(item.requiredAmount)}</strong>
               </div>
             ))}
           </div>
+          {currentPurchasingPower && tenYearPurchasingPower && twentyYearPurchasingPower && (
+            <div className="report-purchasing-feedback">
+              물가가 매년 {Number.isFinite(inflationRate) ? `${Math.round(inflationRate * 1000) / 10}%` : '현재 가정만큼'} 오른다고 보면,
+              현재 {formatWon(currentPurchasingPower.requiredAmount)}과 같은 구매력을 유지하려면 10년 후에는 {formatWon(tenYearPurchasingPower.requiredAmount)},
+              20년 후에는 {formatWon(twentyYearPurchasingPower.requiredAmount)}이 필요합니다. 이 금액은 자산이 자동으로 늘어난다는 뜻이 아니라,
+              지금과 같은 가치 수준을 지키기 위한 목표 금액입니다.
+            </div>
+          )}
 
           <div className="report-assumption-box">
             <strong>계산 가정</strong>
