@@ -32,7 +32,7 @@ const LIVING_EXPENSE_CATEGORY_LABELS = {
   maintenance: '관리비',
   utilities: '공과금',
   fuel: '유류비',
-  carInsurance: '차 보험료',
+  carInsurance: '보험료',
   clothing: '의류비',
   fourInsurances: '4대보험',
   food: '식비',
