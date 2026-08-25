@@ -941,10 +941,12 @@ table.indicator-benchmark-table--dense { font-size: 9.75px; }
 .fhs-definition-guide b { display: block; margin-bottom: 2px; color: var(--navy-800); font-size: 11px; }
 .fhs-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .fhs-summary-group { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
-.fhs-summary-group-head { display: flex; align-items: center; gap: 9px; padding: 11px 13px; background: var(--paper); border-bottom: 1px solid var(--line); }
+.fhs-summary-group-head { display: flex; align-items: center; gap: 9px; padding: 9px 13px; background: var(--paper); border-bottom: 1px solid var(--line); }
 .fhs-summary-group-head span { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: var(--navy-800); color: #fff; font-size: 12px; font-weight: 800; }
 .fhs-summary-group-head h3 { margin: 0; color: var(--navy-900); font-size: 14px; }
+.fhs-summary-group-description { margin: 2px 0 0; color: var(--navy-800); font-size: 10.5px; font-weight: 800; line-height: 1.35; }
 .fhs-summary-list { padding: 3px 13px; }
+.fhs-summary-feedback { margin: 4px 10px 9px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: rgba(255, 255, 255, .55); color: var(--ink-soft); font-size: 9.8px; font-weight: 600; line-height: 1.4; }
 .fhs-summary-row { display: grid; grid-template-columns: minmax(0, 1fr) 76px auto; align-items: center; gap: 8px; min-height: 52px; border-bottom: 1px solid rgba(223, 207, 181, .65); }
 .fhs-summary-row:last-child { border-bottom: 0; }
 .fhs-summary-name { color: var(--navy-900); font-size: 12px; font-weight: 700; }
@@ -962,6 +964,8 @@ table.indicator-benchmark-table--dense { font-size: 9.75px; }
 
 .indicator-detail { }
 .indicator-detail-title { font-size: 16px; font-weight: 800; color: var(--navy-900); margin: 4px 0 14px; }
+.indicator-origin { margin: 5px 0 0; color: var(--ink-soft); font-size: 10.5px; font-weight: 700; }
+.indicator-policy-note { margin: 10px 0 0; padding: 8px 10px; border-radius: 7px; background: var(--paper); color: var(--ink-soft); font-size: 11px; line-height: 1.5; }
 .indicator-value { font-size: 30px; font-weight: 800; color: var(--navy-900); margin: 6px 0; }
 .indicator-feedback { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; font-weight: 600; }
 

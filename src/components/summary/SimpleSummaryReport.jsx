@@ -147,7 +147,7 @@ function FinancialOverviewCard({ od, aggregates }) {
   );
 }
 
-// "종합 결과"의 현재 재무상태 카드에 쓰는 3개 대표 FHS 지표. 점수·등급·권장기준은 전부
+// "종합 결과"의 현재 재무상태 카드에 쓰는 3개 대표 재무평가 항목. 점수·등급·참고 범위는 전부
 // api/_lib/indicators.js·indicatorMeta.js에서 이미 계산·enrich된 값을 그대로 쓰고, 여기서는
 // 화면 표시용 라벨만 다시 붙인다(재무 기준 자체를 새로 만들지 않음).
 const FHS_REP_KEYS = ['household', 'emergency', 'dsr'];
@@ -826,7 +826,6 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                     </p>
                   </div>
                 )}
-                <p className="overview-card-formula">월 예상 노후소득 ÷ 은퇴 후 월 필요생활비 × 100</p>
                 {!rr.retirementIncomeIndicator?.notCalculable && rr.retirementIncomeIndicator?.value === 0 && (
                   <p className="overview-card-zero-reason">
                     {rr.retirementIncomeZeroReason || '월 수령 방식으로 입력된 노후 연금액이 없어 0%입니다.'}
@@ -1169,7 +1168,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
           상세 리포트 다운로드
         </button>
         <button type="button" className="btn-secondary ss-download-btn" onClick={onDownloadFhsDetail}>
-          재무건강지수 9개 지표 심화 리포트 보기
+          JMFinancial 재무건강지수 심화 리포트 보기
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>

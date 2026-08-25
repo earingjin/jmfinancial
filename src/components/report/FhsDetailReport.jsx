@@ -3,13 +3,36 @@ import SectionBadge from './pages/SectionBadge';
 import CoverPage from './pages/CoverPage';
 import { formatNumber } from '../../utils/format';
 
-// FHS 9개 지표를 표시용으로 묶은 카테고리 - 점수·등급 산출(api/_lib/indicators.js)과는 무관한
+// 한국형 가계재무비율 참고 8개 항목과 JMFinancial 자체 추가 항목을 표시용으로 묶는다.
+// 점수·등급 산출(api/_lib/indicators.js)과는 무관하다.
 // 페이지 구성용 그룹핑이다.
 const INDICATOR_GROUPS = [
-  { number: '1', label: '소비 · 유동성', keys: ['household', 'emergency'] },
-  { number: '2', label: '부채', keys: ['dsr', 'debtBurden'] },
-  { number: '3', label: '저축 · 자산', keys: ['savingsRate', 'retirementSavings', 'financialAssetRatio'] },
-  { number: '4', label: '보장 · 노후준비', keys: ['insurance', 'retirementIncome'] },
+  {
+    number: '1', label: '소비 · 유동성', keys: ['household', 'emergency'],
+    description: '소득으로 생활을 감당하고 비상상황에 버틸 수 있는가?',
+  },
+  {
+    number: '2', label: '부채', keys: ['dsr', 'debtBurden'],
+    description: '소득과 자산에 비해 빚이 부담스러운 수준인가?',
+  },
+  {
+    number: '3', label: '저축 · 자산', keys: ['savingsRate', 'retirementSavings', 'financialAssetRatio'],
+    description: '미래를 위해 꾸준히 저축하고 자산을 쌓고 있는가?',
+  },
+  {
+    number: '4', label: '보장 · 노후준비', keys: ['insurance'],
+    description: '예상치 못한 위험과 노후생활에 잘 대비하고 있는가?',
+  },
+];
+
+// 지표별 구간표가 A4 인쇄 높이를 넘지 않도록, ③의 마지막 항목은 다음 페이지에 이어서 표시한다.
+// 요약 페이지의 항목 묶음은 INDICATOR_GROUPS를 그대로 사용한다.
+const DETAIL_PAGE_GROUPS = [
+  INDICATOR_GROUPS[0],
+  INDICATOR_GROUPS[1],
+  { number: '3', label: '저축 · 자산', keys: ['savingsRate', 'retirementSavings'] },
+  { number: '3', label: '저축 · 자산 (계속)', keys: ['financialAssetRatio'] },
+  INDICATOR_GROUPS[3],
 ];
 
 // 게이지·등급 배지·구간표는 app.css에 이미 정의되어 있던 스타일(.indicator-detail, .gauge-*,
@@ -37,6 +60,30 @@ function IndicatorGauge({ gauge, ratioClass, unit }) {
   );
 }
 
+function getIndicatorOrigin() {
+  return '한국형 가계재무비율 참고 지표';
+}
+
+function buildCategoryFeedback(group, indicators) {
+  const items = group.keys
+    .map((key) => (indicators || []).find((indicator) => indicator.key === key))
+    .filter(Boolean);
+  const available = items.filter((indicator) => !indicator.notCalculable);
+
+  if (available.length === 0) {
+    return '입력 정보가 부족해 현재 상태를 해석하기 어렵습니다. 관련 입력값을 확인해 주세요.';
+  }
+
+  const statusSummary = available
+    .map((indicator) => `${indicator.label} ${indicator.status}`)
+    .join(' · ');
+  const hasUnavailable = available.length !== items.length;
+
+  return hasUnavailable
+    ? `${statusSummary}입니다. 산출되지 않은 항목은 관련 입력값을 확인해 주세요.`
+    : `${statusSummary}입니다. 세부 페이지에서 항목별 원인과 참고 범위를 확인해 보세요.`;
+}
+
 function IndicatorDetailCard({ indicator }) {
   const unit = indicator.unit || '%';
 
@@ -44,8 +91,9 @@ function IndicatorDetailCard({ indicator }) {
     return (
       <div className="report-composition-card indicator-detail">
         <h4 className="indicator-detail-title">{indicator.label}</h4>
+        <p className="indicator-origin">{getIndicatorOrigin(indicator)}</p>
         <p className="overview-card-missing">{indicator.reason}</p>
-        <p className="fine-print">권장기준: {indicator.guideline}</p>
+        <p className="fine-print">참고 범위: {indicator.guideline}</p>
       </div>
     );
   }
@@ -58,12 +106,19 @@ function IndicatorDetailCard({ indicator }) {
         <h4 className="indicator-detail-title" style={{ margin: 0 }}>{indicator.label}</h4>
         <span className={`status-tag pill-${indicator.ratioClass}`}>{indicator.status}</span>
       </div>
+      <p className="indicator-origin">{getIndicatorOrigin(indicator)}</p>
       <div className="indicator-value">{formatNumber(indicator.value)}{unit}</div>
 
       <IndicatorGauge gauge={indicator.gauge} ratioClass={indicator.ratioClass} unit={unit} />
 
       {currentBand?.reason && <p className="indicator-feedback">{currentBand.reason}</p>}
-      <p className="fine-print">권장기준: {indicator.guideline} · {indicator.benchmark?.gapText}</p>
+      <p className="fine-print">참고 범위: {indicator.guideline} · {indicator.benchmark?.gapText}</p>
+
+      {indicator.notApplicable && (
+        <p className="indicator-policy-note">
+          65세 이상에서는 JMFinancial 자체 평가정책에 따라 이 지표의 15점을 별도 내부 노후 평가 항목으로 이전합니다.
+        </p>
+      )}
 
       <table className="grade-table indicator-benchmark-table compact">
         <thead>
@@ -92,13 +147,13 @@ function IndicatorDetailCard({ indicator }) {
 function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
   return (
     <PageFrame
-      eyebrow="FHS Indicator Overview"
-      title="재무건강지수 9개 지표 요약"
+      eyebrow="JMFinancial Household Finance Review"
+      title="JMFinancial 재무건강지수 평가 항목 요약"
       pageNumber={pageNumber}
       totalPages={totalPages}
     >
       <p className="fhs-summary-intro">
-        재무 상태를 4개 항목으로 나누어 각 지표의 점수와 현재 상태를 한눈에 정리했습니다.
+        한국형 가계재무비율을 참고한 8개 지표의 점수와 현재 상태를 함께 정리했습니다.
       </p>
       <section className="fhs-definition" aria-labelledby="fhs-definition-title">
         <h3 id="fhs-definition-title">재무건강지수란?</h3>
@@ -106,7 +161,7 @@ function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
           현재 소득과 지출, 비상자금, 부채 등을 바탕으로 가계의 전반적인 재무 안정성을 살펴봅니다.
         </p>
         <div className="fhs-definition-guide">
-          <span><b>점수</b> 기준에 얼마나 부합하는지 보여줘요.</span>
+          <span><b>점수</b> 설정된 평가 구간에서의 위치를 보여줘요.</span>
           <span><b>상태</b> 현재 수준을 쉬운 말로 알려줘요.</span>
           <span><b>활용</b> 보완할 항목의 우선순위를 찾는 데 도움을 줘요.</span>
         </div>
@@ -116,7 +171,10 @@ function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
           <section className="fhs-summary-group" key={group.label}>
             <header className="fhs-summary-group-head">
               <span>{group.number}</span>
-              <h3>{group.label}</h3>
+              <div>
+                <h3>{group.label}</h3>
+                <p className="fhs-summary-group-description">{group.description}</p>
+              </div>
             </header>
             <div className="fhs-summary-list">
               {group.keys.map((key) => {
@@ -136,6 +194,7 @@ function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
                 );
               })}
             </div>
+            <p className="fhs-summary-feedback">{buildCategoryFeedback(group, indicators)}</p>
           </section>
         ))}
       </div>
@@ -148,7 +207,7 @@ function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
 
 export default function FhsDetailReport({ result, onRestart, onBack, onHome, clientName }) {
   const { generatedAt, indicators } = result;
-  const totalPages = INDICATOR_GROUPS.length + 1;
+  const totalPages = DETAIL_PAGE_GROUPS.length + 1;
   let page = 0;
   const nextPage = () => ++page;
   const openPrintDialog = () => window.print();
@@ -177,7 +236,7 @@ export default function FhsDetailReport({ result, onRestart, onBack, onHome, cli
         generatedAt={generatedAt}
         clientName={clientName}
         title="재무건강지수 심화 리포트"
-        subtitle="Financial Health Score"
+        subtitle="JMFinancial Household Finance Review"
       />
 
       <IndicatorSummaryPage
@@ -186,8 +245,8 @@ export default function FhsDetailReport({ result, onRestart, onBack, onHome, cli
         totalPages={totalPages}
       />
 
-      {INDICATOR_GROUPS.map((group) => (
-        <PageFrame key={group.label} eyebrow="FHS Indicator Detail" pageNumber={nextPage()} totalPages={totalPages}>
+      {DETAIL_PAGE_GROUPS.map((group) => (
+        <PageFrame key={group.label} eyebrow="JMFinancial Household Finance Review" pageNumber={nextPage()} totalPages={totalPages}>
           <SectionBadge number={group.number} label={group.label} />
           {group.keys.map((key) => {
             const indicator = (indicators || []).find((ind) => ind.key === key);

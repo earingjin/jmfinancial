@@ -112,7 +112,7 @@ export default async function handler(req, res) {
       financialAssetsMissing,
     });
 
-    // 리포트 렌더링에 필요한 게이지 위치·권장기준 비교 문구·등급 배지·생활수준 구간 같은
+    // 리포트 렌더링에 필요한 게이지 위치·참고 범위 비교 문구·등급 배지·생활수준 구간 같은
     // "표시용 파생값"을 서버에서 미리 계산해 붙인다. 클라이언트는 이 값을 그대로 그리기만
     // 하면 되므로, 게이지 임계값·등급 커트라인 같은 기준 데이터가 클라이언트에 존재하지 않는다.
     const retirementLivingCost = simulation.retirementLivingCostNow;
@@ -159,7 +159,7 @@ export default async function handler(req, res) {
     // 화면(요약/리포트)이 실제로 참조하지 않는 필드는 클라이언트 응답에 내려보내지 않는다.
     // 위 계산(enrichIndicators 등) 자체는 그대로 두고, 여기서 필요한 키만 뽑아낸다.
     // gauge/benchmark/recommendedLabel/guideline은 FHS 9지표 심화 리포트(FhsDetailReport.jsx)가
-    // 게이지·권장기준 대비 설명에 그대로 사용한다. composition(지표별 구성 파이차트)은 어느
+    // 게이지·참고 범위 대비 설명에 그대로 사용한다. composition(지표별 구성 파이차트)은 어느
     // 화면도 아직 쓰지 않아 계속 제외한다.
     const clientIndicators = enriched.indicators.map(
       ({ composition: _composition, ...rest }) => rest

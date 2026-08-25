@@ -55,6 +55,28 @@ function findIndicator(result, key) {
 }
 
 describe('total score integrity', () => {
+  it('preserves the established eight household-finance indicator formulas, raw results, and score allocations', () => {
+    const result = calcIndicators(input());
+    const expected = {
+      household: { rawValue: 54, score: 14, maxScore: 15 },
+      emergency: { rawValue: 1200 / 270, score: 6, maxScore: 10 },
+      dsr: { rawValue: 4, score: 15, maxScore: 15 },
+      debtBurden: { rawValue: 500 / 3000 * 100, score: 9, maxScore: 10 },
+      insurance: { rawValue: 9, score: 10, maxScore: 10 },
+      savingsRate: { rawValue: 40, score: 5, maxScore: 5 },
+      retirementSavings: { rawValue: 75, score: 13, maxScore: 15 },
+      financialAssetRatio: { rawValue: 1700 / 3000 * 100, score: 5, maxScore: 5 },
+    };
+
+    Object.entries(expected).forEach(([key, expectedIndicator]) => {
+      const indicator = findIndicator(result, key);
+      expect(indicator.rawValue).toBeCloseTo(expectedIndicator.rawValue, 8);
+      expect(indicator.score).toBe(expectedIndicator.score);
+      expect(indicator.maxScore).toBe(expectedIndicator.maxScore);
+    });
+    expect(findIndicator(result, 'retirementSavings').formula).toBe('노후대비저축액 ÷ 총저축액 × 100');
+  });
+
   it('sums to exactly 100 for a healthy under-65 input', () => {
     const result = calcIndicators(input());
     expect(result.is65Plus).toBe(false);

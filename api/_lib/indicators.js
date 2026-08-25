@@ -44,8 +44,8 @@ export function calcIndicators(input) {
         [
           { test: atMost(50), score: 15, status: '매우 우수', rangeLabel: '50% 이하', reason: '소득의 절반 이상을 저축·투자로 돌릴 여력이 있어 자산 형성 속도가 매우 빠름' },
           { test: atMost(60), score: 14, status: '우수', rangeLabel: '50% 초과~60% 이하', reason: '지출 관리가 잘 되고 있어 여유자금이 충분히 확보됨' },
-          { test: atMost(70), score: 11, status: '양호', rangeLabel: '60% 초과~70% 이하', reason: 'FP학회 권장기준(70% 이하) 충족, 가계수지가 안정적인 수준' },
-          { test: atMost(80), score: 8, status: '보통', rangeLabel: '70% 초과~80% 이하', reason: '권장기준을 다소 초과했으나 아직 관리 가능한 범위' },
+          { test: atMost(70), score: 11, status: '양호', rangeLabel: '60% 초과~70% 이하', reason: 'JMFinancial 참고 범위(70% 이하) 안으로, 가계수지가 비교적 안정적인 수준' },
+          { test: atMost(80), score: 8, status: '보통', rangeLabel: '70% 초과~80% 이하', reason: 'JMFinancial 참고 범위를 다소 넘었으나 지출 구조를 점검해볼 수 있는 수준' },
           { test: atMost(90), score: 4, status: '주의', rangeLabel: '80% 초과~90% 이하', reason: '소득 대부분이 지출로 소진되어 저축 여력이 크게 부족함' },
           { test: atLeast(0), score: 0, status: '위험', rangeLabel: '90% 초과', reason: '소득으로 지출을 감당하기 어려운 수준, 지출 구조조정이 시급함' },
         ],
@@ -60,10 +60,10 @@ export function calcIndicators(input) {
         emergencyRaw,
         [
           { test: atLeast(6), score: 10, status: '매우 우수', rangeLabel: '6배 이상', reason: '장기 실직·질병 등 예기치 못한 소득 중단에도 충분히 대응 가능' },
-          { test: atLeast(5), score: 8, status: '우수', rangeLabel: '5배 이상~6배 미만', reason: 'FP학회 권장 상한(6배)에 근접, 예비자금이 넉넉함' },
-          { test: atLeast(4), score: 6, status: '양호', rangeLabel: '4배 이상~5배 미만', reason: '권장범위(2~6배) 내에서 안정적인 유동성을 확보함' },
-          { test: atLeast(3), score: 4, status: '보통', rangeLabel: '3배 이상~4배 미만', reason: '최소 권장수준은 충족하나 여유는 크지 않음' },
-          { test: atLeast(2), score: 2, status: '주의', rangeLabel: '2배 이상~3배 미만', reason: '권장범위 하한에 걸쳐 있어 비상상황 대응력이 낮음' },
+          { test: atLeast(5), score: 8, status: '우수', rangeLabel: '5배 이상~6배 미만', reason: 'JMFinancial 참고 범위 상단에 가까워 예비자금이 넉넉한 편' },
+          { test: atLeast(4), score: 6, status: '양호', rangeLabel: '4배 이상~5배 미만', reason: 'JMFinancial 참고 범위(2~6배) 안에서 유동성을 확보한 상태' },
+          { test: atLeast(3), score: 4, status: '보통', rangeLabel: '3배 이상~4배 미만', reason: '비상 상황에 대비할 자금은 있으나 여유는 크지 않은 편' },
+          { test: atLeast(2), score: 2, status: '주의', rangeLabel: '2배 이상~3배 미만', reason: 'JMFinancial 참고 범위 하단에 있어 비상 상황 대응력을 점검할 필요가 있음' },
           { test: atLeast(0), score: 0, status: '위험', rangeLabel: '2배 미만', reason: '소득 중단 시 단기간 내 생활자금이 고갈될 위험이 큼' },
         ],
         10
@@ -77,9 +77,9 @@ export function calcIndicators(input) {
         dsrRaw,
         [
           { test: atMost(10), score: 15, status: '매우 우수', rangeLabel: '10% 이하', reason: '부채 상환 부담이 거의 없어 소득 대부분을 자산형성에 활용 가능' },
-          { test: atMost(20), score: 14, status: '우수', rangeLabel: '10% 초과~20% 이하', reason: 'FP학회 권장기준(30% 이하)에 여유 있게 충족됨' },
-          { test: atMost(30), score: 11, status: '양호', rangeLabel: '20% 초과~30% 이하', reason: '권장기준 내에 있으나 상환 부담이 점차 체감되는 수준' },
-          { test: atMost(40), score: 8, status: '보통', rangeLabel: '30% 초과~40% 이하', reason: '권장기준을 초과해 원리금 상환이 가계에 부담으로 작용함' },
+          { test: atMost(20), score: 14, status: '우수', rangeLabel: '10% 초과~20% 이하', reason: 'JMFinancial 참고 범위(30% 이하)보다 여유가 있는 수준' },
+          { test: atMost(30), score: 11, status: '양호', rangeLabel: '20% 초과~30% 이하', reason: 'JMFinancial 참고 범위 안이나 상환 부담을 함께 살펴볼 필요가 있는 수준' },
+          { test: atMost(40), score: 8, status: '보통', rangeLabel: '30% 초과~40% 이하', reason: 'JMFinancial 참고 범위를 넘어 원리금 상환이 가계에 부담으로 작용할 수 있음' },
           { test: atMost(50), score: 4, status: '주의', rangeLabel: '40% 초과~50% 이하', reason: '소득 대비 상환 부담이 커서 다른 재무목표 실행이 어려움' },
           { test: atLeast(0), score: 0, status: '위험', rangeLabel: '50% 초과', reason: '소득의 절반 이상이 빚 갚는 데 쓰여 재무 건전성이 크게 훼손됨' },
         ],
@@ -94,10 +94,10 @@ export function calcIndicators(input) {
         debtBurdenRaw,
         [
           { test: atMost(10), score: 10, status: '매우 우수', rangeLabel: '10% 이하', reason: '자산 대비 부채가 미미해 재무구조가 매우 안정적임' },
-          { test: atMost(20), score: 9, status: '우수', rangeLabel: '10% 초과~20% 이하', reason: 'FP학회 권장기준(40% 이하)에 여유 있게 충족됨' },
-          { test: atMost(30), score: 7, status: '양호', rangeLabel: '20% 초과~30% 이하', reason: '권장기준 내에서 부채가 안정적으로 관리되고 있음' },
-          { test: atMost(40), score: 5, status: '보통', rangeLabel: '30% 초과~40% 이하', reason: '권장기준 상한에 가까워 자산 대비 부채 비중 관리가 필요함' },
-          { test: atMost(50), score: 3, status: '주의', rangeLabel: '40% 초과~50% 이하', reason: '권장기준을 초과해 자산건전성이 약화되고 있음' },
+          { test: atMost(20), score: 9, status: '우수', rangeLabel: '10% 초과~20% 이하', reason: 'JMFinancial 참고 범위(40% 이하)보다 여유가 있는 수준' },
+          { test: atMost(30), score: 7, status: '양호', rangeLabel: '20% 초과~30% 이하', reason: 'JMFinancial 참고 범위 안에서 부채가 비교적 안정적으로 관리되는 상태' },
+          { test: atMost(40), score: 5, status: '보통', rangeLabel: '30% 초과~40% 이하', reason: 'JMFinancial 참고 범위 상단에 가까워 자산 대비 부채 비중을 살펴볼 필요가 있음' },
+          { test: atMost(50), score: 3, status: '주의', rangeLabel: '40% 초과~50% 이하', reason: 'JMFinancial 참고 범위를 넘어 자산 대비 부채 부담이 큰 편' },
           { test: atLeast(0), score: 0, status: '위험', rangeLabel: '50% 초과', reason: '자산의 절반 이상이 부채로 구성되어 있어 순자산 훼손 위험이 큼' },
         ],
         10
@@ -110,13 +110,13 @@ export function calcIndicators(input) {
     : evaluateBands(
         insuranceRaw,
         [
-          { test: (v) => v < 3, score: 0, status: '위험', rangeLabel: '3% 미만', reason: '위험 발생 시 재정 충격을 감당하기 어렵거나, 과도한 보험료로 자산형성이 저해됨' },
+          { test: (v) => v < 3, score: 0, status: '위험', rangeLabel: '3% 미만', reason: '보장 부족 가능성이 있어 예상치 못한 위험에 대비한 보장 내용을 확인해 보세요.' },
           { test: (v) => v < 5, score: 5, status: '보통(과소·과다)', rangeLabel: '3% 이상~5% 미만', reason: '보장이 부족해 위험 노출이 크거나, 보험료가 과다해 저축 여력을 잠식함' },
           { test: (v) => v < 8, score: 8, status: '양호', rangeLabel: '5% 이상~8% 미만', reason: '적정구간에서 소폭 벗어났으나 보장 공백이나 과잉 지출이 크지 않음' },
-          { test: atMost(10), score: 10, status: '적정', rangeLabel: '8% 이상~10% 이하', reason: 'FP학회 권장구간에 정확히 부합, 위험 대비와 저축 여력의 균형이 좋음' },
+          { test: atMost(10), score: 10, status: '적정', rangeLabel: '8% 이상~10% 이하', reason: 'JMFinancial 참고 범위 안으로, 위험 대비와 저축 여력의 균형을 함께 점검한 상태' },
           { test: atMost(13), score: 8, status: '양호', rangeLabel: '10% 초과~13% 이하', reason: '적정구간에서 소폭 벗어났으나 보장 공백이나 과잉 지출이 크지 않음' },
           { test: atMost(16), score: 5, status: '보통(과소·과다)', rangeLabel: '13% 초과~16% 이하', reason: '보장이 부족해 위험 노출이 크거나, 보험료가 과다해 저축 여력을 잠식함' },
-          { test: atLeast(0), score: 0, status: '위험', rangeLabel: '16% 초과', reason: '위험 발생 시 재정 충격을 감당하기 어렵거나, 과도한 보험료로 자산형성이 저해됨' },
+          { test: atLeast(0), score: 0, status: '위험', rangeLabel: '16% 초과', reason: '보험료 과다로 인한 현금흐름 부담이 있을 수 있어 보험료와 보장 내용을 함께 점검해 보세요.' },
         ],
         10
       );
@@ -128,9 +128,9 @@ export function calcIndicators(input) {
     : evaluateBands(
         savingsRateRaw,
         [
-          { test: atLeast(40), score: 5, status: '매우 우수', rangeLabel: '40% 이상', reason: 'FP학회 권장기준(30% 이상)을 크게 상회해 자산 축적 속도가 빠름' },
-          { test: atLeast(30), score: 4, status: '우수', rangeLabel: '30% 이상~40% 미만', reason: '권장기준을 충족해 장기적 자산형성이 안정적으로 이루어짐' },
-          { test: atLeast(20), score: 3, status: '보통', rangeLabel: '20% 이상~30% 미만', reason: '권장기준에 못 미쳐 자산형성 속도가 다소 더딤' },
+          { test: atLeast(40), score: 5, status: '매우 우수', rangeLabel: '40% 이상', reason: 'JMFinancial 참고 범위(30% 이상)를 웃돌아 자산을 쌓을 여력이 큰 편' },
+          { test: atLeast(30), score: 4, status: '우수', rangeLabel: '30% 이상~40% 미만', reason: 'JMFinancial 참고 범위 안으로, 장기 자산 형성을 이어갈 수 있는 수준' },
+          { test: atLeast(20), score: 3, status: '보통', rangeLabel: '20% 이상~30% 미만', reason: 'JMFinancial 참고 범위보다 낮아 저축 여력을 점검해볼 수 있는 수준' },
           { test: atLeast(10), score: 1, status: '주의', rangeLabel: '10% 이상~20% 미만', reason: '저축 여력이 낮아 목돈 마련이나 노후준비에 제약이 있음' },
           { test: atLeast(0), score: 0, status: '위험', rangeLabel: '10% 미만', reason: '저축이 거의 이루어지지 않아 재무목표 달성이 어려움' },
         ],
@@ -156,7 +156,7 @@ export function calcIndicators(input) {
             score: 0,
             status: '65세 이상 미적용',
             reason:
-              '65세 이상은 자산을 "적립하는 단계"가 아닌 "인출하는 단계(Asset Decumulation)"로 전환되어 이 지표 자체가 성립하지 않습니다. 이 15점은 노후소득보장률(⑨) 지표로 흡수되어 30점 만점으로 통합 적용됩니다.',
+              '65세 이상은 자산을 적립하기보다 인출하는 단계로 보아 이 지표를 적용하지 않습니다. JMFinancial 자체 평가정책에 따라 이 지표의 15점은 별도 내부 노후 평가 항목으로 이전되어 통합 적용됩니다.',
             isCurrent: true,
           },
         ],
@@ -167,10 +167,10 @@ export function calcIndicators(input) {
           retirementSavingsRaw,
           [
             { test: atLeast(80), score: 15, status: '매우 우수', rangeLabel: '80% 이상', reason: '저축의 대부분이 노후 목적으로 배정되어 은퇴 준비가 매우 체계적임' },
-            { test: atLeast(70), score: 13, status: '우수', rangeLabel: '70% 이상~80% 미만', reason: '권장기준(50% 이상)을 크게 상회해 노후 대비가 우수함' },
+            { test: atLeast(70), score: 13, status: '우수', rangeLabel: '70% 이상~80% 미만', reason: 'JMFinancial 참고 범위(50% 이상)를 웃돌아 노후 목적 저축 비중이 높은 편' },
             { test: atLeast(60), score: 11, status: '양호', rangeLabel: '60% 이상~70% 미만', reason: '저축의 상당 부분이 노후 목적으로 관리되고 있음' },
-            { test: atLeast(50), score: 9, status: '보통', rangeLabel: '50% 이상~60% 미만', reason: '국민연금연구원 권장기준(50% 이상)을 충족하는 최소 수준' },
-            { test: atLeast(40), score: 6, status: '주의', rangeLabel: '40% 이상~50% 미만', reason: '권장기준에 못 미쳐 노후 자금 축적이 지연될 우려가 있음' },
+            { test: atLeast(50), score: 9, status: '보통', rangeLabel: '50% 이상~60% 미만', reason: 'JMFinancial 참고 범위(50% 이상)에 해당하는 수준' },
+            { test: atLeast(40), score: 6, status: '주의', rangeLabel: '40% 이상~50% 미만', reason: 'JMFinancial 참고 범위보다 낮아 노후 목적 저축 비중을 점검할 필요가 있음' },
             { test: atLeast(30), score: 3, status: '미흡', rangeLabel: '30% 이상~40% 미만', reason: '저축의 대부분이 다른 목적(주택·교육 등)에 쓰여 노후 준비가 후순위로 밀림' },
             { test: atLeast(0), score: 0, status: '위험', rangeLabel: '30% 미만', reason: '노후 목적 저축이 거의 없어 은퇴 후 소득 공백에 취약함' },
           ],
@@ -184,8 +184,8 @@ export function calcIndicators(input) {
     : evaluateBands(
         financialAssetRatioRaw,
         [
-          { test: atLeast(40), score: 5, status: '매우 우수', rangeLabel: '40% 이상', reason: 'FP학회 권장기준을 충족, 유동성 있는 자산으로 재무유연성이 높음' },
-          { test: atLeast(30), score: 4, status: '우수', rangeLabel: '30% 이상~40% 미만', reason: '권장기준에 근접해 자산구조가 비교적 균형적임' },
+          { test: atLeast(40), score: 5, status: '매우 우수', rangeLabel: '40% 이상', reason: 'JMFinancial 참고 범위에 해당하며, 활용하기 쉬운 자산 비중이 높은 편' },
+          { test: atLeast(30), score: 4, status: '우수', rangeLabel: '30% 이상~40% 미만', reason: 'JMFinancial 참고 범위에 가까워 자산구조가 비교적 균형적인 편' },
           { test: atLeast(20), score: 3, status: '보통', rangeLabel: '20% 이상~30% 미만', reason: '부동산 등 실물자산 비중이 높아 유동성이 다소 제한적임' },
           { test: atLeast(10), score: 2, status: '주의', rangeLabel: '10% 이상~20% 미만', reason: '자산 대부분이 부동산에 묶여 있어 현금흐름 대응력이 낮음' },
           { test: atLeast(0), score: 0, status: '위험', rangeLabel: '10% 미만', reason: "자산이 실물자산에 극단적으로 편중되어 '자산은 있으나 현금은 없는' 상태" },
