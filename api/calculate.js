@@ -5,7 +5,7 @@ import { buildPeerComparison } from './_lib/peerComparison.js';
 import { validateInput } from './_lib/validate.js';
 import { buildFamilyAges, getCurrentAge } from './_lib/aggregate.js';
 import { enrichIndicators, enrichSimulation } from './_lib/reportEnrichment.js';
-import { buildCashFlowOutlookFeedback, buildComprehensiveIssues, buildExecutiveFinancialPositionFeedback, buildExecutiveRetirementFeedback, buildFinancialCashFlowFeedback, buildPeerComparisonFeedback, buildSavingsInvestmentFeedback } from './_lib/executiveSummary.js';
+import { buildCashFlowOutlookFeedback, buildExecutiveFinancialPositionFeedback, buildExecutiveRetirementFeedback, buildFinancialCashFlowFeedback, buildPeerComparisonFeedback, buildSavingsInvestmentFeedback } from './_lib/executiveSummary.js';
 import { buildSimpleSummary } from './_lib/simpleSummary.js';
 import { buildSavingsBreakdown, buildDebtBreakdown, buildLivingExpenseItems, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './_lib/reportBreakdowns.js';
 import { buildWebSummary, allBlankLeaf } from './_lib/summaryOverview.js';
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   input = buildCanonicalInput(input);
 
   try {
-    const { indicators, totalScore, grade, notCalculable, missingInputs, weakest, strongest, aggregates, is65Plus } = calcIndicators(input);
+    const { indicators, totalScore, grade, notCalculable, missingInputs, weakest, strongest, aggregates } = calcIndicators(input);
     const simulation = calcRetirementSimulation(input);
     const scenarioComparison = calcScenarioComparison(input);
     // totalScore가 null(종합점수 산출 불가)이면 buildMetric이 Number.isFinite(null)=false로 감지해
@@ -118,11 +118,6 @@ export default async function handler(req, res) {
     const retirementLivingCost = simulation.retirementLivingCostNow;
     const enriched = enrichIndicators({ indicators, totalScore, weakest, strongest, aggregates, retirementLivingCost });
     const enrichedSimulation = enrichSimulation(simulation, retirementLivingCost);
-    const comprehensiveIssues = buildComprehensiveIssues({
-      indicators: enriched.indicators,
-      simulation: enrichedSimulation,
-      summary: { totalScore, grade, notCalculable, missingInputs },
-    });
     const financialStatusFeedback = buildFinancialCashFlowFeedback({
       indicators: enriched.indicators,
       aggregates,
@@ -161,6 +156,12 @@ export default async function handler(req, res) {
       retirementAssetProjection: webSummary?.futureFinance?.retirementAssetProjection,
     });
 
+    // 화면(요약/리포트)이 실제로 참조하지 않는 필드는 클라이언트 응답에 내려보내지 않는다.
+    // 위 계산(enrichIndicators 등) 자체는 그대로 두고, 여기서 필요한 키만 뽑아낸다.
+    const clientIndicators = enriched.indicators.map(
+      ({ gauge: _gauge, benchmark: _benchmark, composition: _composition, recommendedLabel: _recommendedLabel, guideline: _guideline, ...rest }) => rest
+    );
+
     // 응답을 평문 JSON으로 그대로 내려보내지 않고 스크램블한다. F12 → Network 탭에서
     // 열어봤을 때 계산 기준표(임계값·공식·판정 사유 등)가 곧바로 읽히지 않도록 하기 위함이다.
     // 클라이언트(src/App.jsx)가 동일한 유틸로 즉시 복호화하므로 화면·계산 결과는 그대로다.
@@ -171,22 +172,13 @@ export default async function handler(req, res) {
         grade,
         notCalculable,
         missingInputs,
-        weakest: enriched.weakest,
-        strongest: enriched.strongest,
-        is65Plus,
-        gradeBands: enriched.gradeBands,
-        referenceScore: enriched.referenceScore,
-        nextGrade: enriched.nextGrade,
-        pointsToNextGrade: enriched.pointsToNextGrade,
-        belowRecommendedCount: enriched.belowRecommendedCount,
       },
-      indicators: enriched.indicators,
+      indicators: clientIndicators,
       aggregates,
       simulation: enrichedSimulation,
       scenarioComparison,
       peerComparison,
       familyAges: buildFamilyAges(input),
-      comprehensiveIssues,
       aiFeedback: {
         executiveSummary: {
           financialPosition: financialPositionFeedback,
@@ -203,7 +195,6 @@ export default async function handler(req, res) {
       savingsBreakdown,
       debtBreakdown,
       otherLivingExpenseItems,
-      livingExpenseItems,
       otherLiquidAssetItems,
       webSummary,
     };
