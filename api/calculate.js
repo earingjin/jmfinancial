@@ -158,8 +158,11 @@ export default async function handler(req, res) {
 
     // 화면(요약/리포트)이 실제로 참조하지 않는 필드는 클라이언트 응답에 내려보내지 않는다.
     // 위 계산(enrichIndicators 등) 자체는 그대로 두고, 여기서 필요한 키만 뽑아낸다.
+    // gauge/benchmark/recommendedLabel/guideline은 FHS 9지표 심화 리포트(FhsDetailReport.jsx)가
+    // 게이지·권장기준 대비 설명에 그대로 사용한다. composition(지표별 구성 파이차트)은 어느
+    // 화면도 아직 쓰지 않아 계속 제외한다.
     const clientIndicators = enriched.indicators.map(
-      ({ gauge: _gauge, benchmark: _benchmark, composition: _composition, recommendedLabel: _recommendedLabel, guideline: _guideline, ...rest }) => rest
+      ({ composition: _composition, ...rest }) => rest
     );
 
     // 응답을 평문 JSON으로 그대로 내려보내지 않고 스크램블한다. F12 → Network 탭에서

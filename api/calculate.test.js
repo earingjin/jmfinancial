@@ -8,10 +8,11 @@ const { default: handler } = await import('./calculate.js');
 const { deobfuscate } = await import('../src/utils/obfuscate.js');
 const { initialFormData } = await import('../src/state/initialFormData.js');
 
-// 화면(요약/리포트)이 실제로 참조하지 않아 api/calculate.js 응답 조립 단계에서 제외한 필드 목록.
-// 계산 자체(enrichIndicators 등)는 그대로 두고 마지막 조립 단계에서만 걸러낸 것이므로, 여기서는
-// 이 필드들이 최종 응답(payload)에 없다는 것과 화면이 실제 쓰는 필드(ratioClass 등)는 남아있다는
-// 것만 확인한다.
+// 어떤 화면도 참조하지 않아 api/calculate.js 응답 조립 단계에서 제외한 필드(comprehensiveIssues,
+// 최상위 livingExpenseItems, summary의 일부 파생값, indicators[].composition)가 최종 응답(payload)에
+// 없다는 것과, 화면이 실제 쓰는 필드(ratioClass, 그리고 FHS 심화 리포트가 쓰는 gauge/benchmark/
+// recommendedLabel/guideline)는 남아있다는 것을 확인한다. 계산 자체(enrichIndicators 등)는 그대로
+// 두고 마지막 조립 단계에서만 걸러낸다.
 function buildMinimalValidInput() {
   const input = JSON.parse(JSON.stringify(initialFormData));
   input.basic.birthYear = '1975';
@@ -64,15 +65,15 @@ describe('POST /api/calculate 응답에서 화면 미사용 필드 제외', () =
     expect(result.summary).toHaveProperty('missingInputs');
   });
 
-  it('indicators[] 각 원소에서 gauge/benchmark/composition/recommendedLabel/guideline을 제외하고, ratioClass는 유지한다', async () => {
+  it('indicators[] 각 원소에서 composition은 제외하고, FHS 심화 리포트가 쓰는 gauge/benchmark/recommendedLabel/guideline/ratioClass는 유지한다', async () => {
     const result = await callHandler(buildMinimalValidInput());
     expect(result.indicators.length).toBeGreaterThan(0);
     result.indicators.forEach((indicator) => {
-      expect(indicator).not.toHaveProperty('gauge');
-      expect(indicator).not.toHaveProperty('benchmark');
       expect(indicator).not.toHaveProperty('composition');
-      expect(indicator).not.toHaveProperty('recommendedLabel');
-      expect(indicator).not.toHaveProperty('guideline');
+      expect(indicator).toHaveProperty('gauge');
+      expect(indicator).toHaveProperty('benchmark');
+      expect(indicator).toHaveProperty('recommendedLabel');
+      expect(indicator).toHaveProperty('guideline');
       expect(indicator).toHaveProperty('ratioClass');
     });
   });

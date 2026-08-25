@@ -581,7 +581,7 @@ function RetirementAssetProjectionChart({ projection }) {
   );
 }
 
-export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare }) {
+export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare, onDownloadFhsDetail }) {
   const { generatedAt, peerComparison, webSummary, aggregates, indicators } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
@@ -1167,6 +1167,9 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         <p className="simple-summary-subtitle">상세 리포트에서 재무 현황과 분석 내용을 확인해 보세요.</p>
         <button type="button" className="btn-primary ss-download-btn" onClick={onDownload}>
           상세 리포트 다운로드
+        </button>
+        <button type="button" className="btn-secondary ss-download-btn" onClick={onDownloadFhsDetail}>
+          재무건강지수 9개 지표 심화 리포트 보기
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>

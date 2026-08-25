@@ -1009,6 +1009,11 @@
   font-weight: 800;
   margin: 6px 0 12px;
 }
+.simple-summary .ss-download-btn.btn-secondary {
+  background: #fff1df;
+  border-color: #f0c58f;
+  color: #d66f0b;
+}
 .simple-summary .btn-primary { background: #ff8612; }
 .simple-summary .btn-primary:hover { background: #ff8612; filter: brightness(.98); }
 .ss-actions {

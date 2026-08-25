@@ -19,6 +19,7 @@ import './styles/app.css';
 // 진단·계산 상태와 서버 계산 경계에는 영향을 주지 않는 표시 컴포넌트 분리다.
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
 const Report = lazy(() => import('./components/report/Report'));
+const FhsDetailReport = lazy(() => import('./components/report/FhsDetailReport'));
 const SimpleSummaryReport = lazy(() => import('./components/summary/SimpleSummaryReport'));
 const Wizard = lazy(() => import('./components/wizard/Wizard'));
 
@@ -33,7 +34,7 @@ function LazyScreenFallback() {
 
 function AppContent({ initialDraft = null, startWithWizard = false }) {
   const { user, signOut, deleteAccount } = useAuth();
-  const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'error' | 'history'
+  const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'fhs-report' | 'error' | 'history'
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [wizardResume, setWizardResume] = useState(false);
@@ -140,6 +141,11 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setPhase('report');
   };
 
+  const goToFhsDetailReport = () => {
+    window.scrollTo(0, 0);
+    setPhase('fhs-report');
+  };
+
   const goHome = () => setPhase('home');
 
   const startDiagnosis = () => {
@@ -165,7 +171,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
 
   return (
     <div className={`app-shell${isDiagnosisPhase ? ' app-shell--diagnosis' : ''}`}>
-      {phase !== 'report' && phase !== 'summary' && phase !== 'home' && (
+      {phase !== 'report' && phase !== 'fhs-report' && phase !== 'summary' && phase !== 'home' && (
         <header className={`app-header${useDiagnosisHeader ? ' app-header--diagnosis' : ''}`}>
           <div className="app-header-account">
             {phase === 'wizard' && (
@@ -180,7 +186,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         </header>
       )}
 
-      <main className={`app-main${phase === 'report' ? ' report-print-mode' : ''}${phase === 'home' ? ' app-main--home' : ''}`}>
+      <main className={`app-main${phase === 'report' || phase === 'fhs-report' ? ' report-print-mode' : ''}${phase === 'home' ? ' app-main--home' : ''}`}>
         {phase === 'home' && (
           <HomeScreen
             userName={user?.user_metadata?.name}
@@ -239,6 +245,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
               onHome={goHome}
               onDownload={goToReport}
               onShare={goToReport}
+              onDownloadFhsDetail={goToFhsDetailReport}
             />
           </Suspense>
         )}
@@ -255,8 +262,20 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
             />
           </Suspense>
         )}
+
+        {phase === 'fhs-report' && result && (
+          <Suspense fallback={<LazyScreenFallback />}>
+            <FhsDetailReport
+              result={result}
+              onRestart={restart}
+              onBack={() => setPhase('summary')}
+              onHome={goHome}
+              clientName={user?.user_metadata?.name}
+            />
+          </Suspense>
+        )}
       </main>
-      {phase !== 'report' && phase !== 'home' && <AppCopyright />}
+      {phase !== 'report' && phase !== 'fhs-report' && phase !== 'home' && <AppCopyright />}
     </div>
   );
 }
