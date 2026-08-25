@@ -240,8 +240,7 @@ function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, living
   );
 }
 
-// 재무건강 총점은 연령대별 공식 통계(2025년 가계금융복지조사)가 없어 이번 갱신에서 제외한다
-// (peerComparison.js의 retirementScore 자체는 하위호환을 위해 여전히 존재하지만 화면에는 표시하지 않음).
+// 재무건강 종합점수는 제공하지 않으므로 또래 비교에서도 제외한다.
 const PEER_METRIC_DEFS = [
   { key: 'netWorth', label: '순자산', unit: 'won' },
   { key: 'annualIncome', label: '연소득', unit: 'won', peerKey: 'householdIncome' },

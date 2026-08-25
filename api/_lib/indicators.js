@@ -1,4 +1,4 @@
-// 9개 재무건강지표(FHS) 산출 로직. 클라이언트에는 절대 전달되지 않고,
+// 한국형 가계재무비율 참고 8개 지표와 별도 노후분석 지표를 산출한다. 클라이언트에는 계산식이 전달되지 않고,
 // /api/calculate 응답에는 "계산된 결과값"만 담겨 나간다.
 //
 // 계산 정밀도 원칙(CLAUDE.md 참고): 채점에는 rawValue(미반올림)를 쓰고, displayValue만 화면 표시용으로
@@ -12,9 +12,7 @@ import { buildAggregates, getCurrentAge, n } from './aggregate.js';
 const atMost = (max) => (v) => v <= max;
 const atLeast = (min) => (v) => v >= min;
 
-// 65세 이상: 은퇴자산은 "적립 단계"가 아닌 "인출 단계"로 전환되므로
-// 노후대비저축지표(⑦) 자체가 성립하지 않는다. 이 15점을 노후소득보장률(⑨)로 흡수하여
-// 6단계 배점(15/12/9/6/3/0)을 그대로 2배 스케일링(30/24/18/12/6/0)한다.
+// 노후소득보장률은 재무건강 8개 지표의 총점·등급과 분리된 별도 노후분석 값이다.
 const RETIREMENT_INCOME_BANDS = [
   { test: atLeast(120), rangeLabel: '120% 이상', status: '여유로운 노후 가능', reason: '필요생활비를 넘어서는 소득이 확보되어 여가·의료비 등에도 대응 가능' },
   { test: atLeast(100), rangeLabel: '100% 이상~120% 미만', status: '기본 생활비 충당 가능', reason: '필요생활비를 충당할 소득이 확보되어 기본적인 노후생활이 가능함' },
@@ -24,7 +22,16 @@ const RETIREMENT_INCOME_BANDS = [
   { test: atLeast(0), rangeLabel: '40% 미만', status: '은퇴계획 재검토 필요', reason: '노후소득이 크게 부족해 은퇴 시기·생활수준 전반의 재검토가 불가피함' },
 ];
 const RETIREMENT_INCOME_SCORES_STANDARD = [15, 12, 9, 6, 3, 0];
-const RETIREMENT_INCOME_SCORES_65PLUS = [30, 24, 18, 12, 6, 0];
+const FINANCIAL_HEALTH_KEYS = new Set([
+  'household',
+  'emergency',
+  'dsr',
+  'debtBurden',
+  'insurance',
+  'savingsRate',
+  'retirementSavings',
+  'financialAssetRatio',
+]);
 
 function buildRetirementIncomeBands(scores) {
   return RETIREMENT_INCOME_BANDS.map((band, i) => ({ ...band, score: scores[i] }));
@@ -61,9 +68,9 @@ export function calcIndicators(input) {
         [
           { test: atLeast(6), score: 10, status: '매우 우수', rangeLabel: '6배 이상', reason: '장기 실직·질병 등 예기치 못한 소득 중단에도 충분히 대응 가능' },
           { test: atLeast(5), score: 8, status: '우수', rangeLabel: '5배 이상~6배 미만', reason: 'JMFinancial 참고 범위 상단에 가까워 예비자금이 넉넉한 편' },
-          { test: atLeast(4), score: 6, status: '양호', rangeLabel: '4배 이상~5배 미만', reason: 'JMFinancial 참고 범위(2~6배) 안에서 유동성을 확보한 상태' },
+          { test: atLeast(4), score: 6, status: '양호', rangeLabel: '4배 이상~5배 미만', reason: 'JMFinancial 참고 범위(4~6개월) 안에서 유동성을 확보한 상태' },
           { test: atLeast(3), score: 4, status: '보통', rangeLabel: '3배 이상~4배 미만', reason: '비상 상황에 대비할 자금은 있으나 여유는 크지 않은 편' },
-          { test: atLeast(2), score: 2, status: '주의', rangeLabel: '2배 이상~3배 미만', reason: 'JMFinancial 참고 범위 하단에 있어 비상 상황 대응력을 점검할 필요가 있음' },
+          { test: atLeast(2), score: 2, status: '주의', rangeLabel: '2배 이상~3배 미만', reason: 'JMFinancial 참고 범위보다 낮아 비상 상황 대응력을 점검할 필요가 있음' },
           { test: atLeast(0), score: 0, status: '위험', rangeLabel: '2배 미만', reason: '소득 중단 시 단기간 내 생활자금이 고갈될 위험이 큼' },
         ],
         10
@@ -137,7 +144,7 @@ export function calcIndicators(input) {
         5
       );
 
-  // ⑦ 노후대비저축지표 = 노후대비저축액 ÷ 총저축액 (65세 이상은 지표 자체가 성립하지 않아 ⑨로 흡수)
+  // ⑦ 노후대비저축지표 = 노후대비저축액 ÷ 총저축액 (65세 이상은 적립 단계가 아니므로 해당 없음)
   const retirementSavingsRaw = pctOrNA(agg.retirementSavingsAnnual, agg.totalSavingsAnnual);
   const indicator7 = is65Plus
     ? {
@@ -146,7 +153,7 @@ export function calcIndicators(input) {
         value: retirementSavingsRaw === null ? null : round1(retirementSavingsRaw),
         score: 0,
         maxScore: 0,
-        status: '65세 이상 미적용',
+        status: '해당 없음',
         notCalculable: false,
         notApplicable: true,
         reason: null,
@@ -154,9 +161,9 @@ export function calcIndicators(input) {
           {
             rangeLabel: '전 구간',
             score: 0,
-            status: '65세 이상 미적용',
+            status: '해당 없음',
             reason:
-              '65세 이상은 자산을 적립하기보다 인출하는 단계로 보아 이 지표를 적용하지 않습니다. JMFinancial 자체 평가정책에 따라 이 지표의 15점은 별도 내부 노후 평가 항목으로 이전되어 통합 적용됩니다.',
+              '65세 이상은 자산을 적립하기보다 인출하는 단계로 보아 이 지표를 적용하지 않습니다.',
             isCurrent: true,
           },
         ],
@@ -193,15 +200,16 @@ export function calcIndicators(input) {
         5
       );
 
-  // ⑨ 노후소득보장률 = 월예상 노후소득 ÷ 은퇴후 월필요생활비 (0년차 값. 연차별 추이는 은퇴자산 시뮬레이션에서 별도 계산)
+  // 별도 노후분석: 노후소득보장률 = 월예상 노후소득 ÷ 은퇴후 월필요생활비
+  // 재무건강 총점·등급에는 포함하지 않는다. 연차별 추이는 은퇴자산 시뮬레이션에서 별도 계산한다.
   const retirementLivingCost = n(input.expense?.retirementLivingCost);
   const retirementIncomeRaw = pctOrNA(agg.monthlyRetirementIncome, retirementLivingCost);
   const indicator9 = retirementIncomeRaw === null
-    ? notCalculableResult(is65Plus ? 30 : 15, '노후 월 필요생활비가 입력되지 않아 노후소득보장률을 산출할 수 없습니다.')
+    ? notCalculableResult(15, '노후 월 필요생활비가 입력되지 않아 노후소득보장률을 산출할 수 없습니다.')
     : evaluateBands(
         retirementIncomeRaw,
-        buildRetirementIncomeBands(is65Plus ? RETIREMENT_INCOME_SCORES_65PLUS : RETIREMENT_INCOME_SCORES_STANDARD),
-        is65Plus ? 30 : 15
+        buildRetirementIncomeBands(RETIREMENT_INCOME_SCORES_STANDARD),
+        15
       );
 
   const list = [
@@ -216,27 +224,17 @@ export function calcIndicators(input) {
     { key: 'retirementIncome', label: '노후소득보장률', formula: '월예상 노후소득 ÷ 은퇴후 월필요생활비 × 100', ...indicator9 },
   ];
 
-  const anyNotCalculable = list.some((i) => i.notCalculable);
-  const missingInputs = list.filter((i) => i.notCalculable).map((i) => i.reason);
+  const financialHealthIndicators = list.filter((indicator) => FINANCIAL_HEALTH_KEYS.has(indicator.key));
+  const anyNotCalculable = financialHealthIndicators.some((i) => i.notCalculable);
+  const missingInputs = financialHealthIndicators.filter((i) => i.notCalculable).map((i) => i.reason);
 
   // notCalculable(분모 0) 지표는 순위 산정에서 제외한다. maxScore=0(65세 이상 지표⑦)도 기존과 동일하게 제외.
-  const rankable = list.filter((i) => i.maxScore > 0 && !i.notCalculable);
+  const rankable = financialHealthIndicators.filter((i) => i.maxScore > 0 && !i.notCalculable);
   const weakest = rankable.length ? [...rankable].sort((a, b) => a.score / a.maxScore - b.score / b.maxScore)[0] : null;
   const strongest = rankable.length ? [...rankable].sort((a, b) => b.score / b.maxScore - a.score / a.maxScore)[0] : null;
 
-  // 지표 중 하나라도 N/A면 종합점수·등급 자체를 산출하지 않는다(0으로 합산하지도, N/A를 제외한 채
-  // 100점으로 환산하지도 않음 - 재무정책 결정 없이는 재산정 방식을 임의로 정하지 않는다).
-  let totalScore = null;
-  let grade = null;
-  if (!anyNotCalculable) {
-    totalScore = list.reduce((sum, i) => sum + i.score, 0);
-    grade = gradeFromScore(totalScore);
-  }
-
   return {
     indicators: list,
-    totalScore,
-    grade,
     notCalculable: anyNotCalculable,
     missingInputs,
     weakest,
@@ -245,14 +243,4 @@ export function calcIndicators(input) {
     currentAge,
     is65Plus,
   };
-}
-
-// 1_계산로직.html §6 "종합등급 산출" 표와 동일 (90~100=S ... 49이하=F)
-function gradeFromScore(score) {
-  if (score >= 90) return { letter: 'S', label: '매우 건강' };
-  if (score >= 80) return { letter: 'A', label: '건강' };
-  if (score >= 70) return { letter: 'B', label: '양호' };
-  if (score >= 60) return { letter: 'C', label: '개선 필요' };
-  if (score >= 50) return { letter: 'D', label: '위험' };
-  return { letter: 'F', label: '심각' };
 }

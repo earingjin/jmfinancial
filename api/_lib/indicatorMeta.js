@@ -10,8 +10,8 @@ export const INDICATOR_META = {
     guideline: '총 소득 대비 총 지출 70% 이하',
   },
   emergency: {
-    recommendedLabel: '2~6배', gaugeMax: 8, bench: { type: 'between', min: 2, max: 6 },
-    guideline: '총 지출금액 대비 유동성자산 금액 2~6배',
+    recommendedLabel: '4~6개월', gaugeMax: 8, bench: { type: 'between', min: 4, max: 6 },
+    guideline: '월 총지출 대비 유동성자산 4~6개월분',
   },
   dsr: {
     recommendedLabel: '30% 이하', gaugeMax: 60, bench: { type: 'atMost', value: 30 },

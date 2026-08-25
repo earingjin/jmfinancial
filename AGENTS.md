@@ -48,6 +48,7 @@ Summary와 Report는 동일한 서버 결과를 재사용한다.
 
 ## Project Constraints
 
+- 재무건강지표의 정의·산식·분자·분모·해석은 `docs/financial-indicators.md`를 기준으로 한다.
 - 미래재무 전망은 `CLAUDE.md`와 `docs/future-finance-spec.md`를 따른다.
 - 공식 명칭은 `연금소득 기준 생활비 충당률`이며 종합 은퇴 준비도로 해석하지 않는다.
 - 현재 Wizard는 Step1~6만 사용하며 Step7은 사용자 요청 없이 활성화하지 않는다.

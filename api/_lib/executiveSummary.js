@@ -267,12 +267,14 @@ export function buildComprehensiveIssues({ indicators, simulation, summary }) {
     return issues;
   }
 
-  const weakIndicators = indicators.filter((i) => !i.notCalculable && i.maxScore > 0 && i.score / i.maxScore < 0.5);
+  const weakIndicators = indicators.filter(
+    (i) => i.key !== 'retirementIncome' && !i.notCalculable && !i.notApplicable && i.maxScore > 0 && i.score / i.maxScore < 0.5
+  );
   if (weakIndicators.length > 0) {
     const names = weakIndicators.map((i) => i.label).join(' · ');
-    issues.push(`FHS 종합결과 — 100점 만점 중 ${summary.totalScore}점(${summary.grade.letter}등급)으로, ${names} 지표가 개선이 필요한 구간입니다.`);
+    issues.push(`재무건강지표 종합결과 — ${names} 지표를 우선 점검할 필요가 있습니다.`);
   } else {
-    issues.push(`FHS 종합결과 — 100점 만점 중 ${summary.totalScore}점(${summary.grade.letter}등급)으로 전반적으로 안정적인 재무구조입니다.`);
+    issues.push('재무건강지표 종합결과 — 산출 가능한 8개 지표를 함께 보면 전반적으로 안정적인 재무구조입니다.');
   }
 
   return issues;

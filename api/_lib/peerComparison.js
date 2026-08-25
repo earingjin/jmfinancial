@@ -1,8 +1,6 @@
 // 또래(연령대) 비교.
 // 순자산/연소득/금융자산 평균은 peerBenchmarks.js의 2025년 가계금융복지조사 공식 통계를
 // 사용자 나이에 해당하는 연령구간으로 자동 연결한다(사용자 승인됨).
-// 재무건강 총점(retirementScore)은 연령대별 공식 통계가 없어 이번 갱신 대상에서 제외하고,
-// 기존 placeholder 평균을 그대로 유지한다(사용자 확인됨) - 새 기준을 임의로 만들지 않는다.
 
 import { PEER_AGE_BRACKETS, getPeerBracket, PEER_BENCHMARK_META } from './peerBenchmarks.js';
 
@@ -12,7 +10,6 @@ export function buildPeerComparison({
   totalDebt,
   annualIncome,
   financialAssetsTotal,
-  retirementScore,
   netWorthMissing = false,
   annualIncomeMissing = false,
   financialAssetsMissing = false,
@@ -64,25 +61,15 @@ export function buildPeerComparison({
     netWorth: buildMetric(netWorth, userBracket.netWorth, { missing: netWorthMissing, binaryLabel: true }),
     householdIncome: buildMetric(annualIncome, userBracket.annualIncome, { missing: annualIncomeMissing, binaryLabel: true }),
     financialAssets: buildMetric(financialAssetsTotal, userBracket.financialAssets, { missing: financialAssetsMissing, binaryLabel: true }),
-    retirementScore: buildMetric(retirementScore, PLACEHOLDER_BENCHMARK.retirementScoreAverage),
     benchmarkMeta: PEER_BENCHMARK_META,
-    // netWorth/householdIncome/financialAssets는 이제 2025년 가계금융복지조사 공식 통계이므로
-    // "자리표시 데이터" 전체 배지를 붙이면 안 된다 - retirementScore에만 남은 placeholder 여부를
-    // 별도로 표시한다(화면에 재무건강 총점을 표시하지 않는 요약페이지에서는 쓰이지 않음).
-    retirementScoreIsPlaceholder: true,
   };
 }
-
-// 재무건강 총점은 연령대별 공식 통계가 없어 유지하는 유일한 placeholder 값.
-const PLACEHOLDER_BENCHMARK = {
-  retirementScoreAverage: 69.9,
-};
 
 // 값이 없거나(null/undefined) NaN·Infinity면, 또는 explicitly missing(미입력)이면
 // 산술을 시도하지 않고 "비교 데이터 부족" 상태를 그대로 반환한다.
 // 미입력과 실제 0원은 다르다 - 미입력을 0원으로 취급해 -100%를 보여주지 않기 위해 missing을 별도로 받는다.
 function buildMetric(value, average, opts = {}) {
-  const { missing = false, binaryLabel = false } = opts;
+  const { missing = false } = opts;
   if (missing || !Number.isFinite(value)) {
     return { value: null, average, diffPercent: null, percentileLabel: '비교 데이터 부족' };
   }
@@ -96,7 +83,7 @@ function buildMetric(value, average, opts = {}) {
     value,
     average,
     diffPercent: round1(rawDiffRatio * 100),
-    percentileLabel: binaryLabel ? binaryPercentileLabel(rawDiffRatio) : estimatePercentileLabel(rawDiffRatio),
+    percentileLabel: binaryPercentileLabel(rawDiffRatio),
   };
 }
 
@@ -107,13 +94,6 @@ function binaryPercentileLabel(rawDiffRatio) {
 
 // 실제 분포(가계금융복지조사 등) 데이터 없이 평균 대비 비율만으로 판단하므로, "상위 20%"처럼
 // 확정적인 백분위 표현은 쓰지 않는다 - 평균 대비 상대적 위치만 서술한다.
-// (재무건강 총점 전용 - 연령대별 공식 통계가 없어 기존 3단계 판정을 그대로 유지한다.)
-function estimatePercentileLabel(rawDiffRatio) {
-  const ratio = rawDiffRatio + 1;
-  if (ratio >= 1.1) return '또래 가구 평균보다 높음';
-  if (ratio >= 0.9) return '또래 가구 평균과 비슷함';
-  return '또래 가구 평균보다 낮음';
-}
 
 function round1(v) {
   // -0을 0으로 정규화한다 - 그렇지 않으면 근소하게 낮은 값이 "-0.0%"로 표시되어

@@ -54,7 +54,7 @@ function findIndicator(result, key) {
   return result.indicators.find((i) => i.key === key);
 }
 
-describe('total score integrity', () => {
+describe('financial-health indicator integrity', () => {
   it('preserves the established eight household-finance indicator formulas, raw results, and score allocations', () => {
     const result = calcIndicators(input());
     const expected = {
@@ -77,26 +77,23 @@ describe('total score integrity', () => {
     expect(findIndicator(result, 'retirementSavings').formula).toBe('노후대비저축액 ÷ 총저축액 × 100');
   });
 
-  it('sums to exactly 100 for a healthy under-65 input', () => {
+  it('does not expose a composite total or S~F grade for an under-65 input', () => {
     const result = calcIndicators(input());
     expect(result.is65Plus).toBe(false);
     expect(result.notCalculable).toBe(false);
-    expect(result.totalScore).toBe(
-      result.indicators.reduce((sum, i) => sum + i.score, 0)
-    );
-    const maxSum = result.indicators.reduce((sum, i) => sum + i.maxScore, 0);
-    expect(maxSum).toBe(100);
+    expect(result).not.toHaveProperty('totalScore');
+    expect(result).not.toHaveProperty('grade');
   });
 
-  it('sums to exactly 100 for a healthy 65+ input (indicator7 absorbed into indicator9)', () => {
+  it('keeps retirement savings not applicable at 65+ without transferring its allocation', () => {
     const result = calcIndicators(input({ basic: { birthYear: new Date().getFullYear() - 66 } }));
     expect(result.is65Plus).toBe(true);
     const retirementSavings = findIndicator(result, 'retirementSavings');
     const retirementIncome = findIndicator(result, 'retirementIncome');
     expect(retirementSavings.maxScore).toBe(0);
-    expect(retirementIncome.maxScore).toBe(30);
-    const maxSum = result.indicators.reduce((sum, i) => sum + i.maxScore, 0);
-    expect(maxSum).toBe(100);
+    expect(retirementSavings.notApplicable).toBe(true);
+    expect(retirementIncome.maxScore).toBe(15);
+    expect(retirementIncome.score).toBeLessThanOrEqual(15);
   });
 });
 
@@ -194,12 +191,19 @@ describe('A-2 / N/A handling - denominator 0 must never score best or worst sile
     expect(findIndicator(result, 'retirementIncome').notCalculable).toBe(true);
   });
 
-  it('a single N/A indicator makes the composite totalScore/grade null, not partially summed', () => {
+  it('reports missing inputs for the eight-indicator assessment without exposing a composite score', () => {
     const result = calcIndicators(input({ assets: { currentIncome: { monthly: 0 } } }));
     expect(result.notCalculable).toBe(true);
-    expect(result.totalScore).toBeNull();
-    expect(result.grade).toBeNull();
+    expect(result).not.toHaveProperty('totalScore');
+    expect(result).not.toHaveProperty('grade');
     expect(result.missingInputs.length).toBeGreaterThan(0);
+  });
+
+  it('keeps retirement-income N/A separate from the eight-indicator assessment', () => {
+    const result = calcIndicators(input({ expense: { retirementLivingCost: 0 } }));
+    expect(findIndicator(result, 'retirementIncome').notCalculable).toBe(true);
+    expect(result.notCalculable).toBe(false);
+    expect(result.missingInputs).not.toContain(findIndicator(result, 'retirementIncome').reason);
   });
 
   it('N/A indicators are excluded from weakest/strongest ranking', () => {
@@ -369,15 +373,15 @@ describe('A-1 boundary continuity (T-0.01 / T / T+0.01) - cutoffs unchanged, gap
     expect(ind.score).toBe(expectedScore);
   });
 
-  it('retirementIncome doubles to max 30 for 65+', () => {
+  it('retirementIncome keeps its standalone max 15 for 65+', () => {
     const result = calcIndicators(
       retirementIncomeCase(120)
         ? deepMerge(retirementIncomeCase(120), { basic: { birthYear: new Date().getFullYear() - 66 } })
         : {}
     );
     const ind = findIndicator(result, 'retirementIncome');
-    expect(ind.maxScore).toBe(30);
-    expect(ind.score).toBe(30);
+    expect(ind.maxScore).toBe(15);
+    expect(ind.score).toBe(15);
   });
 
   // emergency (multiple) = liquidAssets / monthlyExpense, monthlyExpense fixed at 100.

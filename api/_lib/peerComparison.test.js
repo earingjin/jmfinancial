@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildPeerComparison } from './peerComparison.js';
 
-const BASE_ARGS = { age: 41, totalAssets: 40000, totalDebt: 5000, annualIncome: 12000, financialAssetsTotal: 5000, retirementScore: 75 };
+const BASE_ARGS = { age: 41, totalAssets: 40000, totalDebt: 5000, annualIncome: 12000, financialAssetsTotal: 5000 };
 
 describe('buildPeerComparison - wording must never assert a confident percentile without real distribution data', () => {
   it('does not return an estimated percentile rank without distribution data', () => {
@@ -9,36 +9,24 @@ describe('buildPeerComparison - wording must never assert a confident percentile
   });
   it('never uses a definitive "상위 N%" style claim in percentileLabel', () => {
     const result = buildPeerComparison(BASE_ARGS);
-    for (const key of ['netWorth', 'householdIncome', 'financialAssets', 'retirementScore']) {
+    for (const key of ['netWorth', 'householdIncome', 'financialAssets']) {
       expect(result[key].percentileLabel).not.toMatch(/상위\s*\d+%/);
     }
   });
 
-  it('marks only retirementScore as placeholder data (netWorth/householdIncome/financialAssets are now official 2025 statistics)', () => {
+  it('does not expose the removed financial-health composite comparison', () => {
     const result = buildPeerComparison(BASE_ARGS);
-    expect(result.retirementScoreIsPlaceholder).toBe(true);
-  });
-
-  it('reports "비교 데이터 부족" instead of a bogus diff when retirementScore is null (notCalculable)', () => {
-    const result = buildPeerComparison({ ...BASE_ARGS, retirementScore: null });
-    expect(result.retirementScore.value).toBeNull();
-    expect(result.retirementScore.diffPercent).toBeNull();
-    expect(result.retirementScore.percentileLabel).toBe('비교 데이터 부족');
+    expect(result).not.toHaveProperty('retirementScore');
+    expect(result).not.toHaveProperty('retirementScoreIsPlaceholder');
   });
 
   it('reports "비교 데이터 부족" for NaN/Infinity input instead of doing arithmetic on it', () => {
-    expect(buildPeerComparison({ ...BASE_ARGS, retirementScore: NaN }).retirementScore.percentileLabel).toBe('비교 데이터 부족');
     expect(buildPeerComparison({ ...BASE_ARGS, annualIncome: Infinity }).householdIncome.percentileLabel).toBe('비교 데이터 부족');
-  });
-
-  it('still computes a normal comparison label for a finite value', () => {
-    const result = buildPeerComparison(BASE_ARGS);
-    expect(['또래 가구 평균보다 높음', '또래 가구 평균과 비슷함', '또래 가구 평균보다 낮음']).toContain(result.retirementScore.percentileLabel);
   });
 });
 
 // 2025년 가계금융복지조사 연동: 순자산/연소득/금융자산은 사용자 나이에 해당하는 연령구간 평균을
-// 써야 한다(재무건강 총점은 연령대별 데이터가 없어 이번 갱신에서 제외 - 사용자 확인됨).
+// 써야 한다.
 describe('buildPeerComparison - age-bracket-based peer averages (2025 가계금융복지조사)', () => {
   it('40~49세 구간(age=41)에서는 해당 구간의 순자산/연소득/금융자산 평균을 사용한다', () => {
     const result = buildPeerComparison({ age: 41, totalAssets: 40000, totalDebt: 5000, annualIncome: 12000, financialAssetsTotal: 5000, retirementScore: 75 });
@@ -61,12 +49,6 @@ describe('buildPeerComparison - age-bracket-based peer averages (2025 가계금�
     expect(at50.netWorth.average).toBe(55161);
   });
 
-  it('재무건강 총점(retirementScore)은 이번 갱신 대상이 아니므로 나이와 무관하게 기존 고정 평균(69.9)을 유지한다', () => {
-    const young = buildPeerComparison({ age: 25, totalAssets: 0, totalDebt: 0, annualIncome: 0, financialAssetsTotal: 0, retirementScore: 50 });
-    const old = buildPeerComparison({ age: 65, totalAssets: 0, totalDebt: 0, annualIncome: 0, financialAssetsTotal: 0, retirementScore: 50 });
-    expect(young.retirementScore.average).toBe(69.9);
-    expect(old.retirementScore.average).toBe(69.9);
-  });
 });
 
 // 비교율 부호(양수→높음, 음수→낮음)는 화면 표시용으로 반올림한 diffPercent가 아니라

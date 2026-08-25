@@ -45,6 +45,7 @@ describe('POST /api/calculate 응답에서 화면 미사용 필드 제외', () =
     const result = await callHandler(buildMinimalValidInput());
     expect(result).not.toHaveProperty('comprehensiveIssues');
     expect(result).not.toHaveProperty('livingExpenseItems');
+    expect(result).not.toHaveProperty('scenarioComparison');
     // webSummary.donuts.expense.items 쪽은 화면이 실제로 쓰므로 그대로 유지되어야 한다.
     expect(result.webSummary?.donuts?.expense?.items).toBeDefined();
   });
@@ -53,16 +54,17 @@ describe('POST /api/calculate 응답에서 화면 미사용 필드 제외', () =
     const result = await callHandler(buildMinimalValidInput());
     const removedSummaryKeys = [
       'gradeBands', 'referenceScore', 'nextGrade', 'pointsToNextGrade',
-      'belowRecommendedCount', 'weakest', 'strongest', 'is65Plus',
+      'belowRecommendedCount', 'weakest', 'strongest', 'is65Plus', 'totalScore', 'grade',
     ];
     removedSummaryKeys.forEach((key) => {
       expect(result.summary).not.toHaveProperty(key);
     });
-    // 화면이 실제로 쓰는 summary 필드는 그대로 유지되어야 한다.
-    expect(result.summary).toHaveProperty('totalScore');
-    expect(result.summary).toHaveProperty('grade');
     expect(result.summary).toHaveProperty('notCalculable');
     expect(result.summary).toHaveProperty('missingInputs');
+    expect(result.peerComparison).not.toHaveProperty('retirementScore');
+    expect(result.peerComparison).not.toHaveProperty('retirementScoreIsPlaceholder');
+    expect(result.financialHealthInterpretation.categories).toHaveLength(4);
+    expect(result.financialHealthInterpretation.conclusion).toBeTruthy();
   });
 
   it('indicators[] 각 원소에서 composition은 제외하고, FHS 심화 리포트가 쓰는 gauge/benchmark/recommendedLabel/guideline/ratioClass는 유지한다', async () => {

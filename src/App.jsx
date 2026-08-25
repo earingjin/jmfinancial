@@ -44,10 +44,6 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   // 지금 보고 있는 result가 방금 새로 진단한 것인지('new'), 과거 목록에서 열어본 것인지('history')
   // 구분한다 - 요약 화면의 "뒤로가기"가 어디로 돌아가야 하는지를 이 값으로 분기한다.
   const [resultSource, setResultSource] = useState('new');
-  // "7. 대응방안"에서 사용자가 실제로 켠 시나리오/직접 입력한 값(나이·기간·목표금액 등)을 리포트의
-  // 마지막 페이지(AssetManagementOptionsPage)에서 그대로 보여주기 위해 보관한다. 서버 계산 결과와
-  // 달리 이 값은 계산이 아니라 사용자가 입력한 그대로를 표시하는 용도라 formData에서 바로 가져온다.
-  const [submittedScenariosInput, setSubmittedScenariosInput] = useState(null);
   const pendingSubmissionRef = useRef(null);
   const submissionPromiseRef = useRef(null);
 
@@ -78,7 +74,6 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setPhase('loading');
     setErrorMessage('');
     setResultSource('new');
-    setSubmittedScenariosInput(formData?.scenarios ?? null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
@@ -258,7 +253,6 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
               onBack={() => setPhase('summary')}
               onHome={goHome}
               clientName={user?.user_metadata?.name}
-              scenariosInput={submittedScenariosInput}
             />
           </Suspense>
         )}

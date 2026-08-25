@@ -3,8 +3,7 @@ import SectionBadge from './pages/SectionBadge';
 import CoverPage from './pages/CoverPage';
 import { formatNumber } from '../../utils/format';
 
-// 한국형 가계재무비율 참고 8개 항목과 JMFinancial 자체 추가 항목을 표시용으로 묶는다.
-// 점수·등급 산출(api/_lib/indicators.js)과는 무관하다.
+// 한국형 가계재무비율 참고 8개 항목을 표시용으로 묶는다.
 // 페이지 구성용 그룹핑이다.
 const INDICATOR_GROUPS = [
   {
@@ -60,28 +59,20 @@ function IndicatorGauge({ gauge, ratioClass, unit }) {
   );
 }
 
-function getIndicatorOrigin() {
-  return '한국형 가계재무비율 참고 지표';
-}
+const INDICATOR_DEFINITIONS = {
+  household: '현재 소득 가운데 생활과 각종 지출에 사용하는 비중으로, 소득으로 가계 지출을 안정적으로 감당하는지를 봅니다.',
+  emergency: '갑작스러운 소득 중단이나 예상하지 못한 지출이 생겼을 때 유동성자산으로 생활을 얼마나 유지할 수 있는지를 봅니다.',
+  dsr: '현재 소득 가운데 대출 원금과 이자를 갚는 데 사용하는 비중으로, 부채가 현금흐름에 주는 부담을 봅니다.',
+  debtBurden: '현재 보유한 전체 자산과 비교한 부채 규모로, 가계의 자산·부채 구조가 안정적인지를 봅니다.',
+  insurance: '현재 소득 가운데 질병·상해·사망 등 위험에 대비하기 위해 지출하는 보장성보험료의 비중을 봅니다.',
+  savingsRate: '현재 소득 가운데 실제 저축으로 배분하는 비중으로, 미래 재무목표를 위해 자산을 쌓는 흐름을 봅니다.',
+  retirementSavings: '전체 저축 가운데 노후생활을 위해 배분하는 비중으로, 현재 저축이 노후 준비로 얼마나 연결되는지를 봅니다.',
+  financialAssetRatio: '전체 자산 가운데 금융자산이 차지하는 비중으로, 자산이 실물자산에 지나치게 집중됐는지와 활용 가능한 자산을 봅니다.',
+};
 
-function buildCategoryFeedback(group, indicators) {
-  const items = group.keys
-    .map((key) => (indicators || []).find((indicator) => indicator.key === key))
-    .filter(Boolean);
-  const available = items.filter((indicator) => !indicator.notCalculable);
-
-  if (available.length === 0) {
-    return '입력 정보가 부족해 현재 상태를 해석하기 어렵습니다. 관련 입력값을 확인해 주세요.';
-  }
-
-  const statusSummary = available
-    .map((indicator) => `${indicator.label} ${indicator.status}`)
-    .join(' · ');
-  const hasUnavailable = available.length !== items.length;
-
-  return hasUnavailable
-    ? `${statusSummary}입니다. 산출되지 않은 항목은 관련 입력값을 확인해 주세요.`
-    : `${statusSummary}입니다. 세부 페이지에서 항목별 원인과 참고 범위를 확인해 보세요.`;
+function IndicatorDefinition({ indicator }) {
+  const definition = INDICATOR_DEFINITIONS[indicator.key];
+  return definition ? <p className="indicator-definition"><b>이 지표는</b> {definition}</p> : null;
 }
 
 function IndicatorDetailCard({ indicator }) {
@@ -91,7 +82,7 @@ function IndicatorDetailCard({ indicator }) {
     return (
       <div className="report-composition-card indicator-detail">
         <h4 className="indicator-detail-title">{indicator.label}</h4>
-        <p className="indicator-origin">{getIndicatorOrigin(indicator)}</p>
+        <IndicatorDefinition indicator={indicator} />
         <p className="overview-card-missing">{indicator.reason}</p>
         <p className="fine-print">참고 범위: {indicator.guideline}</p>
       </div>
@@ -106,7 +97,7 @@ function IndicatorDetailCard({ indicator }) {
         <h4 className="indicator-detail-title" style={{ margin: 0 }}>{indicator.label}</h4>
         <span className={`status-tag pill-${indicator.ratioClass}`}>{indicator.status}</span>
       </div>
-      <p className="indicator-origin">{getIndicatorOrigin(indicator)}</p>
+      <IndicatorDefinition indicator={indicator} />
       <div className="indicator-value">{formatNumber(indicator.value)}{unit}</div>
 
       <IndicatorGauge gauge={indicator.gauge} ratioClass={indicator.ratioClass} unit={unit} />
@@ -116,7 +107,7 @@ function IndicatorDetailCard({ indicator }) {
 
       {indicator.notApplicable && (
         <p className="indicator-policy-note">
-          65세 이상에서는 JMFinancial 자체 평가정책에 따라 이 지표의 15점을 별도 내부 노후 평가 항목으로 이전합니다.
+          65세 이상은 자산을 적립하기보다 인출하는 단계로 보아 이 지표를 적용하지 않습니다.
         </p>
       )}
 
@@ -144,7 +135,76 @@ function IndicatorDetailCard({ indicator }) {
   );
 }
 
-function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
+const LEGACY_FEEDBACK_TEXTS = [
+  '입력 정보가 부족해 현재 상태를 해석하기 어렵습니다.',
+  '관련 입력값을 확인한 뒤 다시 진단해 주세요.',
+];
+
+function getCategoryFeedback(group, indicators, storedCategory) {
+  const items = group.keys
+    .map((key) => (indicators || []).find((indicator) => indicator.key === key))
+    .filter(Boolean);
+  const applicable = items.filter((indicator) => !indicator.notCalculable && !indicator.notApplicable);
+  const unavailable = items.filter((indicator) => indicator.notCalculable);
+  const hasLegacyText = LEGACY_FEEDBACK_TEXTS.some(
+    (text) => storedCategory?.summary?.includes(text) || storedCategory?.action?.includes(text)
+  );
+
+  if (applicable.length === 0 && unavailable.length > 0) {
+    const detail = unavailable
+      .map((indicator) => `${indicator.label}: ${indicator.reason}`)
+      .join(' / ');
+
+    return {
+      summary: `현재 영역은 다음 지표가 산출되지 않아 종합 해석을 제공하지 않습니다. ${detail}`,
+      action: '위 사유를 확인한 뒤 다시 진단해 주세요.',
+    };
+  }
+
+  if (storedCategory && !hasLegacyText) return storedCategory;
+
+  if (applicable.length > 0) {
+    return {
+      summary: applicable.map((indicator) => `${indicator.label}: ${indicator.status}`).join(' / '),
+      action: unavailable.length > 0
+        ? `산출되지 않은 항목: ${unavailable.map((indicator) => `${indicator.label}: ${indicator.reason}`).join(' / ')}`
+        : '각 지표의 현재 상태와 세부 해석을 확인해 주세요.',
+    };
+  }
+
+  return {
+    summary: '현재 영역에 표시할 지표 결과가 없습니다.',
+    action: '지표 결과가 생성되었는지 확인해 주세요.',
+  };
+}
+
+function getConclusionGroups(indicators, conclusion) {
+  const financialHealthKeys = new Set(INDICATOR_GROUPS.flatMap((group) => group.keys));
+  const applicable = (indicators || []).filter(
+    (indicator) => financialHealthKeys.has(indicator.key) && !indicator.notCalculable && !indicator.notApplicable
+  );
+  const names = (items) => items.map((indicator) => indicator.label).join(' · ') || '해당 없음';
+
+  return [
+    {
+      label: '점검 우선 지표',
+      value: names(applicable.filter((indicator) => indicator.ratioClass === 'risk' || indicator.ratioClass === 'caution')),
+    },
+    {
+      label: '안정적인 지표',
+      value: names(applicable.filter((indicator) => indicator.ratioClass === 'good')),
+    },
+    {
+      label: '도출되는 점',
+      value: conclusion || '산출 가능한 8개 지표 결과를 바탕으로 현재 재무상태를 함께 확인해 주세요.',
+    },
+  ];
+}
+
+function IndicatorSummaryPage({ indicators, interpretation, pageNumber, totalPages }) {
+  const categoryByKey = new Map((interpretation?.categories || []).map((category) => [category.key, category]));
+  const groupKeys = ['spendingLiquidity', 'debt', 'savingsAssets', 'protection'];
+
   return (
     <PageFrame
       eyebrow="JMFinancial Household Finance Review"
@@ -166,8 +226,23 @@ function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
           <span><b>활용</b> 보완할 항목의 우선순위를 찾는 데 도움을 줘요.</span>
         </div>
       </section>
+      <section className="fhs-overall-conclusion" aria-labelledby="fhs-overall-conclusion-title">
+        <div className="fhs-overall-conclusion-head">
+          <h3 id="fhs-overall-conclusion-title">8개 지표 종합결론</h3>
+          <span>한눈에 보기</span>
+        </div>
+        <ul className="fhs-overall-conclusion-list">
+          {getConclusionGroups(indicators, interpretation?.conclusion).map((item) => (
+            <li key={item.label} className={item.label === '도출되는 점' ? 'fhs-overall-conclusion-insight' : ''}>
+              {item.label === '도출되는 점' ? item.value : <><b>{item.label} :</b> {item.value}</>}
+            </li>
+          ))}
+        </ul>
+      </section>
       <div className="fhs-summary-grid">
-        {INDICATOR_GROUPS.map((group) => (
+        {INDICATOR_GROUPS.map((group, groupIndex) => {
+          const category = getCategoryFeedback(group, indicators, categoryByKey.get(groupKeys[groupIndex]));
+          return (
           <section className="fhs-summary-group" key={group.label}>
             <header className="fhs-summary-group-head">
               <span>{group.number}</span>
@@ -185,18 +260,26 @@ function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
                   <div className="fhs-summary-row" key={key}>
                     <div className="fhs-summary-name">{indicator.label}</div>
                     <div className="fhs-summary-score">
-                      {indicator.notCalculable ? '산출 불가' : `${indicator.score} / ${indicator.maxScore}점`}
+                      {indicator.notApplicable
+                        ? '해당 없음'
+                        : indicator.notCalculable
+                          ? '산출 불가'
+                          : `${indicator.score} / ${indicator.maxScore}점`}
                     </div>
-                    <span className={`status-tag ${indicator.notCalculable ? 'pill-unavailable' : `pill-${indicator.ratioClass}`}`}>
-                      {indicator.notCalculable ? '확인 필요' : indicator.status}
+                    <span className={`status-tag ${indicator.notCalculable || indicator.notApplicable ? 'pill-unavailable' : `pill-${indicator.ratioClass}`}`}>
+                      {indicator.notApplicable ? '해당 없음' : indicator.notCalculable ? '확인 필요' : indicator.status}
                     </span>
                   </div>
                 );
               })}
             </div>
-            <p className="fhs-summary-feedback">{buildCategoryFeedback(group, indicators)}</p>
+            <div className="fhs-summary-feedback">
+              <p>{category.summary}</p>
+              <p>{category.action}</p>
+            </div>
           </section>
-        ))}
+          );
+        })}
       </div>
       <p className="fine-print fhs-summary-note">
         세부 산출 기준과 지표별 해석은 다음 페이지에서 확인할 수 있습니다.
@@ -206,7 +289,7 @@ function IndicatorSummaryPage({ indicators, pageNumber, totalPages }) {
 }
 
 export default function FhsDetailReport({ result, onRestart, onBack, onHome, clientName }) {
-  const { generatedAt, indicators } = result;
+  const { generatedAt, indicators, financialHealthInterpretation } = result;
   const totalPages = DETAIL_PAGE_GROUPS.length + 1;
   let page = 0;
   const nextPage = () => ++page;
@@ -241,6 +324,7 @@ export default function FhsDetailReport({ result, onRestart, onBack, onHome, cli
 
       <IndicatorSummaryPage
         indicators={indicators}
+        interpretation={financialHealthInterpretation}
         pageNumber={nextPage()}
         totalPages={totalPages}
       />
