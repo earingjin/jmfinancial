@@ -31,7 +31,7 @@ export default function BackCoverPage({ generatedAt }) {
             {REPORT_DISCLAIMERS.map((line) => <li key={line}>{line}</li>)}
           </ul>
           <div className="backcover-contact">
-            연구개발: JMCAREER AI RE:WORKCENTER &nbsp;|&nbsp; CONTACT US : happylife@jmcareer.co.kr
+            &nbsp;&nbsp; CONTACT US : happylife@jmcareer.co.kr
           </div>
         </div>
       </div>
