@@ -619,6 +619,21 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         </button>
       </div>
 
+      {/* 요약/상세 리포트/재무건강 리포트 3개 화면을 오가는 형식 전환 탭. 새 계산이나 새 전환
+          로직 없이 기존 onDownload/onDownloadFhsDetail(→goToReport/goToFhsDetailReport)을
+          그대로 재사용한다. */}
+      <div className="ss-format-tabs" role="tablist" aria-label="리포트 형식 선택">
+        <button type="button" className="ss-format-tab ss-format-tab--active" role="tab" aria-selected="true">
+          <span>모바일</span><span className="ss-format-tab-type">(Lite)</span>
+        </button>
+        <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onDownload}>
+          <span>상세 리포트</span><span className="ss-format-tab-type">(Standard)</span>
+        </button>
+        <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onDownloadFhsDetail}>
+          <span>재무건강 리포트</span><span className="ss-format-tab-type">(Pro)</span>
+        </button>
+      </div>
+
       {/* 페이지가 여러 섹션으로 길게 이어지므로, 스크롤 중에도 원하는
           섹션으로 바로 이동할 수 있는 상단 고정 내비게이션을 추가한다. */}
       <nav className="ss-section-nav" aria-label="섹션 바로가기">
@@ -1162,12 +1177,12 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
       {/* 5. 상세 리포트 다운로드 */}
       <section className="ss-download-section" aria-labelledby="ss-h-download">
         <h2 id="ss-h-download" className="simple-summary-title">더 자세한 분석이 필요하신가요?</h2>
-        <p className="simple-summary-subtitle">상세 리포트에서 재무 현황과 분석 내용을 확인해 보세요.</p>
+        <p className="simple-summary-subtitle">리포트에서 더 심화된 재무 현황을 확인해 보세요.</p>
         <button type="button" className="btn-primary ss-download-btn" onClick={onDownload}>
-          상세 리포트 다운로드
+          상세 리포트 (Standard) PDF
         </button>
         <button type="button" className="btn-secondary ss-download-btn" onClick={onDownloadFhsDetail}>
-          JMFinancial 재무건강지수 심화 리포트 보기
+          재무건강 리포트 (Pro) PDF
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>

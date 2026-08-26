@@ -47,6 +47,10 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const [resultSource, setResultSource] = useState('new');
   const pendingSubmissionRef = useRef(null);
   const submissionPromiseRef = useRef(null);
+  // 요약 화면에서 상세/재무건강 리포트로 넘어가기 직전 스크롤 위치를 기억해뒀다가, 다시 요약
+  // 화면으로 돌아왔을 때만 복원한다. 히스토리 열람 등 다른 경로로 요약 화면에 처음 들어오는
+  // 경우에는 저장된 값이 없어 이 로직이 관여하지 않는다.
+  const summaryScrollPositionRef = useRef(null);
   // FormProvider가 들고 있는 formData(=위저드 입력값, retirementSavingsInputVersion 포함)를
   // "새로 시작"할 때만 완전히 새 값으로 초기화하기 위한 상태. key를 바꿔 FormProvider를 강제로
   // 재마운트하면 initialFormData 기준으로 다시 초기화되어(버전도 새 진단 기본값인 2로) 이전
@@ -177,11 +181,13 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   };
 
   const goToReport = () => {
+    summaryScrollPositionRef.current = window.scrollY;
     window.scrollTo(0, 0);
     setPhase('report');
   };
 
   const goToFhsDetailReport = () => {
+    summaryScrollPositionRef.current = window.scrollY;
     window.scrollTo(0, 0);
     setPhase('fhs-report');
   };
@@ -215,6 +221,21 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setResultSource('history');
     setPhase('summary');
   };
+
+  // 상세/재무건강 리포트에서 요약 화면으로 "바로" 돌아왔을 때만 저장해둔 스크롤 위치로
+  // 복원한다. 직전 phase까지 함께 확인하는 이유: report/fhs-report에서 홈으로 나갔다가
+  // 히스토리를 거쳐 다시 요약 화면에 들어오는 것처럼, report/fhs-report를 거치지 않고
+  // 새로 진입하는 경우에는 과거에 저장된 값이 남아 있어도 복원하면 안 되기 때문이다.
+  const prevPhaseRef = useRef(phase);
+  useEffect(() => {
+    const prevPhase = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (phase !== 'summary' || (prevPhase !== 'report' && prevPhase !== 'fhs-report')) return;
+    const savedY = summaryScrollPositionRef.current;
+    summaryScrollPositionRef.current = null;
+    if (savedY == null) return;
+    requestAnimationFrame(() => window.scrollTo(0, savedY));
+  }, [phase]);
 
   const isDiagnosisPhase = phase === 'wizard' || phase === 'loading';
   // 홈/이전 결과 화면은 배경까지는 진단 화면과 맞추지 않고, 헤더(맨 위 부분)만 진단 화면과
