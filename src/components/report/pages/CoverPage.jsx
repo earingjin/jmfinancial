@@ -10,7 +10,7 @@ function formatDate(date) {
   return `${y}.${m}.${d}`;
 }
 
-export default function CoverPage({ generatedAt, clientName, title, subtitle }) {
+export default function CoverPage({ generatedAt, clientName, title, titleSuffix, subtitle }) {
   const date = generatedAt ? new Date(generatedAt) : new Date();
 
   return (
@@ -22,7 +22,9 @@ export default function CoverPage({ generatedAt, clientName, title, subtitle }) 
         </div>
 
         <h1 className="cover-title">
-          {title || '제이엠 자산관리 플래너'}<br /><span>{subtitle || 'JM Financial Planner'}</span>
+          <span className="cover-title-main">{title || '제이엠 자산관리 플래너'}</span>
+          {titleSuffix && <span className="cover-title-suffix">{titleSuffix}</span>}
+          <br /><span className="cover-title-subtitle">{subtitle || 'JM Financial Planner'}</span>
         </h1>
 
         <div className="cover-date-badge">Date&nbsp;&nbsp;{formatDate(date)}</div>

@@ -462,7 +462,8 @@ export default function FhsDetailReport({ result, onRestart, onBack, onHome, cli
       <CoverPage
         generatedAt={generatedAt}
         clientName={clientName}
-        title="제이엠 자산관리 플래너(Pro)"
+        title="제이엠 자산관리 플래너"
+        titleSuffix="(Pro)"
         subtitle="JM Financial Planner"
       />
 

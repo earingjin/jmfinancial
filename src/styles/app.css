@@ -1249,7 +1249,9 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .cover-logo-img { height: 34px; width: auto; display: block; }
 .cover-kicker { margin-top: 34px; font-size: 15px; color: var(--ink); line-height: 1.5; }
 .cover-title { margin: 44px 0 0; font-size: 52px; font-weight: 800; line-height: 1.2; color: #fff; letter-spacing: -1px; }
-.cover-title span { display: block; font-size: 30px; font-weight: 800; margin-top: 6px; }
+.cover-title-main { white-space: nowrap; }
+.cover-title-suffix { margin-left: 10px; font-size: 30px; font-weight: 800; white-space: nowrap; }
+.cover-title-subtitle { display: block; margin-top: 6px; font-size: 30px; font-weight: 800; }
 .cover-date-badge {
   display: inline-block; width: fit-content; margin-top: 26px;
   padding: 10px 24px; background: rgba(251, 233, 190, .9); border-radius: 4px;
