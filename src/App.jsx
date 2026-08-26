@@ -11,6 +11,7 @@ import WebBrandLogo from './components/WebBrandLogo';
 import { deobfuscate } from './utils/obfuscate';
 import { supabase } from './lib/supabaseClient';
 import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
+import { resetFormSessionWithServerCleanup, shouldResetFormSession } from './state/formSessionPolicy';
 import { completePlannerSubmission, createSubmissionId } from './services/plannerSubmission';
 import './styles/tokens.css';
 import './styles/app.css';
@@ -46,6 +47,38 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const [resultSource, setResultSource] = useState('new');
   const pendingSubmissionRef = useRef(null);
   const submissionPromiseRef = useRef(null);
+  // FormProvider가 들고 있는 formData(=위저드 입력값, retirementSavingsInputVersion 포함)를
+  // "새로 시작"할 때만 완전히 새 값으로 초기화하기 위한 상태. key를 바꿔 FormProvider를 강제로
+  // 재마운트하면 initialFormData 기준으로 다시 초기화되어(버전도 새 진단 기본값인 2로) 이전
+  // formData가 남지 않는다. 이전 단계로 돌아가기/저장 실패 후 계속 수정하기처럼 같은 입력을
+  // 이어가야 하는 흐름(backToWizard)에서는 이 값을 절대 건드리지 않는다.
+  const [formSessionKey, setFormSessionKey] = useState(0);
+  const [formSessionDraft, setFormSessionDraft] = useState(initialDraft);
+  // 지금 FormProvider가 들고 있는 formData로 이미 진단을 완료(저장까지 성공)했는지 여부.
+  // true일 때만 "자산진단 시작하기"가 새 세션으로 리셋한다 - 위저드를 다 채우지 않고 홈으로
+  // 나갔다가 다시 "자산진단 시작하기"를 누른 경우(미완성 이어쓰기)는 그대로 이어가야 하므로
+  // 여기 해당하지 않는다.
+  const formSessionConsumedRef = useRef(false);
+
+  // 완료된(또는 실패한) 현재 formData 세션을 버리고 완전히 새 진단용 세션을 시작한다.
+  // "새 진단 시작"(자산진단 시작하기 - 완료 후)과 "다시 입력하기"/"처음부터 다시 입력하기"
+  // 에서만 호출한다. 서버 draft 삭제 → 성공 시에만 로컬 세션 리셋 순서는
+  // formSessionPolicy.js의 resetFormSessionWithServerCleanup이 담당한다(완료 후 호출돼 이미
+  // 지워진 경우는 그냥 무해한 재시도가 된다). 삭제가 실패하면 false를 반환하고 지금 formData·
+  // 결과 화면은 그대로 둔다 - 호출부가 에러만 안내한다.
+  const resetFormSession = async () => {
+    const { ok } = await resetFormSessionWithServerCleanup({
+      userId: user.id,
+      deleteDraft,
+      onReset: () => {
+        formSessionConsumedRef.current = false;
+        setFormSessionDraft(null);
+        setFormSessionKey((key) => key + 1);
+        setWizardStep(0);
+      },
+    });
+    return ok;
+  };
 
   const finishSubmission = async () => {
     if (submissionPromiseRef.current) return submissionPromiseRef.current;
@@ -57,6 +90,8 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         const completedResult = await completePlannerSubmission(pending, user);
         setResult(completedResult);
         pendingSubmissionRef.current = null;
+        // 이 formData로 진단이 완료·저장됐다 - 다음 "자산진단 시작하기"는 새 세션으로 리셋해야 한다.
+        formSessionConsumedRef.current = true;
         setPhase('summary');
       } catch {
         setErrorMessage(pending.resultSaved
@@ -106,11 +141,21 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     }
   };
 
-  const restart = () => {
+  // "처음부터 다시 입력하기"(계산 실패)/"다시 입력하기"(결과 화면) - 둘 다 지금 formData를
+  // 버리고 완전히 새로 시작하는 흐름이므로 매번 formData 세션을 리셋한다. 서버 draft 삭제가
+  // 실패하면(resetFormSession이 false 반환) 지금 화면·formData를 그대로 두고 에러만 안내한다.
+  const restart = async () => {
+    if (shouldResetFormSession('restart', formSessionConsumedRef.current)) {
+      const didReset = await resetFormSession();
+      if (!didReset) {
+        setErrorMessage('이전 임시 초안을 정리하지 못해 새로 시작할 수 없습니다. 다시 시도해 주세요.');
+        setPhase('error');
+        return;
+      }
+    }
     setResult(null);
     setResultSource('new');
     setWizardResume(false);
-    setWizardStep(0);
     setPhase('wizard');
   };
 
@@ -143,7 +188,19 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
 
   const goHome = () => setPhase('home');
 
-  const startDiagnosis = () => {
+  // "자산진단 시작하기"(홈/히스토리) - 위저드를 다 채우기 전에 홈으로 나왔다가 돌아온 경우는
+  // 같은 formData를 이어서 채워야 하므로 그대로 두고, 직전 진단이 이미 완료·저장된 뒤라면
+  // (formSessionConsumedRef) 새 진단이므로 formData 세션을 리셋한다. 서버 draft 삭제가 실패하면
+  // 위저드로 넘어가지 않고 홈에 머무른 채 에러만 안내한다(현재 formData는 그대로 보존).
+  const startDiagnosis = async () => {
+    if (shouldResetFormSession('startDiagnosis', formSessionConsumedRef.current)) {
+      const didReset = await resetFormSession();
+      if (!didReset) {
+        setErrorMessage('이전 임시 초안을 정리하지 못해 새 진단을 시작할 수 없습니다. 다시 시도해 주세요.');
+        setPhase('error');
+        return;
+      }
+    }
     setResultSource('new');
     setWizardResume(false);
     setPhase('wizard');
@@ -196,7 +253,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
           <HistoryList user={user} onSelect={openPastResult} onBackHome={goHome} onStart={startDiagnosis} />
         )}
 
-        <FormProvider userId={user.id} initialDraft={initialDraft}>
+        <FormProvider key={formSessionKey} userId={user.id} initialDraft={formSessionDraft}>
           {phase === 'wizard' && (
             <Suspense fallback={<LazyScreenFallback />}>
               <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={wizardStep} onStepChange={setWizardStep} />

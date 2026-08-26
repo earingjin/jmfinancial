@@ -77,6 +77,56 @@ describe('financial-health indicator integrity', () => {
     expect(findIndicator(result, 'retirementSavings').formula).toBe('노후대비저축액 ÷ 총저축액 × 100');
   });
 
+  // retirementSavingsInputVersion: 2 - 연금저축·IRP 자동합산 + 추가 노후저축 입력의 노후대비저축지표
+  // 공식(retirementSavingsAnnual ÷ totalSavingsAnnual × 100)은 변경하지 않는다. 지표에 들어가기 전
+  // 집계값만 버전에 맞게 만들어지는지 확인한다.
+  it('Case 1(v2): 연금저축 20 + IRP 30 자동합산, 추가 노후저축 없음 → 50%', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          annual: 1200,
+          retirementSavingsInputVersion: 2,
+          breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+        },
+      },
+    }));
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBeCloseTo(50, 8);
+  });
+
+  it('Case 2(v2): 연금저축 20 + IRP 30 + 추가 노후저축 10 → 약 54.5%', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          annual: 1200,
+          retirementSavingsInputVersion: 2,
+          breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+          additionalRetirementMonthly: 10,
+          additionalRetirementAnnual: 120,
+        },
+      },
+    }));
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBeCloseTo(720 / 1320 * 100, 8);
+    expect(findIndicator(result, 'retirementSavings').displayValue).toBeCloseTo(54.5, 8);
+  });
+
+  it('Case 5/6(v1 회귀): 버전 필드가 없으면 연금저축·IRP breakdown을 무시하고 레거시 retirementMonthly만 분자로 쓴다', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 200,
+          annual: 2400,
+          breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+          retirementMonthly: 50,
+          retirementAnnual: 600,
+        },
+      },
+    }));
+    // (20+30+50)*12 ÷ 2400 이 아니라, 기존 그대로 retirementAnnual(600) ÷ totalSavingsAnnual(2400)
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBeCloseTo(600 / 2400 * 100, 8);
+  });
+
   it('does not expose a composite total or S~F grade for an under-65 input', () => {
     const result = calcIndicators(input());
     expect(result.is65Plus).toBe(false);
@@ -171,6 +221,40 @@ describe('A-2 / N/A handling - denominator 0 must never score best or worst sile
   it('retirementSavings (under 65): totalSavingsAnnual=0 -> N/A', () => {
     const result = calcIndicators(input({ assets: { savingsPlan: { monthly: 0, annual: 0, retirementMonthly: 0, retirementAnnual: 0 } } }));
     expect(findIndicator(result, 'retirementSavings').notCalculable).toBe(true);
+  });
+
+  it('uses retirement savings as part of an already-included total without double counting', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          annual: 1200,
+          retirementMonthly: 30,
+          retirementAnnual: 360,
+          retirementIncludedInTotal: true,
+        },
+      },
+    }));
+
+    expect(result.aggregates.totalSavingsAnnual).toBe(1200);
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBe(30);
+  });
+
+  it('adds separately managed retirement savings to the total before calculating the ratio', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          annual: 1200,
+          retirementMonthly: 30,
+          retirementAnnual: 360,
+          retirementIncludedInTotal: false,
+        },
+      },
+    }));
+
+    expect(result.aggregates.totalSavingsAnnual).toBe(1560);
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBeCloseTo(23.0769, 4);
   });
 
   it('emergency: monthly expense=0 -> N/A (not 0x, not best, regardless of liquid assets)', () => {

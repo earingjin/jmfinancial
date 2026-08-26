@@ -80,3 +80,22 @@ describe('POST /api/calculate 응답에서 화면 미사용 필드 제외', () =
     });
   });
 });
+
+// Case D(코드리뷰 후속): validate → canonicalInput → aggregate → indicators로 이어지는 실제 API
+// 흐름 전체(핸들러 그대로 호출)를 통해 retirementSavingsInputVersion: 2의 노후대비저축지표
+// 계산을 확인한다. initialFormData 기본값이 이미 버전 2이므로 별도 지정 없이도 v2 경로를 탄다.
+describe('retirementSavingsInputVersion: 2 - 전체 API 흐름(validate → canonicalInput → aggregate → indicators)', () => {
+  it('breakdown 총저축 100(연금저축 20 + IRP 30 포함) + 추가 노후저축 10 → 총저축 110 / 노후저축 60 / 지표 약 54.5%', async () => {
+    const input = buildMinimalValidInput();
+    input.assets.savingsPlan.breakdown.installment.monthly = '50';
+    input.assets.savingsPlan.breakdown.pensionSavings.monthly = '20';
+    input.assets.savingsPlan.breakdown.irp.monthly = '30';
+    input.assets.savingsPlan.additionalRetirementMonthly = '10';
+
+    const result = await callHandler(input);
+    const indicator = result.indicators.find((i) => i.key === 'retirementSavings');
+
+    expect(indicator.rawValue).toBeCloseTo((60 / 110) * 100, 5);
+    expect(indicator.displayValue).toBeCloseTo(54.5, 5);
+  });
+});

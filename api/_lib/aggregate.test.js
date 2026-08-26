@@ -139,6 +139,92 @@ describe('otherAssets is included in totalAssets', () => {
   });
 });
 
+// retirementSavingsInputVersion: 2 - 연금저축·IRP는 breakdown 저축 총액에 이미 포함되어 자동
+// 인식되고, additionalRetirementMonthly/Annual만 사용자가 별도로 추가하는 "노후저축 v2" 계산.
+// v1(레거시 retirementMonthly/retirementIncludedInTotal) 계산식은 절대 건드리지 않는다.
+describe('retirementSavingsInputVersion 2 - auto-detected pensionSavings/irp + additional retirement savings', () => {
+  const v2Overrides = (extra = {}) => ({
+    assets: {
+      savingsPlan: {
+        retirementSavingsInputVersion: 2,
+        breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+        additionalRetirementMonthly: 0,
+        additionalRetirementAnnual: 0,
+        ...extra,
+      },
+    },
+  });
+
+  it('Case 1: breakdown 총저축 100(연금저축 20 + IRP 30 포함), 추가 노후저축 0 → 총저축 100 / 노후저축 50', () => {
+    const agg = buildAggregates(input(v2Overrides()));
+    expect(agg.monthlySavings).toBe(100);
+    expect(agg.retirementSavingsAnnual).toBe(600); // (20+30)*12
+    expect(agg.totalSavingsAnnual).toBe(1200);
+  });
+
+  it('Case 2: 추가 노후저축 10이 총저축·노후저축에 각각 한 번만 더해진다 → 총저축 110 / 노후저축 60', () => {
+    const agg = buildAggregates(input(v2Overrides({ additionalRetirementMonthly: 10, additionalRetirementAnnual: 120 })));
+    expect(agg.monthlySavings).toBe(110);
+    expect(agg.retirementSavingsAnnual).toBe(720); // 600 + 120
+    expect(agg.totalSavingsAnnual).toBe(1320); // 1200 + 120
+  });
+
+  it('Case 3: 연금저축·IRP 없이 추가 노후저축 30만 있으면 총저축에 30이 한 번만 더해진다', () => {
+    const agg = buildAggregates(
+      input({
+        assets: {
+          savingsPlan: {
+            monthly: 0,
+            annual: 0,
+            retirementSavingsInputVersion: 2,
+            breakdown: { pensionSavings: { monthly: 0 }, irp: { monthly: 0 } },
+            additionalRetirementMonthly: 30,
+            additionalRetirementAnnual: 360,
+          },
+        },
+      })
+    );
+    expect(agg.monthlySavings).toBe(30);
+    expect(agg.retirementSavingsAnnual).toBe(360);
+  });
+
+  it('Case 4: 연금저축·IRP만 있고 추가 노후저축 입력이 없어도 정상 계산된다', () => {
+    const agg = buildAggregates(input(v2Overrides()));
+    expect(agg.retirementSavingsAnnual).toBe(600);
+    expect(agg.totalSavingsAnnual).toBe(1200);
+  });
+
+  it('v2에서는 노후저축 전액이 이미 총저축 합계 안에 있으므로 retirementIncludedInSavings가 true다', () => {
+    const agg = buildAggregates(input(v2Overrides({ additionalRetirementMonthly: 10, additionalRetirementAnnual: 120 })));
+    expect(agg.retirementIncludedInSavings).toBe(true);
+  });
+});
+
+describe('retirementSavingsInputVersion 1(레거시, 버전 필드 없음) - pensionSavings/irp breakdown을 자동 합산하지 않는다', () => {
+  it('Case 6: 연금저축 20 + IRP 30이 있어도 레거시 retirementMonthly=50만 노후저축 분자로 쓴다(100으로 계산되지 않음)', () => {
+    const agg = buildAggregates(
+      input({
+        assets: {
+          savingsPlan: {
+            breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+            retirementMonthly: 50,
+            retirementAnnual: 600,
+            retirementIncludedInTotal: false,
+          },
+        },
+      })
+    );
+    expect(agg.retirementSavingsAnnual).toBe(600); // (20+30+50)*12=1200 이 아니라 retirementAnnual 필드값 그대로
+    expect(agg.monthlySavings).toBe(150); // generalSavingsMonthly(100) + retirementMonthly(50) - breakdown 자동합산 없음
+  });
+
+  it('Case 5: 버전 필드가 아예 없는 기존 저장 결과는 현재(v1) 계산과 완전히 동일하다', () => {
+    const withVersion = buildAggregates(input({ assets: { savingsPlan: { retirementSavingsInputVersion: undefined } } }));
+    const withoutVersion = buildAggregates(input());
+    expect(withVersion).toEqual(withoutVersion);
+  });
+});
+
 describe('savingsPlan.retirementIncludedInTotal - retirementIncludedInSavings is exposed for display purposes', () => {
   it('defaults to true when the flag is omitted', () => {
     const agg = buildAggregates(input());

@@ -15,7 +15,7 @@ const input = () => ({
     realEstateAssets: { total: 9999, mainProperty: 1000, otherItems: [{ amount: 200 }] },
     otherAssets: { total: 9999, items: [{ amount: 50 }, { amount: 25 }] },
     debtStatus: { inputMode: 'detailed', totalBalance: 9999, monthlyRepayment: 9999, breakdown: { mortgage: { repaymentType: 'interestOnly', principal: 500, monthlyInterest: 5 } }, customItems: [] },
-    savingsPlan: { monthly: 9999, annual: 9999, retirementMonthly: 50, retirementAnnual: 9999, breakdown: { installment: { monthly: 100 } }, customItems: [{ monthly: 20 }] },
+    savingsPlan: { monthly: 9999, annual: 9999, retirementMonthly: 50, retirementAnnual: 9999, additionalRetirementMonthly: 15, additionalRetirementAnnual: 9999, breakdown: { installment: { monthly: 100 } }, customItems: [{ monthly: 20 }] },
   },
 });
 
@@ -36,6 +36,7 @@ describe('buildCanonicalInput', () => {
     expect(result.assets.savingsPlan.monthly).toBe(120);
     expect(result.assets.savingsPlan.annual).toBe(1440);
     expect(result.assets.savingsPlan.retirementAnnual).toBe(600);
+    expect(result.assets.savingsPlan.additionalRetirementAnnual).toBe(180);
   });
 
   it('preserves direct debt totals in simple mode', () => {

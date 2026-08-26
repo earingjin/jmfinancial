@@ -133,6 +133,8 @@ const AMOUNT_FIELDS = [
   'assets.savingsPlan.annual',
   'assets.savingsPlan.retirementMonthly',
   'assets.savingsPlan.retirementAnnual',
+  'assets.savingsPlan.additionalRetirementMonthly',
+  'assets.savingsPlan.additionalRetirementAnnual',
   'income.salary.annual',
   'income.salary.monthly',
   'income.business.annual',
@@ -391,6 +393,12 @@ export function validateInput(input) {
 
   // ---- 필드 간 관계 검증 ----
 
+  // 아래 두 관계 검증은 v1(레거시) retirementMonthly/retirementAnnual 직접입력 방식에서만
+  // 의미가 있다. v2(retirementSavingsInputVersion === 2)는 이 필드들을 계산에 전혀 쓰지 않으므로
+  // (연금저축·IRP 자동합산 + additionalRetirementMonthly만 사용), v2 데이터에 레거시 값이 남아
+  // 있어도(예: v1→v2 전환 전 입력 잔재) 이 관계 검증으로 요청을 거부하지 않는다.
+  const isLegacyRetirementSavingsInput = input.assets?.savingsPlan?.retirementSavingsInputVersion !== 2;
+
   // 노후준비 저축액(월/연)이 총 저축액에 이미 포함되어 있는 경우(retirementIncludedInTotal !== false,
   // 기본값 포함)에만 총 저축액의 일부여야 하므로 총 저축액보다 클 수 없다. 노후준비를 총 저축액과
   // 별도로 하고 있다고 명시한 경우(false)는 서로 겹치지 않는 별개 금액이라 이 제약을 적용하지 않는다.
@@ -398,6 +406,7 @@ export function validateInput(input) {
   const savingsMonthly = input.assets?.savingsPlan?.monthly;
   const retirementMonthly = input.assets?.savingsPlan?.retirementMonthly;
   if (
+    isLegacyRetirementSavingsInput &&
     retirementIncludedInTotal &&
     !isBlank(savingsMonthly) &&
     !isBlank(retirementMonthly) &&
@@ -409,6 +418,7 @@ export function validateInput(input) {
   const savingsAnnual = input.assets?.savingsPlan?.annual;
   const retirementAnnual = input.assets?.savingsPlan?.retirementAnnual;
   if (
+    isLegacyRetirementSavingsInput &&
     retirementIncludedInTotal &&
     !isBlank(savingsAnnual) &&
     !isBlank(retirementAnnual) &&

@@ -46,10 +46,13 @@ const savingsMonthly = (item) => (
   item && typeof item === 'object' ? n(item.monthly) : n(item)
 );
 
-// aggregate.js의 monthlySavings와 동일한 범위로 맞춘다: 노후준비저축(retirementMonthly)이 총
-// 저축액에 이미 포함되어 있으면(retirementIncludedInTotal !== false, 기본값 포함) 여기 합계에
-// 넣지 않고, 별도로 하고 있다고 명시한 경우(false)는 겹치지 않는 별개 금액이라 슬라이스로 추가한다
-// - 그래야 이 합계가 monthlySavings와 어긋나지 않는다.
+// aggregate.js의 monthlySavings와 동일한 범위로 맞춘다.
+// v1(레거시, retirementSavingsInputVersion !== 2): 노후준비저축(retirementMonthly)이 총 저축액에
+// 이미 포함되어 있으면(retirementIncludedInTotal !== false, 기본값 포함) 여기 합계에 넣지 않고,
+// 별도로 하고 있다고 명시한 경우(false)는 겹치지 않는 별개 금액이라 슬라이스로 추가한다.
+// v2: 연금저축·IRP는 이미 breakdown 항목(위 items)으로 슬라이스에 포함되어 있으므로, 여기서는
+// additionalRetirementMonthly만 한 번 더 슬라이스로 추가한다(aggregate.js의 v2 monthlySavings와
+// 동일하게 breakdown 총액 + additionalRetirementMonthly가 되어야 한다).
 export function buildSavingsBreakdown(input) {
   const sp = input.assets?.savingsPlan || {};
   const breakdown = sp.breakdown || {};
@@ -64,6 +67,12 @@ export function buildSavingsBreakdown(input) {
     const value = n(item.monthly);
     if (value > 0) items.push({ key: `custom-${i}`, label: item.name || '기타 저축', value });
   });
+
+  if (sp.retirementSavingsInputVersion === 2) {
+    const additionalValue = n(sp.additionalRetirementMonthly);
+    if (additionalValue > 0) items.push({ key: 'additionalRetirement', label: '추가 노후준비저축', value: additionalValue });
+    return items;
+  }
 
   const retirementIncludedInTotal = sp.retirementIncludedInTotal !== false;
   if (!retirementIncludedInTotal) {

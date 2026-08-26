@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../lib/supabaseClient', () => ({ supabase: {} }));
 
-import { clearDraftSessionCache, createLatestDraftSaver, deleteDraft, DRAFT_SCHEMA_VERSION, fetchDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, upsertDraft, validateDraft } from './draftStorage.js';
+import { clearDraftSessionCache, createLatestDraftSaver, deleteDraft, DRAFT_SCHEMA_VERSION, fetchDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, resolveRetirementSavingsInputVersion, upsertDraft, validateDraft } from './draftStorage.js';
 
 const compatibleFormData = () => ({ basic: {}, income: {}, spouse: {}, expense: {}, assets: {} });
 
@@ -90,5 +90,29 @@ describe('Supabase planner drafts', () => {
     const client = { from: () => ({ upsert: () => ({ select: () => ({ single: async () => ({ data: null, error: new Error('offline') }) }) }) }) };
     await expect(upsertDraft('user-1', formData, 0, client)).rejects.toThrow('offline');
     expect(formData).toEqual(original);
+  });
+});
+
+// v2 자동합산 노후저축 입력 버전 판정: mergeDraft로 initialFormData 기본값을 채워 넣기 전,
+// 원본 저장 데이터에 버전 필드가 실제로 있었는지만으로 판정해야 한다(병합 후 판정하면
+// initialFormData의 기본값이 끼어들어 v1 초안이 v2로 오판된다).
+describe('resolveRetirementSavingsInputVersion', () => {
+  it('Case 8 - 새 진단(저장된 초안 없음)은 v2로 시작한다', () => {
+    expect(resolveRetirementSavingsInputVersion(undefined)).toBe(2);
+    expect(resolveRetirementSavingsInputVersion(null)).toBe(2);
+  });
+
+  it('Case 7 - 버전 필드가 없는 기존 초안은 병합 전 판정으로 v1을 유지한다', () => {
+    const legacyDraft = { assets: { savingsPlan: { monthly: 100, retirementMonthly: 30 } } };
+    expect(resolveRetirementSavingsInputVersion(legacyDraft)).toBe(1);
+  });
+
+  it('버전 필드가 명시적으로 2인 저장된 초안(작성 중이던 v2)은 v2를 유지한다', () => {
+    const v2Draft = { assets: { savingsPlan: { retirementSavingsInputVersion: 2, additionalRetirementMonthly: 10 } } };
+    expect(resolveRetirementSavingsInputVersion(v2Draft)).toBe(2);
+  });
+
+  it('savingsPlan 자체가 없는 매우 오래된 초안도 v1로 안전하게 처리한다', () => {
+    expect(resolveRetirementSavingsInputVersion({ assets: {} })).toBe(1);
   });
 });

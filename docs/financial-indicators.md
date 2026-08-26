@@ -168,13 +168,10 @@
 현재 하고 있는 전체 저축 가운데 노후생활을 위해 배분하고 있는 저축의 비중을 나타낸다. 단순히 저축을 많이 하는지가 아니라 **현재 저축이 노후 준비로 얼마나 연결되고 있는지**를 평가한다.
 
 **산식**  
-`노후대비저축액 ÷ 총저축액 × 100`
+`노후대비저축액(retirementSavingsAnnual) ÷ 총저축액(totalSavingsAnnual) × 100`
 
-**분자**  
-노후를 목적으로 하는 연간 저축액.
-
-**분모**  
-연간 전체 저축액.
+이 산식 자체는 아래 입력 버전(v1/v2)과 무관하게 항상 동일하다. 버전에 따라 달라지는 것은 산식에 들어가기 전에
+`api\_lib\aggregate.js`가 `retirementSavingsAnnual`/`totalSavingsAnnual`을 만드는 방식뿐이다.
 
 **참고범위**  
 `50% 이상`
@@ -187,6 +184,27 @@
 - 이 지표의 분모는 소득이 아니라 **총저축액**이다.
 - `노후대비저축액 ÷ 총소득`으로 변경하지 않는다.
 - 총저축액이 0이면 0%로 처리하지 않고 산출 불가로 구분한다. 다만 65세 이상은 별도 평가정책이 적용된다.
+
+#### 입력 버전 v1(레거시) — `retirementSavingsInputVersion !== 2`
+
+저장된 데이터에 `assets.savingsPlan.retirementSavingsInputVersion` 필드가 없으면(과거 저장 결과 포함) 이 방식으로 해석한다.
+
+- 사용자가 "노후준비 저축액"을 `retirementMonthly`/`retirementAnnual`로 **하나의 합계**로 직접 입력한다.
+- **분자**: `retirementAnnual`(비어 있으면 `retirementMonthly × 12`) 값 그대로.
+- **분모**: `retirementIncludedInTotal !== false`(기본값 포함)이면 일반 저축 합계(`savingsPlan.annual`) 그대로. `retirementIncludedInTotal === false`(별도로 하고 있다고 명시)면 일반 저축 합계에 노후준비 저축액을 더한다.
+- `retirementIncludedInTotal`은 v1에서만 의미가 있으며, v2 계산에는 전혀 쓰이지 않는다(레거시 데이터 해석용으로 필드만 유지).
+
+#### 입력 버전 v2(신규) — `retirementSavingsInputVersion === 2`
+
+새로 시작하는 진단의 기본값이다.
+
+- **자동 노후저축** = 연금저축(`savingsPlan.breakdown.pensionSavings.monthly`) + IRP(`savingsPlan.breakdown.irp.monthly`). 두 항목은 이미 "3. 저축" 화면의 일반 저축 항목으로 입력되어 총저축 합계(`savingsPlan.monthly`)에 포함되어 있으므로 자동으로 노후저축으로 인식할 뿐 별도로 다시 입력받지 않는다.
+- **추가 노후저축** = `additionalRetirementMonthly`/`additionalRetirementAnnual`. 연금저축·IRP 외에 사용자가 별도로 하고 있는 노후 목적 저축만 여기 입력한다.
+- **전체 노후저축(분자, retirementSavingsAnnual)** = 자동 노후저축 + 추가 노후저축(연 환산).
+- **총저축(분모, totalSavingsAnnual)** = `savingsPlan.breakdown` 전체 합계(연금저축·IRP 포함) + `customItems` 합계 + 추가 노후저축(연 환산). 연금저축·IRP는 breakdown 합계에 이미 포함되어 있으므로 다시 더하지 않는다.
+- `retirementIncludedInTotal`은 v2 계산에 사용하지 않는다(필드 자체는 레거시 호환을 위해 삭제하지 않는다).
+
+**예시(v2)** — breakdown 총저축 100(연금저축 20 + IRP 30 포함), 추가 노후저축 10인 경우: 총저축 110, 노후저축 60, 지표 값 약 54.5%.
 
 ### 5.3 금융자산비중지표
 

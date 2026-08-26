@@ -68,6 +68,7 @@ export function buildCanonicalInput(input) {
     + sum(savings.customItems, (item) => item.monthly);
   savings.annual = Math.round(savings.monthly * 12);
   savings.retirementAnnual = Math.round(n(savings.retirementMonthly) * 12);
+  savings.additionalRetirementAnnual = Math.round(n(savings.additionalRetirementMonthly) * 12);
 
   return result;
 }

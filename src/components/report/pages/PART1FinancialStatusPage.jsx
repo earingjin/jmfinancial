@@ -58,7 +58,9 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
             <td>
               (노후목적) 연 저축액
               <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}>
-                {agg.retirementIncludedInSavings ? ' (위 합계에 포함된 금액)' : ' (위 합계에 별도로 합산된 금액)'}
+                {agg.retirementIncludedInSavings
+                  ? ' (월 환산액이 위 저축·투자액 합계(월평균)에 포함됨)'
+                  : ' (월 환산액이 위 저축·투자액 합계(월평균)와 별도로 합산됨)'}
               </span>
             </td>
             <td className="num">{formatWon(agg.retirementSavingsAnnual)}</td>

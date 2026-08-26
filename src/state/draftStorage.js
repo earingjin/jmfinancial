@@ -15,6 +15,18 @@ export const mergeDraft = (defaults, saved) => {
   return Object.fromEntries(Object.keys(defaults).map((key) => [key, mergeDraft(defaults[key], source[key])]));
 };
 
+// 노후저축 입력 버전(v1/v2) 판정. mergeDraft로 initialFormData 기본값을 채워 넣은 "이후"의
+// formData를 보고 판정하면, 저장된 v1 초안에도 initialFormData의 기본값(2)이 끼어들어 v1 초안이
+// v2로 잘못 인식된다 - 그래서 병합 "전" 원본 저장 데이터(rawFormData)만 보고 판정해야 한다.
+// - rawFormData가 없으면(=저장된 초안 없이 새로 시작) v2.
+// - rawFormData는 있지만 버전 필드가 없으면(=이 기능 이전에 저장된 v1 초안) v1.
+// - rawFormData에 버전 필드가 명시적으로 2면(=작성 중이던 v2 초안) v2.
+export function resolveRetirementSavingsInputVersion(rawFormData) {
+  const rawVersion = rawFormData?.assets?.savingsPlan?.retirementSavingsInputVersion;
+  if (rawVersion === 2) return 2;
+  return rawFormData ? 1 : 2;
+}
+
 export function validateDraft(draft) {
   if (!isRecord(draft)) return { valid: false, reason: '초안 데이터 형식이 올바르지 않습니다.' };
   if (draft.schema_version !== DRAFT_SCHEMA_VERSION) return { valid: false, reason: '현재 버전과 호환되지 않는 초안입니다.' };
