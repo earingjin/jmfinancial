@@ -1153,6 +1153,20 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 
   .fhs-overall-conclusion-hero { font-size: 15px; }
   .fhs-overall-status-card p { overflow-wrap: anywhere; }
+
+  /* 리포트 본문은 고정 A4 레이아웃이므로 모바일에서도 내부 요소를 재배치하지 않는다. */
+  .app-main.report-print-mode { width: 210mm; padding: 24px 0 60px; }
+  .report-print-mode .indicator-gauge-breakdown-row { flex-direction: row; }
+  .report-print-mode .indicator-gauge-breakdown-row .gauge-wrap { flex: 0 0 33%; max-width: 33%; width: auto; }
+  .report-print-mode .indicator-gauge-breakdown-row .indicator-breakdown-table { flex: 1 1 auto; max-width: none; width: auto; }
+  .report-print-mode .sim-summary { grid-template-columns: repeat(4, 1fr); }
+  .report-print-mode .compose-wrap { flex-direction: row; align-items: center; gap: 26px; padding: 16px 18px; }
+  .report-print-mode .pie-chart { margin: 0; }
+  .report-print-mode table.grade-table th,
+  .report-print-mode table.grade-table td { padding: 6px 8px; }
+  .report-print-mode table.grade-table.compact th,
+  .report-print-mode table.grade-table.compact td { padding: 4px 8px; font-size: 10.5px; }
+  .report-print-mode .fhs-overall-conclusion-hero { font-size: 17px; }
 }
 
 @media (max-width: 380px) {
@@ -1167,8 +1181,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 }
 
 /* ---------- 인쇄형 리포트 페이지 ---------- */
-.report-print-mode { background: #ede4d2; }
-.report-print-mode .app-main { max-width: none; padding: 24px 0 60px; }
+.app-main.report-print-mode { width: 210mm; max-width: none; padding: 24px 0 60px; background: #ede4d2; }
 
 .report-actions {
   width: min(210mm, calc(100% - 32px));
