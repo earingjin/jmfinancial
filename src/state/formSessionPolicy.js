@@ -1,13 +1,16 @@
 // "새 진단 시작"/"다시 입력하기" 계열 진입점에서 FormProvider의 formData 세션을 완전히 새로
-// 시작해야 하는지 판정하는 순수 함수. restart(처음부터 다시 입력하기 / 결과 화면의 다시
-// 입력하기)는 지금 formData를 버리는 흐름이므로 항상 리셋하고, startDiagnosis(자산진단
-// 시작하기)는 직전 formData 세션으로 이미 진단을 완료·저장한 뒤일 때만 리셋한다 - 위저드를
-// 다 채우지 않고 홈으로 나왔다가 되돌아온 미완성 이어쓰기는 그대로 보존해야 하기 때문이다.
+// 시작해야 하는지 판정하는 순수 함수.
+//
+// restart(처음부터 다시 입력하기 / 결과 화면의 다시 입력하기)와 startDiagnosis(자산진단
+// 시작하기) 둘 다, 직전 formData 세션으로 이미 진단을 완료·저장한 뒤(formSessionConsumed)일
+// 때만 리셋한다. 리셋은 서버 draft 삭제까지 함께 일으키므로(resetFormSessionWithServerCleanup),
+// "계산 실패로 처음부터 다시 입력하기"처럼 아직 저장되지 않은 정상 입력값이 남아있는 상태에서
+// 함부로 리셋하면 방금 입력한 내용이 통째로 사라진다 - 위저드를 다 채우지 않고 홈으로 나왔다가
+// 되돌아온 미완성 이어쓰기와 마찬가지로, 저장에 성공한 적 없는 세션은 절대 리셋하지 않는다.
 // App.jsx는 supabase 클라이언트 등 무거운 트리를 정적으로 import하므로, 이 판정만 App.jsx 밖의
 // 별도 모듈로 분리해 App.jsx를 렌더링하지 않고도 단위 테스트할 수 있게 한다.
 export function shouldResetFormSession(trigger, formSessionConsumed) {
-  if (trigger === 'restart') return true;
-  if (trigger === 'startDiagnosis') return Boolean(formSessionConsumed);
+  if (trigger === 'restart' || trigger === 'startDiagnosis') return Boolean(formSessionConsumed);
   return false;
 }
 

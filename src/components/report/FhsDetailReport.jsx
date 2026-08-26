@@ -329,9 +329,6 @@ function IndicatorSummaryPage({ indicators, interpretation, pageNumber, totalPag
           );
         })}
       </div>
-      <p className="fine-print fhs-summary-note">
-        세부 산출 기준과 지표별 해석은 다음 페이지에서 확인할 수 있습니다.
-      </p>
     </PageFrame>
   );
 }
@@ -366,7 +363,7 @@ export default function FhsDetailReport({ result, onRestart, onBack, onHome, cli
       <CoverPage
         generatedAt={generatedAt}
         clientName={clientName}
-        title="제이엠 자산관리 플래너"
+        title="제이엠 자산관리 플래너(Pro)"
         subtitle="JM Financial Planner"
       />
 

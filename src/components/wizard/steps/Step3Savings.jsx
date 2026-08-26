@@ -104,6 +104,7 @@ export default function Step3Savings() {
                 annualPath="assets.savingsPlan.additionalRetirementAnnual"
                 label="추가 노후준비 저축"
                 helper="연금저축·IRP 외에 노후 목적으로 따로 저축하고 있는 금액이 있다면 입력해 주세요."
+                helperClassName="field-helper--prominent"
               />
             </div>
 

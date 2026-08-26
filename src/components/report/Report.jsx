@@ -54,7 +54,11 @@ export default function Report({ result, onRestart, onBack, onHome, clientName }
         </p>
       </div>
 
-      <CoverPage generatedAt={generatedAt} clientName={clientName} />
+      <CoverPage
+        generatedAt={generatedAt}
+        clientName={clientName}
+        title="제이엠 자산관리 플래너(Standard)"
+      />
 
       <ExecutiveSummaryPage
         simulation={simulation}

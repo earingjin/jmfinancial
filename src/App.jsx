@@ -13,6 +13,7 @@ import { supabase } from './lib/supabaseClient';
 import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
 import { resetFormSessionWithServerCleanup, shouldResetFormSession } from './state/formSessionPolicy';
 import { completePlannerSubmission, createSubmissionId } from './services/plannerSubmission';
+import { requestCalculation } from './services/calculationApi';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -114,20 +115,9 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setErrorMessage('');
     setResultSource('new');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-
-      const res = await fetch('/api/calculate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(formData),
-      });
+      const res = await requestCalculation(formData);
 
       if (res.status === 401) {
-        await signOut();
         throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
       }
 
@@ -145,17 +135,24 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     }
   };
 
-  // "처음부터 다시 입력하기"(계산 실패)/"다시 입력하기"(결과 화면) - 둘 다 지금 formData를
-  // 버리고 완전히 새로 시작하는 흐름이므로 매번 formData 세션을 리셋한다. 서버 draft 삭제가
-  // 실패하면(resetFormSession이 false 반환) 지금 화면·formData를 그대로 두고 에러만 안내한다.
+  // "처음부터 다시 입력하기"(계산 실패)/"다시 입력하기"(결과 화면) - 직전 세션이 이미
+  // 완료·저장된 뒤(formSessionConsumedRef)일 때만 formData·서버 draft를 완전히 새로 시작한다.
+  // 계산이 막 실패했을 뿐 저장된 적 없는 정상 입력값이 남아있는 상태에서는 아무것도 지우지
+  // 않고 위저드 1단계로만 되돌아간다 - 그렇지 않으면 방금 입력한 내용이 사라진다.
   const restart = async () => {
     if (shouldResetFormSession('restart', formSessionConsumedRef.current)) {
+      // 직전 세션이 이미 완료·저장된 뒤라면(예: 결과 화면의 "다시 입력하기") 완전히 새로
+      // 시작한다 - resetFormSession이 서버 draft 삭제와 wizardStep 초기화를 함께 처리한다.
       const didReset = await resetFormSession();
       if (!didReset) {
         setErrorMessage('이전 임시 초안을 정리하지 못해 새로 시작할 수 없습니다. 다시 시도해 주세요.');
         setPhase('error');
         return;
       }
+    } else {
+      // 계산 실패 등으로 아직 저장된 적 없는 세션이면 formData·서버 draft를 절대 건드리지 않고
+      // 위저드 1단계로만 되돌아간다 - 방금 입력한 내용이 통째로 사라지면 안 되기 때문이다.
+      setWizardStep(0);
     }
     setResult(null);
     setResultSource('new');

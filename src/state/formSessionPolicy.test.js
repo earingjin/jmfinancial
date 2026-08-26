@@ -4,10 +4,19 @@ import { resetFormSessionWithServerCleanup, shouldResetFormSession } from './for
 // Case B(코드리뷰 후속): v1 초안을 이어서 완료한 뒤 같은 세션에서 새 진단을 시작해도
 // FormProvider의 formData(및 retirementSavingsInputVersion)가 이전 세션 것으로 남지 않아야 한다.
 // App.jsx는 restart/startDiagnosis에서 이 판정 결과에 따라 FormProvider를 리셋한다.
+//
+// 버그 수정: restart(처음부터 다시 입력하기 / 다시 입력하기)를 "항상 리셋"으로 두면, 계산이
+// 막 실패했을 뿐 아직 저장된 적 없는 정상 입력값이 남아있는 상태에서도 리셋(=서버 draft 삭제 +
+// formData 초기화)이 일어나 방금 입력한 내용이 통째로 사라진다(실사용자 리포트: "진단결과 누르니
+// 로그인이 만료됐다고 뜨고, 다시 로그인했더니 입력한 게 다 사라졌다"). startDiagnosis와 동일하게
+// "직전 세션이 이미 완료·저장된 뒤"에만 리셋하도록 통일한다.
 describe('shouldResetFormSession', () => {
-  it('restart(처음부터 다시 입력하기 / 다시 입력하기)는 직전 세션 완료 여부와 무관하게 항상 리셋한다', () => {
+  it('restart(처음부터 다시 입력하기 / 다시 입력하기)는 직전 세션이 이미 완료·저장된 뒤에만 리셋한다', () => {
     expect(shouldResetFormSession('restart', true)).toBe(true);
-    expect(shouldResetFormSession('restart', false)).toBe(true);
+  });
+
+  it('회귀 방지: restart라도 직전 세션이 저장된 적 없으면(계산 실패 등) 리셋하지 않는다', () => {
+    expect(shouldResetFormSession('restart', false)).toBe(false);
   });
 
   it('Case B: startDiagnosis(자산진단 시작하기)는 직전 formData 세션이 이미 완료·저장된 뒤에만 리셋한다', () => {

@@ -38,9 +38,23 @@ describe('App.jsx - "새 진단"이 아닌 흐름은 서버 draft를 지우지 �
     expect(body).not.toContain('resetFormSession');
   });
 
-  it('restart/startDiagnosis는 실제로 resetFormSession(서버 draft 삭제 경유)을 호출한다(회귀 확인)', async () => {
+  it('restart/startDiagnosis는 resetFormSession(서버 draft 삭제 경유)을 shouldResetFormSession 판정 뒤에만 호출한다(회귀 확인)', async () => {
     const source = await readAppSource();
     expect(extractFunctionBody(source, 'const restart = async ()')).toContain('resetFormSession()');
     expect(extractFunctionBody(source, 'const startDiagnosis = async ()')).toContain('resetFormSession()');
+  });
+
+  // 버그 수정(실사용자 리포트): 계산 실패로 "처음부터 다시 입력하기"를 눌렀을 뿐인데 아직 저장된
+  // 적 없는 정상 입력값과 서버 draft가 함께 지워지던 문제. restart는 이제 shouldResetFormSession이
+  // false를 반환하는 분기(직전 세션 미완료)에서 deleteDraft/resetFormSession을 절대 부르지 않고
+  // wizardStep만 0으로 되돌려야 한다.
+  it('restart는 shouldResetFormSession이 false인 분기에서 deleteDraft/resetFormSession을 호출하지 않고 setWizardStep(0)만 호출한다', async () => {
+    const source = await readAppSource();
+    const restartBody = extractFunctionBody(source, 'const restart = async ()');
+    const elseStart = restartBody.indexOf('} else {');
+    const elseBody = restartBody.slice(elseStart, restartBody.lastIndexOf('}'));
+    expect(elseBody).not.toContain('deleteDraft');
+    expect(elseBody).not.toContain('resetFormSession()');
+    expect(elseBody).toContain('setWizardStep(0)');
   });
 });
