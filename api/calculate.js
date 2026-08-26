@@ -50,7 +50,7 @@ export default async function handler(req, res) {
   input = buildCanonicalInput(input);
 
   try {
-    const { indicators, notCalculable, missingInputs, weakest, strongest, aggregates } = calcIndicators(input);
+    const { indicators, notCalculable, missingInputs, weakest, strongest, aggregates, currentAge } = calcIndicators(input);
     const simulation = calcRetirementSimulation(input);
     // netWorth/annualIncome/financialAssetsTotal은 미입력 시 n()이 0으로 채우므로, 아래 경로가
     // 전부 비어 있으면(=사용자가 해당 항목 자체를 입력하지 않았으면) "실제 0원"이 아니라 미입력임을
@@ -111,7 +111,7 @@ export default async function handler(req, res) {
     // "표시용 파생값"을 서버에서 미리 계산해 붙인다. 클라이언트는 이 값을 그대로 그리기만
     // 하면 되므로, 게이지 임계값·등급 커트라인 같은 기준 데이터가 클라이언트에 존재하지 않는다.
     const retirementLivingCost = simulation.retirementLivingCostNow;
-    const enriched = enrichIndicators({ indicators, weakest, strongest, aggregates, retirementLivingCost });
+    const enriched = enrichIndicators({ indicators, weakest, strongest, aggregates, retirementLivingCost, age: currentAge });
     const financialHealthInterpretation = buildFinancialHealthInterpretation(enriched.indicators);
     const enrichedSimulation = enrichSimulation(simulation, retirementLivingCost);
     const financialStatusFeedback = buildFinancialCashFlowFeedback({

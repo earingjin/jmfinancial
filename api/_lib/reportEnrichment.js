@@ -5,7 +5,7 @@
 // 클라이언트는 이 값을 그대로 렌더링만 하면 되므로, 게이지 임계값·등급 커트라인·생활수준
 // 구간표 같은 기준 데이터가 클라이언트 번들에 존재하지 않는다.
 
-import { INDICATOR_META, pct, describeBenchmark, classifyByRatio } from './indicatorMeta.js';
+import { getIndicatorMeta, pct, describeBenchmark, classifyByRatio } from './indicatorMeta.js';
 import { buildLifestyleTrack } from './lifestyleTiers.js';
 import { buildIndicatorComposition } from './indicatorComposition.js';
 
@@ -113,6 +113,11 @@ export function buildFinancialHealthInterpretation(indicators) {
   const cautions = applicable.filter((item) => item.ratioClass === 'caution');
   const strengths = applicable.filter((item) => item.ratioClass === 'good');
   const priorities = [...risks, ...cautions];
+  const scoreSummary = {
+    score: unavailableCount > 0 ? null : applicable.reduce((total, item) => total + item.score, 0),
+    maxScore: financialHealthIndicators.reduce((total, item) => total + item.maxScore, 0),
+    notCalculable: unavailableCount > 0,
+  };
 
   let conclusion;
   if (applicable.length === 0) {
@@ -131,11 +136,11 @@ export function buildFinancialHealthInterpretation(indicators) {
     conclusion += ` 산출되지 않은 ${unavailableCount}개 지표는 입력을 보완한 뒤 함께 해석해야 합니다.`;
   }
 
-  return { categories, conclusion };
+  return { categories, conclusion, scoreSummary };
 }
 
-function enrichIndicator(indicator, aggregates, retirementLivingCost) {
-  const meta = INDICATOR_META[indicator.key];
+function enrichIndicator(indicator, aggregates, retirementLivingCost, age) {
+  const meta = getIndicatorMeta(indicator.key, age);
 
   // 분모 0 등으로 산출 자체가 불가능한 지표는 게이지·벤치마크·구성분석을 만들지 않는다(null 산술로
   // "0%"처럼 조용히 잘못 표시되는 것을 막는다) - 화면은 notCalculable/reason을 보고 "산출 불가"를 표시한다.
@@ -184,8 +189,8 @@ function enrichIndicator(indicator, aggregates, retirementLivingCost) {
 /**
  * calcIndicators()의 결과를 받아 지표별 표시용 파생값을 붙인다.
  */
-export function enrichIndicators({ indicators, weakest, strongest, aggregates, retirementLivingCost }) {
-  const enrichedIndicators = indicators.map((ind) => enrichIndicator(ind, aggregates, retirementLivingCost));
+export function enrichIndicators({ indicators, weakest, strongest, aggregates, retirementLivingCost, age }) {
+  const enrichedIndicators = indicators.map((ind) => enrichIndicator(ind, aggregates, retirementLivingCost, age));
   const byKey = (key) => enrichedIndicators.find((ind) => ind.key === key);
 
   const belowRecommendedCount = enrichedIndicators.filter(

@@ -45,6 +45,55 @@ export const INDICATOR_META = {
   },
 };
 
+const AGE_GUIDELINES = {
+  household: [50, 70, 80, 90, 95],
+  emergency: [2, 3, 4, 5, 6],
+  savingsRate: [50, 30, 20, 10, 5],
+};
+
+function ageGuidelineValue(age, values) {
+  if (!Number.isFinite(age) || age < 20) return null;
+  if (age < 30) return values[0];
+  if (age < 40) return values[1];
+  if (age < 50) return values[2];
+  if (age < 65) return values[3];
+  return values[4];
+}
+
+// 점수·상태 판정과 분리된 표시용 연령별 바람직한 기준이다. 연령 기준이 지정되지 않은
+// 지표와 20세 미만 사용자는 기존 공통 메타데이터를 그대로 사용한다.
+export function getIndicatorMeta(key, age) {
+  const base = INDICATOR_META[key];
+  const values = AGE_GUIDELINES[key];
+  if (!base || !values) return base;
+
+  const value = ageGuidelineValue(age, values);
+  if (value === null) return base;
+
+  if (key === 'household') {
+    return {
+      ...base,
+      recommendedLabel: `${value}% 이하`,
+      bench: { type: 'atMost', value },
+      guideline: `연령별 바람직한 기준: 총 소득 대비 총 지출 ${value}% 이하`,
+    };
+  }
+  if (key === 'emergency') {
+    return {
+      ...base,
+      recommendedLabel: `${value}개월 이상`,
+      bench: { type: 'atLeast', value },
+      guideline: `연령별 바람직한 기준: 월 총지출 대비 유동성자산 ${value}개월분 이상`,
+    };
+  }
+  return {
+    ...base,
+    recommendedLabel: `${value}% 이상`,
+    bench: { type: 'atLeast', value },
+    guideline: `연령별 바람직한 기준: 총 소득 대비 총 저축 ${value}% 이상`,
+  };
+}
+
 export function pct(value, max) {
   if (!max) return 0;
   return Math.min(100, Math.max(0, (value / max) * 100));

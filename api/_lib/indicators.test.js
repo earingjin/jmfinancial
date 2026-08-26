@@ -1,5 +1,29 @@
 import { describe, it, expect } from 'vitest';
 import { calcIndicators } from './indicators.js';
+import { getIndicatorMeta } from './indicatorMeta.js';
+
+describe('연령별 바람직한 표시 기준', () => {
+  it.each([
+    [20, 50, 2, 50],
+    [29, 50, 2, 50],
+    [30, 70, 3, 30],
+    [39, 70, 3, 30],
+    [40, 80, 4, 20],
+    [49, 80, 4, 20],
+    [50, 90, 5, 10],
+    [64, 90, 5, 10],
+    [65, 95, 6, 5],
+  ])('%i세의 가계수지·비상예비금·총저축성향 기준을 반환한다', (age, household, emergency, savingsRate) => {
+    expect(getIndicatorMeta('household', age).bench).toEqual({ type: 'atMost', value: household });
+    expect(getIndicatorMeta('emergency', age).bench).toEqual({ type: 'atLeast', value: emergency });
+    expect(getIndicatorMeta('savingsRate', age).bench).toEqual({ type: 'atLeast', value: savingsRate });
+  });
+
+  it('연령 기준이 없는 총부채상환지표와 20세 미만은 기존 공통 기준을 유지한다', () => {
+    expect(getIndicatorMeta('dsr', 35).bench).toEqual({ type: 'atMost', value: 30 });
+    expect(getIndicatorMeta('household', 19).bench).toEqual({ type: 'atMost', value: 70 });
+  });
+});
 
 function deepMerge(base, override) {
   if (Array.isArray(override)) return override;

@@ -70,6 +70,36 @@ const INDICATOR_DEFINITIONS = {
   financialAssetRatio: '전체 자산 가운데 금융자산이 차지하는 비중으로, 자산이 실물자산에 지나치게 집중됐는지와 활용 가능한 자산을 봅니다.',
 };
 
+// 과거 저장 결과의 구간표에는 현재 제거된 "JMFinancial 참고 범위" 문구가 reason에 남아 있다.
+// 저장 결과를 재계산하지 않고 표시 문구만 현재 버전과 맞추기 위한 하위호환 매핑이다.
+const LEGACY_TABLE_REASON_OVERRIDES = new Map([
+  ['JMFinancial 참고 범위(70% 이하) 안으로, 가계수지가 비교적 안정적인 수준', '가계수지가 비교적 안정적인 수준'],
+  ['JMFinancial 참고 범위를 다소 넘었으나 지출 구조를 점검해볼 수 있는 수준', '지출 비중이 다소 높지만 지출 구조를 점검해볼 수 있는 수준'],
+  ['JMFinancial 참고 범위 상단에 가까워 예비자금이 넉넉한 편', '예비자금이 넉넉한 편'],
+  ['JMFinancial 참고 범위(4~6개월) 안에서 유동성을 확보한 상태', '비상 상황에 대응할 유동성을 확보한 상태'],
+  ['JMFinancial 참고 범위보다 낮아 비상 상황 대응력을 점검할 필요가 있음', '예비자금이 부족해 비상 상황 대응력을 점검할 필요가 있음'],
+  ['JMFinancial 참고 범위(30% 이하)보다 여유가 있는 수준', '원리금 상환 부담이 낮아 여유가 있는 수준'],
+  ['JMFinancial 참고 범위 안이나 상환 부담을 함께 살펴볼 필요가 있는 수준', '원리금 상환 부담을 함께 살펴볼 필요가 있는 수준'],
+  ['JMFinancial 참고 범위를 넘어 원리금 상환이 가계에 부담으로 작용할 수 있음', '원리금 상환이 가계에 부담으로 작용할 수 있음'],
+  ['JMFinancial 참고 범위(40% 이하)보다 여유가 있는 수준', '자산 대비 부채 부담이 낮아 여유가 있는 수준'],
+  ['JMFinancial 참고 범위 안에서 부채가 비교적 안정적으로 관리되는 상태', '부채가 비교적 안정적으로 관리되는 상태'],
+  ['JMFinancial 참고 범위 상단에 가까워 자산 대비 부채 비중을 살펴볼 필요가 있음', '자산 대비 부채 비중을 살펴볼 필요가 있음'],
+  ['JMFinancial 참고 범위를 넘어 자산 대비 부채 부담이 큰 편', '자산 대비 부채 부담이 큰 편'],
+  ['JMFinancial 참고 범위 안으로, 위험 대비와 저축 여력의 균형을 함께 점검한 상태', '위험 대비와 저축 여력의 균형을 함께 점검한 상태'],
+  ['JMFinancial 참고 범위(30% 이상)를 웃돌아 자산을 쌓을 여력이 큰 편', '저축 비중이 높아 자산을 쌓을 여력이 큰 편'],
+  ['JMFinancial 참고 범위 안으로, 장기 자산 형성을 이어갈 수 있는 수준', '장기 자산 형성을 이어갈 수 있는 수준'],
+  ['JMFinancial 참고 범위보다 낮아 저축 여력을 점검해볼 수 있는 수준', '저축 비중이 낮아 저축 여력을 점검해볼 수 있는 수준'],
+  ['JMFinancial 참고 범위(50% 이상)를 웃돌아 노후 목적 저축 비중이 높은 편', '노후 목적 저축 비중이 높은 편'],
+  ['JMFinancial 참고 범위(50% 이상)에 해당하는 수준', '노후 목적 저축을 일정 수준 유지하고 있음'],
+  ['JMFinancial 참고 범위보다 낮아 노후 목적 저축 비중을 점검할 필요가 있음', '노후 목적 저축 비중을 점검할 필요가 있음'],
+  ['JMFinancial 참고 범위에 해당하며, 활용하기 쉬운 자산 비중이 높은 편', '활용하기 쉬운 자산 비중이 높은 편'],
+  ['JMFinancial 참고 범위에 가까워 자산구조가 비교적 균형적인 편', '자산구조가 비교적 균형적인 편'],
+]);
+
+function formatIndicatorReason(reason) {
+  return LEGACY_TABLE_REASON_OVERRIDES.get(reason) || reason;
+}
+
 function IndicatorDefinition({ indicator }) {
   const definition = INDICATOR_DEFINITIONS[indicator.key];
   return definition ? <p className="indicator-definition"><b>이 지표는</b> {definition}</p> : null;
@@ -102,7 +132,7 @@ function IndicatorDetailCard({ indicator }) {
 
       <IndicatorGauge gauge={indicator.gauge} ratioClass={indicator.ratioClass} unit={unit} />
 
-      {currentBand?.reason && <p className="indicator-feedback">{currentBand.reason}</p>}
+      {currentBand?.reason && <p className="indicator-feedback">{formatIndicatorReason(currentBand.reason)}</p>}
       <p className="fine-print">참고 범위: {indicator.guideline} · {indicator.benchmark?.gapText}</p>
 
       {indicator.notApplicable && (
@@ -126,7 +156,7 @@ function IndicatorDetailCard({ indicator }) {
               <td>{band.rangeLabel}</td>
               <td className="num">{band.score}</td>
               <td>{band.status}</td>
-              <td className="dim">{band.reason}</td>
+              <td className="dim">{formatIndicatorReason(band.reason)}</td>
             </tr>
           ))}
         </tbody>
@@ -178,37 +208,38 @@ function getCategoryFeedback(group, indicators, storedCategory) {
   };
 }
 
-function getConclusionGroups(indicators, conclusion) {
+function getConclusionSummary(indicators) {
   const financialHealthKeys = new Set(INDICATOR_GROUPS.flatMap((group) => group.keys));
-  const applicable = (indicators || []).filter(
-    (indicator) => financialHealthKeys.has(indicator.key) && !indicator.notCalculable && !indicator.notApplicable
-  );
-  const names = (items) => items.map((indicator) => indicator.label).join(' · ') || '해당 없음';
+  const financialHealthIndicators = (indicators || []).filter((indicator) => financialHealthKeys.has(indicator.key));
+  const applicable = financialHealthIndicators.filter((indicator) => !indicator.notCalculable && !indicator.notApplicable);
+  const risks = applicable.filter((indicator) => indicator.ratioClass === 'risk');
+  const cautions = applicable.filter((indicator) => indicator.ratioClass === 'caution');
+  const unavailableCount = financialHealthIndicators.filter((indicator) => indicator.notCalculable).length;
 
-  return [
-    {
-      label: '점검 우선 지표',
-      value: names(applicable.filter((indicator) => indicator.ratioClass === 'risk' || indicator.ratioClass === 'caution')),
+  return {
+    priorities: [...risks, ...cautions],
+    stable: applicable.filter((indicator) => indicator.ratioClass === 'good'),
+    scoreSummary: {
+      score: unavailableCount > 0 ? null : applicable.reduce((total, indicator) => total + indicator.score, 0),
+      maxScore: financialHealthIndicators.reduce((total, indicator) => total + indicator.maxScore, 0),
+      notCalculable: unavailableCount > 0,
     },
-    {
-      label: '안정적인 지표',
-      value: names(applicable.filter((indicator) => indicator.ratioClass === 'good')),
-    },
-    {
-      label: '도출되는 점',
-      value: conclusion || '산출 가능한 8개 지표 결과를 바탕으로 현재 재무상태를 함께 확인해 주세요.',
-    },
-  ];
+  };
 }
 
 function IndicatorSummaryPage({ indicators, interpretation, pageNumber, totalPages }) {
   const categoryByKey = new Map((interpretation?.categories || []).map((category) => [category.key, category]));
   const groupKeys = ['spendingLiquidity', 'debt', 'savingsAssets', 'protection'];
+  const conclusionSummary = getConclusionSummary(indicators);
+  const indicatorNames = (items) => items.map((indicator) => indicator.label).join(' · ') || '해당 없음';
+  // scoreSummary가 저장되기 전의 과거 결과도 원본 입력을 재계산하지 않고, 이미 저장된 서버 지표
+  // 점수만 합산해 같은 표시를 제공한다. 새 결과에서는 서버 scoreSummary를 항상 우선한다.
+  const scoreSummary = interpretation?.scoreSummary || conclusionSummary.scoreSummary;
 
   return (
     <PageFrame
       eyebrow="JMFinancial Household Finance Review"
-      title="JMFinancial 재무건강지수 평가 항목 요약"
+      title="재무건강지수 평가 항목 요약"
       pageNumber={pageNumber}
       totalPages={totalPages}
     >
@@ -229,15 +260,32 @@ function IndicatorSummaryPage({ indicators, interpretation, pageNumber, totalPag
       <section className="fhs-overall-conclusion" aria-labelledby="fhs-overall-conclusion-title">
         <div className="fhs-overall-conclusion-head">
           <h3 id="fhs-overall-conclusion-title">8개 지표 종합결론</h3>
-          <span>한눈에 보기</span>
+          {scoreSummary && (
+            <div className="fhs-overall-score" aria-label={`8개 재무건강지표 총점 ${scoreSummary.notCalculable ? '산출 불가' : scoreSummary.score}점 / ${scoreSummary.maxScore}점`}>
+              <span>총점</span>
+              <strong>{scoreSummary.notCalculable ? '산출 불가' : scoreSummary.score}<small> / {scoreSummary.maxScore}</small></strong>
+            </div>
+          )}
         </div>
-        <ul className="fhs-overall-conclusion-list">
-          {getConclusionGroups(indicators, interpretation?.conclusion).map((item) => (
-            <li key={item.label} className={item.label === '도출되는 점' ? 'fhs-overall-conclusion-insight' : ''}>
-              {item.label === '도출되는 점' ? item.value : <><b>{item.label} :</b> {item.value}</>}
-            </li>
-          ))}
-        </ul>
+        <p className="fhs-overall-conclusion-hero">
+          현재는 <strong>{conclusionSummary.priorities.length}개 항목</strong>을 먼저 점검하는 것이 좋습니다.
+        </p>
+        <div className="fhs-overall-status-grid" aria-label="재무건강지표 상태 요약">
+          <div className="fhs-overall-status-card">
+            <div className="fhs-overall-status fhs-overall-status--attention">
+              <span>점검 우선</span>
+              <strong>{conclusionSummary.priorities.length}개</strong>
+            </div>
+            <p>{indicatorNames(conclusionSummary.priorities)}</p>
+          </div>
+          <div className="fhs-overall-status-card">
+            <div className="fhs-overall-status fhs-overall-status--stable">
+              <span>안정적</span>
+              <strong>{conclusionSummary.stable.length}개</strong>
+            </div>
+            <p>{indicatorNames(conclusionSummary.stable)}</p>
+          </div>
+        </div>
       </section>
       <div className="fhs-summary-grid">
         {INDICATOR_GROUPS.map((group, groupIndex) => {
@@ -318,8 +366,8 @@ export default function FhsDetailReport({ result, onRestart, onBack, onHome, cli
       <CoverPage
         generatedAt={generatedAt}
         clientName={clientName}
-        title="재무건강지수 심화 리포트"
-        subtitle="JMFinancial Household Finance Review"
+        title="제이엠 자산관리 플래너"
+        subtitle="JM Financial Planner"
       />
 
       <IndicatorSummaryPage
