@@ -101,6 +101,49 @@ describe('financial-health indicator integrity', () => {
     expect(findIndicator(result, 'retirementSavings').formula).toBe('노후대비저축액 ÷ 총저축액 × 100');
   });
 
+  // breakdown: 화면(FhsDetailReport)에서 비율의 근거가 된 실제 금액을 보여주기 위한 표시용
+  // 데이터. 판정(rawValue/score)에 이미 쓰인 agg 값을 그대로 재사용할 뿐 새 계산이 아니므로,
+  // 위 테스트가 검증한 것과 같은 HEALTHY_BASE 입력에서 각 지표의 분자·분모 금액이 정확히
+  // 일치하는지만 확인한다(연간원리금상환액=월상환액×12=20×12=240, 금융자산=투자자산+
+  // 현금성자산=500+1200=1700 등, 판정식에 쓰인 것과 동일한 원본 표현식).
+  it('8개 지표 모두 breakdown.numerator/denominator가 판정에 쓰인 agg 값과 정확히 일치한다', () => {
+    const result = calcIndicators(input());
+    const expectedBreakdowns = {
+      household: { numerator: { label: '총지출(저축 제외)', amount: 270 }, denominator: { label: '총소득', amount: 500 } },
+      emergency: { numerator: { label: '유동성자산', amount: 1200 }, denominator: { label: '월지출(저축 제외)', amount: 270 } },
+      dsr: { numerator: { label: '연간원리금상환액', amount: 240 }, denominator: { label: '연소득', amount: 6000 } },
+      debtBurden: { numerator: { label: '총부채', amount: 500 }, denominator: { label: '총자산', amount: 3000 } },
+      insurance: { numerator: { label: '보장성보험료(월)', amount: 45 }, denominator: { label: '월소득', amount: 500 } },
+      savingsRate: { numerator: { label: '총저축액(연)', amount: 2400 }, denominator: { label: '총소득(연)', amount: 6000 } },
+      retirementSavings: { numerator: { label: '노후대비저축액(연)', amount: 1800 }, denominator: { label: '총저축액(연)', amount: 2400 } },
+      financialAssetRatio: { numerator: { label: '금융자산(투자+현금성)', amount: 1700 }, denominator: { label: '총자산', amount: 3000 } },
+    };
+
+    Object.entries(expectedBreakdowns).forEach(([key, expected]) => {
+      expect(findIndicator(result, key).breakdown).toEqual(expected);
+    });
+  });
+
+  it('분모가 0이라 notCalculable인 지표는 breakdown이 null이다', () => {
+    const result = calcIndicators(input({ assets: { currentIncome: { monthly: 0 } } }));
+    const household = findIndicator(result, 'household');
+    expect(household.notCalculable).toBe(true);
+    expect(household.breakdown).toBeNull();
+  });
+
+  it('65세 이상(notApplicable)인 노후대비저축지표는 breakdown이 null이다', () => {
+    const result = calcIndicators(input({ basic: { birthYear: new Date().getFullYear() - 66 } }));
+    const retirementSavings = findIndicator(result, 'retirementSavings');
+    expect(retirementSavings.notApplicable).toBe(true);
+    expect(retirementSavings.breakdown).toBeNull();
+  });
+
+  it('노후소득보장률(retirementIncome, FHS 8개 지표 밖)에는 breakdown 필드를 추가하지 않는다', () => {
+    const result = calcIndicators(input());
+    const retirementIncome = findIndicator(result, 'retirementIncome');
+    expect(retirementIncome).not.toHaveProperty('breakdown');
+  });
+
   // retirementSavingsInputVersion: 2 - 연금저축·IRP 자동합산 + 추가 노후저축 입력의 노후대비저축지표
   // 공식(retirementSavingsAnnual ÷ totalSavingsAnnual × 100)은 변경하지 않는다. 지표에 들어가기 전
   // 집계값만 버전에 맞게 만들어지는지 확인한다.

@@ -44,6 +44,13 @@ export function calcIndicators(input) {
 
   // ① 가계수지지표 = 총지출(저축 제외) ÷ 총소득
   const householdRaw = pctOrNA(agg.totalExpenseMonthlyExSavings, agg.monthlyIncome);
+  // breakdown: 화면(FhsDetailReport)에 비율의 근거가 된 실제 금액을 함께 보여주기 위한 표시용
+  // 데이터. 판정에 쓰인 agg 값을 그대로 재사용할 뿐 새로 계산하지 않고, 분모 0(notCalculable)이면
+  // null로 둔다.
+  const householdBreakdown = householdRaw === null ? null : {
+    numerator: { label: '총지출(저축 제외)', amount: agg.totalExpenseMonthlyExSavings },
+    denominator: { label: '총소득', amount: agg.monthlyIncome },
+  };
   const indicator1 = householdRaw === null
     ? notCalculableResult(15, '소득이 0원이어서 가계수지지표를 산출할 수 없습니다.')
     : evaluateBands(
@@ -61,6 +68,10 @@ export function calcIndicators(input) {
 
   // ② 비상예비금지표 = 유동성자산 ÷ 월지출(저축 제외)
   const emergencyRaw = divOrNA(agg.liquidAssets, agg.totalExpenseMonthlyExSavings);
+  const emergencyBreakdown = emergencyRaw === null ? null : {
+    numerator: { label: '유동성자산', amount: agg.liquidAssets },
+    denominator: { label: '월지출(저축 제외)', amount: agg.totalExpenseMonthlyExSavings },
+  };
   const indicator2 = emergencyRaw === null
     ? notCalculableResult(10, '월지출이 0원이어서 비상예비금 배수를 산출할 수 없습니다.')
     : evaluateBands(
@@ -77,7 +88,12 @@ export function calcIndicators(input) {
       );
 
   // ③ 총부채상환지표(DSR) = 연간원리금상환액 ÷ 연소득
-  const dsrRaw = pctOrNA(agg.monthlyDebtRepayment * 12, agg.annualIncome);
+  const dsrAnnualRepayment = agg.monthlyDebtRepayment * 12;
+  const dsrRaw = pctOrNA(dsrAnnualRepayment, agg.annualIncome);
+  const dsrBreakdown = dsrRaw === null ? null : {
+    numerator: { label: '연간원리금상환액', amount: dsrAnnualRepayment },
+    denominator: { label: '연소득', amount: agg.annualIncome },
+  };
   const indicator3 = dsrRaw === null
     ? notCalculableResult(15, '소득이 0원이어서 총부채상환지표(DSR)를 산출할 수 없습니다.')
     : evaluateBands(
@@ -95,6 +111,10 @@ export function calcIndicators(input) {
 
   // ④ 총부채부담지표 = 총부채 ÷ 총자산
   const debtBurdenRaw = pctOrNA(agg.totalDebt, agg.totalAssets);
+  const debtBurdenBreakdown = debtBurdenRaw === null ? null : {
+    numerator: { label: '총부채', amount: agg.totalDebt },
+    denominator: { label: '총자산', amount: agg.totalAssets },
+  };
   const indicator4 = debtBurdenRaw === null
     ? notCalculableResult(10, '총자산이 0원이어서 총부채부담지표를 산출할 수 없습니다.')
     : evaluateBands(
@@ -112,6 +132,10 @@ export function calcIndicators(input) {
 
   // ⑤ 보장성보험준비지표 = 보장성보험료 ÷ 소득 (적정구간 8~10%를 중심으로 좌우 감점, 연속 7단계)
   const insuranceRaw = pctOrNA(agg.monthlyInsurancePremium, agg.monthlyIncome);
+  const insuranceBreakdown = insuranceRaw === null ? null : {
+    numerator: { label: '보장성보험료(월)', amount: agg.monthlyInsurancePremium },
+    denominator: { label: '월소득', amount: agg.monthlyIncome },
+  };
   const indicator5 = insuranceRaw === null
     ? notCalculableResult(10, '소득이 0원이어서 보장성보험준비지표를 산출할 수 없습니다.')
     : evaluateBands(
@@ -130,6 +154,10 @@ export function calcIndicators(input) {
 
   // ⑥ 총저축성향지표 = 총저축액 ÷ 총소득
   const savingsRateRaw = pctOrNA(agg.totalSavingsAnnual, agg.annualIncome);
+  const savingsRateBreakdown = savingsRateRaw === null ? null : {
+    numerator: { label: '총저축액(연)', amount: agg.totalSavingsAnnual },
+    denominator: { label: '총소득(연)', amount: agg.annualIncome },
+  };
   const indicator6 = savingsRateRaw === null
     ? notCalculableResult(5, '소득이 0원이어서 총저축성향지표를 산출할 수 없습니다.')
     : evaluateBands(
@@ -146,6 +174,11 @@ export function calcIndicators(input) {
 
   // ⑦ 노후대비저축지표 = 노후대비저축액 ÷ 총저축액 (65세 이상은 적립 단계가 아니므로 해당 없음)
   const retirementSavingsRaw = pctOrNA(agg.retirementSavingsAnnual, agg.totalSavingsAnnual);
+  // 65세 이상(notApplicable)이거나 분모 0(notCalculable)이면 breakdown도 null로 둔다.
+  const retirementSavingsBreakdown = is65Plus || retirementSavingsRaw === null ? null : {
+    numerator: { label: '노후대비저축액(연)', amount: agg.retirementSavingsAnnual },
+    denominator: { label: '총저축액(연)', amount: agg.totalSavingsAnnual },
+  };
   const indicator7 = is65Plus
     ? {
         rawValue: retirementSavingsRaw,
@@ -185,7 +218,12 @@ export function calcIndicators(input) {
         );
 
   // ⑧ 금융자산비중지표 = (투자자산+현금성자산) ÷ 총자산
-  const financialAssetRatioRaw = pctOrNA(agg.financialAssetsTotal + agg.liquidAssets, agg.totalAssets);
+  const financialAssetsWithLiquid = agg.financialAssetsTotal + agg.liquidAssets;
+  const financialAssetRatioRaw = pctOrNA(financialAssetsWithLiquid, agg.totalAssets);
+  const financialAssetRatioBreakdown = financialAssetRatioRaw === null ? null : {
+    numerator: { label: '금융자산(투자+현금성)', amount: financialAssetsWithLiquid },
+    denominator: { label: '총자산', amount: agg.totalAssets },
+  };
   const indicator8 = financialAssetRatioRaw === null
     ? notCalculableResult(5, '총자산이 0원이어서 금융자산비중지표를 산출할 수 없습니다.')
     : evaluateBands(
@@ -213,14 +251,14 @@ export function calcIndicators(input) {
       );
 
   const list = [
-    { key: 'household', label: '가계수지지표', formula: '총지출 ÷ 총소득', ...indicator1 },
-    { key: 'emergency', label: '비상예비금지표', formula: '유동성자산 ÷ 월지출', unit: '배', ...indicator2 },
-    { key: 'dsr', label: '총부채상환지표(DSR)', formula: '연간원리금상환액 ÷ 연소득', ...indicator3 },
-    { key: 'debtBurden', label: '총부채부담지표', formula: '총부채 ÷ 총자산', ...indicator4 },
-    { key: 'insurance', label: '보장성보험준비지표', formula: '보장성보험료 ÷ 소득', ...indicator5 },
-    { key: 'savingsRate', label: '총저축성향지표', formula: '총저축액 ÷ 총소득', ...indicator6 },
-    { key: 'retirementSavings', label: '노후대비저축지표', formula: '노후대비저축액 ÷ 총저축액 × 100', ...indicator7 },
-    { key: 'financialAssetRatio', label: '금융자산비중지표', formula: '금융자산 ÷ 총자산', ...indicator8 },
+    { key: 'household', label: '가계수지지표', formula: '총지출 ÷ 총소득', breakdown: householdBreakdown, ...indicator1 },
+    { key: 'emergency', label: '비상예비금지표', formula: '유동성자산 ÷ 월지출', unit: '배', breakdown: emergencyBreakdown, ...indicator2 },
+    { key: 'dsr', label: '총부채상환지표(DSR)', formula: '연간원리금상환액 ÷ 연소득', breakdown: dsrBreakdown, ...indicator3 },
+    { key: 'debtBurden', label: '총부채부담지표', formula: '총부채 ÷ 총자산', breakdown: debtBurdenBreakdown, ...indicator4 },
+    { key: 'insurance', label: '보장성보험준비지표', formula: '보장성보험료 ÷ 소득', breakdown: insuranceBreakdown, ...indicator5 },
+    { key: 'savingsRate', label: '총저축성향지표', formula: '총저축액 ÷ 총소득', breakdown: savingsRateBreakdown, ...indicator6 },
+    { key: 'retirementSavings', label: '노후대비저축지표', formula: '노후대비저축액 ÷ 총저축액 × 100', breakdown: retirementSavingsBreakdown, ...indicator7 },
+    { key: 'financialAssetRatio', label: '금융자산비중지표', formula: '금융자산 ÷ 총자산', breakdown: financialAssetRatioBreakdown, ...indicator8 },
     { key: 'retirementIncome', label: '노후소득보장률', formula: '월예상 노후소득 ÷ 은퇴후 월필요생활비 × 100', ...indicator9 },
   ];
 

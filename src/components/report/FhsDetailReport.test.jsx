@@ -77,7 +77,7 @@ describe('FhsDetailReport', () => {
     expect(html).toContain('재무건강지수란?');
     expect(html).toContain('보완할 항목의 우선순위');
     expect(html).toContain('산출 불가');
-    expect(html).toContain('01 / 6');
+    expect(html).toContain('01 / 5');
     expect(html).toContain('저축 · 자산 (계속)');
     expect(html).toContain('소득으로 생활을 감당하고 비상상황에 버틸 수 있는가?');
     expect(html).toContain('예상치 못한 위험과 노후생활에 잘 대비하고 있는가?');
@@ -111,7 +111,7 @@ describe('FhsDetailReport', () => {
 
     expect(html).toContain('gauge-track');
     expect(html).toContain(`${household.score} / ${household.maxScore}점`);
-    expect(html).toContain('06 / 6');
+    expect(html).toContain('05 / 5');
     expect(html).toContain('gauge-fill');
     expect(html).toContain('indicator-benchmark-table');
     expect(html).toContain('이 지표는');
@@ -174,5 +174,178 @@ describe('FhsDetailReport', () => {
 
     expect(html).not.toContain(legacyReason);
     expect(html).toContain('가계수지가 비교적 안정적인 수준');
+  });
+});
+
+// 지표 방향 배지(낮을수록/높을수록/적정구간 유지 - 순수 표시용, 계산 로직 무관)만 검증한다.
+function buildIndicator(overrides = {}) {
+  return {
+    key: 'household',
+    label: '가계수지지표',
+    formula: '총지출 ÷ 총소득',
+    unit: '%',
+    value: 50,
+    displayValue: 50,
+    rawValue: 50,
+    score: 12,
+    maxScore: 15,
+    status: '양호',
+    ratioClass: 'good',
+    notCalculable: false,
+    notApplicable: false,
+    reason: null,
+    guideline: '총 소득 대비 총 지출 70% 이하',
+    benchmark: { withinRecommended: true, gap: 20, gapText: '참고 범위(70% 이하) 대비 20%p 여유가 있습니다' },
+    gauge: { valuePct: 50, benchType: 'atMost', benchValuePct: 70, gaugeMax: 100 },
+    table: [
+      { rangeLabel: '50% 이하', score: 12, status: '양호', reason: '테스트 사유 1', isCurrent: true },
+      { rangeLabel: '50% 초과', score: 0, status: '위험', reason: '테스트 사유 2', isCurrent: false },
+    ],
+    ...overrides,
+  };
+}
+
+function renderWithIndicators(indicators) {
+  return renderToStaticMarkup(
+    <FhsDetailReport
+      result={{ generatedAt: '2026-08-25T00:00:00.000Z', indicators, financialHealthInterpretation: { categories: [] } }}
+      onRestart={() => {}}
+      onBack={() => {}}
+      onHome={() => {}}
+      clientName="테스트"
+    />
+  );
+}
+
+describe('IndicatorDetailCard - 방향 배지', () => {
+  const DIRECTION_EXPECTATIONS = {
+    household: '▼ 낮을수록 좋아요',
+    emergency: '▲ 높을수록 좋아요',
+    dsr: '▼ 낮을수록 좋아요',
+    debtBurden: '▼ 낮을수록 좋아요',
+    insurance: '◆ 적정 구간을 유지하는 게 좋아요',
+    savingsRate: '▲ 높을수록 좋아요',
+    retirementSavings: '▲ 높을수록 좋아요',
+    financialAssetRatio: '▲ 높을수록 좋아요',
+  };
+
+  Object.entries(DIRECTION_EXPECTATIONS).forEach(([key, expectedBadge]) => {
+    it(`${key}는 "${expectedBadge}" 배지를 보여준다`, () => {
+      const html = renderWithIndicators([buildIndicator({ key, label: key })]);
+      expect(html).toContain(expectedBadge);
+    });
+  });
+
+  // 회귀 방지: financialAssetRatio는 api/_lib/indicators.js의 실제 배점 구간표(⑧ 금융자산비중지표)
+  // 기준으로 atLeast(40) 이상이 최고점이고 그 위로 감점 구간이 없는 단조증가형이라 "높을수록
+  // 좋음"으로 분류했다(between이 아님).
+  it('financialAssetRatio는 between이 아니라 higher로 분류된다(실제 배점표 기준)', () => {
+    const html = renderWithIndicators([buildIndicator({ key: 'financialAssetRatio', label: '금융자산비중지표' })]);
+    expect(html).toContain('▲ 높을수록 좋아요');
+    expect(html).not.toContain('◆ 적정 구간을 유지하는 게 좋아요');
+  });
+
+  it('notCalculable 카드에도 방향 배지를 보여준다', () => {
+    const html = renderWithIndicators([buildIndicator({ notCalculable: true, reason: '소득이 0원이어서 산출할 수 없습니다.' })]);
+    expect(html).toContain('▼ 낮을수록 좋아요');
+  });
+});
+
+// IndicatorBreakdownTable(구분/금액/비율 표) - breakdown 유무에 따른 표시만 검증한다.
+describe('IndicatorDetailCard - breakdown 표(구분/금액/비율)', () => {
+  it('breakdown이 있으면 분자·분모 금액과 현재 비율 값을 formatWon으로 보여준다', () => {
+    const html = renderWithIndicators([buildIndicator({
+      value: 45.5,
+      breakdown: {
+        numerator: { label: '총지출(저축 제외)', amount: 12974 },
+        denominator: { label: '총소득', amount: 28514 },
+      },
+    })]);
+    expect(html).toContain('indicator-breakdown-table');
+    expect(html).toContain('총지출(저축 제외)');
+    expect(html).toContain('총소득');
+    // formatWon(12974) === '1억 2,974만원', formatWon(28514) === '2억 8,514만원'
+    expect(html).toContain('1억 2,974만원');
+    expect(html).toContain('2억 8,514만원');
+    expect(html).toContain('45.5%');
+  });
+
+  it('emergency는 비율 컬럼을 퍼센트가 아니라 "N배"로 보여준다', () => {
+    const html = renderWithIndicators([buildIndicator({
+      key: 'emergency',
+      label: '비상예비금지표',
+      unit: '배',
+      value: 5.2,
+      breakdown: {
+        numerator: { label: '유동성자산', amount: 1200 },
+        denominator: { label: '월지출(저축 제외)', amount: 230 },
+      },
+    })]);
+    expect(html).toContain('5.2배');
+    expect(html).not.toContain('5.2%');
+  });
+
+  it('breakdown이 없으면(과거 저장 결과 - 하위호환) 표를 렌더링하지 않고 게이지만 보여준다', () => {
+    const html = renderWithIndicators([buildIndicator()]); // buildIndicator 기본값에는 breakdown이 없음
+    expect(html).not.toContain('indicator-breakdown-table');
+    expect(html).toContain('gauge-track');
+  });
+
+  // 게이지+표 한 줄 배치(indicator-gauge-breakdown-row) 회귀 확인. 실제 가로 배치 여부는
+  // CSS(app.css)가 결정하므로 여기서는 "감싸는 클래스가 올바른 조건으로 붙는지"만 검증한다.
+  it('breakdown이 있으면 게이지와 표가 같은 indicator-gauge-breakdown-row 안에 함께 들어간다', () => {
+    const html = renderWithIndicators([buildIndicator({
+      breakdown: {
+        numerator: { label: '총지출(저축 제외)', amount: 12974 },
+        denominator: { label: '총소득', amount: 28514 },
+      },
+    })]);
+    const rowStart = html.indexOf('indicator-gauge-breakdown-row');
+    const rowTagEnd = html.indexOf('>', rowStart);
+    const rowOpenTag = html.slice(html.lastIndexOf('<div', rowStart), rowTagEnd + 1);
+    expect(rowOpenTag).not.toContain('indicator-gauge-breakdown-row--gauge-only');
+    const afterRow = html.slice(rowTagEnd);
+    // 같은 래퍼 안에서 게이지(gauge-track)가 표(indicator-breakdown-table)보다 먼저 나온다.
+    expect(afterRow.indexOf('gauge-track')).toBeLessThan(afterRow.indexOf('indicator-breakdown-table'));
+  });
+
+  it('breakdown이 없으면 게이지를 다시 전체 폭으로 되돌리는 --gauge-only 수정자가 붙는다', () => {
+    const html = renderWithIndicators([buildIndicator()]);
+    expect(html).toContain('indicator-gauge-breakdown-row indicator-gauge-breakdown-row--gauge-only');
+  });
+
+  it('실제 계산 파이프라인 결과에서도 breakdown 표가 정상적으로 보인다(회귀 확인)', () => {
+    const { indicators, financialHealthInterpretation } = buildReportData({ withIncome: true });
+    const html = renderToStaticMarkup(
+      <FhsDetailReport
+        result={{ generatedAt: '2026-08-25T00:00:00.000Z', indicators, financialHealthInterpretation }}
+        onRestart={() => {}}
+        onBack={() => {}}
+        onHome={() => {}}
+        clientName="테스트"
+      />
+    );
+    const household = indicators.find((ind) => ind.key === 'household');
+    expect(household.breakdown).toBeTruthy();
+    expect(html).toContain('indicator-breakdown-table');
+    expect(html).not.toContain('undefined');
+    expect(html).not.toContain('NaN');
+  });
+
+  // app.css는 CSS라 renderToStaticMarkup으로는 검증할 수 없다 - 모바일 폴백(프로젝트가 이미
+  // 쓰는 640px 브레이크포인트)과 인쇄 시 세로 배치 강제 규칙이 실제로 존재하는지 소스 텍스트로
+  // 회귀 확인한다(값이 조용히 삭제/변경되는 것을 방지).
+  it('app.css에 모바일(640px)·인쇄 시 세로 배치 폴백 규칙이 있다(회귀 방지)', async () => {
+    const fs = await import('node:fs/promises');
+    const css = await fs.readFile(new URL('../../styles/app.css', import.meta.url), 'utf8');
+    const rowRuleIndex = css.indexOf('.indicator-gauge-breakdown-row {');
+    expect(rowRuleIndex).toBeGreaterThan(-1);
+
+    const mobileBlockStart = css.indexOf('@media (max-width: 640px)', rowRuleIndex);
+    const mobileBlockEnd = css.indexOf('\n}', mobileBlockStart);
+    expect(css.slice(mobileBlockStart, mobileBlockEnd)).toContain('.indicator-gauge-breakdown-row { flex-direction: column; }');
+
+    const printBlockStart = css.lastIndexOf('@media print');
+    expect(css.slice(printBlockStart)).not.toContain('.indicator-gauge-breakdown-row { flex-direction: column; }');
   });
 });

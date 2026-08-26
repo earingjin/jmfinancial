@@ -1,7 +1,8 @@
 import PageFrame from './pages/PageFrame';
 import SectionBadge from './pages/SectionBadge';
 import CoverPage from './pages/CoverPage';
-import { formatNumber } from '../../utils/format';
+import BackCoverPage from './pages/BackCoverPage';
+import { formatNumber, formatWon } from '../../utils/format';
 
 // 한국형 가계재무비율 참고 8개 항목을 표시용으로 묶는다.
 // 페이지 구성용 그룹핑이다.
@@ -30,15 +31,62 @@ const DETAIL_PAGE_GROUPS = [
   INDICATOR_GROUPS[0],
   INDICATOR_GROUPS[1],
   { number: '3', label: '저축 · 자산', keys: ['savingsRate', 'retirementSavings'] },
-  { number: '3', label: '저축 · 자산 (계속)', keys: ['financialAssetRatio'] },
-  INDICATOR_GROUPS[3],
+  {
+    number: '3', label: '저축 · 자산 (계속)', keys: ['financialAssetRatio'],
+    trailingGroup: INDICATOR_GROUPS[3],
+  },
 ];
+
+// 지표별 방향성(계산 로직과 무관한 화면 표시용 정적 데이터).
+// api/_lib/indicators.js의 실제 배점 구간표를 기준으로 판단했다:
+// - lower: 값이 낮을수록 점수가 높아지는 단조감소형(atMost 계열 - household/dsr/debtBurden)
+// - higher: 값이 높을수록 점수가 높아지는 단조증가형(atLeast 계열 - emergency/savingsRate/
+//   retirementSavings/financialAssetRatio. financialAssetRatio는 40% 이상 구간에서 감점이
+//   전혀 없는 단조증가형이라 "적정 구간 유지"가 아니라 "높을수록 좋음"으로 분류했다)
+// - between: 특정 구간을 중심으로 위·아래 모두 감점되는 대칭형(insurance만 해당)
+const INDICATOR_DIRECTION = {
+  household: 'lower',
+  emergency: 'higher',
+  dsr: 'lower',
+  debtBurden: 'lower',
+  insurance: 'between',
+  savingsRate: 'higher',
+  retirementSavings: 'higher',
+  financialAssetRatio: 'higher',
+};
+
+const DIRECTION_BADGE = {
+  lower: { icon: '▼', text: '낮을수록 좋아요' },
+  higher: { icon: '▲', text: '높을수록 좋아요' },
+  between: { icon: '◆', text: '적정 구간을 유지하는 게 좋아요' },
+};
+
+function IndicatorDirectionBadge({ indicatorKey }) {
+  const direction = INDICATOR_DIRECTION[indicatorKey];
+  const badge = direction && DIRECTION_BADGE[direction];
+  if (!badge) return null;
+  return (
+    <span className={`indicator-direction-badge indicator-direction-badge--${direction}`}>
+      {badge.icon} {badge.text}
+    </span>
+  );
+}
 
 // 게이지·등급 배지·구간표는 app.css에 이미 정의되어 있던 스타일(.indicator-detail, .gauge-*,
 // .pill-good/caution/risk, .indicator-benchmark-table)을 그대로 쓴다 - 새 디자인을 만들지 않는다.
-function IndicatorGauge({ gauge, ratioClass, unit }) {
+function IndicatorGauge({ gauge, ratioClass, unit, value }) {
+  const labelTransform = gauge.valuePct <= 12 ? 'translateX(0)' : gauge.valuePct >= 88 ? 'translateX(-100%)' : 'translateX(-50%)';
+
   return (
     <div className="gauge-wrap">
+      <div className="gauge-value-slot">
+        <span
+          className="indicator-value"
+          style={{ left: `${gauge.valuePct}%`, transform: labelTransform }}
+        >
+          {formatNumber(value)}{unit}
+        </span>
+      </div>
       <div className="gauge-track">
         <div className={`gauge-fill fill-${ratioClass}`} style={{ width: `${gauge.valuePct}%` }} />
         {gauge.benchType === 'between' ? (
@@ -56,6 +104,38 @@ function IndicatorGauge({ gauge, ratioClass, unit }) {
         <span>{gauge.gaugeMax}{unit}</span>
       </div>
     </div>
+  );
+}
+
+// 비율(%, 배)의 근거가 된 실제 금액(분자/분모)을 "구분 | 금액 | 비율" 2행 표로 보여준다.
+// breakdown은 indicators.js가 판정에 이미 쓴 agg 값을 그대로 표시용으로 붙인 것이라, 여기서는
+// formatWon으로 포맷만 할 뿐 새로 계산하지 않는다. breakdown이 없으면(분모 0 · 65세 이상 해당
+// 없음 · breakdown 필드가 없는 과거 저장 결과) 아무것도 렌더링하지 않는다 - 하위호환.
+function IndicatorBreakdownTable({ breakdown, indicator }) {
+  if (!breakdown) return null;
+  const unit = indicator.unit || '%';
+  return (
+    <table className="grade-table indicator-breakdown-table compact">
+      <thead>
+        <tr>
+          <th className="breakdown-label-col">구분</th>
+          <th className="breakdown-amount-col">금액</th>
+          <th className="breakdown-ratio-col">비율</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr className="indicator-breakdown-numerator">
+          <td>{breakdown.numerator.label}</td>
+          <td className="num">{formatWon(breakdown.numerator.amount)}</td>
+          <td className="num">{formatNumber(indicator.value)}{unit}</td>
+        </tr>
+        <tr className="indicator-breakdown-denominator">
+          <td>{breakdown.denominator.label}</td>
+          <td className="num">{formatWon(breakdown.denominator.amount)}</td>
+          <td className="num">기준</td>
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
@@ -111,7 +191,10 @@ function IndicatorDetailCard({ indicator }) {
   if (indicator.notCalculable) {
     return (
       <div className="report-composition-card indicator-detail">
-        <h4 className="indicator-detail-title">{indicator.label}</h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <h4 className="indicator-detail-title" style={{ margin: 0 }}>{indicator.label}</h4>
+          <IndicatorDirectionBadge indicatorKey={indicator.key} />
+        </div>
         <IndicatorDefinition indicator={indicator} />
         <p className="overview-card-missing">{indicator.reason}</p>
         <p className="fine-print">참고 범위: {indicator.guideline}</p>
@@ -119,20 +202,25 @@ function IndicatorDetailCard({ indicator }) {
     );
   }
 
-  const currentBand = indicator.table?.find((band) => band.isCurrent);
-
   return (
     <div className="report-composition-card indicator-detail">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-        <h4 className="indicator-detail-title" style={{ margin: 0 }}>{indicator.label}</h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <h4 className="indicator-detail-title" style={{ margin: 0 }}>{indicator.label}</h4>
+          <IndicatorDirectionBadge indicatorKey={indicator.key} />
+        </div>
         <span className={`status-tag pill-${indicator.ratioClass}`}>{indicator.status}</span>
       </div>
       <IndicatorDefinition indicator={indicator} />
-      <div className="indicator-value">{formatNumber(indicator.value)}{unit}</div>
 
-      <IndicatorGauge gauge={indicator.gauge} ratioClass={indicator.ratioClass} unit={unit} />
+      {/* 게이지는 축소하고 그만큼 확보된 가로 공간에 breakdown 표를 나란히 배치한다(순수 레이아웃
+          변경 - 두 컴포넌트의 props·내부 렌더링 로직은 그대로다). breakdown이 없는 과거 저장
+          결과는 표가 안 뜨므로 오른쪽이 비지 않도록 게이지를 다시 전체 폭으로 되돌린다. */}
+      <div className={`indicator-gauge-breakdown-row${indicator.breakdown ? '' : ' indicator-gauge-breakdown-row--gauge-only'}`}>
+        <IndicatorGauge gauge={indicator.gauge} ratioClass={indicator.ratioClass} unit={unit} value={indicator.value} />
+        <IndicatorBreakdownTable breakdown={indicator.breakdown} indicator={indicator} />
+      </div>
 
-      {currentBand?.reason && <p className="indicator-feedback">{formatIndicatorReason(currentBand.reason)}</p>}
       <p className="fine-print">참고 범위: {indicator.guideline} · {indicator.benchmark?.gapText}</p>
 
       {indicator.notApplicable && (
@@ -293,7 +381,7 @@ function IndicatorSummaryPage({ indicators, interpretation, pageNumber, totalPag
           return (
           <section className="fhs-summary-group" key={group.label}>
             <header className="fhs-summary-group-head">
-              <span>{group.number}</span>
+              <span>Part {group.number}</span>
               <div>
                 <h3>{group.label}</h3>
                 <p className="fhs-summary-group-description">{group.description}</p>
@@ -330,6 +418,17 @@ function IndicatorSummaryPage({ indicators, interpretation, pageNumber, totalPag
         })}
       </div>
     </PageFrame>
+  );
+}
+
+function FhsKeyNote() {
+  return (
+    <section className="report-key-note report-key-note--fhs" aria-label="사용자 메모 영역">
+      <div className="report-key-note-heading">
+        <strong>KEY NOTE</strong>
+      </div>
+      <div className="report-key-note-space" aria-hidden="true" />
+    </section>
   );
 }
 
@@ -374,15 +473,34 @@ export default function FhsDetailReport({ result, onRestart, onBack, onHome, cli
         totalPages={totalPages}
       />
 
-      {DETAIL_PAGE_GROUPS.map((group) => (
-        <PageFrame key={group.label} eyebrow="JMFinancial Household Finance Review" pageNumber={nextPage()} totalPages={totalPages}>
-          <SectionBadge number={group.number} label={group.label} />
+      {DETAIL_PAGE_GROUPS.map((group, groupIndex) => (
+        <PageFrame
+          key={group.label}
+          eyebrow="JMFinancial Household Finance Review"
+          pageNumber={nextPage()}
+          totalPages={totalPages}
+          contentClassName={groupIndex < 3 ? 'fhs-keynote-page' : ''}
+        >
+          <SectionBadge number={null} label={`Part ${group.number} ${group.label}`} />
           {group.keys.map((key) => {
             const indicator = (indicators || []).find((ind) => ind.key === key);
             return indicator ? <IndicatorDetailCard key={key} indicator={indicator} /> : null;
           })}
+          {group.trailingGroup && <>
+            <SectionBadge number={null} label={`Part ${group.trailingGroup.number} ${group.trailingGroup.label}`} />
+            {group.trailingGroup.keys.map((key) => {
+              const indicator = (indicators || []).find((ind) => ind.key === key);
+              return indicator ? <IndicatorDetailCard key={key} indicator={indicator} /> : null;
+            })}
+          </>}
+          {groupIndex < 3 && <>
+            <div className="fhs-keynote-gap" aria-hidden="true" />
+            <FhsKeyNote />
+          </>}
         </PageFrame>
       ))}
+
+      <BackCoverPage generatedAt={generatedAt} />
     </div>
   );
 }
