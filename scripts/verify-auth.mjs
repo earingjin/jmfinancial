@@ -151,16 +151,19 @@ function report(name, expected, actual, passed) {
   if (ok) {
     try {
       const decoded = deobfuscate(body.payload);
-      const hasTotalScore = decoded?.summary && 'totalScore' in decoded.summary;
+      const hidesCompositeScore = decoded?.summary
+        && !('totalScore' in decoded.summary)
+        && !('grade' in decoded.summary);
       const hasSimulation = !!decoded?.simulation;
+      const hasFinancialHealthInterpretation = decoded?.financialHealthInterpretation?.categories?.length === 4;
       report(
-        '복호화 후 summary.totalScore / simulation 존재',
-        'totalScore 필드 있음, simulation 있음',
-        `totalScore=${decoded?.summary?.totalScore}, simulation=${hasSimulation ? '있음' : '없음'}`,
-        hasTotalScore && hasSimulation
+        '복호화 후 종합점수 비노출 / 영역해석 / simulation 확인',
+        'totalScore·grade 없음, 4개 영역해석 있음, simulation 있음',
+        `종합점수=${hidesCompositeScore ? '비노출' : '노출'}, 영역해석=${hasFinancialHealthInterpretation ? '있음' : '없음'}, simulation=${hasSimulation ? '있음' : '없음'}`,
+        hidesCompositeScore && hasFinancialHealthInterpretation && hasSimulation
       );
     } catch (err) {
-      report('복호화 후 summary.totalScore / simulation 존재', '복호화 성공', `복호화 실패: ${err.message}`, false);
+      report('복호화 후 응답 구조 확인', '복호화 성공', `복호화 실패: ${err.message}`, false);
     }
   } else {
     console.error('응답 본문:', JSON.stringify(body, null, 2));

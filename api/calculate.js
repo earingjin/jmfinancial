@@ -1,10 +1,9 @@
 import { calcIndicators } from './_lib/indicators.js';
 import { calcRetirementSimulation } from './_lib/simulation.js';
-import { calcScenarioComparison } from './_lib/scenarios.js';
 import { buildPeerComparison } from './_lib/peerComparison.js';
 import { validateInput } from './_lib/validate.js';
 import { buildFamilyAges, getCurrentAge } from './_lib/aggregate.js';
-import { enrichIndicators, enrichSimulation } from './_lib/reportEnrichment.js';
+import { buildFinancialHealthInterpretation, enrichIndicators, enrichSimulation } from './_lib/reportEnrichment.js';
 import { buildCashFlowOutlookFeedback, buildExecutiveFinancialPositionFeedback, buildExecutiveRetirementFeedback, buildFinancialCashFlowFeedback, buildPeerComparisonFeedback, buildSavingsInvestmentFeedback } from './_lib/executiveSummary.js';
 import { buildSimpleSummary } from './_lib/simpleSummary.js';
 import { buildSavingsBreakdown, buildDebtBreakdown, buildLivingExpenseItems, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './_lib/reportBreakdowns.js';
@@ -51,11 +50,8 @@ export default async function handler(req, res) {
   input = buildCanonicalInput(input);
 
   try {
-    const { indicators, totalScore, grade, notCalculable, missingInputs, weakest, strongest, aggregates } = calcIndicators(input);
+    const { indicators, notCalculable, missingInputs, weakest, strongest, aggregates, currentAge } = calcIndicators(input);
     const simulation = calcRetirementSimulation(input);
-    const scenarioComparison = calcScenarioComparison(input);
-    // totalScore가 null(종합점수 산출 불가)이면 buildMetric이 Number.isFinite(null)=false로 감지해
-    // "비교 데이터 부족" 상태를 그대로 반환한다(0점처럼 잘못 계산되지 않음 - peerComparison.js 참고).
     // netWorth/annualIncome/financialAssetsTotal은 미입력 시 n()이 0으로 채우므로, 아래 경로가
     // 전부 비어 있으면(=사용자가 해당 항목 자체를 입력하지 않았으면) "실제 0원"이 아니라 미입력임을
     // peerComparison.js에 별도로 알려준다(aggregate.js의 각 합산식과 정확히 대응하는 경로만 검사).
@@ -106,17 +102,17 @@ export default async function handler(req, res) {
       totalDebt: aggregates.totalDebt,
       annualIncome: aggregates.annualIncome,
       financialAssetsTotal: aggregates.financialAssetsTotal + aggregates.liquidAssets,
-      retirementScore: totalScore,
       netWorthMissing,
       annualIncomeMissing,
       financialAssetsMissing,
     });
 
-    // 리포트 렌더링에 필요한 게이지 위치·권장기준 비교 문구·등급 배지·생활수준 구간 같은
+    // 리포트 렌더링에 필요한 게이지 위치·참고 범위 비교 문구·생활수준 구간 같은
     // "표시용 파생값"을 서버에서 미리 계산해 붙인다. 클라이언트는 이 값을 그대로 그리기만
     // 하면 되므로, 게이지 임계값·등급 커트라인 같은 기준 데이터가 클라이언트에 존재하지 않는다.
     const retirementLivingCost = simulation.retirementLivingCostNow;
-    const enriched = enrichIndicators({ indicators, totalScore, weakest, strongest, aggregates, retirementLivingCost });
+    const enriched = enrichIndicators({ indicators, weakest, strongest, aggregates, retirementLivingCost, age: currentAge });
+    const financialHealthInterpretation = buildFinancialHealthInterpretation(enriched.indicators);
     const enrichedSimulation = enrichSimulation(simulation, retirementLivingCost);
     const financialStatusFeedback = buildFinancialCashFlowFeedback({
       indicators: enriched.indicators,
@@ -158,8 +154,11 @@ export default async function handler(req, res) {
 
     // 화면(요약/리포트)이 실제로 참조하지 않는 필드는 클라이언트 응답에 내려보내지 않는다.
     // 위 계산(enrichIndicators 등) 자체는 그대로 두고, 여기서 필요한 키만 뽑아낸다.
+    // gauge/benchmark/recommendedLabel/guideline은 재무건강 8개 지표 심화 리포트(FhsDetailReport.jsx)가
+    // 게이지·참고 범위 대비 설명에 그대로 사용한다. composition(지표별 구성 파이차트)은 어느
+    // 화면도 아직 쓰지 않아 계속 제외한다.
     const clientIndicators = enriched.indicators.map(
-      ({ gauge: _gauge, benchmark: _benchmark, composition: _composition, recommendedLabel: _recommendedLabel, guideline: _guideline, ...rest }) => rest
+      ({ composition: _composition, ...rest }) => rest
     );
 
     // 응답을 평문 JSON으로 그대로 내려보내지 않고 스크램블한다. F12 → Network 탭에서
@@ -168,15 +167,13 @@ export default async function handler(req, res) {
     const calculationResult = {
       generatedAt: new Date().toISOString(),
       summary: {
-        totalScore,
-        grade,
         notCalculable,
         missingInputs,
       },
       indicators: clientIndicators,
+      financialHealthInterpretation,
       aggregates,
       simulation: enrichedSimulation,
-      scenarioComparison,
       peerComparison,
       familyAges: buildFamilyAges(input),
       aiFeedback: {

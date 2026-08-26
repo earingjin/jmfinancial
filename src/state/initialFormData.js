@@ -214,10 +214,20 @@ export const initialFormData = {
       },
       customItems: [],       // [{ name, monthly, remainingMonths, interestRate }] 기본 항목 외 사용자가 추가한 저축. "현재까지
                              // 누적된 금액"은 여기 저장하지 않고 name과 같은 이름의 assets.liquidAssets.customItems 항목과 연동된다.
+      // v1(레거시) 전용 필드 - 노후준비 저축액을 하나의 합계로 직접 입력받던 방식. v2에서는 계산에
+      // 쓰이지 않지만, 과거 저장 결과를 그대로 해석하기 위해 필드 자체는 삭제하지 않는다.
       retirementMonthly: '', retirementAnnual: '',
       // true: 사용자가 직접 "일반 저축액에 이미 포함" 버튼을 선택한 경우.
       // false(기본값): 버튼을 미리 선택하지 않으며, 노후준비 저축을 별도 금액으로 합산한다.
+      // v2에서는 사용하지 않는다(레거시 데이터 해석용으로만 유지).
       retirementIncludedInTotal: false,
+      // 노후저축 입력 방식 버전. 2 = 연금저축·IRP(breakdown)를 노후저축으로 자동 인식하고
+      // additionalRetirementMonthly/Annual만 별도로 입력받는 신규 방식. 저장된 데이터에 이 필드가
+      // 없으면 버전 1(레거시, retirementMonthly 직접입력)로 간주한다 - 새 진단만 2로 시작한다.
+      retirementSavingsInputVersion: 2,
+      // v2 전용 - 연금저축·IRP 외에 별도로 하고 있는 "추가" 노후준비 저축(월/연). 연금저축·IRP는
+      // 이미 breakdown 합계에 포함되어 자동 인식되므로 여기서 중복으로 더하지 않는다.
+      additionalRetirementMonthly: '', additionalRetirementAnnual: '',
     },
   },
 

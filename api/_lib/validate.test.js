@@ -215,6 +215,78 @@ describe('rejects NaN / Infinity / negative amounts across numeric fields', () =
   });
 });
 
+// retirementSavingsInputVersion: 2의 "추가 노후준비 저축" 필드도 다른 금액 입력과 동일하게
+// 음수·NaN·Infinity를 거부해야 한다(CLAUDE.md 금액 입력 공통 규칙).
+describe('additionalRetirementMonthly/Annual amount validation (retirementSavingsInputVersion: 2)', () => {
+  it('rejects a negative additionalRetirementMonthly', () => {
+    const result = validateInput(makeInput({ assets: { savingsPlan: { additionalRetirementMonthly: -10 } } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects Infinity for additionalRetirementAnnual', () => {
+    const result = validateInput(makeInput({ assets: { savingsPlan: { additionalRetirementAnnual: Infinity } } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects NaN-producing garbage for additionalRetirementMonthly', () => {
+    const result = validateInput(makeInput({ assets: { savingsPlan: { additionalRetirementMonthly: 'garbage' } } }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('accepts a valid additionalRetirementMonthly/Annual pair', () => {
+    const result = validateInput(makeInput({ assets: { savingsPlan: { additionalRetirementMonthly: 10, additionalRetirementAnnual: 120 } } }));
+    expect(result.ok).toBe(true);
+  });
+});
+
+// Case C(코드리뷰 후속): v2는 retirementMonthly/retirementAnnual/retirementIncludedInTotal을 계산에
+// 전혀 쓰지 않으므로, v1→v2 전환 전에 남아있던 레거시 값(예: retirementMonthly > savingsMonthly)이
+// 있어도 v1 전용 관계 검증 때문에 API 요청 자체가 거부되면 안 된다. 숫자 타입/NaN/Infinity 같은
+// 전체 입력 안전성 검증(AMOUNT_FIELDS)은 버전과 무관하게 그대로 유지되어야 한다.
+describe('retirementSavingsInputVersion: 2 - 레거시 관계 검증 제외', () => {
+  it('레거시 retirementMonthly(200) > savingsMonthly(100) 값이 남아 있어도 v2는 거부되지 않는다', () => {
+    const result = validateInput(makeInput({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          retirementMonthly: 200,
+          retirementIncludedInTotal: true,
+          retirementSavingsInputVersion: 2,
+        },
+      },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('레거시 retirementAnnual(5000) > savingsAnnual(1200) 값이 남아 있어도 v2는 거부되지 않는다', () => {
+    const result = validateInput(makeInput({
+      assets: {
+        savingsPlan: {
+          annual: 1200,
+          retirementAnnual: 5000,
+          retirementIncludedInTotal: true,
+          retirementSavingsInputVersion: 2,
+        },
+      },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('회귀 확인: 동일한 값이라도 v1(버전 필드 없음)이면 여전히 거부된다', () => {
+    const result = validateInput(makeInput({
+      assets: { savingsPlan: { monthly: 100, retirementMonthly: 200, retirementIncludedInTotal: true } },
+    }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('v2에서도 additionalRetirementMonthly 자체의 음수/NaN/Infinity 검증은 그대로 유지된다', () => {
+    const result = validateInput(makeInput({
+      assets: { savingsPlan: { retirementSavingsInputVersion: 2, additionalRetirementMonthly: -5 } },
+    }));
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe('compound return rates must be greater than -100%', () => {
   it.each([-100, -100.01])('rejects basic.assumedReturnRate=%s', (assumedReturnRate) => {
     const result = validateInput(makeInput({ basic: { assumedReturnRate } }));

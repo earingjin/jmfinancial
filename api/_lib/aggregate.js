@@ -11,6 +11,55 @@ const pickAnnual = (annualRaw, monthlyRaw) => {
   return hasAnnual ? n(annualRaw) : n(monthlyRaw) * 12;
 };
 
+// 노후저축 입력 버전(v1/v2)에 따라 monthlySavings·retirementSavingsAnnual·totalSavingsAnnual을
+// 만든다. 노후대비저축지표 공식(retirementSavingsAnnual ÷ totalSavingsAnnual)은 절대 바꾸지 않고,
+// 지표 계산기에 들어가기 전 이 집계값 자체만 버전에 맞게 만든다(사용자 승인된 계산 방식 추가).
+//
+// v1(레거시, retirementSavingsInputVersion !== 2): 기존 계산 그대로 - 노후준비 저축액을 하나의
+// 합계로 직접 입력받는 retirementMonthly/retirementAnnual과, 그 금액이 위 일반 저축액에 이미
+// 포함되어 있는지를 나타내는 retirementIncludedInTotal(기본값 true=포함) 조합으로 계산한다.
+// 저장된 v1 결과의 숫자를 바꾸지 않기 위해 이 분기는 한 글자도 건드리지 않는다.
+//
+// v2(신규): 연금저축·IRP는 이미 savingsPlan.breakdown 총저축액(=monthly)에 포함되어 자동
+// 인식되므로, 사용자는 그 외에 추가로 하고 있는 노후저축(additionalRetirementMonthly/Annual)만
+// 입력한다. 그래서 총저축은 breakdown 총액 + additionalRetirementMonthly(한 번만 추가)이고,
+// 노후저축(지표 분자)은 연금저축+IRP(자동) + additionalRetirementMonthly다.
+function buildRetirementSavingsAggregate(savingsPlan) {
+  const generalSavingsMonthly = n(savingsPlan?.monthly);
+  const generalSavingsAnnual = pickAnnual(savingsPlan?.annual, generalSavingsMonthly);
+
+  if (savingsPlan?.retirementSavingsInputVersion === 2) {
+    const breakdown = savingsPlan?.breakdown || {};
+    const autoRetirementMonthly = n(breakdown.pensionSavings?.monthly) + n(breakdown.irp?.monthly);
+    const additionalRetirementMonthly = n(savingsPlan?.additionalRetirementMonthly);
+    const additionalRetirementAnnual = pickAnnual(savingsPlan?.additionalRetirementAnnual, additionalRetirementMonthly);
+    return {
+      monthlySavings: generalSavingsMonthly + additionalRetirementMonthly,
+      retirementSavingsAnnual: autoRetirementMonthly * 12 + additionalRetirementAnnual,
+      totalSavingsAnnual: generalSavingsAnnual + additionalRetirementAnnual,
+      // 연금저축·IRP(자동)와 추가 노후저축 전액이 이미 총저축 합계 안에 포함되어 있어 중복이 없다.
+      retirementIncludedInSavings: true,
+    };
+  }
+
+  // 노후준비 저축액이 위 일반 저축액에 이미 포함되어 있으면(retirementIncludedInTotal !== false,
+  // 기본값 포함) 더하지 않고, 사용자가 별도로 하고 있다고 명시하면(false) 겹치지 않는 별개 금액이므로
+  // 더한다(사용자 승인된 계산 방식 변경).
+  const retirementSavingsMonthlyRaw = n(savingsPlan?.retirementMonthly);
+  const retirementIncludedInSavings = savingsPlan?.retirementIncludedInTotal !== false;
+  const retirementSavingsAnnual = pickAnnual(savingsPlan?.retirementAnnual, retirementSavingsMonthlyRaw);
+  return {
+    monthlySavings: retirementIncludedInSavings
+      ? generalSavingsMonthly
+      : generalSavingsMonthly + retirementSavingsMonthlyRaw,
+    retirementSavingsAnnual,
+    totalSavingsAnnual: retirementIncludedInSavings
+      ? generalSavingsAnnual
+      : generalSavingsAnnual + retirementSavingsAnnual,
+    retirementIncludedInSavings,
+  };
+}
+
 export function buildAggregates(input) {
   const assets = input.assets || {};
   const expense = input.expense || {};
@@ -34,15 +83,12 @@ export function buildAggregates(input) {
   const monthlyInsurancePremium = n(assets.insurance?.monthlyPremium);
   const monthlyHealthInsurance = n(expense.healthInsurance?.monthly);
   const monthlyDebtRepayment = n(assets.debtStatus?.monthlyRepayment);
-  // 노후준비 저축액이 위 일반 저축액에 이미 포함되어 있으면(retirementIncludedInTotal !== false,
-  // 기본값 포함) 더하지 않고, 사용자가 별도로 하고 있다고 명시하면(false) 겹치지 않는 별개 금액이므로
-  // 더한다(사용자 승인된 계산 방식 변경).
-  const generalSavingsMonthly = n(assets.savingsPlan?.monthly);
-  const retirementSavingsMonthlyRaw = n(assets.savingsPlan?.retirementMonthly);
-  const retirementIncludedInSavings = assets.savingsPlan?.retirementIncludedInTotal !== false;
-  const monthlySavings = retirementIncludedInSavings
-    ? generalSavingsMonthly
-    : generalSavingsMonthly + retirementSavingsMonthlyRaw;
+  const {
+    monthlySavings,
+    retirementSavingsAnnual,
+    totalSavingsAnnual,
+    retirementIncludedInSavings,
+  } = buildRetirementSavingsAggregate(assets.savingsPlan);
 
   const fixedExpenseMonthly =
     monthlyLivingCost + monthlyHousingCost + monthlyInsurancePremium + monthlyHealthInsurance + monthlyDebtRepayment;
@@ -70,13 +116,6 @@ export function buildAggregates(input) {
 
   // ---- 부채 ----
   const totalDebt = n(assets.debtStatus?.totalBalance);
-
-  // ---- 저축 ----
-  const retirementSavingsAnnual = pickAnnual(assets.savingsPlan?.retirementAnnual, retirementSavingsMonthlyRaw);
-  const generalSavingsAnnual = pickAnnual(assets.savingsPlan?.annual, generalSavingsMonthly);
-  const totalSavingsAnnual = retirementIncludedInSavings
-    ? generalSavingsAnnual
-    : generalSavingsAnnual + retirementSavingsAnnual;
 
   // ---- 노후 예상 월소득 (본인 + 배우자 연금 합산, 항목별 분해) ----
   const retirementIncomeByCategory = calcRetirementIncomeByCategory(input);

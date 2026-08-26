@@ -2,12 +2,19 @@ import { useMemo, useRef, useState, useCallback } from 'react';
 import { initialFormData } from './initialFormData';
 import { setIn } from './pathUtils';
 import { FormContext } from './formState';
-import { createLatestDraftSaver, mergeDraft, upsertDraft } from './draftStorage';
+import { createLatestDraftSaver, mergeDraft, resolveRetirementSavingsInputVersion, upsertDraft } from './draftStorage';
 
 const snapshotOf = (formData, stepIndex) => JSON.stringify({ formData, stepIndex });
 
 export function FormProvider({ children, userId, initialDraft }) {
-  const [formData, setFormData] = useState(() => mergeDraft(initialFormData, initialDraft?.form_data));
+  const [formData, setFormData] = useState(() => {
+    // 버전은 반드시 병합 "전" 원본 저장 데이터(initialDraft?.form_data)로만 판정한다 - mergeDraft
+    // 이후의 formData를 보고 판정하면 initialFormData의 기본값이 끼어들어 v1 초안이 v2로
+    // 오판될 수 있다(draftStorage.js의 resolveRetirementSavingsInputVersion 참고).
+    const retirementSavingsInputVersion = resolveRetirementSavingsInputVersion(initialDraft?.form_data);
+    const merged = mergeDraft(initialFormData, initialDraft?.form_data);
+    return setIn(merged, 'assets.savingsPlan.retirementSavingsInputVersion', retirementSavingsInputVersion);
+  });
   const [draftState, setDraftState] = useState(() => ({
     status: initialDraft ? 'saved' : 'idle',
     updatedAt: initialDraft?.updated_at || null,

@@ -317,6 +317,7 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
 }
 .field-unit { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
 .field-helper { font-size: 11px; color: var(--ink-soft); }
+.field-helper--prominent { color: var(--navy-900); font-size: 12px; font-weight: 700; line-height: 1.55; }
 
 .property-type-field { gap: 8px; }
 .property-type-label {
@@ -919,6 +920,20 @@ table.indicator-benchmark-table th { text-align: center; font-size: 1.05em; }
 table.indicator-benchmark-table--dense { font-size: 9.75px; }
 .indicator-benchmark-table--dense th,
 .indicator-benchmark-table--dense td { padding: 3px 7px; line-height: 1.3; }
+
+/* ---------- 지표 상세 카드의 "구분 / 금액 / 비율" breakdown 표 ---------- */
+table.indicator-breakdown-table { table-layout: fixed; font-size: 11px; line-height: 1.4; margin: 4px 0 10px; }
+.indicator-breakdown-table .breakdown-label-col { width: 40%; }
+.indicator-breakdown-table .breakdown-amount-col { width: 32%; }
+.indicator-breakdown-table .breakdown-ratio-col { width: 28%; }
+.indicator-breakdown-table th,
+.indicator-breakdown-table td { padding: 5px 8px; }
+table.indicator-breakdown-table th { text-align: center; }
+.indicator-breakdown-table td { text-align: right; }
+.indicator-breakdown-table td:first-child { text-align: left; color: var(--ink-soft); word-break: keep-all; }
+.indicator-breakdown-table td.num { word-break: keep-all; }
+.indicator-breakdown-table tr.indicator-breakdown-numerator td:last-child { color: var(--navy-900); font-weight: 800; }
+.indicator-breakdown-table tr.indicator-breakdown-denominator td:last-child { color: var(--ink-soft); }
 .lifecycle-table-wrap { width: 100%; overflow: hidden; }
 .lifecycle-table { width: 100%; table-layout: fixed; }
 .lifecycle-table th,
@@ -930,19 +945,87 @@ table.indicator-benchmark-table--dense { font-size: 9.75px; }
 .pill-good { background: var(--teal-soft); color: #0e6c5e; }
 .pill-caution { background: var(--amber-soft); color: #8a5a12; }
 .pill-risk { background: var(--red-soft); color: #8e332a; }
+.pill-unavailable { background: var(--paper); color: var(--ink-soft); }
 
-.gauge-wrap { margin: 14px 0; }
-.gauge-track { position: relative; height: 10px; border-radius: 6px; background: #efe3cf; overflow: hidden; }
-.gauge-fill { height: 100%; border-radius: 6px; }
+.fhs-summary-intro { margin: -2px 0 12px; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.fhs-definition { margin: 0 0 12px; padding: 9px 12px; border: 1px solid rgba(232, 220, 198, .72); border-radius: 8px; background: rgba(250, 243, 230, .55); }
+.fhs-definition h3 { margin: 0 0 3px; color: var(--navy-900); font-size: 12px; letter-spacing: -.02em; }
+.fhs-definition p { margin: 0; color: var(--ink-soft); font-size: 10.5px; line-height: 1.45; }
+.fhs-definition-guide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 7px; border-top: 1px solid rgba(232, 220, 198, .68); }
+.fhs-definition-guide span { padding: 6px 9px 1px; border-left: 1px solid rgba(232, 220, 198, .68); color: var(--ink-soft); font-size: 9.5px; line-height: 1.4; }
+.fhs-definition-guide span:first-child { padding-left: 0; border-left: 0; }
+.fhs-definition-guide b { margin-right: 4px; color: var(--navy-800); font-size: 9.8px; }
+.fhs-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.fhs-summary-group { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.fhs-summary-group-head { display: flex; align-items: center; gap: 9px; padding: 9px 13px; background: var(--paper); border-bottom: 1px solid var(--line); }
+.fhs-summary-group-head span { display: grid; min-width: 50px; height: 24px; padding: 0 7px; place-items: center; border-radius: 999px; background: var(--navy-800); color: #fff; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.fhs-summary-group-head h3 { margin: 0; color: var(--navy-900); font-size: 14px; }
+.fhs-summary-group-description { margin: 2px 0 0; color: var(--navy-800); font-size: 10.5px; font-weight: 800; line-height: 1.35; }
+.fhs-summary-list { padding: 3px 13px; }
+.fhs-summary-feedback { margin: 4px 10px 9px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: rgba(255, 255, 255, .55); color: var(--ink-soft); font-size: 9.8px; font-weight: 600; line-height: 1.4; }
+.fhs-summary-feedback p { margin: 0; }
+.fhs-summary-feedback p + p { margin-top: 3px; }
+.fhs-summary-feedback b { color: var(--navy-800); }
+.fhs-overall-conclusion { position: relative; margin: 0 0 14px; padding: 13px 16px 14px; border: 1px solid rgba(201, 121, 31, .45); border-radius: 10px; background: var(--card); }
+.fhs-overall-conclusion-head { position: relative; padding-bottom: 6px; border-bottom: 1px solid rgba(232, 220, 198, .78); }
+.fhs-overall-conclusion h3 { margin: 0; color: var(--navy-800); font-size: 12px; letter-spacing: -.02em; }
+.fhs-overall-score { position: absolute; top: 100%; right: 0; z-index: 1; display: flex; min-width: 118px; align-items: baseline; justify-content: center; gap: 5px; padding: 6px 12px; border-radius: 8px; background: #ff8612; color: #fff; transform: translateY(-50%); }
+.fhs-overall-score span { font-size: 10px; font-weight: 700; }
+.fhs-overall-score strong { font-size: 19px; font-weight: 800; letter-spacing: -.03em; white-space: nowrap; }
+.fhs-overall-score small { font-size: 11px; font-weight: 600; }
+.fhs-overall-conclusion-hero { display: flex; align-items: center; min-height: 40px; margin: 9px 0 10px; padding-right: 148px; color: var(--navy-900); font-size: 17px; font-weight: 800; line-height: 1.4; letter-spacing: -.025em; word-break: keep-all; }
+.fhs-overall-conclusion-hero strong { color: var(--navy-800); }
+.fhs-overall-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.fhs-overall-status-card { min-width: 0; padding: 0 10px 8px; border: 1px solid rgba(232, 220, 198, .9); border-radius: 7px; background: var(--card); }
+.fhs-overall-status { display: flex; align-items: center; justify-content: space-between; min-width: 0; margin: 0 -10px; padding: 7px 10px; border-radius: 6px 6px 0 0; font-size: 10.5px; font-weight: 700; }
+.fhs-overall-status strong { font-size: 13px; white-space: nowrap; }
+.fhs-overall-status--attention { background: var(--amber-soft); color: #8a5a12; }
+.fhs-overall-status--stable { background: var(--teal-soft); color: #0e6c5e; }
+.fhs-overall-status-card p { min-height: 27px; margin: 0; padding-top: 7px; color: var(--navy-900); font-size: 9.5px; font-weight: 800; line-height: 1.45; word-break: keep-all; overflow-wrap: anywhere; }
+.fhs-summary-row { display: grid; grid-template-columns: minmax(0, 1fr) 76px auto; align-items: center; gap: 8px; min-height: 52px; border-bottom: 1px solid rgba(223, 207, 181, .65); }
+.fhs-summary-row:last-child { border-bottom: 0; }
+.fhs-summary-name { color: var(--navy-900); font-size: 12px; font-weight: 700; }
+.fhs-summary-score { color: var(--ink); font-size: 12px; font-weight: 800; text-align: right; white-space: nowrap; }
+.fhs-summary-row .status-tag { min-width: 58px; text-align: center; white-space: nowrap; }
+.fhs-summary-note { margin-top: 16px; text-align: right; }
+
+/* 지표 상세 카드에서 비율(%)의 근거가 되는 실제 금액(IndicatorBreakdownTable)이 주된 정보가
+   되면서, 게이지는 보조 시각 요소로 축소했다(높이 10px → 5px, 마커/벤치마크선도 비례 축소). */
+.gauge-wrap { margin: 8px 0; }
+.gauge-value-slot { position: relative; height: 42px; }
+.gauge-value-slot .indicator-value { position: absolute; bottom: 6px; margin: 0; white-space: nowrap; }
+.gauge-track { position: relative; height: 5px; border-radius: 4px; background: #efe3cf; overflow: hidden; }
+.gauge-fill { height: 100%; border-radius: 4px; }
 .fill-good { background: var(--teal); }
 .fill-caution { background: var(--amber); }
 .fill-risk { background: var(--red); }
-.gauge-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-soft); margin-top: 6px; }
+.gauge-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-soft); margin-top: 4px; }
+
+/* ---------- 게이지 + breakdown 표 한 줄 배치 ---------- */
+/* 게이지를 컨테이너의 약 1/3 폭으로 줄이고, 남는 폭에 breakdown 표(구분/금액/비율)를 나란히
+   배치한다. breakdown이 없는(과거 저장 결과) 카드는 표가 렌더링되지 않으므로 --gauge-only
+   수정자로 게이지를 다시 전체 폭으로 되돌린다(FhsDetailReport.jsx가 클래스만 토글). */
+.indicator-gauge-breakdown-row { display: flex; align-items: flex-end; gap: 14px; margin: 8px 0; }
+.indicator-gauge-breakdown-row .gauge-wrap { flex: 0 0 33%; max-width: 33%; margin: 0; }
+.indicator-gauge-breakdown-row .gauge-scale { font-size: 9px; }
+.indicator-gauge-breakdown-row .indicator-breakdown-table { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 10px; }
+.indicator-gauge-breakdown-row--gauge-only .gauge-wrap { flex: 1 1 100%; max-width: none; }
 
 .indicator-detail { }
+.indicator-detail + .indicator-detail { margin-top: 14px; }
+.indicator-detail + .num-section-title { margin-top: 14px !important; }
 .indicator-detail-title { font-size: 16px; font-weight: 800; color: var(--navy-900); margin: 4px 0 14px; }
+.indicator-definition { margin: 4px 0 6px; color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1.55; }
+.indicator-definition b { color: inherit; font-weight: inherit; }
+.indicator-policy-note { margin: 10px 0 0; padding: 8px 10px; border-radius: 7px; background: var(--paper); color: var(--ink-soft); font-size: 11px; line-height: 1.5; }
 .indicator-value { font-size: 30px; font-weight: 800; color: var(--navy-900); margin: 6px 0; }
 .indicator-feedback { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; font-weight: 600; }
+
+/* ---------- 지표 방향 배지(낮을수록/높을수록/적정구간 - 순수 표시용) ---------- */
+.indicator-direction-badge { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 8px; padding: 2px 9px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
+.indicator-direction-badge--lower { background: var(--red-soft); color: #8e332a; }
+.indicator-direction-badge--higher { background: var(--teal-soft); color: #0e6c5e; }
+.indicator-direction-badge--between { background: var(--blue-soft); color: var(--navy-800); }
 
 .sim-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
 .sim-stat { background: #fdfbf6; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
@@ -962,6 +1045,10 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 @media (max-width: 640px) {
   .field-grid, .field-grid.three-col { grid-template-columns: 1fr; }
   .sim-summary { grid-template-columns: 1fr; }
+
+  .indicator-gauge-breakdown-row { flex-direction: column; }
+  .indicator-gauge-breakdown-row .gauge-wrap,
+  .indicator-gauge-breakdown-row .indicator-breakdown-table { flex: 1 1 auto; max-width: none; width: 100%; }
 
   .report-actions {
     display: grid;
@@ -1063,6 +1150,9 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 
   table.grade-table th, table.grade-table td { padding: 7px 6px; }
   table.grade-table.compact th, table.grade-table.compact td { padding: 4px 5px; font-size: 11px; }
+
+  .fhs-overall-conclusion-hero { font-size: 15px; }
+  .fhs-overall-status-card p { overflow-wrap: anywhere; }
 }
 
 @media (max-width: 380px) {
@@ -1159,7 +1249,9 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .cover-logo-img { height: 34px; width: auto; display: block; }
 .cover-kicker { margin-top: 34px; font-size: 15px; color: var(--ink); line-height: 1.5; }
 .cover-title { margin: 44px 0 0; font-size: 52px; font-weight: 800; line-height: 1.2; color: #fff; letter-spacing: -1px; }
-.cover-title span { display: block; font-size: 30px; font-weight: 800; margin-top: 6px; }
+.cover-title-main { white-space: nowrap; }
+.cover-title-suffix { margin-left: 10px; font-size: 30px; font-weight: 800; white-space: nowrap; }
+.cover-title-subtitle { display: block; margin-top: 6px; font-size: 30px; font-weight: 800; }
 .cover-date-badge {
   display: inline-block; width: fit-content; margin-top: 26px;
   padding: 10px 24px; background: rgba(251, 233, 190, .9); border-radius: 4px;
@@ -1239,12 +1331,12 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 
 /* ---------- 게이지 벤치마크 ---------- */
 .gauge-marker {
-  position: absolute; top: -7px; width: 0; height: 0;
-  border-left: 7px solid transparent; border-right: 7px solid transparent;
-  border-top: 10px solid var(--navy-900); transform: translateX(-50%);
+  position: absolute; top: -4px; width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 6px solid var(--navy-900); transform: translateX(-50%);
 }
-.gauge-bench { position: absolute; top: -4px; width: 2px; height: 18px; background: var(--ink); opacity: .55; }
-.gauge-bench-band { position: absolute; top: 0; height: 100%; background: rgba(31, 158, 142, .15); border-radius: 6px; }
+.gauge-bench { position: absolute; top: -2px; width: 2px; height: 9px; background: var(--ink); opacity: .55; }
+.gauge-bench-band { position: absolute; top: 0; height: 100%; background: rgba(31, 158, 142, .15); border-radius: 4px; }
 
 /* ---------- 동일연령대 비교 (막대) ---------- */
 .peer-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
@@ -1787,8 +1879,21 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .report-key-note-space { min-height: 150px; }
 .report-key-note--composition { bottom: 8px; padding-top: 13px; padding-bottom: 10px; }
 .report-key-note--composition .report-key-note-space { min-height: 72px; }
+.report-key-note--fhs { padding-top: 11px; padding-bottom: 10px; }
+.report-key-note--fhs .report-key-note-space { min-height: 48px; }
 .report-key-note--future { bottom: 8px; }
 .report-key-note--future .report-key-note-space { min-height: 105px; }
+.page-pad.fhs-keynote-page { display: flex; flex-direction: column; padding-bottom: 10px; }
+.fhs-keynote-gap { flex: 0 0 10px; }
+.page-pad.fhs-keynote-page .report-key-note--fhs {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  margin: auto 0 0;
+  flex-shrink: 0;
+}
+.report-key-note--fhs .report-key-note-heading { padding-bottom: 0; border-bottom: 0; }
 .report-metric-chart-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px; }
 .report-metric-chart-title { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-size: 12px; font-weight: 800; color: var(--navy-900); }
 .report-metric-chart-title span { font-size: 9px; font-weight: 600; color: var(--ink-soft); }
@@ -1852,6 +1957,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .report-composition-card td { padding: 3px 0; border-bottom: 1px solid rgba(223, 207, 181, .55); font-size: 9.5px; }
 .report-composition-card td:nth-child(2) { width: 48px; color: var(--ink-soft); text-align: right; white-space: nowrap; }
 .report-composition-card p { min-height: 28px; margin: 8px 0 0; color: var(--ink-soft); font-size: 9.5px; }
+.report-composition-card .indicator-definition { color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1.55; }
 .report-composition-card small { display: block; margin-top: 6px; color: var(--ink-soft); font-size: 8.5px; line-height: 1.35; }
 .report-composition-grid { grid-template-rows: auto auto auto; gap: 11px; }
 .report-composition-grid > .donut-card { min-width: 0; padding: 13px 14px; border-radius: 11px; }

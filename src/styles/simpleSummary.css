@@ -35,6 +35,51 @@
   margin-bottom: 6px;
 }
 
+.ss-format-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.ss-format-tab {
+  flex: 1 1 0;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+  border-radius: 8px;
+  padding: 9px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ss-format-tab:hover { color: var(--navy-700); border-color: var(--navy-700); }
+.ss-format-tab:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.ss-format-tab--active,
+.ss-format-tab--active:hover {
+  background: #ff8612;
+  border-color: #ff8612;
+  color: #fff;
+  cursor: default;
+}
+@media (max-width: 480px) {
+  .ss-format-tab-type {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 380px) {
+  .ss-format-tab { font-size: 11.5px; padding: 8px 4px; }
+}
+
+@media print {
+  .ss-format-tabs { display: none !important; }
+}
+
 .ss-section-nav {
   position: sticky;
   top: 0;
@@ -1008,6 +1053,11 @@
   font-size: 16px;
   font-weight: 800;
   margin: 6px 0 12px;
+}
+.simple-summary .ss-download-btn.btn-secondary {
+  background: #fff1df;
+  border-color: #f0c58f;
+  color: #d66f0b;
 }
 .simple-summary .btn-primary { background: #ff8612; }
 .simple-summary .btn-primary:hover { background: #ff8612; filter: brightness(.98); }

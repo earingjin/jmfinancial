@@ -11,7 +11,7 @@ const SCENARIO_LABELS = {
 };
 
 export default function ConclusionPage({ summary, simulation, scenarioComparison, indicators, goalFeedback, feedback, showResponseContent = true, pageNumber, totalPages }) {
-  const { totalScore, grade, notCalculable } = summary;
+  const { notCalculable } = summary;
   const { shortfall, readyAssetsAtRetirement } = simulation;
   const { totalGoalAmount, preparedAmount } = simulation.lifeGoals;
   const { applied, before, after, notes } = scenarioComparison;
@@ -29,8 +29,8 @@ export default function ConclusionPage({ summary, simulation, scenarioComparison
       <SectionBadge number="3" label={showResponseContent ? '종합의견 및 대응' : '종합의견'} />
       <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 0 }}>
         {notCalculable
-          ? `일부 지표를 산출할 수 없어 종합 재무건전성 점수를 계산할 수 없습니다.${showResponseContent ? ' 아래 방안은 산출 가능한 지표를 기준으로 참고해 주세요.' : ''}`
-          : <>귀하는 현재 재무건전성(FHS {totalScore}점, {grade.letter}등급) 측면에서 {grade.label} 수준입니다.{showResponseContent && ' 아래 방안을 검토해보시길 권해드립니다.'}</>}
+          ? `일부 재무건강지표를 산출할 수 없습니다.${showResponseContent ? ' 아래 방안은 산출 가능한 지표를 기준으로 참고해 주세요.' : ''}`
+          : <>8개 재무건강지표를 기준으로 현재 상태를 영역별로 확인했습니다.{showResponseContent && ' 아래 방안을 검토해보시길 권해드립니다.'}</>}
       </p>
 
       <table className="grade-table">

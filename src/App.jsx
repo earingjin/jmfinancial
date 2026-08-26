@@ -11,7 +11,9 @@ import WebBrandLogo from './components/WebBrandLogo';
 import { deobfuscate } from './utils/obfuscate';
 import { supabase } from './lib/supabaseClient';
 import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
+import { resetFormSessionWithServerCleanup, shouldResetFormSession } from './state/formSessionPolicy';
 import { completePlannerSubmission, createSubmissionId } from './services/plannerSubmission';
+import { requestCalculation } from './services/calculationApi';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -19,6 +21,7 @@ import './styles/app.css';
 // 진단·계산 상태와 서버 계산 경계에는 영향을 주지 않는 표시 컴포넌트 분리다.
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
 const Report = lazy(() => import('./components/report/Report'));
+const FhsDetailReport = lazy(() => import('./components/report/FhsDetailReport'));
 const SimpleSummaryReport = lazy(() => import('./components/summary/SimpleSummaryReport'));
 const Wizard = lazy(() => import('./components/wizard/Wizard'));
 
@@ -33,7 +36,7 @@ function LazyScreenFallback() {
 
 function AppContent({ initialDraft = null, startWithWizard = false }) {
   const { user, signOut, deleteAccount } = useAuth();
-  const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'error' | 'history'
+  const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'fhs-report' | 'error' | 'history'
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [wizardResume, setWizardResume] = useState(false);
@@ -43,12 +46,44 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   // 지금 보고 있는 result가 방금 새로 진단한 것인지('new'), 과거 목록에서 열어본 것인지('history')
   // 구분한다 - 요약 화면의 "뒤로가기"가 어디로 돌아가야 하는지를 이 값으로 분기한다.
   const [resultSource, setResultSource] = useState('new');
-  // "7. 대응방안"에서 사용자가 실제로 켠 시나리오/직접 입력한 값(나이·기간·목표금액 등)을 리포트의
-  // 마지막 페이지(AssetManagementOptionsPage)에서 그대로 보여주기 위해 보관한다. 서버 계산 결과와
-  // 달리 이 값은 계산이 아니라 사용자가 입력한 그대로를 표시하는 용도라 formData에서 바로 가져온다.
-  const [submittedScenariosInput, setSubmittedScenariosInput] = useState(null);
   const pendingSubmissionRef = useRef(null);
   const submissionPromiseRef = useRef(null);
+  // 요약 화면에서 상세/재무건강 리포트로 넘어가기 직전 스크롤 위치를 기억해뒀다가, 다시 요약
+  // 화면으로 돌아왔을 때만 복원한다. 히스토리 열람 등 다른 경로로 요약 화면에 처음 들어오는
+  // 경우에는 저장된 값이 없어 이 로직이 관여하지 않는다.
+  const summaryScrollPositionRef = useRef(null);
+  // FormProvider가 들고 있는 formData(=위저드 입력값, retirementSavingsInputVersion 포함)를
+  // "새로 시작"할 때만 완전히 새 값으로 초기화하기 위한 상태. key를 바꿔 FormProvider를 강제로
+  // 재마운트하면 initialFormData 기준으로 다시 초기화되어(버전도 새 진단 기본값인 2로) 이전
+  // formData가 남지 않는다. 이전 단계로 돌아가기/저장 실패 후 계속 수정하기처럼 같은 입력을
+  // 이어가야 하는 흐름(backToWizard)에서는 이 값을 절대 건드리지 않는다.
+  const [formSessionKey, setFormSessionKey] = useState(0);
+  const [formSessionDraft, setFormSessionDraft] = useState(initialDraft);
+  // 지금 FormProvider가 들고 있는 formData로 이미 진단을 완료(저장까지 성공)했는지 여부.
+  // true일 때만 "자산진단 시작하기"가 새 세션으로 리셋한다 - 위저드를 다 채우지 않고 홈으로
+  // 나갔다가 다시 "자산진단 시작하기"를 누른 경우(미완성 이어쓰기)는 그대로 이어가야 하므로
+  // 여기 해당하지 않는다.
+  const formSessionConsumedRef = useRef(false);
+
+  // 완료된(또는 실패한) 현재 formData 세션을 버리고 완전히 새 진단용 세션을 시작한다.
+  // "새 진단 시작"(자산진단 시작하기 - 완료 후)과 "다시 입력하기"/"처음부터 다시 입력하기"
+  // 에서만 호출한다. 서버 draft 삭제 → 성공 시에만 로컬 세션 리셋 순서는
+  // formSessionPolicy.js의 resetFormSessionWithServerCleanup이 담당한다(완료 후 호출돼 이미
+  // 지워진 경우는 그냥 무해한 재시도가 된다). 삭제가 실패하면 false를 반환하고 지금 formData·
+  // 결과 화면은 그대로 둔다 - 호출부가 에러만 안내한다.
+  const resetFormSession = async () => {
+    const { ok } = await resetFormSessionWithServerCleanup({
+      userId: user.id,
+      deleteDraft,
+      onReset: () => {
+        formSessionConsumedRef.current = false;
+        setFormSessionDraft(null);
+        setFormSessionKey((key) => key + 1);
+        setWizardStep(0);
+      },
+    });
+    return ok;
+  };
 
   const finishSubmission = async () => {
     if (submissionPromiseRef.current) return submissionPromiseRef.current;
@@ -60,6 +95,8 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         const completedResult = await completePlannerSubmission(pending, user);
         setResult(completedResult);
         pendingSubmissionRef.current = null;
+        // 이 formData로 진단이 완료·저장됐다 - 다음 "자산진단 시작하기"는 새 세션으로 리셋해야 한다.
+        formSessionConsumedRef.current = true;
         setPhase('summary');
       } catch {
         setErrorMessage(pending.resultSaved
@@ -77,22 +114,10 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setPhase('loading');
     setErrorMessage('');
     setResultSource('new');
-    setSubmittedScenariosInput(formData?.scenarios ?? null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-
-      const res = await fetch('/api/calculate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(formData),
-      });
+      const res = await requestCalculation(formData);
 
       if (res.status === 401) {
-        await signOut();
         throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
       }
 
@@ -110,11 +135,28 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     }
   };
 
-  const restart = () => {
+  // "처음부터 다시 입력하기"(계산 실패)/"다시 입력하기"(결과 화면) - 직전 세션이 이미
+  // 완료·저장된 뒤(formSessionConsumedRef)일 때만 formData·서버 draft를 완전히 새로 시작한다.
+  // 계산이 막 실패했을 뿐 저장된 적 없는 정상 입력값이 남아있는 상태에서는 아무것도 지우지
+  // 않고 위저드 1단계로만 되돌아간다 - 그렇지 않으면 방금 입력한 내용이 사라진다.
+  const restart = async () => {
+    if (shouldResetFormSession('restart', formSessionConsumedRef.current)) {
+      // 직전 세션이 이미 완료·저장된 뒤라면(예: 결과 화면의 "다시 입력하기") 완전히 새로
+      // 시작한다 - resetFormSession이 서버 draft 삭제와 wizardStep 초기화를 함께 처리한다.
+      const didReset = await resetFormSession();
+      if (!didReset) {
+        setErrorMessage('이전 임시 초안을 정리하지 못해 새로 시작할 수 없습니다. 다시 시도해 주세요.');
+        setPhase('error');
+        return;
+      }
+    } else {
+      // 계산 실패 등으로 아직 저장된 적 없는 세션이면 formData·서버 draft를 절대 건드리지 않고
+      // 위저드 1단계로만 되돌아간다 - 방금 입력한 내용이 통째로 사라지면 안 되기 때문이다.
+      setWizardStep(0);
+    }
     setResult(null);
     setResultSource('new');
     setWizardResume(false);
-    setWizardStep(0);
     setPhase('wizard');
   };
 
@@ -136,13 +178,32 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   };
 
   const goToReport = () => {
+    summaryScrollPositionRef.current = window.scrollY;
     window.scrollTo(0, 0);
     setPhase('report');
   };
 
+  const goToFhsDetailReport = () => {
+    summaryScrollPositionRef.current = window.scrollY;
+    window.scrollTo(0, 0);
+    setPhase('fhs-report');
+  };
+
   const goHome = () => setPhase('home');
 
-  const startDiagnosis = () => {
+  // "자산진단 시작하기"(홈/히스토리) - 위저드를 다 채우기 전에 홈으로 나왔다가 돌아온 경우는
+  // 같은 formData를 이어서 채워야 하므로 그대로 두고, 직전 진단이 이미 완료·저장된 뒤라면
+  // (formSessionConsumedRef) 새 진단이므로 formData 세션을 리셋한다. 서버 draft 삭제가 실패하면
+  // 위저드로 넘어가지 않고 홈에 머무른 채 에러만 안내한다(현재 formData는 그대로 보존).
+  const startDiagnosis = async () => {
+    if (shouldResetFormSession('startDiagnosis', formSessionConsumedRef.current)) {
+      const didReset = await resetFormSession();
+      if (!didReset) {
+        setErrorMessage('이전 임시 초안을 정리하지 못해 새 진단을 시작할 수 없습니다. 다시 시도해 주세요.');
+        setPhase('error');
+        return;
+      }
+    }
     setResultSource('new');
     setWizardResume(false);
     setPhase('wizard');
@@ -158,6 +219,21 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setPhase('summary');
   };
 
+  // 상세/재무건강 리포트에서 요약 화면으로 "바로" 돌아왔을 때만 저장해둔 스크롤 위치로
+  // 복원한다. 직전 phase까지 함께 확인하는 이유: report/fhs-report에서 홈으로 나갔다가
+  // 히스토리를 거쳐 다시 요약 화면에 들어오는 것처럼, report/fhs-report를 거치지 않고
+  // 새로 진입하는 경우에는 과거에 저장된 값이 남아 있어도 복원하면 안 되기 때문이다.
+  const prevPhaseRef = useRef(phase);
+  useEffect(() => {
+    const prevPhase = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (phase !== 'summary' || (prevPhase !== 'report' && prevPhase !== 'fhs-report')) return;
+    const savedY = summaryScrollPositionRef.current;
+    summaryScrollPositionRef.current = null;
+    if (savedY == null) return;
+    requestAnimationFrame(() => window.scrollTo(0, savedY));
+  }, [phase]);
+
   const isDiagnosisPhase = phase === 'wizard' || phase === 'loading';
   // 홈/이전 결과 화면은 배경까지는 진단 화면과 맞추지 않고, 헤더(맨 위 부분)만 진단 화면과
   // 같은 디자인으로 통일한다.
@@ -165,7 +241,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
 
   return (
     <div className={`app-shell${isDiagnosisPhase ? ' app-shell--diagnosis' : ''}`}>
-      {phase !== 'report' && phase !== 'summary' && phase !== 'home' && (
+      {phase !== 'report' && phase !== 'fhs-report' && phase !== 'summary' && phase !== 'home' && (
         <header className={`app-header${useDiagnosisHeader ? ' app-header--diagnosis' : ''}`}>
           <div className="app-header-account">
             {phase === 'wizard' && (
@@ -180,7 +256,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         </header>
       )}
 
-      <main className={`app-main${phase === 'report' ? ' report-print-mode' : ''}${phase === 'home' ? ' app-main--home' : ''}`}>
+      <main className={`app-main${phase === 'report' || phase === 'fhs-report' ? ' report-print-mode' : ''}${phase === 'home' ? ' app-main--home' : ''}`}>
         {phase === 'home' && (
           <HomeScreen
             userName={user?.user_metadata?.name}
@@ -195,7 +271,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
           <HistoryList user={user} onSelect={openPastResult} onBackHome={goHome} onStart={startDiagnosis} />
         )}
 
-        <FormProvider userId={user.id} initialDraft={initialDraft}>
+        <FormProvider key={formSessionKey} userId={user.id} initialDraft={formSessionDraft}>
           {phase === 'wizard' && (
             <Suspense fallback={<LazyScreenFallback />}>
               <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={wizardStep} onStepChange={setWizardStep} />
@@ -239,6 +315,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
               onHome={goHome}
               onDownload={goToReport}
               onShare={goToReport}
+              onDownloadFhsDetail={goToFhsDetailReport}
             />
           </Suspense>
         )}
@@ -251,12 +328,23 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
               onBack={() => setPhase('summary')}
               onHome={goHome}
               clientName={user?.user_metadata?.name}
-              scenariosInput={submittedScenariosInput}
+            />
+          </Suspense>
+        )}
+
+        {phase === 'fhs-report' && result && (
+          <Suspense fallback={<LazyScreenFallback />}>
+            <FhsDetailReport
+              result={result}
+              onRestart={restart}
+              onBack={() => setPhase('summary')}
+              onHome={goHome}
+              clientName={user?.user_metadata?.name}
             />
           </Suspense>
         )}
       </main>
-      {phase !== 'report' && phase !== 'home' && <AppCopyright />}
+      {phase !== 'report' && phase !== 'fhs-report' && phase !== 'home' && <AppCopyright />}
     </div>
   );
 }

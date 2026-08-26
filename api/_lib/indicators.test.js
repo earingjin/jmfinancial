@@ -1,5 +1,29 @@
 import { describe, it, expect } from 'vitest';
 import { calcIndicators } from './indicators.js';
+import { getIndicatorMeta } from './indicatorMeta.js';
+
+describe('연령별 바람직한 표시 기준', () => {
+  it.each([
+    [20, 50, 2, 50],
+    [29, 50, 2, 50],
+    [30, 70, 3, 30],
+    [39, 70, 3, 30],
+    [40, 80, 4, 20],
+    [49, 80, 4, 20],
+    [50, 90, 5, 10],
+    [64, 90, 5, 10],
+    [65, 95, 6, 5],
+  ])('%i세의 가계수지·비상예비금·총저축성향 기준을 반환한다', (age, household, emergency, savingsRate) => {
+    expect(getIndicatorMeta('household', age).bench).toEqual({ type: 'atMost', value: household });
+    expect(getIndicatorMeta('emergency', age).bench).toEqual({ type: 'atLeast', value: emergency });
+    expect(getIndicatorMeta('savingsRate', age).bench).toEqual({ type: 'atLeast', value: savingsRate });
+  });
+
+  it('연령 기준이 없는 총부채상환지표와 20세 미만은 기존 공통 기준을 유지한다', () => {
+    expect(getIndicatorMeta('dsr', 35).bench).toEqual({ type: 'atMost', value: 30 });
+    expect(getIndicatorMeta('household', 19).bench).toEqual({ type: 'atMost', value: 70 });
+  });
+});
 
 function deepMerge(base, override) {
   if (Array.isArray(override)) return override;
@@ -54,27 +78,139 @@ function findIndicator(result, key) {
   return result.indicators.find((i) => i.key === key);
 }
 
-describe('total score integrity', () => {
-  it('sums to exactly 100 for a healthy under-65 input', () => {
+describe('financial-health indicator integrity', () => {
+  it('preserves the established eight household-finance indicator formulas, raw results, and score allocations', () => {
+    const result = calcIndicators(input());
+    const expected = {
+      household: { rawValue: 54, score: 14, maxScore: 15 },
+      emergency: { rawValue: 1200 / 270, score: 6, maxScore: 10 },
+      dsr: { rawValue: 4, score: 15, maxScore: 15 },
+      debtBurden: { rawValue: 500 / 3000 * 100, score: 9, maxScore: 10 },
+      insurance: { rawValue: 9, score: 10, maxScore: 10 },
+      savingsRate: { rawValue: 40, score: 5, maxScore: 5 },
+      retirementSavings: { rawValue: 75, score: 13, maxScore: 15 },
+      financialAssetRatio: { rawValue: 1700 / 3000 * 100, score: 5, maxScore: 5 },
+    };
+
+    Object.entries(expected).forEach(([key, expectedIndicator]) => {
+      const indicator = findIndicator(result, key);
+      expect(indicator.rawValue).toBeCloseTo(expectedIndicator.rawValue, 8);
+      expect(indicator.score).toBe(expectedIndicator.score);
+      expect(indicator.maxScore).toBe(expectedIndicator.maxScore);
+    });
+    expect(findIndicator(result, 'retirementSavings').formula).toBe('노후대비저축액 ÷ 총저축액 × 100');
+  });
+
+  // breakdown: 화면(FhsDetailReport)에서 비율의 근거가 된 실제 금액을 보여주기 위한 표시용
+  // 데이터. 판정(rawValue/score)에 이미 쓰인 agg 값을 그대로 재사용할 뿐 새 계산이 아니므로,
+  // 위 테스트가 검증한 것과 같은 HEALTHY_BASE 입력에서 각 지표의 분자·분모 금액이 정확히
+  // 일치하는지만 확인한다(연간원리금상환액=월상환액×12=20×12=240, 금융자산=투자자산+
+  // 현금성자산=500+1200=1700 등, 판정식에 쓰인 것과 동일한 원본 표현식).
+  it('8개 지표 모두 breakdown.numerator/denominator가 판정에 쓰인 agg 값과 정확히 일치한다', () => {
+    const result = calcIndicators(input());
+    const expectedBreakdowns = {
+      household: { numerator: { label: '총지출(저축 제외)', amount: 270 }, denominator: { label: '총소득', amount: 500 } },
+      emergency: { numerator: { label: '유동성자산', amount: 1200 }, denominator: { label: '월지출(저축 제외)', amount: 270 } },
+      dsr: { numerator: { label: '연간원리금상환액', amount: 240 }, denominator: { label: '연소득', amount: 6000 } },
+      debtBurden: { numerator: { label: '총부채', amount: 500 }, denominator: { label: '총자산', amount: 3000 } },
+      insurance: { numerator: { label: '보장성보험료(월)', amount: 45 }, denominator: { label: '월소득', amount: 500 } },
+      savingsRate: { numerator: { label: '총저축액(연)', amount: 2400 }, denominator: { label: '총소득(연)', amount: 6000 } },
+      retirementSavings: { numerator: { label: '노후대비저축액(연)', amount: 1800 }, denominator: { label: '총저축액(연)', amount: 2400 } },
+      financialAssetRatio: { numerator: { label: '금융자산(투자+현금성)', amount: 1700 }, denominator: { label: '총자산', amount: 3000 } },
+    };
+
+    Object.entries(expectedBreakdowns).forEach(([key, expected]) => {
+      expect(findIndicator(result, key).breakdown).toEqual(expected);
+    });
+  });
+
+  it('분모가 0이라 notCalculable인 지표는 breakdown이 null이다', () => {
+    const result = calcIndicators(input({ assets: { currentIncome: { monthly: 0 } } }));
+    const household = findIndicator(result, 'household');
+    expect(household.notCalculable).toBe(true);
+    expect(household.breakdown).toBeNull();
+  });
+
+  it('65세 이상(notApplicable)인 노후대비저축지표는 breakdown이 null이다', () => {
+    const result = calcIndicators(input({ basic: { birthYear: new Date().getFullYear() - 66 } }));
+    const retirementSavings = findIndicator(result, 'retirementSavings');
+    expect(retirementSavings.notApplicable).toBe(true);
+    expect(retirementSavings.breakdown).toBeNull();
+  });
+
+  it('노후소득보장률(retirementIncome, FHS 8개 지표 밖)에는 breakdown 필드를 추가하지 않는다', () => {
+    const result = calcIndicators(input());
+    const retirementIncome = findIndicator(result, 'retirementIncome');
+    expect(retirementIncome).not.toHaveProperty('breakdown');
+  });
+
+  // retirementSavingsInputVersion: 2 - 연금저축·IRP 자동합산 + 추가 노후저축 입력의 노후대비저축지표
+  // 공식(retirementSavingsAnnual ÷ totalSavingsAnnual × 100)은 변경하지 않는다. 지표에 들어가기 전
+  // 집계값만 버전에 맞게 만들어지는지 확인한다.
+  it('Case 1(v2): 연금저축 20 + IRP 30 자동합산, 추가 노후저축 없음 → 50%', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          annual: 1200,
+          retirementSavingsInputVersion: 2,
+          breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+        },
+      },
+    }));
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBeCloseTo(50, 8);
+  });
+
+  it('Case 2(v2): 연금저축 20 + IRP 30 + 추가 노후저축 10 → 약 54.5%', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          annual: 1200,
+          retirementSavingsInputVersion: 2,
+          breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+          additionalRetirementMonthly: 10,
+          additionalRetirementAnnual: 120,
+        },
+      },
+    }));
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBeCloseTo(720 / 1320 * 100, 8);
+    expect(findIndicator(result, 'retirementSavings').displayValue).toBeCloseTo(54.5, 8);
+  });
+
+  it('Case 5/6(v1 회귀): 버전 필드가 없으면 연금저축·IRP breakdown을 무시하고 레거시 retirementMonthly만 분자로 쓴다', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 200,
+          annual: 2400,
+          breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+          retirementMonthly: 50,
+          retirementAnnual: 600,
+        },
+      },
+    }));
+    // (20+30+50)*12 ÷ 2400 이 아니라, 기존 그대로 retirementAnnual(600) ÷ totalSavingsAnnual(2400)
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBeCloseTo(600 / 2400 * 100, 8);
+  });
+
+  it('does not expose a composite total or S~F grade for an under-65 input', () => {
     const result = calcIndicators(input());
     expect(result.is65Plus).toBe(false);
     expect(result.notCalculable).toBe(false);
-    expect(result.totalScore).toBe(
-      result.indicators.reduce((sum, i) => sum + i.score, 0)
-    );
-    const maxSum = result.indicators.reduce((sum, i) => sum + i.maxScore, 0);
-    expect(maxSum).toBe(100);
+    expect(result).not.toHaveProperty('totalScore');
+    expect(result).not.toHaveProperty('grade');
   });
 
-  it('sums to exactly 100 for a healthy 65+ input (indicator7 absorbed into indicator9)', () => {
+  it('keeps retirement savings not applicable at 65+ without transferring its allocation', () => {
     const result = calcIndicators(input({ basic: { birthYear: new Date().getFullYear() - 66 } }));
     expect(result.is65Plus).toBe(true);
     const retirementSavings = findIndicator(result, 'retirementSavings');
     const retirementIncome = findIndicator(result, 'retirementIncome');
     expect(retirementSavings.maxScore).toBe(0);
-    expect(retirementIncome.maxScore).toBe(30);
-    const maxSum = result.indicators.reduce((sum, i) => sum + i.maxScore, 0);
-    expect(maxSum).toBe(100);
+    expect(retirementSavings.notApplicable).toBe(true);
+    expect(retirementIncome.maxScore).toBe(15);
+    expect(retirementIncome.score).toBeLessThanOrEqual(15);
   });
 });
 
@@ -154,6 +290,40 @@ describe('A-2 / N/A handling - denominator 0 must never score best or worst sile
     expect(findIndicator(result, 'retirementSavings').notCalculable).toBe(true);
   });
 
+  it('uses retirement savings as part of an already-included total without double counting', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          annual: 1200,
+          retirementMonthly: 30,
+          retirementAnnual: 360,
+          retirementIncludedInTotal: true,
+        },
+      },
+    }));
+
+    expect(result.aggregates.totalSavingsAnnual).toBe(1200);
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBe(30);
+  });
+
+  it('adds separately managed retirement savings to the total before calculating the ratio', () => {
+    const result = calcIndicators(input({
+      assets: {
+        savingsPlan: {
+          monthly: 100,
+          annual: 1200,
+          retirementMonthly: 30,
+          retirementAnnual: 360,
+          retirementIncludedInTotal: false,
+        },
+      },
+    }));
+
+    expect(result.aggregates.totalSavingsAnnual).toBe(1560);
+    expect(findIndicator(result, 'retirementSavings').rawValue).toBeCloseTo(23.0769, 4);
+  });
+
   it('emergency: monthly expense=0 -> N/A (not 0x, not best, regardless of liquid assets)', () => {
     const zeroExpenseInput = input({
       assets: { currentLivingCost: { monthly: 0 } },
@@ -172,12 +342,19 @@ describe('A-2 / N/A handling - denominator 0 must never score best or worst sile
     expect(findIndicator(result, 'retirementIncome').notCalculable).toBe(true);
   });
 
-  it('a single N/A indicator makes the composite totalScore/grade null, not partially summed', () => {
+  it('reports missing inputs for the eight-indicator assessment without exposing a composite score', () => {
     const result = calcIndicators(input({ assets: { currentIncome: { monthly: 0 } } }));
     expect(result.notCalculable).toBe(true);
-    expect(result.totalScore).toBeNull();
-    expect(result.grade).toBeNull();
+    expect(result).not.toHaveProperty('totalScore');
+    expect(result).not.toHaveProperty('grade');
     expect(result.missingInputs.length).toBeGreaterThan(0);
+  });
+
+  it('keeps retirement-income N/A separate from the eight-indicator assessment', () => {
+    const result = calcIndicators(input({ expense: { retirementLivingCost: 0 } }));
+    expect(findIndicator(result, 'retirementIncome').notCalculable).toBe(true);
+    expect(result.notCalculable).toBe(false);
+    expect(result.missingInputs).not.toContain(findIndicator(result, 'retirementIncome').reason);
   });
 
   it('N/A indicators are excluded from weakest/strongest ranking', () => {
@@ -347,15 +524,15 @@ describe('A-1 boundary continuity (T-0.01 / T / T+0.01) - cutoffs unchanged, gap
     expect(ind.score).toBe(expectedScore);
   });
 
-  it('retirementIncome doubles to max 30 for 65+', () => {
+  it('retirementIncome keeps its standalone max 15 for 65+', () => {
     const result = calcIndicators(
       retirementIncomeCase(120)
         ? deepMerge(retirementIncomeCase(120), { basic: { birthYear: new Date().getFullYear() - 66 } })
         : {}
     );
     const ind = findIndicator(result, 'retirementIncome');
-    expect(ind.maxScore).toBe(30);
-    expect(ind.score).toBe(30);
+    expect(ind.maxScore).toBe(15);
+    expect(ind.score).toBe(15);
   });
 
   // emergency (multiple) = liquidAssets / monthlyExpense, monthlyExpense fixed at 100.

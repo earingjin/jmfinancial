@@ -147,7 +147,7 @@ function FinancialOverviewCard({ od, aggregates }) {
   );
 }
 
-// "종합 결과"의 현재 재무상태 카드에 쓰는 3개 대표 FHS 지표. 점수·등급·권장기준은 전부
+// "종합 결과"의 현재 재무상태 카드에 쓰는 3개 대표 재무평가 항목. 점수·등급·참고 범위는 전부
 // api/_lib/indicators.js·indicatorMeta.js에서 이미 계산·enrich된 값을 그대로 쓰고, 여기서는
 // 화면 표시용 라벨만 다시 붙인다(재무 기준 자체를 새로 만들지 않음).
 const FHS_REP_KEYS = ['household', 'emergency', 'dsr'];
@@ -240,8 +240,7 @@ function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, living
   );
 }
 
-// 재무건강 총점은 연령대별 공식 통계(2025년 가계금융복지조사)가 없어 이번 갱신에서 제외한다
-// (peerComparison.js의 retirementScore 자체는 하위호환을 위해 여전히 존재하지만 화면에는 표시하지 않음).
+// 재무건강 종합점수는 제공하지 않으므로 또래 비교에서도 제외한다.
 const PEER_METRIC_DEFS = [
   { key: 'netWorth', label: '순자산', unit: 'won' },
   { key: 'annualIncome', label: '연소득', unit: 'won', peerKey: 'householdIncome' },
@@ -581,7 +580,7 @@ function RetirementAssetProjectionChart({ projection }) {
   );
 }
 
-export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare }) {
+export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare, onDownloadFhsDetail }) {
   const { generatedAt, peerComparison, webSummary, aggregates, indicators } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
@@ -617,6 +616,21 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         </button>
         <button type="button" className="ss-back-btn" onClick={onBack}>
           ← 뒤로가기
+        </button>
+      </div>
+
+      {/* 요약/상세 리포트/재무건강 리포트 3개 화면을 오가는 형식 전환 탭. 새 계산이나 새 전환
+          로직 없이 기존 onDownload/onDownloadFhsDetail(→goToReport/goToFhsDetailReport)을
+          그대로 재사용한다. */}
+      <div className="ss-format-tabs" role="tablist" aria-label="리포트 형식 선택">
+        <button type="button" className="ss-format-tab ss-format-tab--active" role="tab" aria-selected="true">
+          <span>모바일</span><span className="ss-format-tab-type">(Lite)</span>
+        </button>
+        <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onDownload}>
+          <span>상세 리포트</span><span className="ss-format-tab-type">(Standard)</span>
+        </button>
+        <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onDownloadFhsDetail}>
+          <span>재무건강 리포트</span><span className="ss-format-tab-type">(Pro)</span>
         </button>
       </div>
 
@@ -826,7 +840,6 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                     </p>
                   </div>
                 )}
-                <p className="overview-card-formula">월 예상 노후소득 ÷ 은퇴 후 월 필요생활비 × 100</p>
                 {!rr.retirementIncomeIndicator?.notCalculable && rr.retirementIncomeIndicator?.value === 0 && (
                   <p className="overview-card-zero-reason">
                     {rr.retirementIncomeZeroReason || '월 수령 방식으로 입력된 노후 연금액이 없어 0%입니다.'}
@@ -1164,9 +1177,12 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
       {/* 5. 상세 리포트 다운로드 */}
       <section className="ss-download-section" aria-labelledby="ss-h-download">
         <h2 id="ss-h-download" className="simple-summary-title">더 자세한 분석이 필요하신가요?</h2>
-        <p className="simple-summary-subtitle">상세 리포트에서 재무 현황과 분석 내용을 확인해 보세요.</p>
+        <p className="simple-summary-subtitle">리포트에서 더 심화된 재무 현황을 확인해 보세요.</p>
         <button type="button" className="btn-primary ss-download-btn" onClick={onDownload}>
-          상세 리포트 다운로드
+          상세 리포트 (Standard) PDF
+        </button>
+        <button type="button" className="btn-secondary ss-download-btn" onClick={onDownloadFhsDetail}>
+          재무건강 리포트 (Pro) PDF
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>

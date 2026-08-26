@@ -223,3 +223,56 @@ describe('buildSavingsBreakdown - retirementIncludedInTotal consistency', () => 
     expect(items.find((it) => it.key === 'retirement')).toBeUndefined();
   });
 });
+
+// retirementSavingsInputVersion: 2 - 연금저축·IRP는 breakdown 항목으로 이미 슬라이스에 포함되므로,
+// 여기서는 additionalRetirementMonthly만 별도 슬라이스로 한 번 추가한다(aggregate.js의 v2
+// monthlySavings와 합계가 일치해야 한다).
+describe('buildSavingsBreakdown - retirementSavingsInputVersion 2', () => {
+  it('adds a single 추가 노후준비저축 slice for additionalRetirementMonthly, on top of the breakdown total', () => {
+    const items = buildSavingsBreakdown({
+      assets: {
+        savingsPlan: {
+          retirementSavingsInputVersion: 2,
+          breakdown: { pensionSavings: { monthly: 20 }, irp: { monthly: 30 } },
+          customItems: [],
+          additionalRetirementMonthly: 10,
+        },
+      },
+    });
+    expect(items).toContainEqual({ key: 'pensionSavings', label: '연금저축', value: 20 });
+    expect(items).toContainEqual({ key: 'irp', label: 'IRP', value: 30 });
+    expect(items).toContainEqual({ key: 'additionalRetirement', label: '추가 노후준비저축', value: 10 });
+    expect(items.reduce((s, it) => s + it.value, 0)).toBe(60);
+  });
+
+  it('adds no zero-value slice when additionalRetirementMonthly is 0', () => {
+    const items = buildSavingsBreakdown({
+      assets: {
+        savingsPlan: {
+          retirementSavingsInputVersion: 2,
+          breakdown: { pensionSavings: { monthly: 20 } },
+          customItems: [],
+          additionalRetirementMonthly: 0,
+        },
+      },
+    });
+    expect(items.find((it) => it.key === 'additionalRetirement')).toBeUndefined();
+  });
+
+  it('ignores the legacy retirementIncludedInTotal/retirementMonthly fields entirely in v2', () => {
+    const items = buildSavingsBreakdown({
+      assets: {
+        savingsPlan: {
+          retirementSavingsInputVersion: 2,
+          breakdown: { installment: 50 },
+          customItems: [],
+          retirementIncludedInTotal: false,
+          retirementMonthly: 999,
+          additionalRetirementMonthly: 0,
+        },
+      },
+    });
+    expect(items.find((it) => it.key === 'retirement')).toBeUndefined();
+    expect(items.reduce((s, it) => s + it.value, 0)).toBe(50);
+  });
+});
