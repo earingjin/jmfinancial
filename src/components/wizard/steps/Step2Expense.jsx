@@ -184,11 +184,22 @@ export default function Step2Expense() {
           addLabel="목돈지출 추가"
           maxItems={10}
           emptyItem={{ name: '', expectedAge: '', amount: '' }}
-          renderItem={(item, _i, update) => (
+          renderItem={(item, i, update) => {
+            // 서버 검증(validate.js)과 동일한 기준: 나이·금액 중 하나라도 입력된 항목은 지출 용도(name)가 필수다.
+            const isBlank = (v) => v === '' || v === null || v === undefined;
+            const nameRequired = !isBlank(item.expectedAge) || !isBlank(item.amount) || !isBlank(item.name);
+            return (
             <div className="field-grid three-col">
               <label className="field">
-                <span className="field-label">지출 용도</span>
-                <input type="text" placeholder="예: 자녀 결혼지원" value={item.name} onChange={(e) => update('name', e.target.value)} />
+                <span className="field-label">지출 용도{nameRequired ? ' *' : ''}</span>
+                <input
+                  id={`expense.retirementLumpSumExpenses.${i}.name`}
+                  type="text"
+                  placeholder="예: 자녀 결혼지원"
+                  value={item.name}
+                  onChange={(e) => update('name', e.target.value)}
+                  required={nameRequired}
+                />
               </label>
               <label className="field">
                 <span className="field-label">예상 지출 나이</span>
@@ -205,7 +216,8 @@ export default function Step2Expense() {
                 </div>
               </label>
             </div>
-          )}
+            );
+          }}
         />
         <span className="field-helper">예상 지출 나이는 은퇴(예정) 연령 이후 ~ 기대수명 이내로 입력해 주세요.</span>
       </section>

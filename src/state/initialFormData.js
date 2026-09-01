@@ -183,7 +183,7 @@ export const initialFormData = {
       // 대출 종류별 상세(총 부채잔액/월 상환액은 이 값들의 합으로 자동 계산됨)
       // 항목별 shape: { repaymentType: 'interestOnly'|'equalPrincipal', principal, monthlyInterest, monthlyRepayment, months }
       breakdown: {
-        mortgage: {},      // 주담대
+        mortgage: {},      // 주택담보대출
         depositLoan: {},   // 보증금대출
         businessLoan: {},  // 사업자대출
         buildingLoan: {},  // 빌딩대출

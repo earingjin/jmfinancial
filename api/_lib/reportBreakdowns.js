@@ -18,7 +18,7 @@ const SAVINGS_CATEGORY_LABELS = {
 };
 
 const DEBT_CATEGORY_LABELS = {
-  mortgage: '주담대',
+  mortgage: '주택담보대출',
   depositLoan: '보증금대출',
   businessLoan: '사업자대출',
   buildingLoan: '빌딩대출',

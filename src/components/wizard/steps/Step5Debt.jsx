@@ -4,7 +4,7 @@ import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 
 const DEBT_CATEGORIES = [
-  { key: 'mortgage', label: '주담대' },
+  { key: 'mortgage', label: '주택담보대출' },
   { key: 'depositLoan', label: '보증금대출' },
   { key: 'businessLoan', label: '사업자대출' },
   { key: 'buildingLoan', label: '빌딩대출' },

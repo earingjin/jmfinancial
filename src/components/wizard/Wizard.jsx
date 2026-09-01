@@ -7,10 +7,9 @@ import Step5Debt from './steps/Step5Debt';
 import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
-import { getIn } from '../../state/pathUtils';
+import { computeWizardRequiredFields } from '../../state/wizardRequiredFields';
 import DiagnosisAreaIcon from '../DiagnosisAreaIcon';
 
-const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 const SHOW_SCENARIO_STEP = false;
 
 const STEPS = [
@@ -113,20 +112,34 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     void saveCurrentDraft(resolved).catch(() => {});
   };
 
-  const requiredBasicPaths = ['basic.birthYear', 'basic.retirementAge', 'basic.lifeExpectancy', 'basic.serviceYears'];
-  const basicInfoMissing = requiredBasicPaths.some((path) => !isFilled(getIn(formData, path)));
-  const retirementLivingCostMissing = !isFilled(getIn(formData, 'expense.retirementLivingCost'));
-  const requiredErrorMessage = basicInfoMissing
-    ? '"1. 수입"의 기본 정보는 모두 필수 입력 항목입니다. 출생년도, 은퇴연령, 기대수명, 근속년수를 입력해 주세요.'
-    : '"2. 지출"의 노후 월 평균 생활비는 필수 입력 항목입니다. 값을 입력한 뒤 진행해 주세요.';
+  // path·label을 함께 들고 있어야 안내 문구에 항목명을 나열하고, 그 중 첫 번째 항목으로 화면을
+  // 스크롤·포커스할 수 있다(NumberField가 path를 그대로 input id로 쓴다). 판정 조건 자체는
+  // wizardRequiredFields.js 참고(api/_lib/validate.js와 동일 기준).
+  const { missingIncomeFields, missingExpenseFields, basicInfoMissing, retirementLivingCostMissing, requiredErrorMessage } =
+    computeWizardRequiredFields(formData);
+
+  // 안내 문구가 가리키는 첫 번째 미입력 항목으로 화면을 이동한다. moveToStep이 다른 스텝으로
+  // 넘어가는 경우 그 스텝의 DOM이 그려질 시간이 필요하므로(150ms는 위 79번째 줄의 포커스 스크롤과
+  // 동일한 지연), 스텝 이동이 없을 때도 같은 지연을 그대로 써서 로직을 하나로 유지한다.
+  const scrollToField = (path) => {
+    if (!path) return;
+    window.setTimeout(() => {
+      const el = document.getElementById(path);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus({ preventScroll: true });
+    }, 150);
+  };
 
   const goNext = () => {
     if (currentStepKey === 'income' && basicInfoMissing) {
       setShowRequiredError(true);
+      scrollToField(missingIncomeFields[0][0]);
       return;
     }
     if (currentStepKey === 'expense' && retirementLivingCostMissing) {
       setShowRequiredError(true);
+      scrollToField(missingExpenseFields[0][0]);
       return;
     }
     setShowRequiredError(false);
@@ -137,11 +150,13 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     if (basicInfoMissing) {
       setShowRequiredError(true);
       moveToStep(STEPS.findIndex((s) => s.key === 'income'));
+      scrollToField(missingIncomeFields[0][0]);
       return;
     }
     if (retirementLivingCostMissing) {
       setShowRequiredError(true);
       moveToStep(STEPS.findIndex((s) => s.key === 'expense'));
+      scrollToField(missingExpenseFields[0][0]);
       return;
     }
     setShowRequiredError(false);
