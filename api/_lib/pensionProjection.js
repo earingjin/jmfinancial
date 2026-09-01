@@ -21,16 +21,18 @@ function buildComponents(person) {
   // 항상 물가연동형(일반 물가상승률)으로 가정한다.
   if (!('type' in severance) || severance.type === 'pension') {
     components.push({
+      paymentPeriod: 'finite',
       monthlyAmount: n(severance.pensionMonthly),
       months: n(severance.pensionMonths),
       growthRate: GENERAL_INFLATION_RATE,
     });
   }
 
-  // 국민연금: 2026 적용률 2.1%를 반복 적용하는 모델 가정이다. 영구 고정 정책률이 아니다.
+  // 국민연금: 수급개시 이후 종신 지급하므로 months를 종료기간으로 사용하지 않는다.
+  // 2026 적용률 2.1%를 반복 적용하는 모델 가정이며, 영구 고정 정책률이라는 뜻은 아니다.
   components.push({
+    paymentPeriod: 'lifetime',
     monthlyAmount: n(nationalPension.monthly),
-    months: n(nationalPension.months),
     growthRate: NATIONAL_PENSION_GROWTH_RATE,
   });
 
@@ -38,6 +40,7 @@ function buildComponents(person) {
   // 항상 물가연동형(일반 물가상승률)으로 가정한다.
   if (personalPension.type === 'installment' || !('type' in personalPension)) {
     components.push({
+      paymentPeriod: 'finite',
       monthlyAmount: n(personalPension.monthly),
       months: n(personalPension.months),
       growthRate: GENERAL_INFLATION_RATE,
@@ -50,7 +53,7 @@ function buildComponents(person) {
 function pensionIncomeAtYear(components, year) {
   return components.reduce((sum, c) => {
     if (c.monthlyAmount <= 0) return sum;
-    if (c.months > 0 && year * 12 > c.months) return sum; // 수령기간 종료 (수령기간 이내 마지막 해까지는 지급)
+    if (c.paymentPeriod === 'finite' && c.months > 0 && year * 12 > c.months) return sum; // 수령기간 종료 (수령기간 이내 마지막 해까지는 지급)
     return sum + c.monthlyAmount * Math.pow(1 + c.growthRate, year);
   }, 0);
 }

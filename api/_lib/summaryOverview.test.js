@@ -442,11 +442,41 @@ describe('buildFinancialOverviewDetail - grouped card (income / expense / balanc
     expect(detail.income.salaryItems.reduce((sum, item) => sum + item.value, 0)).toBe(detail.income.salary);
   });
 
-  it('groups expense into living/housing/insurance vs savings, fixedTotal is their sum', () => {
+  it('uses the user-entered names for business and other income detail rows', () => {
+    const scoped = input({
+      income: {
+        business: { monthly: 100 },
+        otherIncomes: [{ name: '임대 관리 수입', annual: 600 }],
+        regularIncomes: [
+          { type: 'business', name: '온라인 쇼핑몰', annual: 1200 },
+          { type: 'other', name: '임대 관리 수입', annual: 600 },
+        ],
+      },
+    });
+    const { aggregates } = calc(scoped);
+    const detail = buildFinancialOverviewDetail(scoped, aggregates);
+
+    expect(detail.income.businessAndOtherItems).toEqual([
+      { key: 'regular-income-0', label: '온라인 쇼핑몰', value: 100 },
+      { key: 'regular-income-1', label: '임대 관리 수입', value: 50 },
+    ]);
+    expect(detail.income.businessAndOtherItems.reduce((sum, item) => sum + item.value, 0))
+      .toBeCloseTo(detail.income.businessAndOther, 6);
+  });
+
+  it('separates debt repayment from living/housing/insurance while preserving the fixed total', () => {
     const scoped = input();
     const { aggregates } = calc(scoped);
     const detail = buildFinancialOverviewDetail(scoped, aggregates);
-    expect(detail.expense.fixedTotal).toBeCloseTo(detail.expense.livingHousingInsurance + detail.expense.savings, 6);
+    expect(detail.expense.debtRepayment).toBe(aggregates.monthlyDebtRepayment);
+    expect(detail.expense.livingHousingInsurance).toBeCloseTo(
+      aggregates.totalExpenseMonthlyExSavings - detail.expense.debtRepayment,
+      6,
+    );
+    expect(detail.expense.fixedTotal).toBeCloseTo(
+      detail.expense.livingHousingInsurance + detail.expense.debtRepayment + detail.expense.savings,
+      6,
+    );
     expect(detail.expense.incomeMinusExpense).toBeCloseTo(detail.income.monthlyTotal - detail.expense.fixedTotal, 6);
     expect(detail.expense.savings).toBe(aggregates.monthlySavings);
   });
