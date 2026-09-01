@@ -74,7 +74,7 @@ describe('FhsDetailReport', () => {
     expect(html).toContain('재무건강지수 평가 항목 요약');
     expect(html).toContain('한국형 가계재무비율을 참고한 8개 지표');
     expect(html).not.toContain('노후소득보장률');
-    expect(html).toContain('재무건강지수란?');
+    expect(html).toContain('재무건강지수 읽는 방법');
     expect(html).toContain('보완할 항목의 우선순위');
     expect(html).toContain('산출 불가');
     expect(html).toContain('01 / 5');

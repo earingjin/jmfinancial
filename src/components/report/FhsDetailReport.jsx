@@ -326,16 +326,17 @@ function IndicatorSummaryPage({ indicators, interpretation, pageNumber, totalPag
 
   return (
     <PageFrame
-      eyebrow="JMFinancial Household Finance Review"
+      eyebrow="현재 우리 집 재무상태는 괜찮은 건가요? 어떤 기준으로 관리하면 되나요?"
       title="재무건강지수 평가 항목 요약"
       pageNumber={pageNumber}
       totalPages={totalPages}
+      plan="Pro"
     >
       <p className="fhs-summary-intro">
-        한국형 가계재무비율을 참고한 8개 지표의 점수와 현재 상태를 함께 정리했습니다.
+        재무건강지수는 한국형 가계재무 가이드라인 지표로서 한국FP학회에서 권장하는 재무권장 기준을 준수합니다. <br></br>본 가이드라인은 절대적인 기준은 아니고 바람직한 기준입니다.
       </p>
       <section className="fhs-definition" aria-labelledby="fhs-definition-title">
-        <h3 id="fhs-definition-title">재무건강지수란?</h3>
+        <h3 id="fhs-definition-title">재무건강지수 읽는 방법</h3>
         <p>
           현재 소득과 지출, 비상자금, 부채 등을 바탕으로 가계의 전반적인 재무 안정성을 살펴봅니다.
         </p>
@@ -477,9 +478,9 @@ export default function FhsDetailReport({ result, onRestart, onBack, onHome, cli
       {DETAIL_PAGE_GROUPS.map((group, groupIndex) => (
         <PageFrame
           key={group.label}
-          eyebrow="JMFinancial Household Finance Review"
           pageNumber={nextPage()}
           totalPages={totalPages}
+          plan="Pro"
           contentClassName={groupIndex < 3 ? 'fhs-keynote-page' : ''}
         >
           <SectionBadge number={null} label={`Part ${group.number} ${group.label}`} />

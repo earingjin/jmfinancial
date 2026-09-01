@@ -580,7 +580,7 @@ function RetirementAssetProjectionChart({ projection }) {
   );
 }
 
-export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare, onDownloadFhsDetail }) {
+export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare }) {
   const { generatedAt, peerComparison, webSummary, aggregates, indicators } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
@@ -619,18 +619,13 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         </button>
       </div>
 
-      {/* 요약/상세 리포트/재무건강 리포트 3개 화면을 오가는 형식 전환 탭. 새 계산이나 새 전환
-          로직 없이 기존 onDownload/onDownloadFhsDetail(→goToReport/goToFhsDetailReport)을
-          그대로 재사용한다. */}
+      {/* 요약과 상세 리포트 화면을 오가는 형식 전환 탭. */}
       <div className="ss-format-tabs" role="tablist" aria-label="리포트 형식 선택">
         <button type="button" className="ss-format-tab ss-format-tab--active" role="tab" aria-selected="true">
           <span>모바일</span><span className="ss-format-tab-type">(Lite)</span>
         </button>
         <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onDownload}>
           <span>상세 리포트</span><span className="ss-format-tab-type">(Standard)</span>
-        </button>
-        <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onDownloadFhsDetail}>
-          <span>재무건강 리포트</span><span className="ss-format-tab-type">(Pro)</span>
         </button>
       </div>
 
@@ -1180,9 +1175,6 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         <p className="simple-summary-subtitle">리포트에서 더 심화된 재무 현황을 확인해 보세요.</p>
         <button type="button" className="btn-primary ss-download-btn" onClick={onDownload}>
           상세 리포트 (Standard) PDF
-        </button>
-        <button type="button" className="btn-secondary ss-download-btn" onClick={onDownloadFhsDetail}>
-          재무건강 리포트 (Pro) PDF
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>

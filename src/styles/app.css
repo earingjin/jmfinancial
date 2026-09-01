@@ -947,7 +947,7 @@ table.indicator-breakdown-table th { text-align: center; }
 .pill-risk { background: var(--red-soft); color: #8e332a; }
 .pill-unavailable { background: var(--paper); color: var(--ink-soft); }
 
-.fhs-summary-intro { margin: -2px 0 12px; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.fhs-summary-intro { margin: 0 0 12px; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
 .fhs-definition { margin: 0 0 12px; padding: 9px 12px; border: 1px solid rgba(232, 220, 198, .72); border-radius: 8px; background: rgba(250, 243, 230, .55); }
 .fhs-definition h3 { margin: 0 0 3px; color: var(--navy-900); font-size: 12px; letter-spacing: -.02em; }
 .fhs-definition p { margin: 0; color: var(--ink-soft); font-size: 10.5px; line-height: 1.45; }

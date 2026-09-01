@@ -183,12 +183,6 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setPhase('report');
   };
 
-  const goToFhsDetailReport = () => {
-    summaryScrollPositionRef.current = window.scrollY;
-    window.scrollTo(0, 0);
-    setPhase('fhs-report');
-  };
-
   const goHome = () => setPhase('home');
 
   // "자산진단 시작하기"(홈/히스토리) - 위저드를 다 채우기 전에 홈으로 나왔다가 돌아온 경우는
@@ -315,7 +309,6 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
               onHome={goHome}
               onDownload={goToReport}
               onShare={goToReport}
-              onDownloadFhsDetail={goToFhsDetailReport}
             />
           </Suspense>
         )}
