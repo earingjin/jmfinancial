@@ -1,15 +1,15 @@
 import aiDataCenterLogo from '../../../assets/ai데이터센터로고.png';
 
-export default function PageFrame({ eyebrow, title, pageNumber, totalPages, children, contentClassName = '' }) {
+export default function PageFrame({ eyebrow, title, pageNumber, totalPages, children, contentClassName = '', plan = 'Standard' }) {
   return (
     <div className="page">
       <div className="page-vine-bg" aria-hidden="true" />
       <div className={`page-pad ${contentClassName}`}>
         <div className="masthead">
           <span className="masthead-kr">제이엠 자산관리 플래너</span>
-          <span className="masthead-en">JM Financial Planner</span>
+          <span className="masthead-en">JM Financial Planner ({plan})</span>
         </div>
-        <div className="eyebrow">{eyebrow}</div>
+        {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         {title && <h2 className="section-title">{title}</h2>}
         {children}
       </div>
