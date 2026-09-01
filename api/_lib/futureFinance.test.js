@@ -5,6 +5,7 @@ import {
   buildFiveYearOutlookAges,
   buildFutureFinanceProjection,
   buildRetirementAssetProjection,
+  calculatePensionIncomeAtTarget,
   calculateNonPensionIncomeAtTarget,
   calculateFutureValue,
   calculateFutureLivingExpense,
@@ -43,6 +44,7 @@ describe('future finance projection', () => {
     expect(result.targets[0].livingExpense).toBe(403);
     expect(result.targets[0].pensionBreakdown.nationalPension).toBe(0);
     expect(result.targets[1].pensionIncome).toBe(327);
+    expect(result.targets[2].pensionBreakdown.nationalPension).toBeGreaterThan(0);
     expect(result.purchasingPower.map((item) => item.requiredAmount)).toEqual([50000, 67196, 90306]);
   });
 
@@ -177,6 +179,44 @@ describe('future finance projection', () => {
     expect(at80.pensionBreakdown.retirementPension).toBe(0);
   });
 
+  it('pays national pension from its start age through 10, 20, and 30 years later', () => {
+    const input = makeInput({
+      basic: { birthYear: 1986, retirementAge: 60, lifeExpectancy: 95, hasSpouse: false },
+      income: {
+        nationalPension: { monthly: 100, months: 240 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+    });
+    const atAge = (age) => calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: age - 40 });
+
+    expect(atAge(64).nationalPension).toBe(0);
+    [65, 75, 85, 95].forEach((age) => {
+      const pension = atAge(age);
+      expect(pension.nationalPension).toBeGreaterThan(0);
+      expect(pension.components[0].inclusionStatus).toBe('included');
+      expect(pension.components[0].endAge).toBeNull();
+    });
+
+    const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });
+    expect(result.fiveYearOutlook.at(-1).age).toBe(95);
+    expect(result.fiveYearOutlook.at(-1).pensionBreakdown.nationalPension).toBeGreaterThan(0);
+    expect(result.retirementCashFlowOutlook.at(-1).pensionBreakdown.nationalPension).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['direct paymentMonths', { inputMode: 'direct', monthly: 100, months: 12, paymentMonths: 240 }],
+    ['simulated contributionMonths', { inputMode: 'simulate', monthly: 100, months: 12, simulate: { contributionMonths: 240 } }],
+  ])('uses %s only for eligibility, never as a national pension payment duration', (_label, nationalPension) => {
+    const input = makeInput({
+      basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 95, hasSpouse: false },
+      income: { nationalPension, severance: { type: 'none' }, personalPension: { type: 'none' } },
+    });
+    const afterThirtyYears = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 55 });
+    expect(afterThirtyYears.nationalPension).toBeGreaterThan(0);
+    expect(afterThirtyYears.components[0].inclusionStatus).toBe('included');
+  });
+
   it('marks the target incalculable when a positive monthly pension has unknown timing', () => {
     const input = makeInput({ income: { nationalPension: { monthly: 0, months: 0 }, personalPension: { type: 'installment', monthly: 50, startAge: '', months: 240 }, severance: { type: 'none' } } });
     const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });
@@ -192,8 +232,13 @@ describe('future finance projection', () => {
     });
     const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });
     const at70 = result.targets.find((item) => item.age === 70);
+    const at80 = result.targets.find((item) => item.age === 80);
+    const selfNational = at70.pensionBreakdown.components.find((item) => item.key === 'self.nationalPension');
     const spouseNational = at70.pensionBreakdown.components.find((item) => item.key === 'spouse.nationalPension');
+    const spouseNationalAfterStart = at80.pensionBreakdown.components.find((item) => item.key === 'spouse.nationalPension');
+    expect(selfNational.inclusionStatus).toBe('included');
     expect(spouseNational.inclusionStatus).toBe('beforeStart');
+    expect(spouseNationalAfterStart.inclusionStatus).toBe('included');
   });
 });
 

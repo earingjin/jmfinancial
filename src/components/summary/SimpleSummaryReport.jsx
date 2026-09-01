@@ -98,7 +98,13 @@ function FinancialOverviewCard({ od, aggregates }) {
         ) : (
           <DetailRow label="급여" value={formatWon(od.income.salary)} missing={od.income.salaryMissing} />
         )}
-        <DetailRow label="사업·기타소득" value={formatWon(od.income.businessAndOther)} missing={od.income.businessAndOtherMissing} />
+        {od.income.businessAndOtherItems?.length ? (
+          od.income.businessAndOtherItems.map((item) => (
+            <DetailRow key={item.key} label={item.label} value={formatWon(item.value)} />
+          ))
+        ) : (
+          <DetailRow label="사업·기타소득" value={formatWon(od.income.businessAndOther)} missing={od.income.businessAndOtherMissing} />
+        )}
         <DetailRow
           label="합계" bold subtotal
           value={<>{formatWon(od.income.monthlyTotal)} · 연 {formatWon(od.income.annualTotal)}</>}
@@ -108,6 +114,7 @@ function FinancialOverviewCard({ od, aggregates }) {
       <div className="detail-group">
         <div className="detail-group-head">지출 <span className="detail-group-tag">월평균</span></div>
         <DetailRow label="생활비·주거비·보험" value={formatWon(od.expense.livingHousingInsurance)} missing={od.expense.livingHousingInsuranceMissing} />
+        <DetailRow label="대출 상환" value={formatWon(od.expense.debtRepayment)} missing={od.expense.debtRepaymentMissing} />
         <DetailRow label="저축·투자" value={formatWon(od.expense.savings)} missing={od.expense.savingsMissing} />
         <DetailRow label="고정지출 합계" bold subtotal value={formatWon(od.expense.fixedTotal)} />
       </div>
@@ -289,7 +296,7 @@ function PeerMetricRow({ label, metric, unit }) {
   );
 }
 
-function RetirementCashFlowChart({ outlook }) {
+function RetirementCashFlowChart({ outlook, pensionStartAge }) {
   if (!outlook?.length || outlook.some((item) => !Number.isFinite(item.totalIncome))) {
     return <p className="ss-guidance">전체소득 전망이 없는 이전 결과입니다. 재무진단을 다시 실행하면 은퇴 후 현금흐름 그래프를 확인할 수 있습니다.</p>;
   }
@@ -311,6 +318,9 @@ function RetirementCashFlowChart({ outlook }) {
     ...[...outlook].reverse().map((item) => `${x(item.age)},${y(item.totalIncome || 0)}`),
   ].join(' ');
   const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const pensionStartIsVisible = Number.isFinite(pensionStartAge) && pensionStartAge >= minAge && pensionStartAge <= maxAge;
+  const pensionLabelAnchor = pensionStartAge <= minAge ? 'start' : pensionStartAge >= maxAge ? 'end' : 'middle';
+  const pensionLabelDx = pensionStartAge <= minAge ? 4 : pensionStartAge >= maxAge ? -4 : 0;
 
   return (
     <div className="retirement-cashflow-chart">
@@ -322,6 +332,19 @@ function RetirementCashFlowChart({ outlook }) {
           );
         })}
         <polygon className="retirement-chart-gap" points={gapPoints} />
+        {pensionStartIsVisible && (
+          <g className="retirement-chart-pension-start-marker">
+            <line className="retirement-chart-pension-start-line" x1={x(pensionStartAge)} x2={x(pensionStartAge)} y1={plot.top} y2={plot.top + plotHeight} />
+            <text
+              className="retirement-chart-pension-start-label"
+              style={{ textAnchor: pensionLabelAnchor }}
+              x={x(pensionStartAge) + pensionLabelDx}
+              y={height - 34}
+            >
+              연금 수령 시작
+            </text>
+          </g>
+        )}
         <polyline className="retirement-chart-line retirement-chart-line--expense" points={expensePoints} />
         <polyline className="retirement-chart-line retirement-chart-line--income" points={incomePoints} />
         {outlook.map((item, index) => {
@@ -1119,7 +1142,10 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
                   </button>
                 </div>
                 <p className="simple-summary-subtitle">현재 입력한 소득의 유지 기간과 연금 수령 시점을 반영해, 은퇴 후 예상 생활비와 총소득의 차이를 5년 단위로 보여드립니다. 생활비는 연 3%씩 상승한다고 가정합니다.</p>
-                <RetirementCashFlowChart outlook={future.retirementCashFlowOutlook} />
+                <RetirementCashFlowChart
+                  outlook={future.retirementCashFlowOutlook}
+                  pensionStartAge={future.nationalPensionStartAge}
+                />
                 <p className="future-chart-help">주황색은 예상 월 생활비, 초록색은 예상 월 총소득입니다. 두 선 사이가 넓을수록 매월 예상되는 부족액 또는 여유금액이 큽니다.</p>
                 {showFiveYearTable && (
                   <>

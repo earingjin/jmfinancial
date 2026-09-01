@@ -91,21 +91,43 @@ function pensionComponents(input, currentYear) {
   });
 }
 
+function evaluateNationalPension(component, years) {
+  if (!present(component.startAge) || component.currentAge == null) {
+    return { ...component, amount: null, inclusionStatus: 'unknown', endAge: null };
+  }
+  const ageAtTarget = component.currentAge + years;
+  const active = ageAtTarget >= n(component.startAge);
+  return {
+    ...component,
+    amount: active ? calculateFutureValue(component.monthly, component.growthRate, years) : 0,
+    inclusionStatus: active ? 'included' : 'beforeStart',
+    // 국민연금 노령연금은 수급개시연령 이후 종신 지급한다. 레거시 months와 가입·납부기간은
+    // 지급 종료연령이 아니므로 endAge 계산에 사용하지 않는다.
+    endAge: null,
+  };
+}
+
+function evaluateFinitePension(component, years) {
+  if (!present(component.startAge) || !present(component.months) || component.currentAge == null) {
+    return { ...component, amount: null, inclusionStatus: 'unknown' };
+  }
+  const ageAtTarget = component.currentAge + years;
+  const endAge = n(component.startAge) + n(component.months) / 12;
+  const active = n(component.startAge) <= ageAtTarget && ageAtTarget < endAge;
+  return {
+    ...component,
+    amount: active ? calculateFutureValue(component.monthly, component.growthRate, years) : 0,
+    inclusionStatus: active ? 'included' : ageAtTarget < n(component.startAge) ? 'beforeStart' : 'afterEnd',
+    endAge,
+  };
+}
+
 export function calculatePensionIncomeAtTarget({ input, currentYear, years }) {
   const components = pensionComponents(input, currentYear).map((component) => {
     if (component.monthly <= 0) return { ...component, amount: 0, inclusionStatus: 'zero' };
-    if (!present(component.startAge) || !present(component.months) || component.currentAge == null) {
-      return { ...component, amount: null, inclusionStatus: 'unknown' };
-    }
-    const ageAtTarget = component.currentAge + years;
-    const endAge = n(component.startAge) + n(component.months) / 12;
-    const active = n(component.startAge) <= ageAtTarget && ageAtTarget < endAge;
-    return {
-      ...component,
-      amount: active ? calculateFutureValue(component.monthly, component.growthRate, years) : 0,
-      inclusionStatus: active ? 'included' : ageAtTarget < n(component.startAge) ? 'beforeStart' : 'afterEnd',
-      endAge,
-    };
+    return component.category === 'nationalPension'
+      ? evaluateNationalPension(component, years)
+      : evaluateFinitePension(component, years);
   });
   const unknown = components.filter((component) => component.inclusionStatus === 'unknown');
   const byCategory = (category) => {

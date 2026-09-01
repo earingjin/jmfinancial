@@ -361,10 +361,11 @@ export function buildFinancialOverviewDetail(input, aggregates) {
   const salaryMissing = allBlank(input, ['assets.currentIncome.monthly']);
   const businessOtherMissing = allBlank(input, ['income.business.monthly', 'income.otherIncomes']);
   const savingsMissing = allBlank(input, ['assets.savingsPlan.monthly']);
-  const expenseMissing = allBlank(input, [
+  const livingHousingInsuranceMissing = allBlank(input, [
     'assets.currentLivingCost.monthly', 'expense.housingCost', 'assets.insurance.monthlyPremium',
-    'expense.healthInsurance.monthly', 'assets.debtStatus.monthlyRepayment',
+    'expense.healthInsurance.monthly',
   ]);
+  const debtRepaymentMissing = allBlank(input, ['assets.debtStatus.monthlyRepayment']);
   const liquidMissing = allBlank(input, ['assets.liquidAssets.total']);
   const financialPensionMissing = allBlank(input, ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other', 'assets.pensionAssets']);
   const realEstateMissing = allBlank(input, ['assets.realEstateAssets.total']);
@@ -384,11 +385,30 @@ export function buildFinancialOverviewDetail(input, aggregates) {
     salaryItems.push({ key: 'legacy-salary', label: salaryItems.length ? '기타 급여' : '급여', value: unexplainedSalary });
   }
   const businessAndOther = aggregates.businessMonthly + aggregates.otherIncomeMonthly;
+  const businessAndOtherItems = (input.income?.regularIncomes || [])
+    .map((item, index) => ({
+      key: `regular-income-${index}`,
+      label: typeof item.name === 'string' && item.name.trim()
+        ? item.name.trim()
+        : item.type === 'business' ? '사업소득' : '기타 수입',
+      value: n(item.annual) / 12,
+    }))
+    .filter((item) => item.value > 0);
+  const explainedBusinessAndOther = businessAndOtherItems.reduce((sum, item) => sum + item.value, 0);
+  const unexplainedBusinessAndOther = businessAndOther - explainedBusinessAndOther;
+  if (unexplainedBusinessAndOther > 0.001) {
+    businessAndOtherItems.push({
+      key: 'legacy-business-and-other',
+      label: businessAndOtherItems.length ? '기타 사업·기타소득' : '사업·기타소득',
+      value: unexplainedBusinessAndOther,
+    });
+  }
   const monthlyTotal = salary + businessAndOther;
 
-  const livingHousingInsurance = aggregates.totalExpenseMonthlyExSavings;
+  const debtRepayment = aggregates.monthlyDebtRepayment;
+  const livingHousingInsurance = aggregates.totalExpenseMonthlyExSavings - debtRepayment;
   const savings = aggregates.monthlySavings;
-  const fixedTotal = livingHousingInsurance + savings;
+  const fixedTotal = livingHousingInsurance + debtRepayment + savings;
 
   const liquid = aggregates.liquidAssets;
   const financialAndPension = aggregates.financialAssetsTotal + aggregates.pensionAssets;
@@ -397,11 +417,12 @@ export function buildFinancialOverviewDetail(input, aggregates) {
   return {
     income: {
       salary, salaryItems, salaryMissing,
-      businessAndOther, businessAndOtherMissing: businessOtherMissing,
+      businessAndOther, businessAndOtherItems, businessAndOtherMissing: businessOtherMissing,
       monthlyTotal, annualTotal: monthlyTotal * 12,
     },
     expense: {
-      livingHousingInsurance, livingHousingInsuranceMissing: expenseMissing,
+      livingHousingInsurance, livingHousingInsuranceMissing,
+      debtRepayment, debtRepaymentMissing,
       savings, savingsMissing,
       fixedTotal,
       incomeMinusExpense: monthlyTotal - fixedTotal,
