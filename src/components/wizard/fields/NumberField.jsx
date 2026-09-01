@@ -14,6 +14,7 @@ export default function NumberField({ path, label, unit, helper, placeholder, mi
       <span className="field-label">{label}</span>
       <div className="field-input-row">
         <FormattedNumberInput
+          id={path}
           min={min}
           inputMode={integerOnly ? 'numeric' : 'decimal'}
           integerOnly={integerOnly}

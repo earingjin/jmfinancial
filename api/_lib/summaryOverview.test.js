@@ -267,7 +267,7 @@ describe('buildDebtDonut / buildSavingsDonut', () => {
   });
 
   it('uses the real breakdown items when present', () => {
-    const items = [{ key: 'mortgage', label: '주담대', value: 3000 }];
+    const items = [{ key: 'mortgage', label: '주택담보대출', value: 3000 }];
     const donut = buildSavingsDonut(items, 3000);
     expect(donut.hasBreakdown).toBe(true);
     expect(donut.items).toEqual(items);
