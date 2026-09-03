@@ -46,8 +46,8 @@ function NationalPensionEligibilityNotice({ basePath, eligibility }) {
       : plan === 'continue'
         ? '추가로 납부할 예정 개월 수를 입력하면 총 가입기간이 120개월 이상인지 확인합니다.'
     : plan === 'stop'
-      ? '현재 가입기간은 120개월 미만입니다. 노령연금 수급요건을 충족하지 못할 수 있으며, 지급요건에 해당하면 납부한 보험료에 이자를 더한 반환일시금 대상이 될 수 있습니다.'
-      : '향후 가입 여부에 따라 노령연금 또는 반환일시금 여부가 달라질 수 있습니다.';
+      ? '현재 가입기간은 120개월 미만입니다. 국민연금(노령연금) 가입기간 120개월 미만인 경우, 그동안 낸 보험료에 이자를 더해 일시금으로 지급받게 됩니다.'
+      : '현재 가입기간은 120개월 미만입니다. 국민연금(노령연금) 가입기간 120개월 미만인 경우, 그동안 낸 보험료에 이자를 더해 일시금으로 지급받게 됩니다.';
   return (
     <div style={{ marginTop: 12 }}>
       <RadioField
@@ -477,7 +477,10 @@ export default function Step1Income() {
             unit="세"
             required
             onValueChange={() => { lifeExpectancyEditedRef.current = true; }}
-            helper="출생년도를 입력하면 평균 기대수명 84.6세가 자동으로 제안됩니다. 본인의 건강 상태나 계획에 맞게 자유롭게 수정할 수 있습니다. (2024년 대한민국 예상 평균수명: 남성 81.6세, 여성 87.6세)"
+            helper={<>
+              출생년도를 입력하면 평균 기대수명 84.6세가 자동으로 제안됩니다. 본인의 건강 상태나 계획에 맞게 자유롭게 수정할 수 있습니다.{' '}
+              <strong>(2024년 대한민국 예상 평균수명: 남성 81.6세, 여성 87.6세)</strong>
+            </>}
           />
           <NumberField
             path="basic.serviceYears"

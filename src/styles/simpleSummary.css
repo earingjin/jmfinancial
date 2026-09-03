@@ -1079,6 +1079,11 @@
 }
 
 @media (max-width: 620px) {
+  .simple-summary-subtitle { font-size: 14px; line-height: 1.6; }
+  .ss-guidance { font-size: 14px; }
+  .future-method-note { font-size: 13px; line-height: 1.6; }
+  .future-card-label,
+  .future-card dl div { font-size: 13px; line-height: 1.5; }
   .simple-summary-topbar { margin-top: 22px; }
   .donut-grid { grid-template-columns: 1fr; }
   .future-method-list { grid-template-columns: 1fr; }
@@ -1113,7 +1118,7 @@
   .asset-projection-warning-label { font-size: 15px; }
   .asset-projection-lumpsum-marker { font-size: 18px; }
   .asset-projection-lumpsum-amount { font-size: 14px; }
-  .future-chart-help { margin-top: -4px; font-size: 12px; line-height: 1.65; }
+  .future-chart-help { margin-top: -4px; font-size: 13px; line-height: 1.65; }
   .future-outlook-table-wrap { overflow: hidden; }
   .future-outlook-table { display: block; width: 100%; min-width: 0; font-size: 12px; }
   .future-outlook-table thead { display: none; }

@@ -6,6 +6,26 @@ import { createLatestDraftSaver, mergeDraft, resolveRetirementSavingsInputVersio
 
 const snapshotOf = (formData, stepIndex) => JSON.stringify({ formData, stepIndex });
 
+// Repeatable financial item names are display labels, not calculation inputs.
+// Keep their stored form consistent regardless of which field component edits them.
+const NAMED_LIST_PATHS = [
+  'income.regularIncomes', 'income.otherIncomes', 'expense.debts', 'expense.otherExpenses',
+  'expense.healthInsurance.items', 'assets.liquidAssets.customItems', 'assets.currentLivingCost.breakdown.otherItems',
+  'assets.financialAssets.otherItems', 'assets.pensionAssetsBreakdown.otherItems', 'assets.realEstateAssets.otherItems',
+  'assets.otherAssets.items', 'assets.savingsPlan.customItems', 'assets.debtStatus.customItems',
+  'expense.retirementLumpSumExpenses',
+];
+
+function trimRepeatableItemNames(data) {
+  return NAMED_LIST_PATHS.reduce((next, path) => {
+    const list = path.split('.').reduce((value, key) => value?.[key], next);
+    if (!Array.isArray(list) || !list.some((item) => typeof item?.name === 'string' && item.name !== item.name.trim())) return next;
+    return setIn(next, path, list.map((item) => (
+      typeof item?.name === 'string' ? { ...item, name: item.name.trim() } : item
+    )));
+  }, data);
+}
+
 export function FormProvider({ children, userId, initialDraft }) {
   const [formData, setFormData] = useState(() => {
     // 버전은 반드시 병합 "전" 원본 저장 데이터(initialDraft?.form_data)로만 판정한다 - mergeDraft
@@ -44,7 +64,7 @@ export function FormProvider({ children, userId, initialDraft }) {
 
   const changeFormData = useCallback((updater) => {
     setFormData((previous) => {
-      const next = typeof updater === 'function' ? updater(previous) : updater;
+      const next = trimRepeatableItemNames(typeof updater === 'function' ? updater(previous) : updater);
       formDataRef.current = next;
       setDraftState((state) => ({ ...state, status: state.status === 'saving' ? state.status : 'idle', error: null, dirty: true }));
       return next;

@@ -140,6 +140,13 @@ describe('computeWizardRequiredFields - 지출(2. 지출)', () => {
     expect(result.retirementLivingCostMissing).toBe(false);
   });
 
+  it('공백만 입력한 필수 생활비는 미입력으로 처리한다', () => {
+    const formData = structuredClone(initialFormData);
+    fullyFilledIncome(formData);
+    formData.expense.retirementLivingCost = '   ';
+    expect(computeWizardRequiredFields(formData).retirementLivingCostMissing).toBe(true);
+  });
+
   it('목돈지출 계획 항목에 금액만 입력하고 지출 용도를 비워두면 걸린다', () => {
     const formData = structuredClone(initialFormData);
     fullyFilledIncome(formData);

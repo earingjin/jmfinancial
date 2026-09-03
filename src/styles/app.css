@@ -1135,6 +1135,9 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   .step-section h3 { font-size: 14px; margin-bottom: 12px; }
 
   .field-grid { gap: 12px 14px; }
+  .field-helper { font-size: 13px; line-height: 1.55; }
+  .field-helper--prominent { font-size: 13px; }
+  .fine-print { font-size: 13px; line-height: 1.6; }
   .field-input-row input,
   .field input[type="text"],
   .field input[type="number"] { padding: 10px; }

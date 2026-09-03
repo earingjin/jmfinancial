@@ -637,6 +637,20 @@ describe('strict numeric input types and strings', () => {
   });
 });
 
+describe('repeated item names', () => {
+  it.each(['임대수입', 'IRP(개인형)', 'S&P500', 'CMA-RP', '주택/상가'])('accepts a normal financial item name: %s', (name) => {
+    expect(validateInput(makeInput({ income: { otherIncomes: [{ name, annual: 1, years: 1 }] } })).ok).toBe(true);
+  });
+
+  it.each(['!!!', '@@@'])('rejects a punctuation-only item name: %s', (name) => {
+    expect(validateInput(makeInput({ income: { otherIncomes: [{ name, annual: 1, years: 1 }] } })).ok).toBe(false);
+  });
+
+  it('treats a whitespace-only optional item name as blank', () => {
+    expect(validateInput(makeInput({ income: { otherIncomes: [{ name: '   ', annual: '', years: '' }] } })).ok).toBe(true);
+  });
+});
+
 describe('monthly pension start age requirements', () => {
   it.each([
     { income: { severance: { type: 'pension', pensionStartAge: '' } } },

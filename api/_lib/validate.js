@@ -11,7 +11,12 @@ function getPath(input, path) {
 // value가 빈 값(''/null/undefined)이면 아직 입력하지 않은 것으로 보고 통과시킨다(기존 동작 유지) -
 // 실제로 값이 채워졌을 때만 타입·부호를 검사한다.
 function isBlank(value) {
-  return value === '' || value === null || value === undefined;
+  return value === '' || value === null || value === undefined
+    || (typeof value === 'string' && value.trim() === '');
+}
+
+function isValidItemName(value) {
+  return typeof value === 'string' && value.trim() !== '' && /[\p{L}\p{N}]/u.test(value);
 }
 
 // JSON 숫자 또는 부호가 있는 10진 숫자 문자열만 허용한다. 공백, 지수/16진수 표기,
@@ -41,7 +46,9 @@ const KIND_RULES = {
 
 function checkKindField(errors, input, path, kind) {
   const value = getPath(input, path);
-  if (isBlank(value)) return;
+  // A whitespace-only number is not an omitted numeric value. It must be
+  // rejected instead of being silently treated as zero or absent.
+  if (value === '' || value === null || value === undefined) return;
 
   const rule = KIND_RULES[kind];
   const num = parseNumericInput(value);
@@ -258,6 +265,13 @@ const ARRAY_FIELDS = [
 
 const DEBT_BREAKDOWN_CATEGORIES = ['mortgage', 'depositLoan', 'businessLoan', 'buildingLoan', 'carLoan', 'studentLoan', 'otherLoan'];
 const SAVINGS_BREAKDOWN_CATEGORIES = ['installment', 'isa', 'variableAnnuity', 'pensionSavings', 'irp', 'subscription', 'stocks', 'parkingAccount'];
+const NAMED_ARRAY_PATHS = [
+  'income.regularIncomes', 'income.otherIncomes', 'expense.debts', 'expense.otherExpenses',
+  'expense.healthInsurance.items', 'assets.liquidAssets.customItems', 'assets.currentLivingCost.breakdown.otherItems',
+  'assets.financialAssets.otherItems', 'assets.pensionAssetsBreakdown.otherItems', 'assets.realEstateAssets.otherItems',
+  'assets.otherAssets.items', 'assets.savingsPlan.customItems', 'assets.debtStatus.customItems',
+  'expense.retirementLumpSumExpenses',
+];
 
 export function validateInput(input) {
   const errors = [];
@@ -335,6 +349,15 @@ export function validateInput(input) {
 
   ARRAY_FIELDS.forEach(({ path, fields }) => checkArrayField(errors, input, path, fields));
 
+  NAMED_ARRAY_PATHS.forEach((arrayPath) => {
+    const list = getPath(input, arrayPath);
+    if (!Array.isArray(list) || list.length > MAX_ARRAY_LENGTH) return;
+    list.forEach((item, index) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item) || isBlank(item.name)) return;
+      if (!isValidItemName(item.name)) errors.push(`${arrayPath}.${index}.name 값은 문자 또는 숫자를 포함해야 합니다.`);
+    });
+  });
+
   // 체크박스 그룹은 객체 목록이 아니라 승인된 문자열 키 목록이다.
   const expenseReductionTargets = getPath(input, 'scenarios.expenseReduction.targets');
   if (expenseReductionTargets !== undefined && expenseReductionTargets !== null) {
@@ -364,9 +387,6 @@ export function validateInput(input) {
       const path = `expense.retirementLumpSumExpenses.${index}`;
       const isInUse = !isBlank(item.amount) || !isBlank(item.expectedAge) || !isBlank(item.name);
 
-      if (typeof item.name === 'string' && item.name.length > 0 && item.name.trim() === '') {
-        errors.push(`${path}.name 값은 공백만 입력할 수 없습니다.`);
-      }
       if (typeof item.name === 'string' && item.name.length > 40) {
         errors.push(`${path}.name 값은 40자 이하로 입력해 주세요.`);
       }
