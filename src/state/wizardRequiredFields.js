@@ -1,6 +1,7 @@
 import { getIn } from './pathUtils';
 
-const isFilled = (value) => value !== '' && value !== null && value !== undefined;
+const isFilled = (value) => value !== '' && value !== null && value !== undefined
+  && (typeof value !== 'string' || value.trim() !== '');
 
 // api/_lib/validate.js와 동일한 조건으로 판정한다 - 여기서 걸러지지 않으면 서버가 400으로 거부하는데,
 // 그 원인(details)은 화면에 노출되지 않아 사용자가 이유를 알 수 없는 채로 반복 실패하게 된다(연금

@@ -126,7 +126,8 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || '계산에 실패했습니다.');
+        const details = Array.isArray(body.details) ? body.details.filter(Boolean) : [];
+        throw new Error(details.length ? details.join('\n') : (body.error || '계산에 실패했습니다.'));
       }
       const body = await res.json();
       const data = deobfuscate(body.payload);

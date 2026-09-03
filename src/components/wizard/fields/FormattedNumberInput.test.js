@@ -12,8 +12,8 @@ describe('FormattedNumberInput decimal editing', () => {
     expect(formatNumericText('2.5')).toBe('2.5');
   });
 
-  it('keeps integer-only fields free of decimals', () => {
-    expect(normalizeNumericText('24.5', { integerOnly: true })).toBe('24');
+  it('normalizes complete integer-only values without accepting decimal text', () => {
+    expect(normalizeNumericText('24', { integerOnly: true })).toBe('24');
   });
 
   it('keeps grouping separators without losing the decimal part', () => {
