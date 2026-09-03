@@ -6,6 +6,11 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
   const byPerson = agg.retirementIncomeByPerson;
   const selfMonthlyIncome = byPerson.self.nationalPensionMonthly + byPerson.self.severancePensionMonthly + byPerson.self.personalPensionMonthly;
   const spouseMonthlyIncome = byPerson.spouse.nationalPensionMonthly + byPerson.spouse.severancePensionMonthly + byPerson.spouse.personalPensionMonthly;
+  // 국민연금 가입기간 판정이 'unknown'(향후 납부 계속 여부 미확정)이면 해당 인물의 국민연금은
+  // aggregate.js에서 0원으로 집계된다 - "확정된 0원"이 아니므로 여기서 확정 숫자로 보여주지 않는다.
+  const selfNationalPensionUnknown = byPerson.self.nationalPensionEligibilityStatus === 'unknown';
+  const spouseNationalPensionUnknown = byPerson.spouse.nationalPensionEligibilityStatus === 'unknown';
+  const pensionCell = (amount, isUnknown) => (isUnknown ? '확인 필요' : formatWon(amount));
 
   const goals = simulation.lifeGoals;
   const goalGap = goals.preparedAmount - goals.totalGoalAmount;
@@ -32,8 +37,8 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
           </tr>
           <tr>
             <td>3. 국민연금(월)</td>
-            <td className="num">{formatWon(byPerson.self.nationalPensionMonthly)}</td>
-            <td className="num">{formatWon(byPerson.spouse.nationalPensionMonthly)}</td>
+            <td className="num">{pensionCell(byPerson.self.nationalPensionMonthly, selfNationalPensionUnknown)}</td>
+            <td className="num">{pensionCell(byPerson.spouse.nationalPensionMonthly, spouseNationalPensionUnknown)}</td>
           </tr>
           <tr>
             <td>4. 퇴직연금(월)</td>
@@ -68,8 +73,8 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
         <>
           <div className="report-retirement-income-strip">
             <div><span>노후 월 필요생활비</span><strong>{formatWon(retirementReadiness.monthlyIncomeCompare.livingCostMonthly)}</strong></div>
-            <div><span>가구 월 연금합계</span><strong>{formatWon(selfMonthlyIncome + spouseMonthlyIncome)}</strong></div>
-            <div><span>월 부족액</span><strong className="is-shortfall">{formatWon(retirementReadiness.monthlyIncomeCompare.shortfallMonthly)}</strong></div>
+            <div><span>가구 월 연금합계</span><strong>{pensionCell(selfMonthlyIncome + spouseMonthlyIncome, retirementReadiness.monthlyIncomeCompare.nationalPensionUnknown)}</strong></div>
+            <div><span>월 부족액</span><strong className="is-shortfall">{pensionCell(retirementReadiness.monthlyIncomeCompare.shortfallMonthly, retirementReadiness.monthlyIncomeCompare.nationalPensionUnknown)}</strong></div>
             <div><span>연금소득 기준 충당률</span><strong>{retirementReadiness.retirementIncomeIndicator?.notCalculable ? '산출 불가' : `${retirementReadiness.retirementIncomeIndicator?.displayValue ?? retirementReadiness.retirementIncomeIndicator?.value}%`}</strong></div>
           </div>
           <p className="fine-print" style={{ margin: '6px 0 0' }}>

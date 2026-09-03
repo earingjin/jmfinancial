@@ -617,6 +617,10 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
   const allIndicators = indicators || [];
 
   const pensionMonthlyTotal = rr.monthlyIncomeCompare.nationalPensionMonthly + rr.monthlyIncomeCompare.severancePensionMonthly + rr.monthlyIncomeCompare.personalPensionMonthly;
+  // 국민연금 가입기간 판정이 'unknown'이면 monthlyIncomeCompare.nationalPensionMonthly는 0원으로
+  // 집계되어 있다(aggregate.js) - "확정된 0원"이 아니므로 이 값을 포함하는 파생값은 확정 숫자로
+  // 표시하지 않는다.
+  const pensionCell = (amount) => (rr.monthlyIncomeCompare.nationalPensionUnknown ? '확인 필요' : formatWon(amount));
   // 이전에 저장된 결과에도 계산 근거가 보이도록 기존 필드에서 안전하게 역산한다.
   const retirementMonths = rr.retirementYears * 12;
   const livingCostNow = rr.retirementLivingCostNow ?? rr.monthlyIncomeCompare.livingCostMonthly;
@@ -938,7 +942,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               </div>
               <div className="ss-card-row">
                 <div className="ss-row-label">국민연금 예상 월소득</div>
-                <div className="ss-row-value-sm">{formatWon(rr.monthlyIncomeCompare.nationalPensionMonthly)}</div>
+                <div className="ss-row-value-sm">{pensionCell(rr.monthlyIncomeCompare.nationalPensionMonthly)}</div>
               </div>
               <div className="ss-card-row">
                 <div className="ss-row-label">퇴직연금 예상 월소득</div>
@@ -950,12 +954,12 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
               </div>
               <div className="ss-card-row ss-total-row">
                 <div className="ss-row-label"><b>연금 합계</b></div>
-                <div className="ss-row-value-sm">{formatWon(pensionMonthlyTotal)}</div>
+                <div className="ss-row-value-sm">{pensionCell(pensionMonthlyTotal)}</div>
               </div>
               <div className="ss-card-row">
                 <div className="ss-row-label">월 소득 부족액</div>
                 <div className="ss-row-value-sm" style={{ color: rr.monthlyIncomeCompare.shortfallMonthly > 0 ? 'var(--red)' : 'inherit' }}>
-                  {formatWon(rr.monthlyIncomeCompare.shortfallMonthly)}
+                  {pensionCell(rr.monthlyIncomeCompare.shortfallMonthly)}
                 </div>
               </div>
             </div>

@@ -287,6 +287,11 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
 
   const pensionMonthlyTotal = aggregates.nationalPensionMonthly + aggregates.severancePensionMonthly + aggregates.personalPensionMonthly;
   const monthlyShortfall = Math.max(0, simulation.retirementLivingCostNow - pensionMonthlyTotal);
+  // 국민연금 가입기간 판정이 'unknown'이면 aggregates.nationalPensionMonthly는 0원으로 집계되어
+  // 있지만(aggregate.js) 이는 "확정된 0원"이 아니다. 이 값을 그대로 쓰는 화면 표시는 이 플래그를
+  // 확인해 확정 숫자 대신 "산출 불가"류 안내를 보여줘야 한다.
+  const nationalPensionUnknown = aggregates.nationalPensionEligibility?.self === 'unknown'
+    || aggregates.nationalPensionEligibility?.spouse === 'unknown';
   const retirementIncomeIndicator = indicators.find((i) => i.key === 'retirementIncome') || null;
   let retirementIncomeZeroReason = null;
 
@@ -340,6 +345,7 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
     monthlyIncomeCompare: {
       livingCostMonthly: simulation.retirementLivingCostNow,
       nationalPensionMonthly: aggregates.nationalPensionMonthly,
+      nationalPensionUnknown,
       severancePensionMonthly: aggregates.severancePensionMonthly,
       personalPensionMonthly: aggregates.personalPensionMonthly,
       shortfallMonthly: monthlyShortfall,

@@ -240,15 +240,23 @@ export function calcIndicators(input) {
 
   // 별도 노후분석: 노후소득보장률 = 월예상 노후소득 ÷ 은퇴후 월필요생활비
   // 재무건강 총점·등급에는 포함하지 않는다. 연차별 추이는 은퇴자산 시뮬레이션에서 별도 계산한다.
+  // agg.monthlyRetirementIncome은 국민연금 가입기간 판정이 'unknown'(향후 납부 계속 여부를 확정할
+  // 수 없음)이면 해당 인물의 국민연금을 0원으로 집계한다(aggregate.js). 이 0원은 "실제로 받지 않음"이
+  // 아니라 "확정 불가"이므로, 그대로 나눗셈에 쓰면 실제보다 낮은 보장률을 확정된 숫자처럼 보여주게
+  // 된다 - 분모 0과 동일하게 산출 불가로 처리한다.
+  const nationalPensionUnknown = agg.nationalPensionEligibility?.self === 'unknown'
+    || agg.nationalPensionEligibility?.spouse === 'unknown';
   const retirementLivingCost = n(input.expense?.retirementLivingCost);
   const retirementIncomeRaw = pctOrNA(agg.monthlyRetirementIncome, retirementLivingCost);
-  const indicator9 = retirementIncomeRaw === null
-    ? notCalculableResult(15, '노후 월 필요생활비가 입력되지 않아 노후소득보장률을 산출할 수 없습니다.')
-    : evaluateBands(
-        retirementIncomeRaw,
-        buildRetirementIncomeBands(RETIREMENT_INCOME_SCORES_STANDARD),
-        15
-      );
+  const indicator9 = nationalPensionUnknown
+    ? notCalculableResult(15, '국민연금 향후 가입 여부를 확정할 수 없어 노후소득보장률을 산출할 수 없습니다.')
+    : retirementIncomeRaw === null
+      ? notCalculableResult(15, '노후 월 필요생활비가 입력되지 않아 노후소득보장률을 산출할 수 없습니다.')
+      : evaluateBands(
+          retirementIncomeRaw,
+          buildRetirementIncomeBands(RETIREMENT_INCOME_SCORES_STANDARD),
+          15
+        );
 
   const list = [
     { key: 'household', label: '가계수지지표', formula: '총지출 ÷ 총소득', breakdown: householdBreakdown, ...indicator1 },

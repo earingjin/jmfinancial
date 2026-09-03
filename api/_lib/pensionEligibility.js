@@ -3,4 +3,9 @@ export {
   NATIONAL_PENSION_COHORTS,
   findNationalPensionCohort,
   getNationalPensionStartAge,
+  NATIONAL_PENSION_MIN_MONTHS,
+  getNationalPensionContributionMonths,
+  assessNationalPensionEligibility,
+  nationalPensionMonthlyEligible,
+  calculateNationalPensionMonthlyEstimate,
 } from '../../src/utils/pensionEligibility.js';

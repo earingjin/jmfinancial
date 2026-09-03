@@ -1,5 +1,5 @@
 import { n } from './aggregate.js';
-import { getNationalPensionStartAge } from './pensionEligibility.js';
+import { assessNationalPensionEligibility, getNationalPensionStartAge, nationalPensionMonthlyEligible } from './pensionEligibility.js';
 import { FUTURE_FINANCE_ASSUMPTIONS } from './constants.js';
 import { NonFiniteCalculationError } from './finite.js';
 
@@ -50,16 +50,6 @@ function round1(value) {
 
 const present = (value) => value !== '' && value !== null && value !== undefined;
 
-function nationalEligible(person = {}) {
-  const pension = person.nationalPension || {};
-  if (pension.inputMode === 'none') return false;
-  const rawMonths = pension.inputMode === 'simulate' ? pension.simulate?.contributionMonths : pension.paymentMonths;
-  const legacyYears = pension.inputMode === 'simulate' ? pension.simulate?.years : pension.paymentYears;
-  if (present(rawMonths)) return n(rawMonths) >= 120;
-  if (present(legacyYears)) return n(legacyYears) * 12 >= 120;
-  return true;
-}
-
 function pensionComponents(input, currentYear) {
   const people = [
     { key: 'self', person: input.income || {}, birthYear: input.basic?.birthYear },
@@ -71,10 +61,12 @@ function pensionComponents(input, currentYear) {
     const severance = person.severance || {};
     const personal = person.personalPension || {};
     const nationalStart = present(birthYear) ? getNationalPensionStartAge(n(birthYear)) : null;
+    const nationalEligibility = assessNationalPensionEligibility({ pension: national });
     return [
       {
-        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalEligible(person) ? n(national.monthly) : 0,
+        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalPensionMonthlyEligible(nationalEligibility) ? n(national.monthly) : 0,
         startAge: nationalStart, months: national.months, currentAge,
+        eligibilityStatus: nationalEligibility.status,
         growthRate: FUTURE_FINANCE_ASSUMPTIONS.nationalPensionGrowthRate,
       },
       {
@@ -124,6 +116,14 @@ function evaluateFinitePension(component, years) {
 
 export function calculatePensionIncomeAtTarget({ input, currentYear, years }) {
   const components = pensionComponents(input, currentYear).map((component) => {
+    if (component.category === 'nationalPension' && component.eligibilityStatus === 'unknown') {
+      return {
+        ...component,
+        amount: null,
+        inclusionStatus: 'unknown',
+        unknownReason: '국민연금 향후 가입기간을 확정할 수 없음',
+      };
+    }
     if (component.monthly <= 0) return { ...component, amount: 0, inclusionStatus: 'zero' };
     return component.category === 'nationalPension'
       ? evaluateNationalPension(component, years)
@@ -142,7 +142,9 @@ export function calculatePensionIncomeAtTarget({ input, currentYear, years }) {
     nationalPension, personalPension, retirementPension,
     total: calculable ? nationalPension + personalPension + retirementPension : null,
     calculable,
-    reason: calculable ? null : `연금 개시·종료 정보 부족: ${unknown.map((component) => component.key).join(', ')}`,
+    reason: calculable ? null : unknown
+      .map((component) => component.unknownReason || `연금 개시·종료 정보 부족: ${component.key}`)
+      .join(', '),
     components,
   };
 }

@@ -342,6 +342,25 @@ describe('A-2 / N/A handling - denominator 0 must never score best or worst sile
     expect(findIndicator(result, 'retirementIncome').notCalculable).toBe(true);
   });
 
+  it('retirementIncome: 국민연금 가입기간 판정이 unknown이면 0원 집계를 확정 비율로 보여주지 않고 N/A 처리한다', () => {
+    // 다른 입력은 모두 정상(HEALTHY_BASE)이라 unknown이 아니었다면 계산 가능한 비율이 나온다 -
+    // agg.monthlyRetirementIncome이 국민연금을 0원으로 포함한 "확정 안 된" 값이라는 걸 확인한다.
+    const result = calcIndicators(input({
+      income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 60, futureContributionPlan: 'continue' } },
+    }));
+    const retirementIncome = findIndicator(result, 'retirementIncome');
+    expect(retirementIncome.notCalculable).toBe(true);
+    expect(retirementIncome.reason).toContain('국민연금');
+  });
+
+  it('retirementIncome: 배우자 국민연금이 unknown이어도 N/A 처리한다', () => {
+    const result = calcIndicators(input({
+      basic: { hasSpouse: true },
+      spouse: { nationalPension: { inputMode: 'direct', monthly: 50, months: 240, paymentMonths: 60, futureContributionPlan: 'unknown' } },
+    }));
+    expect(findIndicator(result, 'retirementIncome').notCalculable).toBe(true);
+  });
+
   it('reports missing inputs for the eight-indicator assessment without exposing a composite score', () => {
     const result = calcIndicators(input({ assets: { currentIncome: { monthly: 0 } } }));
     expect(result.notCalculable).toBe(true);

@@ -5,6 +5,10 @@ import { formatWon } from '../../../utils/format';
 export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreakdown, overviewDetail, savingsInvestmentFeedback, pageNumber, totalPages }) {
   const savingsRows = savingsBreakdown || [];
   const hasSavingsBreakdown = savingsRows.length > 0;
+  // 국민연금 가입기간 판정이 'unknown'(향후 납부 계속 여부 미확정)이면 agg.monthlyRetirementIncome은
+  // 해당 인물의 국민연금을 0원으로 포함한 값이다 - "미수령 확정"이 아니므로 그대로 보여주지 않는다.
+  const nationalPensionUnknown = agg.nationalPensionEligibility?.self === 'unknown'
+    || agg.nationalPensionEligibility?.spouse === 'unknown';
 
   return (
     <PageFrame eyebrow="Household Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
@@ -24,13 +28,31 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
           <tr>
             <td>국민연금 · 퇴직연금 · 개인연금</td>
             <td className="num">
-              {formatWon(agg.monthlyRetirementIncome)}
-              {agg.monthlyRetirementIncome === 0 && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (미수령)</span>}
+              {nationalPensionUnknown ? (
+                <>확인 필요<span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 향후 가입 여부 미확정)</span></>
+              ) : (
+                <>
+                  {formatWon(agg.monthlyRetirementIncome)}
+                  {agg.monthlyRetirementIncome === 0 && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (미수령)</span>}
+                </>
+              )}
             </td>
           </tr>
           <tr><td>기타(임대소득 · 배당금 등)</td><td className="num">{formatWon(agg.otherIncomeMonthly)}</td></tr>
-          <tr className="total-row"><td>가구 합계(월평균)</td><td className="num">{formatWon(agg.householdMonthlyIncomeTotal)}</td></tr>
-          <tr><td>가구 합계(연평균)</td><td className="num">{formatWon(agg.householdMonthlyIncomeTotal * 12)}</td></tr>
+          <tr className="total-row">
+            <td>가구 합계(월평균)</td>
+            <td className="num">
+              {formatWon(agg.householdMonthlyIncomeTotal)}
+              {nationalPensionUnknown && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 미확정분 제외)</span>}
+            </td>
+          </tr>
+          <tr>
+            <td>가구 합계(연평균)</td>
+            <td className="num">
+              {formatWon(agg.householdMonthlyIncomeTotal * 12)}
+              {nationalPensionUnknown && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 미확정분 제외)</span>}
+            </td>
+          </tr>
         </tbody>
       </table>
       <div className="indicator-feedback" style={{ marginBottom: 8 }}>

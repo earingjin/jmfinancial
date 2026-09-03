@@ -37,6 +37,24 @@ function allNumbersAreFinite(value) {
 }
 
 describe('future finance projection', () => {
+  it('does not turn unknown national-pension eligibility into a calculable zero', () => {
+    const input = makeInput({
+      basic: { birthYear: 1976, retirementAge: 65, lifeExpectancy: 83, hasSpouse: false },
+      income: {
+        nationalPension: { inputMode: 'direct', monthly: 150, months: 240, paymentMonths: 100, futureContributionPlan: 'continue' },
+        personalPension: { type: 'none' }, severance: { type: 'none' },
+      },
+    });
+    const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });
+    expect(result.targets.length).toBeGreaterThan(0);
+    expect(result.targets.every((target) => (
+      target.calculable === false
+      && target.pensionIncome === null
+      && target.coverageRate === null
+      && target.calculationReason.includes('국민연금 향후 가입기간을 확정할 수 없음')
+    ))).toBe(true);
+  });
+
   it('calculates the 60/70/80 outlook and purchasing-power equivalents', () => {
     const input = makeInput();
     const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });

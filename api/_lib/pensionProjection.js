@@ -4,6 +4,7 @@
 
 import { n } from './aggregate.js';
 import { GENERAL_INFLATION_RATE, NATIONAL_PENSION_GROWTH_RATE } from './constants.js';
+import { assessNationalPensionEligibility, nationalPensionMonthlyEligible } from './pensionEligibility.js';
 
 const TREND_YEARS = [0, 5, 10, 15, 20, 25, 30];
 const MAX_CROSSING_YEAR = 40;
@@ -30,10 +31,15 @@ function buildComponents(person) {
 
   // 국민연금: 수급개시 이후 종신 지급하므로 months를 종료기간으로 사용하지 않는다.
   // 2026 적용률 2.1%를 반복 적용하는 모델 가정이며, 영구 고정 정책률이라는 뜻은 아니다.
+  const eligibility = assessNationalPensionEligibility({ pension: nationalPension });
   components.push({
     paymentPeriod: 'lifetime',
-    monthlyAmount: n(nationalPension.monthly),
+    // 새 필드가 없던 초안은 이 경로에서 가입기간과 무관하게 월액을 사용하던 기존 결과를 보존한다.
+    monthlyAmount: nationalPensionMonthlyEligible(eligibility) || eligibility.legacyFallback
+      ? n(nationalPension.monthly)
+      : 0,
     growthRate: NATIONAL_PENSION_GROWTH_RATE,
+    eligibilityStatus: eligibility.status,
   });
 
   // 개인연금 (일시금 수령은 월소득에 포함되지 않음). 물가연동 여부는 사용자가 선택하지 않으므로
@@ -62,12 +68,24 @@ function pensionIncomeAtYear(components, year) {
 // calcPensionAdequacyTrend와 동일한 연금 구성 로직을 재사용할 뿐, 기존 함수/트렌드 지점(TREND_YEARS)에는
 // 영향을 주지 않는 별도 진입점이다.
 export function pensionIncomeSeries(input, years) {
-  const components = [...buildComponents(input.income || {}), ...buildComponents(input.spouse || {})];
+  const components = [
+    ...buildComponents(input.income || {}),
+    ...buildComponents(input.spouse || {}),
+  ];
   return years.map((year) => ({ year, pensionIncome: Math.round(pensionIncomeAtYear(components, year)) }));
 }
 
 export function calcPensionAdequacyTrend(input) {
-  const components = [...buildComponents(input.income || {}), ...buildComponents(input.spouse || {})];
+  const components = [
+    ...buildComponents(input.income || {}),
+    ...buildComponents(input.spouse || {}),
+  ];
+  const eligibilityStatus = {
+    self: assessNationalPensionEligibility({ pension: input.income?.nationalPension || {} }).status,
+    spouse: input.basic?.hasSpouse
+      ? assessNationalPensionEligibility({ pension: input.spouse?.nationalPension || {} }).status
+      : 'none',
+  };
   const livingCostNow = n(input.expense?.retirementLivingCost);
 
   const ratioAtYear = (year) => {
@@ -91,7 +109,7 @@ export function calcPensionAdequacyTrend(input) {
     }
   }
 
-  return { threshold: CROSSING_THRESHOLD, trend, crossingYear };
+  return { threshold: CROSSING_THRESHOLD, trend, crossingYear, eligibilityStatus };
 }
 
 function round1(v) {

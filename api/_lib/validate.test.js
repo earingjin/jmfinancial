@@ -287,6 +287,23 @@ describe('retirementSavingsInputVersion: 2 - 레거시 관계 검증 제외', ()
   });
 });
 
+describe('national pension future contribution plan validation', () => {
+  it('allows an actual contribution period below 120 months with a supported plan', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { inputMode: 'direct', paymentMonths: 60, futureContributionPlan: 'stop' } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects an unsupported future contribution plan', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { futureContributionPlan: 'maybe' } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain('income.nationalPension.futureContributionPlan 값이 유효하지 않습니다.');
+  });
+});
+
 describe('compound return rates must be greater than -100%', () => {
   it.each([-100, -100.01])('rejects basic.assumedReturnRate=%s', (assumedReturnRate) => {
     const result = validateInput(makeInput({ basic: { assumedReturnRate } }));

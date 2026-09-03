@@ -1,7 +1,11 @@
+import { assessNationalPensionEligibility, nationalPensionMonthlyEligible } from './pensionEligibility.js';
+
 // 원본 입력값(input)에서 지표 계산에 필요한 집계값을 만든다.
 // 이 파일이 곧 "현재 시점 가계 재무 스냅샷"을 만드는 핵심 로직이며, 서버에서만 실행된다.
 
 const n = (v) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
+
+const nationalPensionStatus = (pension) => assessNationalPensionEligibility({ pension: pension || {} }).status;
 
 // annual 필드가 실제로 입력되지 않은 경우(빈 값/undefined/null)에만 monthly×12로 대체한다.
 // annual이 명시적으로 0이어도(예: 올해는 저축을 전혀 안 함) 그 값을 그대로 존중한다 -
@@ -163,6 +167,7 @@ export function buildAggregates(input) {
     liquidAssets,
     monthlyRetirementIncome,
     nationalPensionMonthly: retirementIncomeByCategory.nationalPension,
+    nationalPensionEligibility: retirementIncomeByCategory.nationalPensionEligibility,
     severancePensionMonthly: retirementIncomeByCategory.severancePension,
     personalPensionMonthly: retirementIncomeByCategory.personalPension,
     reverseMortgageMonthly,
@@ -187,13 +192,8 @@ export function calcRetirementIncomeByCategory(input) {
 
   const pickNationalPension = (pension) => {
     const p = pension || {};
-    const mode = p.inputMode || 'direct';
-    const rawContributionMonths = mode === 'simulate' ? p.simulate?.contributionMonths : p.paymentMonths;
-    const legacyYears = mode === 'simulate' ? p.simulate?.years : p.paymentYears;
-    const hasNewContributionField = rawContributionMonths !== '' && rawContributionMonths != null;
-    const hasLegacyYears = legacyYears !== '' && legacyYears != null;
-    // 새 입력은 최소 120개월을 강제한다. 두 필드가 모두 없는 과거 저장 결과만 기존 계산을 유지한다.
-    if ((hasNewContributionField || hasLegacyYears) && n(hasNewContributionField ? rawContributionMonths : legacyYears * 12) < 120) return 0;
+    const eligibility = assessNationalPensionEligibility({ pension: p });
+    if (!nationalPensionMonthlyEligible(eligibility)) return 0;
     return pick(p.monthly, p.months);
   };
 
@@ -210,8 +210,14 @@ export function calcRetirementIncomeByCategory(input) {
   };
 
   const nationalPension =
-    pickNationalPension(income.nationalPension) +
-    pickNationalPension(spouse.nationalPension);
+    pickNationalPension(income.nationalPension) + pickNationalPension(spouse.nationalPension);
+
+  const nationalPensionEligibility = {
+    self: assessNationalPensionEligibility({ pension: income.nationalPension || {} }).status,
+    spouse: input.basic?.hasSpouse
+      ? assessNationalPensionEligibility({ pension: spouse.nationalPension || {} }).status
+      : 'none',
+  };
 
   const severancePension = pickSeverancePension(income.severance) + pickSeverancePension(spouse.severance);
 
@@ -219,6 +225,7 @@ export function calcRetirementIncomeByCategory(input) {
 
   return {
     nationalPension,
+    nationalPensionEligibility,
     severancePension,
     personalPension,
     total: nationalPension + severancePension + personalPension,
@@ -235,12 +242,8 @@ export function calcRetirementIncomeByPerson(input) {
   const pick = (monthly, months) => (n(months) > 0 ? n(monthly) : 0);
   const pickNationalPension = (pension) => {
     const p = pension || {};
-    const mode = p.inputMode || 'direct';
-    const rawContributionMonths = mode === 'simulate' ? p.simulate?.contributionMonths : p.paymentMonths;
-    const legacyYears = mode === 'simulate' ? p.simulate?.years : p.paymentYears;
-    const hasNewContributionField = rawContributionMonths !== '' && rawContributionMonths != null;
-    const hasLegacyYears = legacyYears !== '' && legacyYears != null;
-    if ((hasNewContributionField || hasLegacyYears) && n(hasNewContributionField ? rawContributionMonths : legacyYears * 12) < 120) return 0;
+    const eligibility = assessNationalPensionEligibility({ pension: p });
+    if (!nationalPensionMonthlyEligible(eligibility)) return 0;
     return pick(p.monthly, p.months);
   };
 
@@ -250,21 +253,34 @@ export function calcRetirementIncomeByPerson(input) {
     return pick(p.monthly, p.months);
   };
 
+  // 표시용 퇴직금(일시금)은 type이 'lumpsum'일 때만 사용한다. 'pension'·'none'으로 바꾼 뒤에도
+  // 이전에 입력했던 lumpsum이 폼에 남아있을 수 있어(프론트 초기화 누락·과거 저장 데이터 모두 포함),
+  // type을 확인하지 않고 그대로 읽으면 실제로는 해당 없는 금액이 화면에 노출된다. type 필드 자체가
+  // 없는 오래된 데이터(레거시)는 이 필드가 생기기 전 항상 lumpsum을 그대로 보여주던 기존 결과를
+  // 그대로 유지한다.
+  const severanceLumpsum = (severance) => {
+    const s = severance || {};
+    if ('type' in s && s.type !== 'lumpsum') return 0;
+    return n(s.lumpsum);
+  };
+
   return {
     self: {
       nationalPensionMonthly: pickNationalPension(income.nationalPension),
+      nationalPensionEligibilityStatus: nationalPensionStatus(income.nationalPension),
       severancePensionMonthly: income.severance?.type === 'pension'
         ? pick(income.severance?.pensionMonthly, income.severance?.pensionMonths)
         : 0,
-      severanceLumpsum: n(income.severance?.lumpsum),
+      severanceLumpsum: severanceLumpsum(income.severance),
       personalPensionMonthly: personalPensionMonthly(income.personalPension),
     },
     spouse: {
       nationalPensionMonthly: pickNationalPension(spouse.nationalPension),
+      nationalPensionEligibilityStatus: input.basic?.hasSpouse ? nationalPensionStatus(spouse.nationalPension) : 'none',
       severancePensionMonthly: spouse.severance?.type === 'pension'
         ? pick(spouse.severance?.pensionMonthly, spouse.severance?.pensionMonths)
         : 0,
-      severanceLumpsum: n(spouse.severance?.lumpsum),
+      severanceLumpsum: severanceLumpsum(spouse.severance),
       personalPensionMonthly: personalPensionMonthly(spouse.personalPension),
     },
   };

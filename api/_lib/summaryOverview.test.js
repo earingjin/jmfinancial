@@ -411,6 +411,31 @@ describe('buildRetirementReadiness', () => {
     expect(readiness.incomeGap.annualGapCost).toBeNull();
     expect(readiness.incomeGap.totalGapFundingNeeded).toBeNull();
   });
+
+  it('flags monthlyIncomeCompare.nationalPensionUnknown when self national-pension eligibility is unknown', () => {
+    const scoped = input({
+      income: { nationalPension: { inputMode: 'direct', monthly: 90, months: 240, paymentMonths: 60, futureContributionPlan: 'continue' } },
+    });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
+    expect(readiness.monthlyIncomeCompare.nationalPensionUnknown).toBe(true);
+  });
+
+  it('flags monthlyIncomeCompare.nationalPensionUnknown when spouse national-pension eligibility is unknown', () => {
+    const scoped = input({
+      basic: { hasSpouse: true },
+      spouse: { nationalPension: { inputMode: 'direct', monthly: 50, months: 240, paymentMonths: 60, futureContributionPlan: 'unknown' } },
+    });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
+    expect(readiness.monthlyIncomeCompare.nationalPensionUnknown).toBe(true);
+  });
+
+  it('does not flag nationalPensionUnknown for an ordinary eligible pension', () => {
+    const { aggregates, simulation, indicators } = calc(input());
+    const readiness = buildRetirementReadiness({ input: input(), simulation, indicators, aggregates });
+    expect(readiness.monthlyIncomeCompare.nationalPensionUnknown).toBe(false);
+  });
 });
 
 describe('buildFinancialOverviewDetail - grouped card (income / expense / balance)', () => {

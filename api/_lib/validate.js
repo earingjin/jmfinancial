@@ -315,16 +315,10 @@ export function validateInput(input) {
   checkKindField(errors, input, 'basic.assumedReturnRate', 'returnRate');
   checkKindField(errors, input, 'scenarios.expenseReduction.reductionRate', 'rate');
 
-  [
-    ['income.nationalPension.paymentMonths', input.income?.nationalPension?.inputMode],
-    ['income.nationalPension.simulate.contributionMonths', input.income?.nationalPension?.inputMode],
-    ['spouse.nationalPension.paymentMonths', input.spouse?.nationalPension?.inputMode],
-    ['spouse.nationalPension.simulate.contributionMonths', input.spouse?.nationalPension?.inputMode],
-  ].forEach(([path, mode]) => {
+  ['income.nationalPension.futureContributionPlan', 'spouse.nationalPension.futureContributionPlan'].forEach((path) => {
     const value = getPath(input, path);
-    const isActivePath = (mode === 'simulate') === path.includes('.simulate.');
-    if (mode !== 'none' && isActivePath && !isBlank(value) && Number(value) > 0 && Number(value) < 120) {
-      errors.push(`${path} 값은 노령연금 수급을 위해 최소 120개월 이상이어야 합니다.`);
+    if (!isBlank(value) && !['continue', 'stop', 'unknown'].includes(value)) {
+      errors.push(`${path} 값이 유효하지 않습니다.`);
     }
   });
 
