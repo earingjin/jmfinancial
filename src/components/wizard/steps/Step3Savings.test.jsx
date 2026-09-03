@@ -1,6 +1,9 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../../lib/supabaseClient', () => ({ supabase: {} }));
+
 import { FormContext } from '../../../state/formState';
 import { initialFormData } from '../../../state/initialFormData';
 import { setIn } from '../../../state/pathUtils';

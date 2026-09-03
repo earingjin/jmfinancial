@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../../lib/supabaseClient', () => ({ supabase: {} }));
+
 import { initialFormData } from '../../../state/initialFormData';
 import { mergeDraft } from '../../../state/draftStorage';
 import { setIn } from '../../../state/pathUtils';
