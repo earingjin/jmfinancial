@@ -1,9 +1,15 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../../lib/supabaseClient', () => ({ supabase: {} }));
+
 import { FormContext } from '../../../state/formState';
 import { initialFormData } from '../../../state/initialFormData';
-import Step3Savings from './Step3Savings';
+import { setIn } from '../../../state/pathUtils';
+import { buildCanonicalInput } from '../../../../api/_lib/canonicalInput';
+import { DRAFT_SCHEMA_VERSION, validateDraft } from '../../../state/draftStorage';
+import Step3Savings, { updateSavingsPresence } from './Step3Savings';
 
 globalThis.React = React;
 
@@ -78,12 +84,6 @@ describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 
   });
 });
 
-// Case E(코드리뷰 후속): "저축 없음" 선택 시 setHasSavings(false)가 additionalRetirementMonthly/
-// Annual까지 0으로 초기화하는지(레거시 retirementMonthly/Annual과 동일한 패턴), 그리고 "저축
-// 있음"으로 되돌아왔을 때도 v2 모드(retirementSavingsInputVersion)와 그 초기화된 값이 그대로
-// 정상 렌더링되는지 확인한다. 이 저장소에는 jsdom/testing-library가 없어 실제 클릭 이벤트를
-// 시뮬레이션할 수는 없으므로, "저축 없음" 전/후 각 상태를 정적으로 렌더링해 결과를 검증한다
-// (초기화 로직 자체는 setHasSavings의 setField 호출 목록으로 코드상 확인됨).
 describe('Step3Savings - 저축 없음 → 저축 있음 전환(retirementSavingsInputVersion: 2)', () => {
   it('저축 없음 상태에서는 v2 노후저축 입력 UI가 보이지 않는다', () => {
     const formData = structuredClone(initialFormData);
@@ -95,7 +95,7 @@ describe('Step3Savings - 저축 없음 → 저축 있음 전환(retirementSaving
       </FormContext.Provider>
     );
 
-    expect(html).toContain('저축 없음으로 선택했습니다');
+    expect(html).toContain('현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.');
     expect(html).not.toContain('추가 노후준비 저축');
   });
 
@@ -120,17 +120,70 @@ describe('Step3Savings - 저축 없음 → 저축 있음 전환(retirementSaving
     expect(html).toContain('0만원');
   });
 
-  it('setHasSavings(false) 초기화 목록에 additionalRetirementMonthly/Annual이 레거시 retirementMonthly/Annual과 함께 포함되어 있다(회귀 방지용 소스 검증)', async () => {
-    const source = await import('node:fs/promises').then((fs) =>
-      fs.readFile(new URL('./Step3Savings.jsx', import.meta.url), 'utf8')
-    );
-    const resetBlockStart = source.indexOf('if (!value) {');
-    const resetBlockEnd = source.indexOf('\n    }', resetBlockStart);
-    const resetBlock = source.slice(resetBlockStart, resetBlockEnd);
+  it('월 납입액만 0으로 만들고 연결 자산과 사용자 추가 항목을 보존한다', () => {
+    let formData = structuredClone(initialFormData);
+    Object.assign(formData.assets.savingsPlan.breakdown.stocks, { monthly: 50, remainingMonths: 24, interestRate: 5 });
+    Object.assign(formData.assets.savingsPlan.breakdown.irp, { monthly: 30, remainingMonths: 120, interestRate: 3 });
+    formData.assets.savingsPlan.customItems = [{ name: '여행저축', monthly: 10, remainingMonths: 12, interestRate: 2 }];
+    formData.assets.savingsPlan.monthly = 90;
+    formData.assets.savingsPlan.annual = 1080;
+    formData.assets.savingsPlan.additionalRetirementMonthly = 20;
+    formData.assets.savingsPlan.additionalRetirementAnnual = 240;
+    formData.assets.financialAssets.stocks = 1000;
+    Object.assign(formData.assets.pensionAssetsBreakdown, { irp: 2000, pensionSavingsAccount: 3000, variableAnnuity: 4000 });
+    formData.assets.pensionAssets = 9000;
+    Object.assign(formData.assets.liquidAssets.breakdown, { savings: 500, subscription: 600 });
+    formData.assets.liquidAssets.customItems = [
+      { name: 'ISA', amount: 700 },
+      { name: '파킹통장', amount: 800 },
+      { name: '여행저축', amount: 900 },
+    ];
+    formData.assets.liquidAssets.total = 3500;
+    const assetsBefore = structuredClone({
+      liquidAssets: formData.assets.liquidAssets,
+      financialAssets: formData.assets.financialAssets,
+      pensionAssetsBreakdown: formData.assets.pensionAssetsBreakdown,
+      pensionAssets: formData.assets.pensionAssets,
+    });
+    const setField = (path, value) => { formData = setIn(formData, path, value); };
 
-    expect(resetBlock).toContain("setField('assets.savingsPlan.retirementMonthly', 0)");
-    expect(resetBlock).toContain("setField('assets.savingsPlan.retirementAnnual', 0)");
-    expect(resetBlock).toContain("setField('assets.savingsPlan.additionalRetirementMonthly', 0)");
-    expect(resetBlock).toContain("setField('assets.savingsPlan.additionalRetirementAnnual', 0)");
+    updateSavingsPresence(formData, setField, false);
+
+    expect(formData.assets.savingsPlan.hasSavings).toBe(false);
+    expect(formData.assets.savingsPlan.monthly).toBe(0);
+    expect(formData.assets.savingsPlan.additionalRetirementMonthly).toBe(0);
+    expect(formData.assets.savingsPlan.breakdown.stocks.monthly).toBe('');
+    expect(formData.assets.savingsPlan.breakdown.irp.monthly).toBe('');
+    expect(formData.assets.savingsPlan.customItems).toEqual([
+      { name: '여행저축', monthly: '', remainingMonths: '', interestRate: '' },
+    ]);
+    expect({
+      liquidAssets: formData.assets.liquidAssets,
+      financialAssets: formData.assets.financialAssets,
+      pensionAssetsBreakdown: formData.assets.pensionAssetsBreakdown,
+      pensionAssets: formData.assets.pensionAssets,
+    }).toEqual(assetsBefore);
+
+    const canonical = buildCanonicalInput(formData);
+    expect(canonical.assets.savingsPlan.monthly).toBe(0);
+    expect(canonical.assets.savingsPlan.annual).toBe(0);
+    expect(canonical.assets.savingsPlan.additionalRetirementAnnual).toBe(0);
+    expect(canonical.assets.liquidAssets.total).toBe(3500);
+    expect(canonical.assets.pensionAssets).toBe(9000);
+
+    updateSavingsPresence(formData, setField, true);
+    expect(formData.assets.financialAssets.stocks).toBe(1000);
+    expect(formData.assets.liquidAssets.customItems).toHaveLength(3);
+    expect(formData.assets.savingsPlan.customItems).toHaveLength(1);
+
+    const restored = JSON.parse(JSON.stringify({
+      schema_version: DRAFT_SCHEMA_VERSION,
+      step_index: 3,
+      form_data: formData,
+    }));
+    expect(validateDraft(restored).valid).toBe(true);
+    expect(restored.form_data.assets.financialAssets.stocks).toBe(1000);
+    expect(restored.form_data.assets.pensionAssetsBreakdown.irp).toBe(2000);
+    expect(restored.form_data.assets.savingsPlan.monthly).toBe(0);
   });
 });

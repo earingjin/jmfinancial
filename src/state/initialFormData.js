@@ -36,6 +36,8 @@ export const initialFormData = {
       months: '',
       paymentMonths: '',        // 실제 보험료를 납부한 총 개월 수
       paymentYears: '',         // 국민연금 납입기간(년) - 직접입력 모드의 참고용 기록(계산에는 쓰이지 않음)
+      futureContributionPlan: '', // 120개월 미만일 때 'continue' | 'stop' | 'unknown'; 빈 값은 신규 입력의 미선택 상태
+      expectedAdditionalContributionMonths: '', // 계속 납부 예정일 때 사용자가 입력하는 추가 납부 예정 개월 수
       simulate: {               // 모의계산 입력값 - monthly = 월평균급여×가입기간×1.5%로 자동 계산되어 반영됨
         averageMonthlyIncome: '', // 가입기간 중 월평균급여
         contributionMonths: '',   // 실제 보험료를 납부한 총 개월 수
@@ -79,6 +81,8 @@ export const initialFormData = {
       months: '',
       paymentMonths: '',
       paymentYears: '',
+      futureContributionPlan: '',
+      expectedAdditionalContributionMonths: '',
       simulate: {
         averageMonthlyIncome: '',
         contributionMonths: '',
@@ -115,6 +119,7 @@ export const initialFormData = {
     currentIncome: { monthly: '', annual: '' },
     currentLivingCost: {
       monthly: '', annual: '',
+      simpleMonthly: '', simpleAnnual: '', simpleInputStored: false,
       inputMode: 'simple',   // 'simple'(총액 한번에 입력) | 'detailed'(지출별 입력) - UI 입력 방식 선택값
       breakdown: {           // 현재 월 생활비 세부 항목(월 생활비 합계는 이 값들의 합으로 자동 계산됨)
         rent: '',            // 월세
@@ -179,17 +184,18 @@ export const initialFormData = {
     debtStatus: {
       hasDebt: true,
       totalBalance: '', monthlyRepayment: '',
+      simpleTotalBalance: '', simpleMonthlyRepayment: '', simpleInputStored: false,
       inputMode: 'simple',   // 'simple'(총액 한번에 입력) | 'detailed'(대출별 입력) - UI 입력 방식 선택값
       // 대출 종류별 상세(총 부채잔액/월 상환액은 이 값들의 합으로 자동 계산됨)
       // 항목별 shape: { repaymentType: 'interestOnly'|'equalPrincipal', principal, monthlyInterest, monthlyRepayment, months }
       breakdown: {
-        mortgage: {},      // 주택담보대출
-        depositLoan: {},   // 보증금대출
-        businessLoan: {},  // 사업자대출
-        buildingLoan: {},  // 빌딩대출
-        carLoan: {},       // 차량대출
-        studentLoan: {},   // 학자금대출
-        otherLoan: {},     // 기타대출
+        mortgage: { repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' },      // 주택담보대출
+        depositLoan: { repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' },   // 보증금대출
+        businessLoan: { repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' },  // 사업자대출
+        buildingLoan: { repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' },  // 빌딩대출
+        carLoan: { repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' },       // 차량대출
+        studentLoan: { repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' },   // 학자금대출
+        otherLoan: { repaymentType: 'interestOnly', principal: '', monthlyInterest: '', monthlyRepayment: '', months: '' },     // 기타대출
       },
       customItems: [],     // [{ name, repaymentType, principal, monthlyInterest, monthlyRepayment, months }] 기본 항목 외 사용자가 추가한 대출
     },

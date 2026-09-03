@@ -15,3 +15,71 @@ export function findNationalPensionCohort(birthYear) {
 export function getNationalPensionStartAge(birthYear) {
   return findNationalPensionCohort(birthYear)?.pensionAge ?? null;
 }
+
+export const NATIONAL_PENSION_MIN_MONTHS = 120;
+
+const present = (value) => value !== '' && value !== null && value !== undefined;
+const n = (value) => Number(value) || 0;
+
+export function getNationalPensionContributionMonths(pension = {}) {
+  const mode = pension.inputMode || 'direct';
+  const months = mode === 'simulate' ? pension.simulate?.contributionMonths : pension.paymentMonths;
+  const years = mode === 'simulate' ? pension.simulate?.years : pension.paymentYears;
+  if (present(months)) return n(months);
+  if (present(years)) return n(years) * 12;
+  return null;
+}
+
+export function assessNationalPensionEligibility({ pension = {} }) {
+  const contributionMonths = getNationalPensionContributionMonths(pension);
+  const hasFutureContributionPlan = Object.prototype.hasOwnProperty.call(pension, 'futureContributionPlan');
+  if (pension.inputMode === 'none') {
+    return { status: 'none', benefitType: 'none', contributionMonths };
+  }
+  // 가입기간 필드가 전혀 없는 과거 데이터는 기존처럼 입력된 월 예상연금을 포함한다.
+  if (contributionMonths === null) {
+    if (hasFutureContributionPlan) {
+      return { status: 'unknown', benefitType: 'unknown', contributionMonths: null };
+    }
+    return { status: 'eligible', benefitType: 'oldAgePension', contributionMonths: null, legacyFallback: true };
+  }
+  if (contributionMonths >= NATIONAL_PENSION_MIN_MONTHS) {
+    return { status: 'eligible', benefitType: 'oldAgePension', contributionMonths };
+  }
+
+  const plan = pension.futureContributionPlan;
+  if (hasFutureContributionPlan && plan === 'continue') {
+    const expectedAdditionalMonths = pension.expectedAdditionalContributionMonths;
+    if (!present(expectedAdditionalMonths)) {
+      return { status: 'unknown', benefitType: 'unknown', contributionMonths };
+    }
+    const effectiveContributionMonths = contributionMonths + Math.max(0, n(expectedAdditionalMonths));
+    if (effectiveContributionMonths >= NATIONAL_PENSION_MIN_MONTHS) {
+      return {
+        status: 'eligible', benefitType: 'oldAgePension', contributionMonths,
+        expectedAdditionalMonths: Math.max(0, n(expectedAdditionalMonths)),
+        effectiveContributionMonths,
+        eligibilityBasis: 'actualAndPlanned',
+      };
+    }
+    return {
+      status: 'unknown', benefitType: 'unknown', contributionMonths,
+      expectedAdditionalMonths: Math.max(0, n(expectedAdditionalMonths)),
+      effectiveContributionMonths,
+    };
+  }
+  if (hasFutureContributionPlan && plan !== 'stop') {
+    return { status: 'unknown', benefitType: 'unknown', contributionMonths };
+  }
+  return {
+    status: 'lumpSumPossible', benefitType: 'possibleRefundLumpSum', contributionMonths,
+    legacyFallback: !hasFutureContributionPlan,
+  };
+}
+
+export const nationalPensionMonthlyEligible = (eligibility) => eligibility?.status === 'eligible';
+
+export function calculateNationalPensionMonthlyEstimate(averageMonthlyIncome, contributionMonths) {
+  if (!present(averageMonthlyIncome) || !present(contributionMonths)) return null;
+  return Math.round(n(averageMonthlyIncome) * (n(contributionMonths) / 12) * 0.015);
+}

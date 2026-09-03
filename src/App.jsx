@@ -46,6 +46,9 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   // 지금 보고 있는 result가 방금 새로 진단한 것인지('new'), 과거 목록에서 열어본 것인지('history')
   // 구분한다 - 요약 화면의 "뒤로가기"가 어디로 돌아가야 하는지를 이 값으로 분기한다.
   const [resultSource, setResultSource] = useState('new');
+  // 과거 결과를 열었을 때 그 결과를 만든 원본 위저드 입력값(planner_results.input_json)을
+  // 잠시 들고 있다가, "수정하기"를 누르면 그대로 위저드에 다시 불러온다.
+  const [historyInput, setHistoryInput] = useState(null);
   const pendingSubmissionRef = useRef(null);
   const submissionPromiseRef = useRef(null);
   // 요약 화면에서 상세/재무건강 리포트로 넘어가기 직전 스크롤 위치를 기억해뒀다가, 다시 요약
@@ -206,11 +209,29 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const viewHistory = () => setPhase('history');
 
   // 히스토리 목록에서 항목을 클릭했을 때 - 새로 계산하지 않고 저장된 result_json을 그대로
-  // 요약 화면에 넘긴다(계산 API를 다시 호출하지 않음).
+  // 요약 화면에 넘긴다(계산 API를 다시 호출하지 않음). input_json은 "수정하기"를 누를 때만
+  // 쓰도록 따로 들고 있는다.
   const openPastResult = (row) => {
     setResult(row.result_json);
+    setHistoryInput(row.input_json || null);
     setResultSource('history');
     setPhase('summary');
+  };
+
+  // 과거 결과 화면의 "수정하기" - 그 결과를 만들었던 원본 입력값을 위저드에 다시 불러와
+  // 마지막 단계부터 이어서 수정할 수 있게 한다. 지금 진행 중이던 별도의 미완성 초안이 있어도
+  // 사용자가 명시적으로 과거 결과를 편집하겠다고 선택한 것이므로 그대로 덮어쓴다(다음 편집
+  // 시 자동저장이 서버 draft도 이 내용으로 갱신한다). handleSubmit이 제출 시 resultSource를
+  // 'new'로 되돌리므로, 수정 후 다시 제출하면 새 진단 결과로 저장되고 "뒤로가기"도 정상적으로
+  // 위저드로 돌아간다(overwrite가 아니라 새 결과 추가 - 기존 "새 결과 수정 후 재제출"과 동일한 동작).
+  const editHistoryResult = () => {
+    if (!historyInput) return;
+    formSessionConsumedRef.current = false;
+    setFormSessionDraft({ form_data: historyInput, step_index: null, updated_at: null });
+    setFormSessionKey((key) => key + 1);
+    setWizardStep(0);
+    setWizardResume(true);
+    setPhase('wizard');
   };
 
   // 상세/재무건강 리포트에서 요약 화면으로 "바로" 돌아왔을 때만 저장해둔 스크롤 위치로
@@ -306,6 +327,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
             <SimpleSummaryReport
               result={result}
               onBack={handleSummaryBack}
+              onEdit={resultSource === 'history' && historyInput ? editHistoryResult : undefined}
               onHome={goHome}
               onDownload={goToReport}
               onShare={goToReport}

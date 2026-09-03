@@ -15,7 +15,7 @@ function calcNonPensionFinancialMonthly(financialAssetsTotal, retirementYears) {
   return months > 0 ? financialAssetsTotal / months : 0;
 }
 
-function buildCashFlowByAge({ input, retirementAge, retirementYears, retirementLivingCostNow, nonPensionFinancialMonthly }) {
+function buildCashFlowByAge({ input, retirementAge, retirementYears, retirementLivingCostNow, nonPensionFinancialMonthly, pensionCalculable }) {
   const years = [];
   for (let y = 0; y <= retirementYears; y += CASH_FLOW_STEP_YEARS) years.push(y);
   if (years[years.length - 1] !== retirementYears) years.push(retirementYears);
@@ -24,10 +24,11 @@ function buildCashFlowByAge({ input, retirementAge, retirementYears, retirementL
 
   return years.map((year) => {
     const requiredLivingCost = Math.round(retirementLivingCostNow * Math.pow(1 + GENERAL_INFLATION_RATE, year));
-    const pensionIncome = pensionByYear.find((p) => p.year === year)?.pensionIncome ?? 0;
-    const preparedAmount = Math.round(pensionIncome + nonPensionFinancialMonthly);
-    const shortfallAmount = Math.max(0, requiredLivingCost - preparedAmount);
-    return { age: retirementAge + year, requiredLivingCost, preparedAmount, shortfallAmount };
+    const pensionIncome = pensionByYear.find((p) => p.year === year)?.pensionIncome;
+    const calculable = pensionCalculable && pensionIncome != null;
+    const preparedAmount = calculable ? Math.round(pensionIncome + nonPensionFinancialMonthly) : null;
+    const shortfallAmount = calculable ? Math.max(0, requiredLivingCost - preparedAmount) : null;
+    return { age: retirementAge + year, requiredLivingCost, preparedAmount, shortfallAmount, calculable };
   });
 }
 
@@ -41,10 +42,12 @@ export function buildSimpleSummary({ input, aggregates, simulation }) {
     calcNonPensionFinancialMonthly(aggregates.financialAssetsTotal + aggregates.liquidAssets, simulation.retirementYears)
   );
 
-  const pensionMonthly = Math.round(aggregates.monthlyRetirementIncome);
-  const preparedMonthly = pensionMonthly + nonPensionFinancialMonthly;
+  const nationalPensionEligibility = aggregates.nationalPensionEligibility || {};
+  const pensionCalculable = !Object.values(nationalPensionEligibility).includes('unknown');
+  const pensionMonthly = pensionCalculable ? Math.round(aggregates.monthlyRetirementIncome) : null;
+  const preparedMonthly = pensionCalculable ? pensionMonthly + nonPensionFinancialMonthly : null;
   const livingCostMonthly = simulation.retirementLivingCostNow;
-  const shortfallMonthly = Math.max(0, livingCostMonthly - preparedMonthly);
+  const shortfallMonthly = pensionCalculable ? Math.max(0, livingCostMonthly - preparedMonthly) : null;
 
   const cashFlowByAge = buildCashFlowByAge({
     input,
@@ -52,6 +55,7 @@ export function buildSimpleSummary({ input, aggregates, simulation }) {
     retirementYears: simulation.retirementYears,
     retirementLivingCostNow: livingCostMonthly,
     nonPensionFinancialMonthly,
+    pensionCalculable,
   });
 
   return {
@@ -65,7 +69,10 @@ export function buildSimpleSummary({ input, aggregates, simulation }) {
     totalLivingCost: simulation.requiredAtRetirement,
     pensionBreakdown: {
       total: pensionMonthly,
-      nationalPension: Math.round(aggregates.nationalPensionMonthly),
+      nationalPension: pensionCalculable ? Math.round(aggregates.nationalPensionMonthly) : null,
+      nationalPensionEligibility,
+      calculable: pensionCalculable,
+      calculationReason: pensionCalculable ? null : '국민연금 향후 가입기간을 확정할 수 없음',
       severancePension: Math.round(aggregates.severancePensionMonthly),
       personalPension: Math.round(aggregates.personalPensionMonthly),
     },

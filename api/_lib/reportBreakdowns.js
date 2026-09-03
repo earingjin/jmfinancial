@@ -87,6 +87,7 @@ export function buildSavingsBreakdown(input) {
 // 돌려준다. 이 값은 이미 assets.currentLivingCost.breakdown.other(→ monthlyLivingCost 합계)에
 // 포함되어 있으므로 여기서 다시 더하지 않는다 - 화면에 항목명을 보여주기 위한 표시용 목록일 뿐이다.
 export function buildOtherLivingExpenseItems(input) {
+  if (input.assets?.currentLivingCost?.inputMode !== 'detailed') return [];
   const otherItems = input.assets?.currentLivingCost?.breakdown?.otherItems || [];
   return otherItems
     .map((item, i) => ({ key: `other-living-${i}`, label: item.name || '기타지출', value: n(item.amount) }))
@@ -94,7 +95,12 @@ export function buildOtherLivingExpenseItems(input) {
 }
 
 export function buildLivingExpenseItems(input) {
-  const breakdown = input.assets?.currentLivingCost?.breakdown || {};
+  const livingCost = input.assets?.currentLivingCost || {};
+  if (livingCost.inputMode !== 'detailed') {
+    const value = n(livingCost.monthly);
+    return value > 0 ? [{ key: 'living-simple', label: '간편 입력 생활비', value }] : [];
+  }
+  const breakdown = livingCost.breakdown || {};
   const items = Object.entries(LIVING_EXPENSE_CATEGORY_LABELS)
     .map(([key, label]) => ({ key: `living-${key}`, label, value: n(breakdown[key]) }))
     .filter((item) => item.value > 0);
@@ -116,6 +122,10 @@ export function buildOtherLiquidAssetItems(input) {
 // 총 부채잔액(assets.debtStatus.totalBalance)과 동일한 범위(대출 원금 기준)만 포함한다.
 export function buildDebtBreakdown(input) {
   const ds = input.assets?.debtStatus || {};
+  if (ds.inputMode !== 'detailed') {
+    const value = n(ds.totalBalance);
+    return value > 0 ? [{ key: 'total', label: '간편 입력 부채', value }] : [];
+  }
   const breakdown = ds.breakdown || {};
   const items = Object.entries(DEBT_CATEGORY_LABELS)
     .map(([key, label]) => ({ key, label, value: n(breakdown[key]?.principal) }))

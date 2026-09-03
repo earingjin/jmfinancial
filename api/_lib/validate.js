@@ -187,6 +187,7 @@ const COUNT_FIELDS = [
   'income.nationalPension.months',
   'income.nationalPension.paymentMonths',
   'income.nationalPension.simulate.contributionMonths',
+  'income.nationalPension.expectedAdditionalContributionMonths',
   'income.personalPension.months',
   'income.personalPension.lumpsumAge',
   'spouse.salary.months',
@@ -195,6 +196,7 @@ const COUNT_FIELDS = [
   'spouse.nationalPension.months',
   'spouse.nationalPension.paymentMonths',
   'spouse.nationalPension.simulate.contributionMonths',
+  'spouse.nationalPension.expectedAdditionalContributionMonths',
   'spouse.personalPension.months',
   'spouse.personalPension.lumpsumAge',
   'expense.medical.years',
@@ -315,16 +317,19 @@ export function validateInput(input) {
   checkKindField(errors, input, 'basic.assumedReturnRate', 'returnRate');
   checkKindField(errors, input, 'scenarios.expenseReduction.reductionRate', 'rate');
 
-  [
-    ['income.nationalPension.paymentMonths', input.income?.nationalPension?.inputMode],
-    ['income.nationalPension.simulate.contributionMonths', input.income?.nationalPension?.inputMode],
-    ['spouse.nationalPension.paymentMonths', input.spouse?.nationalPension?.inputMode],
-    ['spouse.nationalPension.simulate.contributionMonths', input.spouse?.nationalPension?.inputMode],
-  ].forEach(([path, mode]) => {
+  ['income.nationalPension.futureContributionPlan', 'spouse.nationalPension.futureContributionPlan'].forEach((path) => {
     const value = getPath(input, path);
-    const isActivePath = (mode === 'simulate') === path.includes('.simulate.');
-    if (mode !== 'none' && isActivePath && !isBlank(value) && Number(value) > 0 && Number(value) < 120) {
-      errors.push(`${path} 값은 노령연금 수급을 위해 최소 120개월 이상이어야 합니다.`);
+    if (!isBlank(value) && !['continue', 'stop', 'unknown'].includes(value)) {
+      errors.push(`${path} 값이 유효하지 않습니다.`);
+    }
+  });
+  [
+    ['income.nationalPension', true],
+    ['spouse.nationalPension', input.basic?.hasSpouse === true],
+  ].forEach(([basePath, active]) => {
+    if (active && getPath(input, `${basePath}.futureContributionPlan`) === 'continue'
+      && isBlank(getPath(input, `${basePath}.expectedAdditionalContributionMonths`))) {
+      errors.push(`${basePath}.expectedAdditionalContributionMonths 값이 필요합니다.`);
     }
   });
 

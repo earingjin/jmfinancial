@@ -7,7 +7,7 @@ export default function PageFrame({ eyebrow, title, pageNumber, totalPages, chil
       <div className={`page-pad ${contentClassName}`}>
         <div className="masthead">
           <span className="masthead-kr">제이엠 자산관리 플래너</span>
-          <span className="masthead-en">JM Financial Planner ({plan})</span>
+          <span className="masthead-en">JM Financial Planner{plan === 'Standard' ? '' : ` (${plan})`}</span>
         </div>
         {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         {title && <h2 className="section-title">{title}</h2>}

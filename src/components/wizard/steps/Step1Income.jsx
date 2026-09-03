@@ -10,7 +10,7 @@ import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { initialFormData } from '../../../state/initialFormData';
 import { formatNumber, formatWon } from '../../../utils/format';
-import { getNationalPensionStartAge } from '../../../utils/pensionEligibility';
+import { assessNationalPensionEligibility, calculateNationalPensionMonthlyEstimate, getNationalPensionStartAge, nationalPensionMonthlyEligible } from '../../../utils/pensionEligibility';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
 
 // 2024년 통계청 발표 기준 대한민국 평균 기대수명(성별 구분 없는 평균치, 참고용 초기 제안값).
@@ -34,6 +34,56 @@ function PensionPortalNotice() {
       </a>
     </div>
   );
+}
+
+function NationalPensionEligibilityNotice({ basePath, eligibility }) {
+  const { setField } = useFormData();
+  const plan = eligibility.futureContributionPlan;
+  const message = plan === 'continue' && eligibility.eligibilityBasis === 'actualAndPlanned'
+    ? `실제 납부기간과 추가 납부 예정기간을 합한 총 ${formatNumber(eligibility.effectiveContributionMonths)}개월을 기준으로 국민연금 예상액을 계산합니다.`
+    : plan === 'continue' && eligibility.effectiveContributionMonths != null
+      ? `실제 납부기간과 추가 납부 예정기간의 합계는 ${formatNumber(eligibility.effectiveContributionMonths)}개월입니다. 120개월 미만이므로 국민연금 예상액을 계산하지 않습니다.`
+      : plan === 'continue'
+        ? '추가로 납부할 예정 개월 수를 입력하면 총 가입기간이 120개월 이상인지 확인합니다.'
+    : plan === 'stop'
+      ? '현재 가입기간은 120개월 미만입니다. 노령연금 수급요건을 충족하지 못할 수 있으며, 지급요건에 해당하면 납부한 보험료에 이자를 더한 반환일시금 대상이 될 수 있습니다.'
+      : '향후 가입 여부에 따라 노령연금 또는 반환일시금 여부가 달라질 수 있습니다.';
+  return (
+    <div style={{ marginTop: 12 }}>
+      <RadioField
+        path={`${basePath}.futureContributionPlan`}
+        label="앞으로 국민연금 보험료를 계속 납부할 예정인가요?"
+        onChange={(value) => setField(`${basePath}.futureContributionPlan`, value)}
+        options={[
+          { value: 'continue', label: '계속 납부 예정' },
+          { value: 'stop', label: '더 이상 납부하지 않을 예정' },
+          { value: 'unknown', label: '잘 모르겠음' },
+        ]}
+      />
+      {plan === 'continue' && (
+        <NumberField
+          path={`${basePath}.expectedAdditionalContributionMonths`}
+          label="추가 납부 예정 개월 수"
+          unit="개월"
+          min={0}
+        />
+      )}
+      <p className="field-helper">{message}</p>
+    </div>
+  );
+}
+
+// 퇴직금·퇴직연금 수령 방식을 '없음'으로 바꾸면 이전에 입력해둔 금액이 폼에 남아있지 않도록 초기화한다.
+// 국민연금(handleNationalPensionMode)·개인연금(handlePersonalPensionType)과 같은 초기화 패턴(0으로
+// 리셋)이며, type 자체는 건드리지 않는다(RadioField가 이미 setField(path, 'none')을 호출한 뒤 이
+// 핸들러가 실행됨). 컴포넌트 클로저 밖의 top-level 함수로 둔 것은, 이 프로젝트에 클릭 시뮬레이션이
+// 가능한 테스트 환경(jsdom 등)이 없어 setField 목(mock)을 직접 넘겨 단위 테스트하기 위함이다.
+export const SEVERANCE_RESET_FIELDS_ON_NONE = ['lumpsum', 'lumpsumAge', 'pensionMonthly', 'pensionStartAge', 'pensionYears', 'pensionMonths'];
+
+export function handleSeveranceType(setField, basePath, value) {
+  if (value === 'none') {
+    SEVERANCE_RESET_FIELDS_ON_NONE.forEach((field) => setField(`${basePath}.${field}`, 0));
+  }
 }
 
 export default function Step1Income() {
@@ -78,6 +128,8 @@ export default function Step1Income() {
     if (value === 'none') {
       clearPensionValues(basePath, ['monthly', 'months', 'paymentMonths', 'paymentYears']);
       clearPensionValues(`${basePath}.simulate`, ['averageMonthlyIncome', 'contributionMonths', 'years']);
+      setField(`${basePath}.futureContributionPlan`, '');
+      setField(`${basePath}.expectedAdditionalContributionMonths`, '');
     }
   };
 
@@ -199,10 +251,16 @@ export default function Step1Income() {
   const selfNpContributionYears = isFilledValue(selfNpEffectiveContributionMonths) ? Number(selfNpEffectiveContributionMonths) / 12 : null;
   const selfNpPaymentYears = isFilledValue(selfNpEffectivePaymentMonths) ? Number(selfNpEffectivePaymentMonths) / 12 : null;
   const selfNpEligibilityMonths = nationalPensionInputMode === 'simulate' ? selfNpEffectiveContributionMonths : selfNpEffectivePaymentMonths;
-  const selfNpEligible = isFilledValue(selfNpEligibilityMonths) && Number(selfNpEligibilityMonths) >= 120;
+  const selfNationalPension = getIn(formData, 'income.nationalPension');
+  const selfNpEligibility = {
+    ...assessNationalPensionEligibility({ pension: selfNationalPension }),
+    futureContributionPlan: selfNationalPension?.futureContributionPlan,
+  };
+  const selfNpEligible = isFilledValue(selfNpEligibilityMonths) && nationalPensionMonthlyEligible(selfNpEligibility);
+  const selfNpBenefitMonths = selfNpEligibility.effectiveContributionMonths ?? selfNpEffectiveContributionMonths;
   const selfNpSimulated =
-    isFilledValue(selfNpAvgIncome) && selfNpContributionYears != null && selfNpEligible
-      ? Math.round(Number(selfNpAvgIncome) * selfNpContributionYears * 0.015)
+    isFilledValue(selfNpAvgIncome) && isFilledValue(selfNpBenefitMonths) && selfNpEligible
+      ? calculateNationalPensionMonthlyEstimate(selfNpAvgIncome, selfNpBenefitMonths)
       : null;
 
   useEffect(() => {
@@ -233,10 +291,16 @@ export default function Step1Income() {
   const spouseNpContributionYears = isFilledValue(spouseNpEffectiveContributionMonths) ? Number(spouseNpEffectiveContributionMonths) / 12 : null;
   const spouseNpPaymentYears = isFilledValue(spouseNpEffectivePaymentMonths) ? Number(spouseNpEffectivePaymentMonths) / 12 : null;
   const spouseNpEligibilityMonths = spouseNationalPensionInputMode === 'simulate' ? spouseNpEffectiveContributionMonths : spouseNpEffectivePaymentMonths;
-  const spouseNpEligible = isFilledValue(spouseNpEligibilityMonths) && Number(spouseNpEligibilityMonths) >= 120;
+  const spouseNationalPension = getIn(formData, 'spouse.nationalPension');
+  const spouseNpEligibility = {
+    ...assessNationalPensionEligibility({ pension: spouseNationalPension }),
+    futureContributionPlan: spouseNationalPension?.futureContributionPlan,
+  };
+  const spouseNpEligible = isFilledValue(spouseNpEligibilityMonths) && nationalPensionMonthlyEligible(spouseNpEligibility);
+  const spouseNpBenefitMonths = spouseNpEligibility.effectiveContributionMonths ?? spouseNpEffectiveContributionMonths;
   const spouseNpSimulated =
-    isFilledValue(spouseNpAvgIncome) && spouseNpContributionYears != null && spouseNpEligible
-      ? Math.round(Number(spouseNpAvgIncome) * spouseNpContributionYears * 0.015)
+    isFilledValue(spouseNpAvgIncome) && isFilledValue(spouseNpBenefitMonths) && spouseNpEligible
+      ? calculateNationalPensionMonthlyEstimate(spouseNpAvgIncome, spouseNpBenefitMonths)
       : null;
 
   useEffect(() => {
@@ -565,6 +629,7 @@ export default function Step1Income() {
           path="income.severance.type"
           label="수령 방식"
           helper="이미 퇴직하여 퇴직금을 수령하신 경우 '없음'을 선택해 주세요"
+          onChange={(value) => handleSeveranceType(setField, 'income.severance', value)}
           options={[
             { value: 'lumpsum', label: '퇴직금(일시금)' },
             { value: 'pension', label: '퇴직연금(월지급)' },
@@ -621,6 +686,7 @@ export default function Step1Income() {
               path="spouse.severance.type"
               label="수령 방식"
               helper="이미 퇴직하여 퇴직금을 수령하신 경우 '없음'을 선택해 주세요"
+              onChange={(value) => handleSeveranceType(setField, 'spouse.severance', value)}
               options={[
                 { value: 'lumpsum', label: '퇴직금(일시금)' },
                 { value: 'pension', label: '퇴직연금(월지급)' },
@@ -756,6 +822,9 @@ export default function Step1Income() {
             />
           </div>
         )}
+        {nationalPensionInputMode !== 'none' && isFilledValue(selfNpEligibilityMonths) && Number(selfNpEligibilityMonths) < 120 && (
+          <NationalPensionEligibilityNotice basePath="income.nationalPension" eligibility={selfNpEligibility} />
+        )}
         {selfNationalPensionMonthly > 0 && selfNationalPensionMonths > 0 && (
           <TotalAmountBox label="국민연금 수령 총액" amount={selfNationalPensionTotal} valueLabel="수령 총액은" />
         )}
@@ -837,6 +906,9 @@ export default function Step1Income() {
                     : '실제로 보험료를 납부한 전체 개월 수를 입력해 주세요. 최소 120개월(10년)이 필요합니다.'}
                 />
               </div>
+            )}
+            {spouseNationalPensionInputMode !== 'none' && isFilledValue(spouseNpEligibilityMonths) && Number(spouseNpEligibilityMonths) < 120 && (
+              <NationalPensionEligibilityNotice basePath="spouse.nationalPension" eligibility={spouseNpEligibility} />
             )}
             {spouseNationalPensionMonthly > 0 && spouseNationalPensionMonths > 0 && (
               <TotalAmountBox label="국민연금 수령 총액" amount={spouseNationalPensionTotal} valueLabel="수령 총액은" />

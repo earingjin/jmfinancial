@@ -1,5 +1,5 @@
 import { n } from './aggregate.js';
-import { getNationalPensionStartAge } from './pensionEligibility.js';
+import { assessNationalPensionEligibility, getNationalPensionStartAge, nationalPensionMonthlyEligible } from './pensionEligibility.js';
 import { FUTURE_FINANCE_ASSUMPTIONS } from './constants.js';
 import { NonFiniteCalculationError } from './finite.js';
 
@@ -50,16 +50,6 @@ function round1(value) {
 
 const present = (value) => value !== '' && value !== null && value !== undefined;
 
-function nationalEligible(person = {}) {
-  const pension = person.nationalPension || {};
-  if (pension.inputMode === 'none') return false;
-  const rawMonths = pension.inputMode === 'simulate' ? pension.simulate?.contributionMonths : pension.paymentMonths;
-  const legacyYears = pension.inputMode === 'simulate' ? pension.simulate?.years : pension.paymentYears;
-  if (present(rawMonths)) return n(rawMonths) >= 120;
-  if (present(legacyYears)) return n(legacyYears) * 12 >= 120;
-  return true;
-}
-
 function pensionComponents(input, currentYear) {
   const people = [
     { key: 'self', person: input.income || {}, birthYear: input.basic?.birthYear },
@@ -71,10 +61,12 @@ function pensionComponents(input, currentYear) {
     const severance = person.severance || {};
     const personal = person.personalPension || {};
     const nationalStart = present(birthYear) ? getNationalPensionStartAge(n(birthYear)) : null;
+    const nationalEligibility = assessNationalPensionEligibility({ pension: national });
     return [
       {
-        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalEligible(person) ? n(national.monthly) : 0,
+        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalPensionMonthlyEligible(nationalEligibility) ? n(national.monthly) : 0,
         startAge: nationalStart, months: national.months, currentAge,
+        eligibilityStatus: nationalEligibility.status,
         growthRate: FUTURE_FINANCE_ASSUMPTIONS.nationalPensionGrowthRate,
       },
       {
@@ -122,8 +114,24 @@ function evaluateFinitePension(component, years) {
   };
 }
 
-export function calculatePensionIncomeAtTarget({ input, currentYear, years }) {
+// treatUnknownNationalPensionAsZero: "연금소득 기준 생활비 충당률"(60/70/80세 지표)은 국민연금
+// 가입기간이 unknown이면 임의로 추정하지 않고 해당 목표 나이 전체를 산출 불가로 처리해야 한다
+// (docs/future-finance-spec.md). 이 옵션은 기본값 false로 그 동작을 그대로 유지하고, 성격이 다른
+// buildRetirementAssetProjection(자산잔액 시뮬레이션)에서만 true로 넘겨, 국민연금이 unknown인
+// 해에는 그 해 국민연금만 0원으로 두고 급여·퇴직연금·개인연금·자산은 계속 계산하도록 완화한다.
+export function calculatePensionIncomeAtTarget({ input, currentYear, years, treatUnknownNationalPensionAsZero = false }) {
   const components = pensionComponents(input, currentYear).map((component) => {
+    if (component.category === 'nationalPension' && component.eligibilityStatus === 'unknown') {
+      if (treatUnknownNationalPensionAsZero) {
+        return { ...component, amount: 0, inclusionStatus: 'zero' };
+      }
+      return {
+        ...component,
+        amount: null,
+        inclusionStatus: 'unknown',
+        unknownReason: '국민연금 향후 가입기간을 확정할 수 없음',
+      };
+    }
     if (component.monthly <= 0) return { ...component, amount: 0, inclusionStatus: 'zero' };
     return component.category === 'nationalPension'
       ? evaluateNationalPension(component, years)
@@ -142,7 +150,9 @@ export function calculatePensionIncomeAtTarget({ input, currentYear, years }) {
     nationalPension, personalPension, retirementPension,
     total: calculable ? nationalPension + personalPension + retirementPension : null,
     calculable,
-    reason: calculable ? null : `연금 개시·종료 정보 부족: ${unknown.map((component) => component.key).join(', ')}`,
+    reason: calculable ? null : unknown
+      .map((component) => component.unknownReason || `연금 개시·종료 정보 부족: ${component.key}`)
+      .join(', '),
     components,
   };
 }
@@ -299,6 +309,11 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
 const LUMP_SUM_EXPENSE_NOTE_EXCLUDED = '자녀 학자금·결혼지원비 등 목돈지출은 발생 시점(나이) 정보가 없어 이번 자산잔액 전망에는 포함되지 않았습니다.';
 const LUMP_SUM_EXPENSE_NOTE_INCLUDED = '입력하신 은퇴 후 예상 목돈지출(발생 나이·금액)을 반영했습니다. 자녀 학자금 등 발생 시점이 불명확한 목돈지출은 포함되지 않습니다.';
 
+// 국민연금 가입기간이 120개월 미만이면서 향후 납부 계획이 확정되지 않은 해에는(가입기간
+// 불확실) 그 해 국민연금만 0원으로 가정하고 나머지(급여·퇴직연금·개인연금·자산)는 계속
+// 계산한다는 사실을 화면에 알리는 안내 문구.
+const NATIONAL_PENSION_UNKNOWN_NOTE = '국민연금 향후 가입기간을 확정할 수 없는 기간은 국민연금 소득을 0원으로 가정해 계산했습니다. 실제로는 이보다 소득이 더 있을 수 있습니다.';
+
 // input.expense.retirementLumpSumExpenses에서 은퇴나이~기대수명 범위 안의 유효한 항목만 골라
 // 나이별로 합산한다. validate.js가 제출 시점에 이미 이 범위를 검증하지만, 이 함수를 직접 호출하는
 // 테스트나 과거 데이터를 대비해 여기서도 방어적으로 다시 확인한다 - 은퇴 전 지출이나 금액 0 이하
@@ -333,6 +348,8 @@ function retirementAssetProjectionNotCalculable(reason) {
     recoveredAfterDepletion: null,
     lumpSumExpenseIncluded: false,
     lumpSumExpenseNote: LUMP_SUM_EXPENSE_NOTE_EXCLUDED,
+    nationalPensionUnknownAssumedZero: false,
+    nationalPensionUnknownNote: null,
     points: [],
   };
 }
@@ -400,14 +417,21 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
   const points = [];
   let balance = simulation.readyAssetsAtRetirement;
   let depletionAge = null;
+  // 국민연금 가입기간이 unknown인 해가 하나라도 있었는지 - 그 해엔 국민연금만 0원으로 가정하고
+  // 계속 계산하므로(treatUnknownNationalPensionAsZero), 이 시뮬레이션 전체가 "확정된 숫자"가
+  // 아니라 일부 연도는 국민연금 미확정을 0원으로 가정했다는 사실을 잃지 않고 결과에 남겨둔다.
+  let nationalPensionUnknownAssumedZero = false;
 
   for (let age = retirementAge; age <= lifeExpectancy; age++) {
     const years = age - simulation.currentAge;
-    const pension = calculatePensionIncomeAtTarget({ input, currentYear, years });
+    const pension = calculatePensionIncomeAtTarget({ input, currentYear, years, treatUnknownNationalPensionAsZero: true });
     if (!pension.calculable) {
       return retirementAssetProjectionNotCalculable(
         `연금 개시·종료 정보가 불명확해 자산잔액 전망을 계산할 수 없습니다 (${pension.reason}).`
       );
+    }
+    if (pension.components.some((c) => c.category === 'nationalPension' && c.eligibilityStatus === 'unknown')) {
+      nationalPensionUnknownAssumedZero = true;
     }
     const nonPensionIncome = calculateNonPensionIncomeAtTarget({
       input, aggregates, currentAge: simulation.currentAge, currentYear, years,
@@ -463,6 +487,8 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
     recoveredAfterDepletion,
     lumpSumExpenseIncluded,
     lumpSumExpenseNote: lumpSumExpenseIncluded ? LUMP_SUM_EXPENSE_NOTE_INCLUDED : LUMP_SUM_EXPENSE_NOTE_EXCLUDED,
+    nationalPensionUnknownAssumedZero,
+    nationalPensionUnknownNote: nationalPensionUnknownAssumedZero ? NATIONAL_PENSION_UNKNOWN_NOTE : null,
     explanation: {
       endingAssets: round(endingAssets),
       assetChange,

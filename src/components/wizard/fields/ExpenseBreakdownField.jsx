@@ -5,6 +5,7 @@ import { formatNumber } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
 import RepeatableList from './RepeatableList';
 import TotalAmountBox from './TotalAmountBox';
+import { changeLivingInputMode, livingDetailedTotal } from './inputModeTransitions';
 
 /**
  * 세부 항목을 버튼(pill)으로 나열해 클릭한 항목만 금액 입력창을 펼쳐서 보여주는 필드.
@@ -19,6 +20,9 @@ export default function ExpenseBreakdownField({
   totalPath,
   annualPath,
   modePath,
+  simpleTotalPath,
+  simpleAnnualPath,
+  simpleStoredPath,
   categories,
   totalLabel = '월 합계',
 }) {
@@ -27,6 +31,7 @@ export default function ExpenseBreakdownField({
   const total = getIn(formData, totalPath);
   const annualTotal = annualPath ? getIn(formData, annualPath) : null;
   const mode = getIn(formData, modePath) || 'simple';
+  const detailedTotal = livingDetailedTotal(formData, basePath, categories);
 
   const [openKeys, setOpenKeys] = useState(() => {
     const otherItemsInit = getIn(formData, `${basePath}.otherItems`) || [];
@@ -67,7 +72,22 @@ export default function ExpenseBreakdownField({
     const value = raw === '' ? '' : Number(raw);
     setField(totalPath, value);
     if (annualPath) setField(annualPath, value === '' ? '' : Math.round(value * 12));
+    setField(simpleTotalPath, value);
+    setField(simpleAnnualPath, value === '' ? '' : Math.round(value * 12));
+    setField(simpleStoredPath, true);
   };
+
+  const changeMode = (nextMode) => changeLivingInputMode({
+    formData, setField, nextMode, basePath, totalPath, annualPath, modePath,
+    simpleTotalPath, simpleAnnualPath, simpleStoredPath, categories,
+    confirmChange: (message) => window.confirm(message),
+  });
+
+  useEffect(() => {
+    if (mode !== 'detailed' || Number(total) === detailedTotal) return;
+    setField(totalPath, detailedTotal);
+    if (annualPath) setField(annualPath, Math.round(detailedTotal * 12));
+  }, [annualPath, detailedTotal, mode, setField, total, totalPath]);
 
   // pill을 다시 눌러 패널을 접기만 하면 입력창이 숨겨질 뿐 값은 그대로 남아 합계에 계속
   // 포함된다. "이 항목 삭제"는 값을 실제로 비우고 합계를 재계산한 뒤 패널도 닫는다.
@@ -105,14 +125,14 @@ export default function ExpenseBreakdownField({
         <button
           type="button"
           className={`radio-pill ${mode === 'simple' ? 'is-active' : ''}`}
-          onClick={() => setField(modePath, 'simple')}
+          onClick={() => changeMode('simple')}
         >
           총액으로 한번에 입력
         </button>
         <button
           type="button"
           className={`radio-pill ${mode === 'detailed' ? 'is-active' : ''}`}
-          onClick={() => setField(modePath, 'detailed')}
+          onClick={() => changeMode('detailed')}
         >
           지출별로 자세히 입력
         </button>

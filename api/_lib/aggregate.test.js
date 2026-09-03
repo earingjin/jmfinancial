@@ -71,6 +71,61 @@ describe('retirementIncomeByPerson', () => {
     expect(result.retirementIncomeByPerson.self.severancePensionMonthly).toBe(40);
     expect(result.retirementIncomeByPerson.spouse.severancePensionMonthly).toBe(30);
   });
+
+  it('exposes each person\'s national-pension eligibility status alongside the monthly amount (self and spouse independently)', () => {
+    const result = buildAggregates(input({
+      basic: { hasSpouse: true },
+      income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 60, futureContributionPlan: 'continue' } },
+      spouse: { nationalPension: { inputMode: 'direct', monthly: 80, months: 240, paymentMonths: 130 } },
+    }));
+
+    expect(result.retirementIncomeByPerson.self.nationalPensionEligibilityStatus).toBe('unknown');
+    expect(result.retirementIncomeByPerson.self.nationalPensionMonthly).toBe(0);
+    expect(result.retirementIncomeByPerson.spouse.nationalPensionEligibilityStatus).toBe('eligible');
+    expect(result.retirementIncomeByPerson.spouse.nationalPensionMonthly).toBe(80);
+  });
+
+  it('marks spouse eligibility as "none" when there is no spouse, without throwing', () => {
+    const result = buildAggregates(input({ basic: { hasSpouse: false } }));
+    expect(result.retirementIncomeByPerson.spouse.nationalPensionEligibilityStatus).toBe('none');
+  });
+
+  describe('severanceLumpsum ignores stale lumpsum values left over from switching type', () => {
+    it('keeps showing the lumpsum amount when type is "lumpsum" (existing behavior unchanged)', () => {
+      const result = buildAggregates(input({ income: { severance: { type: 'lumpsum', lumpsum: 5000 } } }));
+      expect(result.retirementIncomeByPerson.self.severanceLumpsum).toBe(5000);
+    });
+
+    it('reports 0 when type is "none" even though a stale lumpsum value remains in the form data', () => {
+      const result = buildAggregates(input({ income: { severance: { type: 'none', lumpsum: 5000 } } }));
+      expect(result.retirementIncomeByPerson.self.severanceLumpsum).toBe(0);
+    });
+
+    it('reports 0 when type is "pension" even though a stale lumpsum value remains in the form data', () => {
+      const result = buildAggregates(input({
+        income: { severance: { type: 'pension', lumpsum: 5000, pensionMonthly: 40, pensionMonths: 120 } },
+      }));
+      expect(result.retirementIncomeByPerson.self.severanceLumpsum).toBe(0);
+      // the switch to type='pension' must not be affected by this fix
+      expect(result.retirementIncomeByPerson.self.severancePensionMonthly).toBe(40);
+    });
+
+    it('applies the same rule to the spouse independently of self', () => {
+      const result = buildAggregates(input({
+        income: { severance: { type: 'lumpsum', lumpsum: 5000 } },
+        spouse: { severance: { type: 'none', lumpsum: 3000 } },
+      }));
+      expect(result.retirementIncomeByPerson.self.severanceLumpsum).toBe(5000);
+      expect(result.retirementIncomeByPerson.spouse.severanceLumpsum).toBe(0);
+    });
+
+    it('preserves old saved results that predate the type field entirely (no "type" key at all)', () => {
+      const legacyInput = input({ income: { severance: { lumpsum: 5000 } } });
+      delete legacyInput.income.severance.type;
+      const result = buildAggregates(legacyInput);
+      expect(result.retirementIncomeByPerson.self.severanceLumpsum).toBe(5000);
+    });
+  });
 });
 
 describe('savingsPlan.retirementIncludedInTotal - totalSavingsAnnual', () => {

@@ -6,11 +6,12 @@ export default function Step6NetWorth() {
   const { formData } = useFormData();
   const liquidAssets = Number(getIn(formData, 'assets.liquidAssets.total')) || 0;
   const fa = getIn(formData, 'assets.financialAssets') || {};
-  const financialAssetsTotal = ['stocks', 'funds', 'other']
+  const financialAssetsTotal = ['stocks', 'funds', 'bonds', 'other']
     .reduce((s, k) => s + (Number(fa[k]) || 0), 0);
   const pensionAssets = Number(getIn(formData, 'assets.pensionAssets')) || 0;
   const realEstateTotal = Number(getIn(formData, 'assets.realEstateAssets.total')) || 0;
-  const totalAssets = liquidAssets + financialAssetsTotal + pensionAssets + realEstateTotal;
+  const otherAssetsTotal = Number(getIn(formData, 'assets.otherAssets.total')) || 0;
+  const totalAssets = liquidAssets + financialAssetsTotal + pensionAssets + realEstateTotal + otherAssetsTotal;
   const totalDebt = Number(getIn(formData, 'assets.debtStatus.totalBalance')) || 0;
   const netWorth = totalAssets - totalDebt;
 

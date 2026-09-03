@@ -39,6 +39,9 @@ export default function Step5Debt() {
           balanceTotalPath="assets.debtStatus.totalBalance"
           repaymentTotalPath="assets.debtStatus.monthlyRepayment"
           modePath="assets.debtStatus.inputMode"
+          simpleBalancePath="assets.debtStatus.simpleTotalBalance"
+          simpleRepaymentPath="assets.debtStatus.simpleMonthlyRepayment"
+          simpleStoredPath="assets.debtStatus.simpleInputStored"
           categories={DEBT_CATEGORIES}
         /> : <p className="field-helper">부채 없음으로 선택했습니다. 부채잔액과 월 상환액은 0원으로 반영됩니다.</p>}
       </section>
