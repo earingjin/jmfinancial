@@ -49,6 +49,18 @@ describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 
 });
 
 describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 2, default for new diagnoses)', () => {
+  it('renders the total/detail mode selector when savings are present', () => {
+    const formData = structuredClone(initialFormData);
+    const html = renderToStaticMarkup(
+      <FormContext.Provider value={{ formData, setField: vi.fn() }}>
+        <Step3Savings />
+      </FormContext.Provider>
+    );
+
+    expect(html).toContain('총액으로 한 번에 입력');
+    expect(html).toContain('항목별로 자세히 입력');
+  });
+
   it('defaults to v2 for a brand-new form (initialFormData as-is)', () => {
     const formData = structuredClone(initialFormData);
 
@@ -150,8 +162,8 @@ describe('Step3Savings - 저축 없음 → 저축 있음 전환(retirementSaving
     updateSavingsPresence(formData, setField, false);
 
     expect(formData.assets.savingsPlan.hasSavings).toBe(false);
-    expect(formData.assets.savingsPlan.monthly).toBe(0);
-    expect(formData.assets.savingsPlan.additionalRetirementMonthly).toBe(0);
+    expect(formData.assets.savingsPlan.monthly).toBe('');
+    expect(formData.assets.savingsPlan.additionalRetirementMonthly).toBe('');
     expect(formData.assets.savingsPlan.breakdown.stocks.monthly).toBe('');
     expect(formData.assets.savingsPlan.breakdown.irp.monthly).toBe('');
     expect(formData.assets.savingsPlan.customItems).toEqual([
@@ -184,6 +196,6 @@ describe('Step3Savings - 저축 없음 → 저축 있음 전환(retirementSaving
     expect(validateDraft(restored).valid).toBe(true);
     expect(restored.form_data.assets.financialAssets.stocks).toBe(1000);
     expect(restored.form_data.assets.pensionAssetsBreakdown.irp).toBe(2000);
-    expect(restored.form_data.assets.savingsPlan.monthly).toBe(0);
+    expect(restored.form_data.assets.savingsPlan.monthly).toBe('');
   });
 });

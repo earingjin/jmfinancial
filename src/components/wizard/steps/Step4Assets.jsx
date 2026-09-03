@@ -8,6 +8,7 @@ import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
 import TotalAmountBox from '../fields/TotalAmountBox';
+import TotalInputModeField from '../fields/TotalInputModeField';
 
 const LIQUID_ASSET_CATEGORIES = [
   { key: 'deposit', label: '예금' },
@@ -65,6 +66,11 @@ export default function Step4Assets() {
   const hasPensionAssets = getIn(formData, 'assets.hasPensionAssets') !== false;
   const hasRealEstateAssets = getIn(formData, 'assets.realEstateAssets.hasAssets') !== false;
   const hasOtherAssets = getIn(formData, 'assets.otherAssets.hasAssets') !== false;
+  const liquidMode = getIn(formData, 'assets.liquidAssets.inputMode') || 'detailed';
+  const financialMode = getIn(formData, 'assets.financialAssets.inputMode') || 'detailed';
+  const pensionMode = getIn(formData, 'assets.pensionAssetsInputMode') || 'detailed';
+  const realEstateMode = getIn(formData, 'assets.realEstateAssets.inputMode') || 'detailed';
+  const otherAssetsMode = getIn(formData, 'assets.otherAssets.inputMode') || 'detailed';
 
   const setAssetPresence = (path, value, clear) => {
     setField(path, value);
@@ -74,18 +80,19 @@ export default function Step4Assets() {
   const clearLiquidAssets = () => {
     LIQUID_ASSET_CATEGORIES.forEach(({ key }) => setField(`assets.liquidAssets.breakdown.${key}`, ''));
     setField('assets.liquidAssets.customItems', []);
-    setField('assets.liquidAssets.total', 0);
+    setField('assets.liquidAssets.total', '');
   };
 
   const clearFinancialAssets = () => {
     FINANCIAL_ASSET_CATEGORIES.forEach(({ key }) => setField(`assets.financialAssets.${key}`, ''));
     setField('assets.financialAssets.otherItems', []);
+    setField('assets.financialAssets.total', '');
   };
 
   const clearPensionAssets = () => {
     PENSION_ASSET_CATEGORIES.forEach(({ key }) => setField(`assets.pensionAssetsBreakdown.${key}`, ''));
     setField('assets.pensionAssetsBreakdown.otherItems', []);
-    setField('assets.pensionAssets', 0);
+    setField('assets.pensionAssets', '');
   };
 
   const clearRealEstateAssets = () => {
@@ -93,12 +100,12 @@ export default function Step4Assets() {
     setField('assets.realEstateAssets.mainProperty', '');
     setField('assets.realEstateAssets.reverseMortgageHouse', '');
     setField('assets.realEstateAssets.otherItems', []);
-    setField('assets.realEstateAssets.total', 0);
+    setField('assets.realEstateAssets.total', '');
   };
 
   const clearOtherAssets = () => {
     setField('assets.otherAssets.items', []);
-    setField('assets.otherAssets.total', 0);
+    setField('assets.otherAssets.total', '');
   };
   const [openFinancialKeys, setOpenFinancialKeys] = useState(() => {
     const fa = getIn(formData, 'assets.financialAssets') || {};
@@ -174,54 +181,83 @@ export default function Step4Assets() {
   // 그 합계 변경이 다시 4개 항목 합계(assets.pensionAssets)에도 반영되도록 함께 재계산한다.
   const pensionOtherItems = getIn(formData, 'assets.pensionAssetsBreakdown.otherItems') || [];
   const pensionOtherTotal = pensionOtherItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
+  const hasPensionOtherInput = pensionOtherItems.some((item) => item?.amount !== '' && item?.amount != null);
 
   useEffect(() => {
-    setField('assets.pensionAssetsBreakdown.other', pensionOtherTotal);
-  }, [pensionOtherTotal, setField]);
+    if (pensionMode === 'simple') return;
+    setField('assets.pensionAssetsBreakdown.other', hasPensionOtherInput ? pensionOtherTotal : '');
+  }, [hasPensionOtherInput, pensionMode, pensionOtherTotal, setField]);
 
   const pensionBreakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
+  const hasPensionDetailedInput = ['variableAnnuity', 'pensionSavingsAccount', 'irp'].some((key) => {
+    const value = pensionBreakdown[key];
+    return value !== '' && value != null;
+  }) || hasPensionOtherInput;
   const pensionAssetsTotal = PENSION_BREAKDOWN_NUMERIC_KEYS.reduce(
     (s, k) => s + (k === 'other' ? pensionOtherTotal : Number(pensionBreakdown[k]) || 0),
     0
   );
 
   useEffect(() => {
-    setField('assets.pensionAssets', pensionAssetsTotal);
-  }, [pensionAssetsTotal, setField]);
+    if (pensionMode === 'simple') return;
+    setField('assets.pensionAssets', hasPensionDetailedInput ? pensionAssetsTotal : '');
+  }, [hasPensionDetailedInput, pensionAssetsTotal, pensionMode, setField]);
 
   // "기타 금융자산"도 종류별로 나눠 입력받고, 합계만 financialAssets.other에 반영한다.
   const financialOtherItems = getIn(formData, 'assets.financialAssets.otherItems') || [];
   const financialOtherTotal = financialOtherItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
+  const hasFinancialOtherInput = financialOtherItems.some((item) => item?.amount !== '' && item?.amount != null);
 
   useEffect(() => {
-    setField('assets.financialAssets.other', financialOtherTotal);
-  }, [financialOtherTotal, setField]);
+    if (financialMode === 'simple') return;
+    setField('assets.financialAssets.other', hasFinancialOtherInput ? financialOtherTotal : '');
+  }, [financialMode, financialOtherTotal, hasFinancialOtherInput, setField]);
 
-  const liquidAssets = Number(getIn(formData, 'assets.liquidAssets.total')) || 0;
-  const financialAssetsTotal =
+  const liquidBreakdown = getIn(formData, 'assets.liquidAssets.breakdown') || {};
+  const hasLiquidDetailedInput = LIQUID_ASSET_CATEGORIES.some((category) => {
+    const value = liquidBreakdown[category.key];
+    return value !== '' && value != null;
+  }) || (getIn(formData, 'assets.liquidAssets.customItems') || []).some((item) => item?.amount !== '' && item?.amount != null);
+  const liquidDetailedTotal = LIQUID_ASSET_CATEGORIES.reduce((s, c) => s + (Number(liquidBreakdown[c.key]) || 0), 0)
+    + (getIn(formData, 'assets.liquidAssets.customItems') || []).reduce((s, item) => s + (Number(item.amount) || 0), 0);
+  const liquidAssets = liquidMode === 'simple' ? Number(getIn(formData, 'assets.liquidAssets.total')) || 0 : liquidDetailedTotal;
+  const financialDetailedTotal =
     (Number(getIn(formData, 'assets.financialAssets.stocks')) || 0) +
     (Number(getIn(formData, 'assets.financialAssets.funds')) || 0) +
     (Number(getIn(formData, 'assets.financialAssets.bonds')) || 0) +
     financialOtherTotal;
-  const pensionAssets = Number(getIn(formData, 'assets.pensionAssets')) || 0;
+  const hasFinancialDetailedInput = ['stocks', 'funds', 'bonds'].some((key) => {
+    const value = getIn(formData, `assets.financialAssets.${key}`);
+    return value !== '' && value != null;
+  }) || hasFinancialOtherInput;
+  const financialAssetsTotal = financialMode === 'simple' ? Number(getIn(formData, 'assets.financialAssets.total')) || 0 : financialDetailedTotal;
+  const pensionAssets = pensionMode === 'simple' ? Number(getIn(formData, 'assets.pensionAssets')) || 0 : pensionAssetsTotal;
 
   // 부동산자산 총액 = 주요 부동산 시세 + 기타 부동산(추가 보유) 시세 합계. 이 합계를 그대로
   // assets.realEstateAssets.total에 반영한다 - 서버 계산(aggregate.js 등)은 계속 이 필드를 그대로 읽는다.
   const realEstateMainProperty = Number(getIn(formData, 'assets.realEstateAssets.mainProperty')) || 0;
   const realEstateOtherItems = getIn(formData, 'assets.realEstateAssets.otherItems') || [];
   const realEstateOtherTotal = realEstateOtherItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
-  const realEstateTotal = realEstateMainProperty + realEstateOtherTotal;
+  const hasRealEstateDetailedInput = (() => {
+    const mainProperty = getIn(formData, 'assets.realEstateAssets.mainProperty');
+    return (mainProperty !== '' && mainProperty != null)
+      || realEstateOtherItems.some((item) => item?.amount !== '' && item?.amount != null);
+  })();
+  const realEstateDetailedTotal = realEstateMainProperty + realEstateOtherTotal;
+  const realEstateTotal = realEstateMode === 'simple' ? Number(getIn(formData, 'assets.realEstateAssets.total')) || 0 : realEstateDetailedTotal;
 
   const otherAssetItems = getIn(formData, 'assets.otherAssets.items') || [];
-  const otherAssetsTotal = otherAssetItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
+  const otherAssetsDetailedTotal = otherAssetItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
+  const hasOtherAssetsDetailedInput = otherAssetItems.some((item) => item?.amount !== '' && item?.amount != null);
+  const otherAssetsTotal = otherAssetsMode === 'simple' ? Number(getIn(formData, 'assets.otherAssets.total')) || 0 : otherAssetsDetailedTotal;
 
   useEffect(() => {
-    setField('assets.otherAssets.total', otherAssetsTotal);
-  }, [otherAssetsTotal, setField]);
+    if (otherAssetsMode !== 'simple') setField('assets.otherAssets.total', hasOtherAssetsDetailedInput ? otherAssetsDetailedTotal : '');
+  }, [hasOtherAssetsDetailedInput, otherAssetsDetailedTotal, otherAssetsMode, setField]);
 
   useEffect(() => {
-    setField('assets.realEstateAssets.total', realEstateTotal);
-  }, [realEstateTotal, setField]);
+    if (realEstateMode !== 'simple') setField('assets.realEstateAssets.total', hasRealEstateDetailedInput ? realEstateDetailedTotal : '');
+  }, [hasRealEstateDetailedInput, realEstateDetailedTotal, realEstateMode, setField]);
 
   const totalAssets = liquidAssets + financialAssetsTotal + pensionAssets + realEstateTotal + otherAssetsTotal;
 
@@ -235,7 +271,11 @@ export default function Step4Assets() {
           예금·적금·비상금 등 즉시 인출 가능한 자산입니다.
         </p>
         <PresenceField label="현금성 자산 여부" present={hasLiquidAssets} onChange={(value) => setAssetPresence('assets.liquidAssets.hasAssets', value, clearLiquidAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
-        {hasLiquidAssets ? <CategoryBreakdownField
+        {hasLiquidAssets ? <TotalInputModeField
+          modePath="assets.liquidAssets.inputMode" totalPath="assets.liquidAssets.total"
+          simpleTotalPath="assets.liquidAssets.simpleTotal" simpleStoredPath="assets.liquidAssets.simpleInputStored"
+          detailedTotal={liquidDetailedTotal} detailedHasInput={hasLiquidDetailedInput} totalLabel="현금성 자산 총액"
+        ><CategoryBreakdownField
           basePath="assets.liquidAssets.breakdown"
           customPath="assets.liquidAssets.customItems"
           totalPath="assets.liquidAssets.total"
@@ -247,7 +287,7 @@ export default function Step4Assets() {
           customNamePlaceholder="예: 외화예금"
           customAmountLabel="금액"
           addItemLabel="현금성 자산 항목 추가"
-        /> : <p className="field-helper">현금성 자산 없음으로 선택했습니다.</p>}
+        /></TotalInputModeField> : <p className="field-helper">현금성 자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">
@@ -256,7 +296,11 @@ export default function Step4Assets() {
           예금·적금·CMA는 위 현금성 자산에서 입력해 주세요. 여기는 주식·펀드·채권 등 투자자산입니다.
         </p>
         <PresenceField label="금융자산 여부" present={hasFinancialAssets} onChange={(value) => setAssetPresence('assets.financialAssets.hasAssets', value, clearFinancialAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
-        {hasFinancialAssets ? <>
+        {hasFinancialAssets ? <TotalInputModeField
+          modePath="assets.financialAssets.inputMode" totalPath="assets.financialAssets.total"
+          simpleTotalPath="assets.financialAssets.simpleTotal" simpleStoredPath="assets.financialAssets.simpleInputStored"
+          detailedTotal={financialDetailedTotal} detailedHasInput={hasFinancialDetailedInput} totalLabel="금융자산 총액"
+        >
         <p className="field-label">해당하는 금융자산 종류를 눌러 금액을 입력해 주세요</p>
         <div className="checkbox-group" style={{ marginTop: 8, marginBottom: 14 }}>
           {FINANCIAL_ASSET_CATEGORIES.map((c) => (
@@ -317,7 +361,7 @@ export default function Step4Assets() {
         )}
         <TotalAmountBox label="금융자산 총액" amount={financialAssetsTotal} valueLabel="총액은" />
         <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
-        </> : <p className="field-helper">금융자산 없음으로 선택했습니다.</p>}
+        </TotalInputModeField> : <p className="field-helper">금융자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">
@@ -327,7 +371,11 @@ export default function Step4Assets() {
           "3. 저축"과 값이 연동되며, 여기서 직접 입력·수정할 수도 있습니다.
         </p>
         <PresenceField label="연금자산 여부" present={hasPensionAssets} onChange={(value) => setAssetPresence('assets.hasPensionAssets', value, clearPensionAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
-        {hasPensionAssets ? <>
+        {hasPensionAssets ? <TotalInputModeField
+          modePath="assets.pensionAssetsInputMode" totalPath="assets.pensionAssets"
+          simpleTotalPath="assets.pensionAssetsSimpleTotal" simpleStoredPath="assets.pensionAssetsSimpleInputStored"
+          detailedTotal={pensionAssetsTotal} detailedHasInput={hasPensionDetailedInput} totalLabel="연금자산 총액"
+        >
         <div className="checkbox-group" style={{ marginBottom: 14 }}>
           {PENSION_ASSET_CATEGORIES.map((c) => (
             <button
@@ -386,7 +434,7 @@ export default function Step4Assets() {
         )}
         <TotalAmountBox label="연금자산 총액" amount={pensionAssets} valueLabel="총액은" />
         <span className="field-helper">위 4개 항목의 합으로 자동 계산됩니다. 금융자산비중지표 계산 시 금융자산과 별도로 취급됩니다.</span>
-        </> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
+        </TotalInputModeField> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">
@@ -395,7 +443,11 @@ export default function Step4Assets() {
           매입가·공시가가 아닌 현재 시세 기준으로 입력해 주세요.
         </p>
         <PresenceField label="부동산자산 여부" present={hasRealEstateAssets} onChange={(value) => setAssetPresence('assets.realEstateAssets.hasAssets', value, clearRealEstateAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
-        {hasRealEstateAssets ? <>
+        {hasRealEstateAssets ? <TotalInputModeField
+          modePath="assets.realEstateAssets.inputMode" totalPath="assets.realEstateAssets.total"
+          simpleTotalPath="assets.realEstateAssets.simpleTotal" simpleStoredPath="assets.realEstateAssets.simpleInputStored"
+          detailedTotal={realEstateDetailedTotal} detailedHasInput={hasRealEstateDetailedInput} totalLabel="부동산자산 총액"
+        >
         <div className="field-grid three-col">
           <PropertyTypeField
             value={getIn(formData, 'assets.realEstateAssets.mainPropertyType')}
@@ -441,7 +493,7 @@ export default function Step4Assets() {
         />
         <TotalAmountBox label="부동산자산 총액" amount={realEstateTotal} valueLabel="총액은" />
         <span className="field-helper">부동산 시세와 기타 부동산 시세의 합으로 자동 계산됩니다</span>
-        </> : <p className="field-helper">부동산자산 없음으로 선택했습니다.</p>}
+        </TotalInputModeField> : <p className="field-helper">부동산자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">
@@ -450,7 +502,11 @@ export default function Step4Assets() {
           위 자산 분류에 포함되지 않는 기타 보유 자산을 입력해 주세요.
         </p>
         <PresenceField label="기타 자산 여부" present={hasOtherAssets} onChange={(value) => setAssetPresence('assets.otherAssets.hasAssets', value, clearOtherAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
-        {hasOtherAssets ? <>
+        {hasOtherAssets ? <TotalInputModeField
+          modePath="assets.otherAssets.inputMode" totalPath="assets.otherAssets.total"
+          simpleTotalPath="assets.otherAssets.simpleTotal" simpleStoredPath="assets.otherAssets.simpleInputStored"
+          detailedTotal={otherAssetsDetailedTotal} detailedHasInput={hasOtherAssetsDetailedInput} totalLabel="기타 자산 총액"
+        >
           <RepeatableList
             path="assets.otherAssets.items"
             label="기타 자산 추가"
@@ -474,7 +530,7 @@ export default function Step4Assets() {
           />
           <TotalAmountBox label="기타 자산 총액" amount={otherAssetsTotal} valueLabel="총액은" />
           <span className="field-helper">입력하신 기타 자산의 현재 가치를 자동으로 합산한 금액입니다.</span>
-        </> : <p className="field-helper">기타 자산 없음으로 선택했습니다.</p>}
+        </TotalInputModeField> : <p className="field-helper">기타 자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">

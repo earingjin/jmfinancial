@@ -2,10 +2,40 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../lib/supabaseClient', () => ({ supabase: {} }));
 
-import { buildPlannerResultRow, completePlannerSubmission, savePlannerResult } from './plannerSubmission.js';
+import { buildPlannerResultRow, completePlannerSubmission, hasSavedPlannerResults, savePlannerResult } from './plannerSubmission.js';
 
 const pending = () => ({ formData: { basic: {} }, data: { score: 1 }, resultSaved: false, submissionId: 'submission-1' });
 const user = { id: 'user-1' };
+
+describe('saved planner result lookup', () => {
+  const clientWithRows = (rows, error = null) => {
+    const limit = vi.fn().mockResolvedValue({ data: rows, error });
+    const eq = vi.fn(() => ({ limit }));
+    const select = vi.fn(() => ({ eq }));
+    const from = vi.fn(() => ({ select }));
+    return { client: { from }, from, select, eq, limit };
+  };
+
+  it('returns true when at least one previous result exists', async () => {
+    const query = clientWithRows([{ id: 'result-1' }]);
+
+    await expect(hasSavedPlannerResults('user-1', query.client)).resolves.toBe(true);
+    expect(query.from).toHaveBeenCalledWith('planner_results');
+    expect(query.select).toHaveBeenCalledWith('id');
+    expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(query.limit).toHaveBeenCalledWith(1);
+  });
+
+  it('returns false when no previous result exists', async () => {
+    const query = clientWithRows([]);
+    await expect(hasSavedPlannerResults('user-1', query.client)).resolves.toBe(false);
+  });
+
+  it('does not treat a lookup failure as an empty history', async () => {
+    const query = clientWithRows(null, new Error('lookup failed'));
+    await expect(hasSavedPlannerResults('user-1', query.client)).rejects.toThrow('lookup failed');
+  });
+});
 
 describe('planner submission ordering', () => {
   it('deletes the draft only after the result is saved', async () => {

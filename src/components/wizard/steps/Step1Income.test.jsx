@@ -87,24 +87,24 @@ describe('handleSeveranceType - 퇴직금·퇴직연금 잔존값 초기화', ()
     const setField = vi.fn();
     handleSeveranceType(setField, 'income.severance', 'none');
     RESET_FIELDS.forEach((field) => {
-      expect(setField).toHaveBeenCalledWith(`income.severance.${field}`, 0);
+      expect(setField).toHaveBeenCalledWith(`income.severance.${field}`, '');
     });
   });
 
   it('본인: 퇴직연금(월지급) 입력 후 없음으로 전환하면 pensionMonthly 등 관련 값을 초기화한다', () => {
     const setField = vi.fn();
     handleSeveranceType(setField, 'income.severance', 'none');
-    expect(setField).toHaveBeenCalledWith('income.severance.pensionMonthly', 0);
-    expect(setField).toHaveBeenCalledWith('income.severance.pensionStartAge', 0);
-    expect(setField).toHaveBeenCalledWith('income.severance.pensionYears', 0);
-    expect(setField).toHaveBeenCalledWith('income.severance.pensionMonths', 0);
+    expect(setField).toHaveBeenCalledWith('income.severance.pensionMonthly', '');
+    expect(setField).toHaveBeenCalledWith('income.severance.pensionStartAge', '');
+    expect(setField).toHaveBeenCalledWith('income.severance.pensionYears', '');
+    expect(setField).toHaveBeenCalledWith('income.severance.pensionMonths', '');
   });
 
   it('배우자도 동일하게 초기화한다', () => {
     const setField = vi.fn();
     handleSeveranceType(setField, 'spouse.severance', 'none');
     RESET_FIELDS.forEach((field) => {
-      expect(setField).toHaveBeenCalledWith(`spouse.severance.${field}`, 0);
+      expect(setField).toHaveBeenCalledWith(`spouse.severance.${field}`, '');
     });
   });
 

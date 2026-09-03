@@ -19,8 +19,8 @@ export default function Step5Debt() {
   const setHasDebt = (value) => {
     setField('assets.debtStatus.hasDebt', value);
     if (!value) {
-      setField('assets.debtStatus.totalBalance', 0);
-      setField('assets.debtStatus.monthlyRepayment', 0);
+      setField('assets.debtStatus.totalBalance', '');
+      setField('assets.debtStatus.monthlyRepayment', '');
       setField('assets.debtStatus.customItems', []);
       DEBT_CATEGORIES.forEach(({ key }) => setField(`assets.debtStatus.breakdown.${key}`, {}));
     }

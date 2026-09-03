@@ -66,21 +66,44 @@ export default async function handler(req, res) {
       `assets.debtStatus.breakdown.${cat}.months`,
     ]);
 
+    const liquidAssetLeafPaths = input.assets?.liquidAssets?.inputMode === 'simple'
+      ? ['assets.liquidAssets.total']
+      : [
+          'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
+          'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.emergencyFund',
+        ];
+    const financialAssetLeafPaths = input.assets?.financialAssets?.inputMode === 'simple'
+      ? ['assets.financialAssets.total']
+      : ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds'];
+    const pensionAssetLeafPaths = input.assets?.pensionAssetsInputMode === 'simple'
+      ? ['assets.pensionAssets']
+      : [
+          'assets.pensionAssetsBreakdown.variableAnnuity', 'assets.pensionAssetsBreakdown.pensionSavingsAccount',
+          'assets.pensionAssetsBreakdown.irp',
+        ];
+    const realEstateAssetLeafPaths = input.assets?.realEstateAssets?.inputMode === 'simple'
+      ? ['assets.realEstateAssets.total']
+      : ['assets.realEstateAssets.mainProperty'];
+    const otherAssetLeafPaths = input.assets?.otherAssets?.inputMode === 'simple'
+      ? ['assets.otherAssets.total']
+      : [];
+    const activeAssetArrayPaths = [
+      ...(input.assets?.liquidAssets?.inputMode === 'simple' ? [] : ['assets.liquidAssets.customItems']),
+      ...(input.assets?.financialAssets?.inputMode === 'simple' ? [] : ['assets.financialAssets.otherItems']),
+      ...(input.assets?.pensionAssetsInputMode === 'simple' ? [] : ['assets.pensionAssetsBreakdown.otherItems']),
+      ...(input.assets?.realEstateAssets?.inputMode === 'simple' ? [] : ['assets.realEstateAssets.otherItems']),
+      ...(input.assets?.otherAssets?.inputMode === 'simple' ? [] : ['assets.otherAssets.items']),
+      'assets.debtStatus.customItems',
+    ];
+
     const netWorthMissing = allBlankLeaf(
       input,
       [
-        'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
-        'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.emergencyFund',
-        'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds',
-        'assets.pensionAssetsBreakdown.variableAnnuity', 'assets.pensionAssetsBreakdown.pensionSavingsAccount', 'assets.pensionAssetsBreakdown.irp',
-        'assets.realEstateAssets.mainProperty',
+        ...liquidAssetLeafPaths, ...financialAssetLeafPaths, ...pensionAssetLeafPaths,
+        ...realEstateAssetLeafPaths, ...otherAssetLeafPaths,
         ...debtBreakdownLeafPaths,
       ],
-      [
-        'assets.liquidAssets.customItems', 'assets.financialAssets.otherItems',
-        'assets.pensionAssetsBreakdown.otherItems', 'assets.realEstateAssets.otherItems',
-        'assets.debtStatus.customItems',
-      ]
+      activeAssetArrayPaths
     );
     const annualIncomeMissing = allBlankLeaf(input, [
       'income.salary.monthly', 'income.salary.annualBonus', 'income.business.monthly',
@@ -89,11 +112,13 @@ export default async function handler(req, res) {
     const financialAssetsMissing = allBlankLeaf(
       input,
       [
-        'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds',
-        'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
-        'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.emergencyFund',
+        ...financialAssetLeafPaths,
+        ...liquidAssetLeafPaths,
       ],
-      ['assets.financialAssets.otherItems', 'assets.liquidAssets.customItems']
+      [
+        ...(input.assets?.financialAssets?.inputMode === 'simple' ? [] : ['assets.financialAssets.otherItems']),
+        ...(input.assets?.liquidAssets?.inputMode === 'simple' ? [] : ['assets.liquidAssets.customItems']),
+      ]
     );
 
     const peerComparison = buildPeerComparison({

@@ -4,6 +4,7 @@ import PresenceField from '../fields/PresenceField';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
+import TotalInputModeField from '../fields/TotalInputModeField';
 
 // assetLink: "현재까지 누적된 금액"이 "4. 자산" 파트의 어느 값과 연동되는지(사용자 승인된 매핑).
 // 변액연금·연금저축·IRP는 "4. 자산 > 연금자산"의 각각 전용 항목(pensionAssetsBreakdown)에 바로 연동된다
@@ -37,12 +38,12 @@ export function updateSavingsPresence(formData, setField, value) {
     interestRate: '',
   }));
   setField('assets.savingsPlan.customItems', customItems);
-  setField('assets.savingsPlan.monthly', 0);
-  setField('assets.savingsPlan.annual', 0);
-  setField('assets.savingsPlan.retirementMonthly', 0);
-  setField('assets.savingsPlan.retirementAnnual', 0);
-  setField('assets.savingsPlan.additionalRetirementMonthly', 0);
-  setField('assets.savingsPlan.additionalRetirementAnnual', 0);
+  setField('assets.savingsPlan.monthly', '');
+  setField('assets.savingsPlan.annual', '');
+  setField('assets.savingsPlan.retirementMonthly', '');
+  setField('assets.savingsPlan.retirementAnnual', '');
+  setField('assets.savingsPlan.additionalRetirementMonthly', '');
+  setField('assets.savingsPlan.additionalRetirementAnnual', '');
 }
 
 export default function Step3Savings() {
@@ -65,6 +66,13 @@ export default function Step3Savings() {
   const additionalRetirementMonthly = Number(getIn(formData, 'assets.savingsPlan.additionalRetirementMonthly')) || 0;
   const totalRetirementSavingsMonthly = pensionSavingsMonthly + irpMonthly + additionalRetirementMonthly;
   const totalSavingsMonthlyV2 = savingsMonthly + additionalRetirementMonthly;
+  const detailedSavingsMonthly = SAVINGS_CATEGORIES.reduce(
+    (sum, category) => sum + (Number(getIn(formData, `assets.savingsPlan.breakdown.${category.key}.monthly`)) || 0), 0
+  ) + (getIn(formData, 'assets.savingsPlan.customItems') || []).reduce((sum, item) => sum + (Number(item.monthly) || 0), 0);
+  const hasDetailedSavingsInput = SAVINGS_CATEGORIES.some((category) => {
+    const value = getIn(formData, `assets.savingsPlan.breakdown.${category.key}.monthly`);
+    return value !== '' && value != null;
+  }) || (getIn(formData, 'assets.savingsPlan.customItems') || []).some((item) => item?.monthly !== '' && item?.monthly != null);
 
   const setHasSavings = (value) => {
     updateSavingsPresence(formData, setField, value);
@@ -80,7 +88,18 @@ export default function Step3Savings() {
           국민연금 · 개인연금 · 저축성보험(연금보험 등)처럼 노후를 위해 정기적으로 적립하는 금액을 포함해 입력해 주세요.
         </p>
         <PresenceField label="저축 여부" present={hasSavings} onChange={setHasSavings} presentLabel="저축 있음" absentLabel="저축 없음" />
-        {hasSavings ? <>
+        {hasSavings ? <TotalInputModeField
+          modePath="assets.savingsPlan.inputMode"
+          totalPath="assets.savingsPlan.monthly"
+          simpleTotalPath="assets.savingsPlan.simpleMonthly"
+          simpleStoredPath="assets.savingsPlan.simpleInputStored"
+          annualPath="assets.savingsPlan.annual"
+          simpleAnnualPath="assets.savingsPlan.simpleAnnual"
+          detailedTotal={detailedSavingsMonthly}
+          detailedHasInput={hasDetailedSavingsInput}
+          totalLabel="월 저축 합계"
+          inputLabel="현재 월 저축액"
+        >
         <SavingsBreakdownField
           basePath="assets.savingsPlan.breakdown"
           customPath="assets.savingsPlan.customItems"
@@ -150,7 +169,7 @@ export default function Step3Savings() {
             </table>
           </>
         )}
-        </> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
+        </TotalInputModeField> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
       </section>
     </div>
   );

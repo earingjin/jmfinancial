@@ -50,7 +50,11 @@ export function applyScenarios(input) {
     const availableRealEstate = n(adjusted.assets.realEstateAssets.total);
     const cashOut = Math.min(Math.max(0, requestedCashOut), availableRealEstate);
     adjusted.assets.realEstateAssets.total = availableRealEstate - cashOut;
-    adjusted.assets.financialAssets.other = n(adjusted.assets.financialAssets.other) + cashOut;
+    if (adjusted.assets.financialAssets.inputMode === 'simple') {
+      adjusted.assets.financialAssets.total = n(adjusted.assets.financialAssets.total) + cashOut;
+    } else {
+      adjusted.assets.financialAssets.other = n(adjusted.assets.financialAssets.other) + cashOut;
+    }
     notes.push({ scenario: 'realEstateConversion', assetsShifted: cashOut, requestedCashOut });
   }
 

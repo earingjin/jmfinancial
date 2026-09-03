@@ -30,6 +30,15 @@ function buildRetirementSavingsAggregate(savingsPlan) {
   const generalSavingsMonthly = n(savingsPlan?.monthly);
   const generalSavingsAnnual = pickAnnual(savingsPlan?.annual, generalSavingsMonthly);
 
+  if (savingsPlan?.inputMode === 'simple') {
+    return {
+      monthlySavings: generalSavingsMonthly,
+      retirementSavingsAnnual: 0,
+      totalSavingsAnnual: generalSavingsAnnual,
+      retirementIncludedInSavings: true,
+    };
+  }
+
   if (savingsPlan?.retirementSavingsInputVersion === 2) {
     const breakdown = savingsPlan?.breakdown || {};
     const autoRetirementMonthly = n(breakdown.pensionSavings?.monthly) + n(breakdown.irp?.monthly);
@@ -108,7 +117,7 @@ export function buildAggregates(input) {
   // 예금·적금·CMA는 현금성자산(liquidAssets)으로 집계되므로 financialAssetsTotal(투자자산)에는
   // 포함하지 않는다 - 주식·펀드·채권·기타처럼 즉시 인출이 어려운 투자자산만 남긴다.
   const fa = assets.financialAssets || {};
-  const financialAssetsTotal = n(fa.stocks) + n(fa.funds) + n(fa.bonds) + n(fa.other);
+  const financialAssetsTotal = fa.inputMode === 'simple' ? n(fa.total) : n(fa.stocks) + n(fa.funds) + n(fa.bonds) + n(fa.other);
   const pensionAssets = n(assets.pensionAssets);
   const realEstateTotal = n(assets.realEstateAssets?.total);
   // 현금성자산(예금·적금·비상금 등, 비상예비금지표에도 쓰이는 값)은 총자산에도 포함된다.

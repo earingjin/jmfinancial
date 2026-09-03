@@ -8,7 +8,7 @@ import { setIn } from '../../../state/pathUtils';
 import { buildCanonicalInput } from '../../../../api/_lib/canonicalInput';
 import { buildAggregates } from '../../../../api/_lib/aggregate';
 import { buildDebtBreakdown, buildLivingExpenseItems } from '../../../../api/_lib/reportBreakdowns';
-import { changeDebtInputMode, changeLivingInputMode } from './inputModeTransitions';
+import { changeDebtInputMode, changeLivingInputMode, changeTotalInputMode } from './inputModeTransitions';
 
 const livingCategories = ['rent', 'maintenance', 'utilities', 'fuel', 'carInsurance', 'clothing', 'fourInsurances', 'food', 'communication', 'medical', 'subscription', 'other'].map((key) => ({ key }));
 const debtCategories = ['mortgage', 'depositLoan', 'businessLoan', 'buildingLoan', 'carLoan', 'studentLoan', 'otherLoan'].map((key) => ({ key }));
@@ -39,6 +39,15 @@ function debtChange(harness, nextMode, confirmChange = vi.fn(() => true)) {
   });
 }
 
+function totalChange(harness, nextMode, detailedTotal, confirmChange = vi.fn(() => true)) {
+  return changeTotalInputMode({
+    formData: harness.get(), setField: harness.setField, nextMode, detailedTotal,
+    modePath: 'assets.financialAssets.inputMode', totalPath: 'assets.financialAssets.total',
+    simpleTotalPath: 'assets.financialAssets.simpleTotal', simpleStoredPath: 'assets.financialAssets.simpleInputStored',
+    totalLabel: 'financial assets', confirmChange,
+  });
+}
+
 describe('living-cost input mode transitions', () => {
   it('간편 300 → 빈 상세 전환을 안내하고 취소 시 모든 상태를 유지한다', () => {
     const formData = structuredClone(initialFormData);
@@ -55,7 +64,7 @@ describe('living-cost input mode transitions', () => {
     Object.assign(formData.assets.currentLivingCost, { monthly: 300, annual: 3600, inputMode: 'simple' });
     const harness = stateHarness(formData);
     livingChange(harness, 'detailed');
-    expect(harness.get().assets.currentLivingCost).toMatchObject({ monthly: 0, annual: 0, inputMode: 'detailed', simpleMonthly: 300 });
+    expect(harness.get().assets.currentLivingCost).toMatchObject({ monthly: '', annual: '', inputMode: 'detailed', simpleMonthly: 300 });
     expect(buildCanonicalInput(harness.get()).assets.currentLivingCost.monthly).toBe(0);
     livingChange(harness, 'simple');
     expect(harness.get().assets.currentLivingCost).toMatchObject({ monthly: 300, annual: 3600, inputMode: 'simple' });
@@ -135,5 +144,92 @@ describe('debt input mode transitions', () => {
       simpleTotalBalance: 1000, simpleMonthlyRepayment: 10, simpleInputStored: true,
     });
     expect(restored.assets.debtStatus.breakdown.mortgage.principal).toBe(1000);
+  });
+});
+
+describe('asset and savings total input mode transitions', () => {
+  it('keeps the first simple total blank when no detailed amount has been entered', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.assets.financialAssets, { inputMode: 'detailed', total: '' });
+    const harness = stateHarness(formData);
+
+    changeTotalInputMode({
+      formData: harness.get(), setField: harness.setField, nextMode: 'simple', detailedTotal: 0, detailedHasInput: false,
+      modePath: 'assets.financialAssets.inputMode', totalPath: 'assets.financialAssets.total',
+      simpleTotalPath: 'assets.financialAssets.simpleTotal', simpleStoredPath: 'assets.financialAssets.simpleInputStored',
+      totalLabel: 'financial assets', confirmChange: vi.fn(() => true),
+    });
+
+    expect(harness.get().assets.financialAssets).toMatchObject({
+      inputMode: 'simple', total: '', simpleTotal: '', simpleInputStored: true,
+    });
+  });
+
+  it('restores selected modes and both simple and detailed values from a draft', () => {
+    const saved = structuredClone(initialFormData);
+    Object.assign(saved.assets.financialAssets, {
+      inputMode: 'simple', total: 1000, simpleTotal: 1000, simpleInputStored: true,
+      stocks: 3000,
+    });
+
+    const restored = mergeDraft(initialFormData, JSON.parse(JSON.stringify(saved)));
+
+    expect(restored.assets.financialAssets).toMatchObject({
+      inputMode: 'simple', total: 1000, simpleTotal: 1000, simpleInputStored: true,
+      stocks: 3000,
+    });
+    expect(mergeDraft(initialFormData, restored)).toEqual(restored);
+  });
+
+  it('treats drafts without the new mode fields as detailed input', () => {
+    const saved = structuredClone(initialFormData);
+    delete saved.assets.financialAssets.inputMode;
+    delete saved.assets.financialAssets.simpleTotal;
+    delete saved.assets.financialAssets.simpleInputStored;
+    saved.assets.financialAssets.stocks = 3000;
+
+    const restored = mergeDraft(initialFormData, saved);
+
+    expect(restored.assets.financialAssets.inputMode).toBe('detailed');
+    expect(buildCanonicalInput(restored).assets.financialAssets.total).toBe(3000);
+  });
+
+  it('preserves simple and detailed values independently through repeated transitions', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.assets.financialAssets, {
+      inputMode: 'detailed', total: 3000, stocks: 1000, bonds: 2000,
+    });
+    const harness = stateHarness(formData);
+
+    totalChange(harness, 'simple', 3000);
+    expect(harness.get().assets.financialAssets).toMatchObject({
+      inputMode: 'simple', total: 3000, simpleTotal: 3000, simpleInputStored: true,
+    });
+
+    harness.setField('assets.financialAssets.total', 1000);
+    harness.setField('assets.financialAssets.simpleTotal', 1000);
+    const cancel = vi.fn(() => false);
+    expect(totalChange(harness, 'detailed', 3000, cancel)).toBe(false);
+    expect(harness.get().assets.financialAssets).toMatchObject({ inputMode: 'simple', total: 1000 });
+
+    totalChange(harness, 'detailed', 3000);
+    expect(harness.get().assets.financialAssets).toMatchObject({
+      inputMode: 'detailed', total: 3000, simpleTotal: 1000,
+    });
+    totalChange(harness, 'simple', 3000);
+    expect(harness.get().assets.financialAssets).toMatchObject({ inputMode: 'simple', total: 1000 });
+    expect(harness.get().assets.financialAssets.stocks).toBe(1000);
+    expect(harness.get().assets.financialAssets.bonds).toBe(2000);
+  });
+
+  it('does not show a confirmation when the active and next totals are equal', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.assets.financialAssets, { inputMode: 'detailed', total: 3000 });
+    const harness = stateHarness(formData);
+    const confirmChange = vi.fn(() => true);
+
+    totalChange(harness, 'simple', 3000, confirmChange);
+
+    expect(confirmChange).not.toHaveBeenCalled();
   });
 });

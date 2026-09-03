@@ -788,13 +788,15 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
 
 .app-header-account { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
 .app-header-signout {
-  background: none; border: none; color: #f0deb8; font-size: 12px; cursor: pointer; padding: 4px 0;
+  background: rgba(255, 255, 255, .24); border: 1px solid rgba(255, 255, 255, .5); border-radius: 8px;
+  color: #f0deb8; font-size: 14px; cursor: pointer; padding: 7px 12px;
 }
-.app-header-signout:hover { color: #fff; }
+.app-header-signout:hover { color: #fff; background: rgba(255, 255, 255, .32); }
 .app-header-home-btn {
-  background: none; border: none; color: #f0deb8; font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 0;
+  background: rgba(255, 255, 255, .24); border: 1px solid rgba(255, 255, 255, .5); border-radius: 8px;
+  color: #f0deb8; font-size: 14px; font-weight: 600; cursor: pointer; padding: 7px 12px;
 }
-.app-header-home-btn:hover { color: #fff; }
+.app-header-home-btn:hover { color: #fff; background: rgba(255, 255, 255, .32); }
 .app-header--diagnosis .app-header-home-btn { color: var(--navy-700); font-weight: 700; }
 .app-header--diagnosis .app-header-home-btn:hover { color: var(--navy-900); }
 

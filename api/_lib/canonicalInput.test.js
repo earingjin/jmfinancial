@@ -51,6 +51,25 @@ describe('buildCanonicalInput', () => {
     expect(buildCanonicalInput(source).assets.currentLivingCost).toMatchObject({ monthly: 9999, annual: 9999 });
   });
 
+  it('uses only the active total for simple savings and each simple asset category', () => {
+    const source = input();
+    Object.assign(source.assets.liquidAssets, { inputMode: 'simple', total: 10 });
+    Object.assign(source.assets.financialAssets, { inputMode: 'simple', total: 20 });
+    Object.assign(source.assets, { pensionAssetsInputMode: 'simple', pensionAssets: 30 });
+    Object.assign(source.assets.realEstateAssets, { inputMode: 'simple', total: 40 });
+    Object.assign(source.assets.otherAssets, { inputMode: 'simple', total: 50 });
+    Object.assign(source.assets.savingsPlan, { inputMode: 'simple', monthly: 60, annual: 720 });
+
+    const result = buildCanonicalInput(source);
+
+    expect(result.assets.liquidAssets.total).toBe(10);
+    expect(result.assets.financialAssets.total).toBe(20);
+    expect(result.assets.pensionAssets).toBe(30);
+    expect(result.assets.realEstateAssets.total).toBe(40);
+    expect(result.assets.otherAssets.total).toBe(50);
+    expect(result.assets.savingsPlan).toMatchObject({ monthly: 60, annual: 720 });
+  });
+
   it('includes subscription savings in liquid assets exactly once', () => {
     const source = input();
     source.assets.liquidAssets.breakdown.subscription = 300;

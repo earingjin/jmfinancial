@@ -58,3 +58,15 @@ describe('App.jsx - "새 진단"이 아닌 흐름은 서버 draft를 지우지 �
     expect(elseBody).toContain('setWizardStep(0)');
   });
 });
+
+describe('App.jsx wizard header result history button', () => {
+  it('opens history only when a saved result exists', async () => {
+    const source = await readAppSource();
+    const body = extractFunctionBody(source, 'const viewHistoryFromHeader = async ()');
+
+    expect(source).toContain('결과 보기');
+    expect(body).toContain('hasSavedPlannerResults(user.id)');
+    expect(body).toContain("window.alert('이전 결과가 없습니다.')");
+    expect(body).toContain("setPhase('history')");
+  });
+});

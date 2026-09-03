@@ -12,7 +12,7 @@ import { deobfuscate } from './utils/obfuscate';
 import { supabase } from './lib/supabaseClient';
 import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
 import { resetFormSessionWithServerCleanup, shouldResetFormSession } from './state/formSessionPolicy';
-import { completePlannerSubmission, createSubmissionId } from './services/plannerSubmission';
+import { completePlannerSubmission, createSubmissionId, hasSavedPlannerResults } from './services/plannerSubmission';
 import { requestCalculation } from './services/calculationApi';
 import './styles/tokens.css';
 import './styles/app.css';
@@ -209,6 +209,18 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
 
   const viewHistory = () => setPhase('history');
 
+  const viewHistoryFromHeader = async () => {
+    try {
+      if (!await hasSavedPlannerResults(user.id)) {
+        window.alert('이전 결과가 없습니다.');
+        return;
+      }
+      setPhase('history');
+    } catch {
+      window.alert('이전 결과를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  };
+
   // 히스토리 목록에서 항목을 클릭했을 때 - 새로 계산하지 않고 저장된 result_json을 그대로
   // 요약 화면에 넘긴다(계산 API를 다시 호출하지 않음). input_json은 "수정하기"를 누를 때만
   // 쓰도록 따로 들고 있는다.
@@ -261,9 +273,14 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         <header className={`app-header${useDiagnosisHeader ? ' app-header--diagnosis' : ''}`}>
           <div className="app-header-account">
             {phase === 'wizard' && (
-              <button type="button" className="app-header-home-btn" onClick={goHome}>
-                홈으로
-              </button>
+              <>
+                <button type="button" className="app-header-home-btn" onClick={goHome}>
+                  홈으로
+                </button>
+                <button type="button" className="app-header-home-btn" onClick={() => void viewHistoryFromHeader()}>
+                  결과 보기
+                </button>
+              </>
             )}
             <button type="button" className="app-header-signout" onClick={signOut}>
               로그아웃

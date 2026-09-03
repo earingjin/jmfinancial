@@ -87,8 +87,8 @@ export default function Step2Expense() {
   const setHasInsurance = (value) => {
     setField('assets.insurance.hasInsurance', value);
     if (!value) {
-      setField('assets.insurance.monthlyPremium', 0);
-      setField('assets.insurance.coverageAmount', 0);
+      setField('assets.insurance.monthlyPremium', '');
+      setField('assets.insurance.coverageAmount', '');
     }
   };
 

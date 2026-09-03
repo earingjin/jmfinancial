@@ -56,10 +56,12 @@ export function buildFinancialOverviewCards(input, aggregates) {
 
   const totalAssetPaths = [
     'assets.liquidAssets.total',
-    'assets.financialAssets.stocks',
-    'assets.financialAssets.funds',
-    'assets.financialAssets.bonds',
-    'assets.financialAssets.other',
+    ...(input.assets?.financialAssets?.inputMode === 'simple'
+      ? ['assets.financialAssets.total']
+      : [
+          'assets.financialAssets.stocks', 'assets.financialAssets.funds',
+          'assets.financialAssets.bonds', 'assets.financialAssets.other',
+        ]),
     'assets.pensionAssets',
     'assets.realEstateAssets.total',
     'assets.otherAssets.total',
@@ -79,7 +81,9 @@ export function buildFinancialOverviewCards(input, aggregates) {
     card('monthlyDebtRepayment', '월 원리금 상환액', aggregates.monthlyDebtRepayment, ['assets.debtStatus.monthlyRepayment']),
     card('liquidAssets', '현금성자산', aggregates.liquidAssets, ['assets.liquidAssets.total']),
     card('financialAssets', '금융자산', aggregates.financialAssetsTotal, [
-      'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other',
+      ...(input.assets?.financialAssets?.inputMode === 'simple'
+        ? ['assets.financialAssets.total']
+        : ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other']),
     ]),
     card('pensionAssets', '연금자산', aggregates.pensionAssets, ['assets.pensionAssets']),
     card('realEstateAssets', '부동산자산', aggregates.realEstateTotal, ['assets.realEstateAssets.total']),
@@ -383,7 +387,10 @@ export function buildFinancialOverviewDetail(input, aggregates) {
   ]);
   const debtRepaymentMissing = allBlank(input, ['assets.debtStatus.monthlyRepayment']);
   const liquidMissing = allBlank(input, ['assets.liquidAssets.total']);
-  const financialPensionMissing = allBlank(input, ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other', 'assets.pensionAssets']);
+  const financialPensionMissing = allBlank(input, [
+    ...(input.assets?.financialAssets?.inputMode === 'simple' ? ['assets.financialAssets.total'] : ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds', 'assets.financialAssets.other']),
+    'assets.pensionAssets',
+  ]);
   const realEstateMissing = allBlank(input, ['assets.realEstateAssets.total']);
   const totalDebtMissing = allBlank(input, ['assets.debtStatus.totalBalance']);
   const realEstateDebtMissing = realEstateMissing && totalDebtMissing;

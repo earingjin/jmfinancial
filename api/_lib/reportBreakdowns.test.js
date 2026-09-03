@@ -280,6 +280,33 @@ describe('buildSavingsBreakdown - retirementSavingsInputVersion 2', () => {
 });
 
 describe('simple-mode report breakdowns', () => {
+  it('shows only the active simple savings total', () => {
+    const input = {
+      assets: {
+        savingsPlan: {
+          inputMode: 'simple', monthly: 100,
+          breakdown: { installment: { monthly: 300 } },
+          additionalRetirementMonthly: 50,
+        },
+      },
+    };
+    expect(buildSavingsBreakdown(input)).toEqual([
+      { key: 'savings-simple', label: '간편 입력 저축', value: 100 },
+    ]);
+  });
+
+  it('hides preserved liquid-asset detail in simple mode', () => {
+    const input = {
+      assets: {
+        liquidAssets: {
+          inputMode: 'simple', total: 100,
+          customItems: [{ name: 'CMA-RP', amount: 300 }],
+        },
+      },
+    };
+    expect(buildOtherLiquidAssetItems(input)).toEqual([]);
+  });
+
   it('생활비 상세항목을 숨기고 간편 입력 총액만 표시한다', () => {
     const input = {
       assets: { currentLivingCost: { inputMode: 'simple', monthly: 100, breakdown: { food: 300 } } },
