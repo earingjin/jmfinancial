@@ -20,6 +20,31 @@ const SAVINGS_CATEGORIES = [
   { key: 'parkingAccount', label: '파킹통장', assetLink: { type: 'liquidCustomItem', name: '파킹통장' }, assetLinkLabel: '현금성 자산의 "파킹통장" 추가 항목' },
 ];
 
+// 테스트에서 실제 상태 변경 경계를 검증하기 위해 함께 내보낸다.
+// oxlint-disable-next-line react/only-export-components
+export function updateSavingsPresence(formData, setField, value) {
+  setField('assets.savingsPlan.hasSavings', value);
+  if (value) return;
+
+  const emptyItem = { monthly: '', remainingMonths: '', interestRate: '' };
+  SAVINGS_CATEGORIES.forEach(({ key }) => {
+    setField(`assets.savingsPlan.breakdown.${key}`, { ...emptyItem });
+  });
+  const customItems = (getIn(formData, 'assets.savingsPlan.customItems') || []).map((item) => ({
+    ...item,
+    monthly: '',
+    remainingMonths: '',
+    interestRate: '',
+  }));
+  setField('assets.savingsPlan.customItems', customItems);
+  setField('assets.savingsPlan.monthly', 0);
+  setField('assets.savingsPlan.annual', 0);
+  setField('assets.savingsPlan.retirementMonthly', 0);
+  setField('assets.savingsPlan.retirementAnnual', 0);
+  setField('assets.savingsPlan.additionalRetirementMonthly', 0);
+  setField('assets.savingsPlan.additionalRetirementAnnual', 0);
+}
+
 export default function Step3Savings() {
   const { formData, setField } = useFormData();
   const savingsMonthly = Number(getIn(formData, 'assets.savingsPlan.monthly')) || 0;
@@ -42,37 +67,7 @@ export default function Step3Savings() {
   const totalSavingsMonthlyV2 = savingsMonthly + additionalRetirementMonthly;
 
   const setHasSavings = (value) => {
-    setField('assets.savingsPlan.hasSavings', value);
-    if (!value) {
-      const emptyItem = { monthly: '', remainingMonths: '', interestRate: '' };
-      SAVINGS_CATEGORIES.forEach(({ key, assetLink }) => {
-        setField(`assets.savingsPlan.breakdown.${key}`, emptyItem);
-        if (assetLink?.type === 'direct') setField(assetLink.path, '');
-        if (assetLink?.type === 'liquidBreakdown') setField(`assets.liquidAssets.breakdown.${assetLink.field}`, '');
-        if (assetLink?.type === 'pensionBreakdown') setField(`assets.pensionAssetsBreakdown.${assetLink.field}`, '');
-      });
-      const linkedNames = new Set([
-        ...SAVINGS_CATEGORIES.filter((item) => item.assetLink?.type === 'liquidCustomItem').map((item) => item.assetLink.name),
-        ...(getIn(formData, 'assets.savingsPlan.customItems') || []).map((item) => item.name),
-      ]);
-      const remainingLiquidItems = (getIn(formData, 'assets.liquidAssets.customItems') || []).filter((item) => !linkedNames.has(item.name));
-      setField('assets.liquidAssets.customItems', remainingLiquidItems);
-      const liquidBreakdown = getIn(formData, 'assets.liquidAssets.breakdown') || {};
-      const remainingLiquidTotal = ['deposit', 'cma', 'emergencyFund'].reduce(
-        (sum, key) => sum + (Number(liquidBreakdown[key]) || 0),
-        0
-      ) + remainingLiquidItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-      setField('assets.liquidAssets.total', remainingLiquidTotal);
-      const pensionBreakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
-      setField('assets.pensionAssets', Number(pensionBreakdown.other) || 0);
-      setField('assets.savingsPlan.customItems', []);
-      setField('assets.savingsPlan.monthly', 0);
-      setField('assets.savingsPlan.annual', 0);
-      setField('assets.savingsPlan.retirementMonthly', 0);
-      setField('assets.savingsPlan.retirementAnnual', 0);
-      setField('assets.savingsPlan.additionalRetirementMonthly', 0);
-      setField('assets.savingsPlan.additionalRetirementAnnual', 0);
-    }
+    updateSavingsPresence(formData, setField, value);
   };
 
   return (
@@ -155,7 +150,7 @@ export default function Step3Savings() {
             </table>
           </>
         )}
-        </> : <p className="field-helper">저축 없음으로 선택했습니다. 저축 금액은 진단 계산에서 제외됩니다.</p>}
+        </> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
       </section>
     </div>
   );

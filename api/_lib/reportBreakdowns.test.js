@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSavingsBreakdown, buildLivingExpenseItems, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './reportBreakdowns.js';
+import { buildSavingsBreakdown, buildLivingExpenseItems, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems, buildDebtBreakdown } from './reportBreakdowns.js';
 
 describe('buildSavingsBreakdown - all savingsPlan.breakdown categories are covered', () => {
   // Step3Savings.jsx's SAVINGS_CATEGORIES lists 8 breakdown keys (installment, isa,
@@ -99,21 +99,21 @@ describe('buildOtherLivingExpenseItems - "현재 생활비 상세"의 기타지�
 
   it('lists a named item with its amount', () => {
     const items = buildOtherLivingExpenseItems({
-      assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물 비용', amount: 10 }] } } },
+      assets: { currentLivingCost: { inputMode: 'detailed', breakdown: { otherItems: [{ name: '반려동물 비용', amount: 10 }] } } },
     });
     expect(items).toEqual([{ key: 'other-living-0', label: '반려동물 비용', value: 10 }]);
   });
 
   it('falls back to "기타지출" when name is blank', () => {
     const items = buildOtherLivingExpenseItems({
-      assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '', amount: 5 }] } } },
+      assets: { currentLivingCost: { inputMode: 'detailed', breakdown: { otherItems: [{ name: '', amount: 5 }] } } },
     });
     expect(items).toEqual([{ key: 'other-living-0', label: '기타지출', value: 5 }]);
   });
 
   it('omits an item with amount=0', () => {
     const items = buildOtherLivingExpenseItems({
-      assets: { currentLivingCost: { breakdown: { otherItems: [{ name: '반려동물 비용', amount: 0 }] } } },
+      assets: { currentLivingCost: { inputMode: 'detailed', breakdown: { otherItems: [{ name: '반려동물 비용', amount: 0 }] } } },
     });
     expect(items).toEqual([]);
   });
@@ -122,6 +122,7 @@ describe('buildOtherLivingExpenseItems - "현재 생활비 상세"의 기타지�
     const items = buildOtherLivingExpenseItems({
       assets: {
         currentLivingCost: {
+          inputMode: 'detailed',
           breakdown: { otherItems: [{ name: '반려동물 비용', amount: 10 }, { name: '구독료', amount: 3 }] },
         },
       },
@@ -138,6 +139,7 @@ describe('buildLivingExpenseItems', () => {
     const items = buildLivingExpenseItems({
       assets: {
         currentLivingCost: {
+          inputMode: 'detailed',
           breakdown: {
             rent: 50,
             food: 40,
@@ -274,5 +276,26 @@ describe('buildSavingsBreakdown - retirementSavingsInputVersion 2', () => {
     });
     expect(items.find((it) => it.key === 'retirement')).toBeUndefined();
     expect(items.reduce((s, it) => s + it.value, 0)).toBe(50);
+  });
+});
+
+describe('simple-mode report breakdowns', () => {
+  it('생활비 상세항목을 숨기고 간편 입력 총액만 표시한다', () => {
+    const input = {
+      assets: { currentLivingCost: { inputMode: 'simple', monthly: 100, breakdown: { food: 300 } } },
+    };
+    expect(buildLivingExpenseItems(input)).toEqual([
+      { key: 'living-simple', label: '간편 입력 생활비', value: 100 },
+    ]);
+    expect(buildOtherLivingExpenseItems(input)).toEqual([]);
+  });
+
+  it('부채 상세항목을 숨기고 간편 입력 총액만 표시한다', () => {
+    const input = {
+      assets: { debtStatus: { inputMode: 'simple', totalBalance: 1000, breakdown: { mortgage: { principal: 5000 } } } },
+    };
+    expect(buildDebtBreakdown(input)).toEqual([
+      { key: 'total', label: '간편 입력 부채', value: 1000 },
+    ]);
   });
 });

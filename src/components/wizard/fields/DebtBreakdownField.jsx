@@ -1,8 +1,9 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
+import { changeDebtInputMode, debtDetailedTotals } from './inputModeTransitions';
 
 const monthlyBurdenOf = (item) =>
   (!item || item.repaymentType !== 'equalPrincipal' ? Number(item?.monthlyInterest) : Number(item?.monthlyRepayment)) || 0;
@@ -97,11 +98,15 @@ function LoanFields({ item, onChange }) {
  * monthlyRepayment 기준)이 그대로 동작한다. 대출 종류별로 한 곳에만 입력하면 되므로 이중 입력
  * 우려가 없다.
  */
-export default function DebtBreakdownField({ basePath, customPath, balanceTotalPath, repaymentTotalPath, modePath, categories }) {
+export default function DebtBreakdownField({
+  basePath, customPath, balanceTotalPath, repaymentTotalPath, modePath,
+  simpleBalancePath, simpleRepaymentPath, simpleStoredPath, categories,
+}) {
   const { formData, setField } = useFormData();
   const breakdown = getIn(formData, basePath) || {};
   const customItems = getIn(formData, customPath) || [];
   const mode = getIn(formData, modePath) || 'simple';
+  const detailedTotals = debtDetailedTotals(formData, basePath, customPath, categories);
 
   const [openKeys, setOpenKeys] = useState(() => {
     const initial = new Set();
@@ -171,6 +176,22 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
     recomputeTotals(breakdown, next);
   };
 
+  const changeMode = (nextMode) => changeDebtInputMode({
+    formData, setField, nextMode, basePath, customPath, balanceTotalPath, repaymentTotalPath,
+    modePath, simpleBalancePath, simpleRepaymentPath, simpleStoredPath, categories,
+    confirmChange: (message) => window.confirm(message),
+  });
+
+  useEffect(() => {
+    if (mode !== 'detailed') return;
+    if (Number(getIn(formData, balanceTotalPath)) !== detailedTotals.balance) {
+      setField(balanceTotalPath, detailedTotals.balance);
+    }
+    if (Number(getIn(formData, repaymentTotalPath)) !== detailedTotals.repayment) {
+      setField(repaymentTotalPath, detailedTotals.repayment);
+    }
+  }, [balanceTotalPath, detailedTotals.balance, detailedTotals.repayment, formData, mode, repaymentTotalPath, setField]);
+
   const balanceTotal = getIn(formData, balanceTotalPath);
   const repaymentTotal = getIn(formData, repaymentTotalPath);
   const openCategories = categories.filter((c) => openKeys.has(c.key));
@@ -182,14 +203,14 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
         <button
           type="button"
           className={`radio-pill ${mode === 'simple' ? 'is-active' : ''}`}
-          onClick={() => setField(modePath, 'simple')}
+          onClick={() => changeMode('simple')}
         >
           총액으로 한번에 입력
         </button>
         <button
           type="button"
           className={`radio-pill ${mode === 'detailed' ? 'is-active' : ''}`}
-          onClick={() => setField(modePath, 'detailed')}
+          onClick={() => changeMode('detailed')}
         >
           대출별로 자세히 입력
         </button>
@@ -205,7 +226,12 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
                 min={0}
                 inputMode="numeric"
                 value={balanceTotal ?? ''}
-                onChange={(e) => setField(balanceTotalPath, e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? '' : Number(e.target.value);
+                  setField(balanceTotalPath, value);
+                  setField(simpleBalancePath, value);
+                  setField(simpleStoredPath, true);
+                }}
               />
               <span className="field-unit">만원</span>
             </div>
@@ -218,7 +244,12 @@ export default function DebtBreakdownField({ basePath, customPath, balanceTotalP
                 min={0}
                 inputMode="numeric"
                 value={repaymentTotal ?? ''}
-                onChange={(e) => setField(repaymentTotalPath, e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? '' : Number(e.target.value);
+                  setField(repaymentTotalPath, value);
+                  setField(simpleRepaymentPath, value);
+                  setField(simpleStoredPath, true);
+                }}
               />
               <span className="field-unit">만원</span>
             </div>
