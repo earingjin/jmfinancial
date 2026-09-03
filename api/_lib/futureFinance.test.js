@@ -511,6 +511,61 @@ describe('buildRetirementAssetProjection', () => {
     expect(result.reason).toMatch(/연금/);
   });
 
+  describe('20f) unknown national-pension eligibility is assumed zero here (relaxed on purpose, unlike the 60/70/80 coverage-rate indicator)', () => {
+    it('still computes the full projection instead of returning notCalculable', () => {
+      const result = project({
+        income: {
+          nationalPension: { inputMode: 'direct', monthly: 100, months: 300, paymentMonths: 60, futureContributionPlan: 'continue' },
+          personalPension: { type: 'installment', monthly: 80, startAge: 65, months: 300 },
+        },
+        assets: { liquidAssets: { total: 1000000 } },
+      });
+      expect(result.notCalculable).toBe(false);
+      expect(result.points.length).toBe(26); // 65..90세, 국민연금 unknown이어도 그대로 다 계산됨
+      // 국민연금은 unknown이라 0원 취급되지만, 개인연금은 그대로 계산에 반영되어야 한다.
+      expect(result.points[0].income).toBeGreaterThan(0);
+    });
+
+    it('flags nationalPensionUnknownAssumedZero and carries an explanatory note', () => {
+      const result = project({
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 300, paymentMonths: 60, futureContributionPlan: 'unknown' } },
+      });
+      expect(result.nationalPensionUnknownAssumedZero).toBe(true);
+      expect(result.nationalPensionUnknownNote).toMatch(/국민연금/);
+    });
+
+    it('does not flag nationalPensionUnknownAssumedZero when eligibility is resolved (stop -> lumpSumPossible, already zero for a known reason)', () => {
+      const result = project({
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 300, paymentMonths: 60, futureContributionPlan: 'stop' } },
+      });
+      expect(result.notCalculable).toBe(false);
+      expect(result.nationalPensionUnknownAssumedZero).toBe(false);
+      expect(result.nationalPensionUnknownNote).toBeNull();
+    });
+
+    it('leaves the 60/70/80 coverage-rate indicator (buildFutureFinanceProjection) strictly not-calculable for the same input', () => {
+      // 이번 완화는 buildRetirementAssetProjection 전용이다 - calculatePensionIncomeAtTarget의
+      // 기본 호출부(60/70/80세 지표)는 여전히 unknown을 산출 불가로 처리해야 한다.
+      const input = makeInput({
+        basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 90, hasSpouse: false },
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 300, paymentMonths: 60, futureContributionPlan: 'continue' } },
+      });
+      const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });
+      expect(result.targets.every((target) => target.calculable === false)).toBe(true);
+    });
+
+    it('still blocks the whole projection when a different component is genuinely unknown (e.g. spouse birth year missing)', () => {
+      const result = project({
+        basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 90, hasSpouse: true },
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 300, paymentMonths: 60, futureContributionPlan: 'unknown' } },
+        spouse: { severance: { type: 'pension', pensionMonthly: 50, pensionStartAge: 65, pensionMonths: 120 } },
+      });
+      // spouse.birthYear가 없어 spouse의 퇴직연금 개시 시점을 알 수 없다 - 이 경우는 여전히
+      // 산출 불가로 남아야 한다(국민연금 unknown 완화와는 별개의 문제).
+      expect(result.notCalculable).toBe(true);
+    });
+  });
+
   it('does not emit NaN or Infinity across the whole projection', () => {
     const result = project({
       basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 90, assumedReturnRate: 5, hasSpouse: false },

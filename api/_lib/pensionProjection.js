@@ -72,7 +72,13 @@ export function pensionIncomeSeries(input, years) {
     ...buildComponents(input.income || {}),
     ...buildComponents(input.spouse || {}),
   ];
-  return years.map((year) => ({ year, pensionIncome: Math.round(pensionIncomeAtYear(components, year)) }));
+  const unknown = components.some((component) => component.eligibilityStatus === 'unknown');
+  return years.map((year) => ({
+    year,
+    pensionIncome: unknown ? null : Math.round(pensionIncomeAtYear(components, year)),
+    calculable: !unknown,
+    eligibilityStatus: unknown ? 'unknown' : 'known',
+  }));
 }
 
 export function calcPensionAdequacyTrend(input) {
@@ -86,6 +92,7 @@ export function calcPensionAdequacyTrend(input) {
       ? assessNationalPensionEligibility({ pension: input.spouse?.nationalPension || {} }).status
       : 'none',
   };
+  const calculable = !Object.values(eligibilityStatus).includes('unknown');
   const livingCostNow = n(input.expense?.retirementLivingCost);
 
   const ratioAtYear = (year) => {
@@ -96,20 +103,23 @@ export function calcPensionAdequacyTrend(input) {
 
   const trend = TREND_YEARS.map((year) => ({
     year,
-    pensionIncome: Math.round(pensionIncomeAtYear(components, year)),
+    pensionIncome: calculable ? Math.round(pensionIncomeAtYear(components, year)) : null,
     requiredLivingCost: Math.round(livingCostNow * Math.pow(1 + GENERAL_INFLATION_RATE, year)),
-    ratio: round1(ratioAtYear(year)),
+    ratio: calculable ? round1(ratioAtYear(year)) : null,
   }));
 
   let crossingYear = null;
-  for (let y = 0; y <= MAX_CROSSING_YEAR; y++) {
+  for (let y = 0; calculable && y <= MAX_CROSSING_YEAR; y++) {
     if (ratioAtYear(y) < CROSSING_THRESHOLD) {
       crossingYear = y;
       break;
     }
   }
 
-  return { threshold: CROSSING_THRESHOLD, trend, crossingYear, eligibilityStatus };
+  return {
+    threshold: CROSSING_THRESHOLD, trend, crossingYear, eligibilityStatus, calculable,
+    calculationReason: calculable ? null : '국민연금 향후 가입기간을 확정할 수 없음',
+  };
 }
 
 function round1(v) {

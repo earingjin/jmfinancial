@@ -16,14 +16,34 @@ function renderStep(formData) {
 }
 
 describe('Step1Income national pension future contribution plan', () => {
-  it('continue는 예상 개월 수 없이 조건부 수급 가능성을 안내한다', () => {
+  it('continue는 추가 납부 예정 개월 수 입력을 요구한다', () => {
     const formData = structuredClone(initialFormData);
     Object.assign(formData.basic, { birthYear: 1986, retirementAge: 50 });
     Object.assign(formData.income.nationalPension, { paymentMonths: 60, futureContributionPlan: 'continue' });
     const html = renderStep(formData);
     expect(html).toContain('앞으로 국민연금 보험료를 계속 납부할 예정인가요?');
-    expect(html).toContain('향후 가입을 계속해 120개월을 충족하면 노령연금 수급요건을 충족할 수 있습니다.');
-    expect(html).not.toContain('개월의 가입기간이 예상');
+    expect(html).toContain('추가 납부 예정 개월 수');
+    expect(html).toContain('추가로 납부할 예정 개월 수를 입력하면 총 가입기간이 120개월 이상인지 확인합니다.');
+  });
+
+  it('실제 60개월과 추가 예정 60개월을 합산해 예상액 계산 기준을 안내한다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.income.nationalPension, {
+      paymentMonths: 60, futureContributionPlan: 'continue', expectedAdditionalContributionMonths: 60,
+    });
+    const html = renderStep(formData);
+    expect(html).toContain('총 120개월을 기준으로 국민연금 예상액을 계산합니다.');
+  });
+
+  it('모의계산은 실제 60개월과 추가 예정 60개월을 합한 120개월로 월 예상액을 계산한다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.income.nationalPension, {
+      inputMode: 'simulate', futureContributionPlan: 'continue', expectedAdditionalContributionMonths: 60,
+      months: 240,
+      simulate: { averageMonthlyIncome: 300, contributionMonths: 60, years: 5 },
+    });
+    const html = renderStep(formData);
+    expect(html).toContain('총 120개월을 기준으로 국민연금 예상액을 계산합니다.');
   });
 
   it('120개월 이상이면 기존 UI만 유지하고 추가 질문을 표시하지 않는다', () => {

@@ -56,6 +56,29 @@ describe('national pension contribution eligibility', () => {
     expect(assess(100, 'continue')).toMatchObject({ status: 'unknown', benefitType: 'unknown' });
   });
 
+  it('직접 입력한 실제·추가 납부기간 합계가 120개월이면 eligible이다', () => {
+    const result = assessNationalPensionEligibility({
+      pension: {
+        inputMode: 'direct', paymentMonths: 100, futureContributionPlan: 'continue',
+        expectedAdditionalContributionMonths: 20,
+      },
+    });
+    expect(result).toMatchObject({
+      status: 'eligible', effectiveContributionMonths: 120, eligibilityBasis: 'actualAndPlanned',
+    });
+    expect(calculateNationalPensionMonthlyEstimate(300, result.effectiveContributionMonths)).toBe(45);
+  });
+
+  it('직접 입력한 실제·추가 납부기간 합계가 119개월이면 unknown이다', () => {
+    const result = assessNationalPensionEligibility({
+      pension: {
+        inputMode: 'direct', paymentMonths: 100, futureContributionPlan: 'continue',
+        expectedAdditionalContributionMonths: 19,
+      },
+    });
+    expect(result).toMatchObject({ status: 'unknown', effectiveContributionMonths: 119 });
+  });
+
   it('잘 모르겠음은 unknown이고 월 연금에 포함하지 않는다', () => {
     const result = assess(100, 'unknown');
     expect(result.status).toBe('unknown');

@@ -288,6 +288,19 @@ describe('retirementSavingsInputVersion: 2 - 레거시 관계 검증 제외', ()
 });
 
 describe('national pension future contribution plan validation', () => {
+  it('requires expected additional months when continued contribution is selected', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { futureContributionPlan: 'continue', expectedAdditionalContributionMonths: '' } },
+    }));
+    expect(result.errors).toContain('income.nationalPension.expectedAdditionalContributionMonths 값이 필요합니다.');
+  });
+
+  it('accepts an explicit zero for expected additional months', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { futureContributionPlan: 'continue', expectedAdditionalContributionMonths: 0 } },
+    }));
+    expect(result.errors).not.toContain('income.nationalPension.expectedAdditionalContributionMonths 값이 필요합니다.');
+  });
   it('allows an actual contribution period below 120 months with a supported plan', () => {
     const result = validateInput(makeInput({
       income: { nationalPension: { inputMode: 'direct', paymentMonths: 60, futureContributionPlan: 'stop' } },

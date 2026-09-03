@@ -39,8 +39,12 @@ function PensionPortalNotice() {
 function NationalPensionEligibilityNotice({ basePath, eligibility }) {
   const { setField } = useFormData();
   const plan = eligibility.futureContributionPlan;
-  const message = plan === 'continue'
-    ? '현재는 노령연금 최소 가입기간 120개월에 미달합니다. 향후 가입을 계속해 120개월을 충족하면 노령연금 수급요건을 충족할 수 있습니다.'
+  const message = plan === 'continue' && eligibility.eligibilityBasis === 'actualAndPlanned'
+    ? `실제 납부기간과 추가 납부 예정기간을 합한 총 ${formatNumber(eligibility.effectiveContributionMonths)}개월을 기준으로 국민연금 예상액을 계산합니다.`
+    : plan === 'continue' && eligibility.effectiveContributionMonths != null
+      ? `실제 납부기간과 추가 납부 예정기간의 합계는 ${formatNumber(eligibility.effectiveContributionMonths)}개월입니다. 120개월 미만이므로 국민연금 예상액을 계산하지 않습니다.`
+      : plan === 'continue'
+        ? '추가로 납부할 예정 개월 수를 입력하면 총 가입기간이 120개월 이상인지 확인합니다.'
     : plan === 'stop'
       ? '현재 가입기간은 120개월 미만입니다. 노령연금 수급요건을 충족하지 못할 수 있으며, 지급요건에 해당하면 납부한 보험료에 이자를 더한 반환일시금 대상이 될 수 있습니다.'
       : '향후 가입 여부에 따라 노령연금 또는 반환일시금 여부가 달라질 수 있습니다.';
@@ -56,6 +60,14 @@ function NationalPensionEligibilityNotice({ basePath, eligibility }) {
           { value: 'unknown', label: '잘 모르겠음' },
         ]}
       />
+      {plan === 'continue' && (
+        <NumberField
+          path={`${basePath}.expectedAdditionalContributionMonths`}
+          label="추가 납부 예정 개월 수"
+          unit="개월"
+          min={0}
+        />
+      )}
       <p className="field-helper">{message}</p>
     </div>
   );
@@ -117,6 +129,7 @@ export default function Step1Income() {
       clearPensionValues(basePath, ['monthly', 'months', 'paymentMonths', 'paymentYears']);
       clearPensionValues(`${basePath}.simulate`, ['averageMonthlyIncome', 'contributionMonths', 'years']);
       setField(`${basePath}.futureContributionPlan`, '');
+      setField(`${basePath}.expectedAdditionalContributionMonths`, '');
     }
   };
 
@@ -244,7 +257,7 @@ export default function Step1Income() {
     futureContributionPlan: selfNationalPension?.futureContributionPlan,
   };
   const selfNpEligible = isFilledValue(selfNpEligibilityMonths) && nationalPensionMonthlyEligible(selfNpEligibility);
-  const selfNpBenefitMonths = selfNpEffectiveContributionMonths;
+  const selfNpBenefitMonths = selfNpEligibility.effectiveContributionMonths ?? selfNpEffectiveContributionMonths;
   const selfNpSimulated =
     isFilledValue(selfNpAvgIncome) && isFilledValue(selfNpBenefitMonths) && selfNpEligible
       ? calculateNationalPensionMonthlyEstimate(selfNpAvgIncome, selfNpBenefitMonths)
@@ -284,7 +297,7 @@ export default function Step1Income() {
     futureContributionPlan: spouseNationalPension?.futureContributionPlan,
   };
   const spouseNpEligible = isFilledValue(spouseNpEligibilityMonths) && nationalPensionMonthlyEligible(spouseNpEligibility);
-  const spouseNpBenefitMonths = spouseNpEffectiveContributionMonths;
+  const spouseNpBenefitMonths = spouseNpEligibility.effectiveContributionMonths ?? spouseNpEffectiveContributionMonths;
   const spouseNpSimulated =
     isFilledValue(spouseNpAvgIncome) && isFilledValue(spouseNpBenefitMonths) && spouseNpEligible
       ? calculateNationalPensionMonthlyEstimate(spouseNpAvgIncome, spouseNpBenefitMonths)

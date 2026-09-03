@@ -187,6 +187,7 @@ const COUNT_FIELDS = [
   'income.nationalPension.months',
   'income.nationalPension.paymentMonths',
   'income.nationalPension.simulate.contributionMonths',
+  'income.nationalPension.expectedAdditionalContributionMonths',
   'income.personalPension.months',
   'income.personalPension.lumpsumAge',
   'spouse.salary.months',
@@ -195,6 +196,7 @@ const COUNT_FIELDS = [
   'spouse.nationalPension.months',
   'spouse.nationalPension.paymentMonths',
   'spouse.nationalPension.simulate.contributionMonths',
+  'spouse.nationalPension.expectedAdditionalContributionMonths',
   'spouse.personalPension.months',
   'spouse.personalPension.lumpsumAge',
   'expense.medical.years',
@@ -319,6 +321,15 @@ export function validateInput(input) {
     const value = getPath(input, path);
     if (!isBlank(value) && !['continue', 'stop', 'unknown'].includes(value)) {
       errors.push(`${path} 값이 유효하지 않습니다.`);
+    }
+  });
+  [
+    ['income.nationalPension', true],
+    ['spouse.nationalPension', input.basic?.hasSpouse === true],
+  ].forEach(([basePath, active]) => {
+    if (active && getPath(input, `${basePath}.futureContributionPlan`) === 'continue'
+      && isBlank(getPath(input, `${basePath}.expectedAdditionalContributionMonths`))) {
+      errors.push(`${basePath}.expectedAdditionalContributionMonths 값이 필요합니다.`);
     }
   });
 

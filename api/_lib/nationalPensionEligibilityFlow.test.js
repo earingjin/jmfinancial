@@ -42,7 +42,19 @@ describe('national pension eligibility is consistent across calculation paths', 
     expect(future.components.find((component) => component.key === 'self.nationalPension')).toMatchObject({
       eligibilityStatus: 'unknown', inclusionStatus: 'unknown', amount: null,
     });
-    expect(pensionIncomeSeries(input, [0], 2026)[0].pensionIncome).toBe(0);
+    expect(pensionIncomeSeries(input, [0], 2026)[0]).toMatchObject({
+      pensionIncome: null, calculable: false, eligibilityStatus: 'unknown',
+    });
+  });
+
+  it('사용자가 입력한 실제+추가 납부 개월이 120개월이면 세 경로에서 국민연금을 포함한다', () => {
+    const input = inputFor({
+      inputMode: 'direct', paymentMonths: 60, futureContributionPlan: 'continue',
+      expectedAdditionalContributionMonths: 60,
+    });
+    expect(buildAggregates(input).nationalPensionMonthly).toBe(100);
+    expect(calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 40 }).nationalPension).toBeGreaterThan(0);
+    expect(pensionIncomeSeries(input, [0])[0]).toMatchObject({ pensionIncome: 100, calculable: true });
   });
 
   it('본인과 배우자를 독립 판정한다', () => {

@@ -48,6 +48,26 @@ export function assessNationalPensionEligibility({ pension = {} }) {
   }
 
   const plan = pension.futureContributionPlan;
+  if (hasFutureContributionPlan && plan === 'continue') {
+    const expectedAdditionalMonths = pension.expectedAdditionalContributionMonths;
+    if (!present(expectedAdditionalMonths)) {
+      return { status: 'unknown', benefitType: 'unknown', contributionMonths };
+    }
+    const effectiveContributionMonths = contributionMonths + Math.max(0, n(expectedAdditionalMonths));
+    if (effectiveContributionMonths >= NATIONAL_PENSION_MIN_MONTHS) {
+      return {
+        status: 'eligible', benefitType: 'oldAgePension', contributionMonths,
+        expectedAdditionalMonths: Math.max(0, n(expectedAdditionalMonths)),
+        effectiveContributionMonths,
+        eligibilityBasis: 'actualAndPlanned',
+      };
+    }
+    return {
+      status: 'unknown', benefitType: 'unknown', contributionMonths,
+      expectedAdditionalMonths: Math.max(0, n(expectedAdditionalMonths)),
+      effectiveContributionMonths,
+    };
+  }
   if (hasFutureContributionPlan && plan !== 'stop') {
     return { status: 'unknown', benefitType: 'unknown', contributionMonths };
   }

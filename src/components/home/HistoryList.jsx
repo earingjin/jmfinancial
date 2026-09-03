@@ -27,7 +27,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
     (async () => {
       const { data, error } = await supabase
         .from('planner_results')
-        .select('id, created_at, result_json')
+        .select('id, created_at, result_json, input_json')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 

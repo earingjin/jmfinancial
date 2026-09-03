@@ -391,6 +391,27 @@ describe('buildRetirementReadiness', () => {
     expect(readiness.retirementIncomeZeroReason).toContain('수령 기간');
   });
 
+  it('propagates unknown national-pension eligibility instead of presenting derived zero values', () => {
+    const scoped = input({
+      income: {
+        nationalPension: {
+          monthly: 90, months: 240, paymentMonths: 100,
+          futureContributionPlan: 'continue', expectedAdditionalContributionMonths: '',
+        },
+      },
+    });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
+    expect(readiness.monthlyIncomeCompare).toMatchObject({
+      nationalPensionMonthly: null,
+      shortfallMonthly: null,
+      calculable: false,
+      calculationReason: '국민연금 향후 가입기간을 확정할 수 없음',
+    });
+    expect(readiness.retirementIncomeIndicator).toMatchObject({ notCalculable: true });
+    expect(readiness.retirementIncomeZeroReason).toBeNull();
+  });
+
   it('computes the total funding needed to bridge the income gap using the inflation-adjusted living cost at retirement (not today\'s cost)', () => {
     const scoped = input({ basic: { birthYear: 1985, retirementAge: 60 }, expense: { retirementLivingCost: 200 } });
     const { aggregates, simulation, indicators } = calc(scoped);

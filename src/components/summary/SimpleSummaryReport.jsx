@@ -603,7 +603,7 @@ function RetirementAssetProjectionChart({ projection }) {
   );
 }
 
-export default function SimpleSummaryReport({ result, onBack, onHome, onDownload, onShare }) {
+export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, onDownload, onShare }) {
   const { generatedAt, peerComparison, webSummary, aggregates, indicators } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
@@ -644,6 +644,11 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         <button type="button" className="ss-back-btn" onClick={onBack}>
           ← 뒤로가기
         </button>
+        {onEdit && (
+          <button type="button" className="ss-back-btn" onClick={onEdit}>
+            수정하기
+          </button>
+        )}
       </div>
 
       {/* 요약과 상세 리포트 화면을 오가는 형식 전환 탭. */}
@@ -652,7 +657,7 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
           <span>모바일</span><span className="ss-format-tab-type">(Lite)</span>
         </button>
         <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onDownload}>
-          <span>상세 리포트</span><span className="ss-format-tab-type">(Standard)</span>
+          <span>상세 리포트</span>
         </button>
       </div>
 
@@ -1204,10 +1209,13 @@ export default function SimpleSummaryReport({ result, onBack, onHome, onDownload
         <h2 id="ss-h-download" className="simple-summary-title">더 자세한 분석이 필요하신가요?</h2>
         <p className="simple-summary-subtitle">리포트에서 더 심화된 재무 현황을 확인해 보세요.</p>
         <button type="button" className="btn-primary ss-download-btn" onClick={onDownload}>
-          상세 리포트 (Standard) PDF
+          상세 리포트 PDF
         </button>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>
+          {onEdit && (
+            <button type="button" className="btn-secondary" onClick={onEdit}>수정하기</button>
+          )}
           <button type="button" className="btn-secondary" onClick={onShare}>공유하기</button>
         </div>
       </section>

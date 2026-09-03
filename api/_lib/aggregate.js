@@ -5,8 +5,6 @@ import { assessNationalPensionEligibility, nationalPensionMonthlyEligible } from
 
 const n = (v) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
 
-const nationalPensionStatus = (pension) => assessNationalPensionEligibility({ pension: pension || {} }).status;
-
 // annual 필드가 실제로 입력되지 않은 경우(빈 값/undefined/null)에만 monthly×12로 대체한다.
 // annual이 명시적으로 0이어도(예: 올해는 저축을 전혀 안 함) 그 값을 그대로 존중한다 -
 // 기존에는 `n(annual) || monthly*12` 형태라 명시적 0이 무시되고 monthly*12로 덮어써지는 문제가 있었다.
@@ -246,6 +244,7 @@ export function calcRetirementIncomeByPerson(input) {
     if (!nationalPensionMonthlyEligible(eligibility)) return 0;
     return pick(p.monthly, p.months);
   };
+  const nationalPensionStatus = (pension) => assessNationalPensionEligibility({ pension: pension || {} }).status;
 
   const personalPensionMonthly = (personalPension) => {
     const p = personalPension || {};

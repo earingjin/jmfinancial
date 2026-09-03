@@ -285,17 +285,24 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
   const annualGapCost = incomeGapNotCalculable ? null : simulation.retirementLivingCostAtRetirement * 12;
   const totalGapFundingNeeded = incomeGapNotCalculable ? null : annualGapCost * gapYears;
 
-  const pensionMonthlyTotal = aggregates.nationalPensionMonthly + aggregates.severancePensionMonthly + aggregates.personalPensionMonthly;
-  const monthlyShortfall = Math.max(0, simulation.retirementLivingCostNow - pensionMonthlyTotal);
   // 국민연금 가입기간 판정이 'unknown'이면 aggregates.nationalPensionMonthly는 0원으로 집계되어
   // 있지만(aggregate.js) 이는 "확정된 0원"이 아니다. 이 값을 그대로 쓰는 화면 표시는 이 플래그를
   // 확인해 확정 숫자 대신 "산출 불가"류 안내를 보여줘야 한다.
   const nationalPensionUnknown = aggregates.nationalPensionEligibility?.self === 'unknown'
     || aggregates.nationalPensionEligibility?.spouse === 'unknown';
-  const retirementIncomeIndicator = indicators.find((i) => i.key === 'retirementIncome') || null;
+  const pensionMonthlyTotal = nationalPensionUnknown
+    ? null
+    : aggregates.nationalPensionMonthly + aggregates.severancePensionMonthly + aggregates.personalPensionMonthly;
+  const monthlyShortfall = pensionMonthlyTotal == null
+    ? null
+    : Math.max(0, simulation.retirementLivingCostNow - pensionMonthlyTotal);
+  const rawRetirementIncomeIndicator = indicators.find((i) => i.key === 'retirementIncome') || null;
+  const retirementIncomeIndicator = nationalPensionUnknown && rawRetirementIncomeIndicator
+    ? { ...rawRetirementIncomeIndicator, notCalculable: true, reason: '국민연금 향후 가입기간을 확정할 수 없음' }
+    : rawRetirementIncomeIndicator;
   let retirementIncomeZeroReason = null;
 
-  if (!retirementIncomeIndicator?.notCalculable && retirementIncomeIndicator?.value === 0) {
+  if (!nationalPensionUnknown && !retirementIncomeIndicator?.notCalculable && retirementIncomeIndicator?.value === 0) {
     const pensionOwners = [input.income || {}, input.spouse || {}];
     const hasMonthlyAmountWithoutPeriod = pensionOwners.some((owner) => (
       (n(owner.nationalPension?.monthly) > 0 && n(owner.nationalPension?.months) <= 0)
@@ -344,8 +351,11 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
     },
     monthlyIncomeCompare: {
       livingCostMonthly: simulation.retirementLivingCostNow,
-      nationalPensionMonthly: aggregates.nationalPensionMonthly,
+      nationalPensionMonthly: nationalPensionUnknown ? null : aggregates.nationalPensionMonthly,
       nationalPensionUnknown,
+      nationalPensionEligibility: aggregates.nationalPensionEligibility,
+      calculable: !nationalPensionUnknown,
+      calculationReason: nationalPensionUnknown ? '국민연금 향후 가입기간을 확정할 수 없음' : null,
       severancePensionMonthly: aggregates.severancePensionMonthly,
       personalPensionMonthly: aggregates.personalPensionMonthly,
       shortfallMonthly: monthlyShortfall,
