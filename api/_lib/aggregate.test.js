@@ -49,6 +49,39 @@ describe('savingsPlan.retirementIncludedInTotal - monthlySavings', () => {
   });
 });
 
+describe('simple savings and asset totals', () => {
+  it('uses active simple totals without mixing preserved detailed values', () => {
+    const result = buildAggregates(input({
+      assets: {
+        liquidAssets: { inputMode: 'simple', total: 10, breakdown: { deposit: 999 } },
+        financialAssets: { inputMode: 'simple', total: 20, stocks: 999, other: 999 },
+        pensionAssets: 30,
+        pensionAssetsBreakdown: { irp: 999 },
+        realEstateAssets: { inputMode: 'simple', total: 40, mainProperty: 999 },
+        otherAssets: { inputMode: 'simple', total: 50, items: [{ amount: 999 }] },
+        savingsPlan: {
+          inputMode: 'simple', monthly: 60, annual: 720,
+          retirementSavingsInputVersion: 2,
+          breakdown: { pensionSavings: { monthly: 999 } },
+          additionalRetirementMonthly: 999,
+        },
+      },
+    }));
+
+    expect(result).toMatchObject({
+      liquidAssets: 10,
+      financialAssetsTotal: 20,
+      pensionAssets: 30,
+      realEstateTotal: 40,
+      otherAssetsTotal: 50,
+      totalAssets: 150,
+      monthlySavings: 60,
+      totalSavingsAnnual: 720,
+      retirementSavingsAnnual: 0,
+    });
+  });
+});
+
 describe('buildFamilyAges', () => {
   it('includes the spouse retirement age and life expectancy in report data', () => {
     const result = buildFamilyAges({

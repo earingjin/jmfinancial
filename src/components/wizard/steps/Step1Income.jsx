@@ -82,7 +82,7 @@ export const SEVERANCE_RESET_FIELDS_ON_NONE = ['lumpsum', 'lumpsumAge', 'pension
 
 export function handleSeveranceType(setField, basePath, value) {
   if (value === 'none') {
-    SEVERANCE_RESET_FIELDS_ON_NONE.forEach((field) => setField(`${basePath}.${field}`, 0));
+    SEVERANCE_RESET_FIELDS_ON_NONE.forEach((field) => setField(`${basePath}.${field}`, ''));
   }
 }
 
@@ -114,14 +114,14 @@ export default function Step1Income() {
   const setHasSalary = (basePath, value) => {
     setField(`${basePath}.hasSalary`, value);
     if (!value) {
-      setField(`${basePath}.monthly`, 0);
-      setField(`${basePath}.annual`, 0);
-      setField(`${basePath}.annualBonus`, 0);
+      setField(`${basePath}.monthly`, '');
+      setField(`${basePath}.annual`, '');
+      setField(`${basePath}.annualBonus`, '');
     }
   };
 
   const clearPensionValues = (basePath, fields) => {
-    fields.forEach((field) => setField(`${basePath}.${field}`, 0));
+    fields.forEach((field) => setField(`${basePath}.${field}`, ''));
   };
 
   const handleNationalPensionMode = (basePath, value) => {

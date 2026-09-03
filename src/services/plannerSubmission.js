@@ -41,6 +41,16 @@ export async function savePlannerResult(user, formData, result, submissionId, cl
   return existing;
 }
 
+export async function hasSavedPlannerResults(userId, client = supabase) {
+  const { data, error } = await client
+    .from('planner_results')
+    .select('id')
+    .eq('user_id', userId)
+    .limit(1);
+  if (error) throw error;
+  return Array.isArray(data) && data.length > 0;
+}
+
 export async function completePlannerSubmission(pending, user, operations = {}) {
   const persistResult = operations.saveResult || savePlannerResult;
   const removeDraft = operations.deleteDraft || deleteDraft;

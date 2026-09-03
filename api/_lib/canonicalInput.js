@@ -41,20 +41,25 @@ export function buildCanonicalInput(input) {
     liquid.breakdown.subscription = n(legacySubscription.amount);
   }
   liquid.customItems = (liquid.customItems || []).filter((item) => item.name !== '청약');
-  liquid.total = LIQUID_KEYS.reduce((total, key) => total + n(liquid.breakdown[key]), 0) + sum(liquid.customItems, (item) => item.amount);
+  if (liquid.inputMode !== 'simple') liquid.total = LIQUID_KEYS.reduce((total, key) => total + n(liquid.breakdown[key]), 0) + sum(liquid.customItems, (item) => item.amount);
 
   const financial = result.assets.financialAssets;
-  financial.other = sum(financial.otherItems, (item) => item.amount);
+  if (financial.inputMode !== 'simple') {
+    financial.other = sum(financial.otherItems, (item) => item.amount);
+    financial.total = n(financial.stocks) + n(financial.funds) + n(financial.bonds) + n(financial.other);
+  }
 
   const pension = result.assets.pensionAssetsBreakdown;
-  pension.other = sum(pension.otherItems, (item) => item.amount);
-  result.assets.pensionAssets = n(pension.variableAnnuity) + n(pension.pensionSavingsAccount) + n(pension.irp) + pension.other;
+  if (result.assets.pensionAssetsInputMode !== 'simple') {
+    pension.other = sum(pension.otherItems, (item) => item.amount);
+    result.assets.pensionAssets = n(pension.variableAnnuity) + n(pension.pensionSavingsAccount) + n(pension.irp) + pension.other;
+  }
 
   const realEstate = result.assets.realEstateAssets;
-  realEstate.total = n(realEstate.mainProperty) + sum(realEstate.otherItems, (item) => item.amount);
+  if (realEstate.inputMode !== 'simple') realEstate.total = n(realEstate.mainProperty) + sum(realEstate.otherItems, (item) => item.amount);
 
   const otherAssets = result.assets.otherAssets;
-  if (otherAssets) otherAssets.total = sum(otherAssets.items, (item) => item.amount);
+  if (otherAssets?.inputMode !== 'simple') otherAssets.total = sum(otherAssets.items, (item) => item.amount);
 
   const debt = result.assets.debtStatus;
   if (debt.inputMode === 'detailed') {
@@ -64,9 +69,11 @@ export function buildCanonicalInput(input) {
   }
 
   const savings = result.assets.savingsPlan;
-  savings.monthly = SAVINGS_KEYS.reduce((total, key) => total + n(savings.breakdown[key]?.monthly), 0)
-    + sum(savings.customItems, (item) => item.monthly);
-  savings.annual = Math.round(savings.monthly * 12);
+  if (savings.inputMode !== 'simple') {
+    savings.monthly = SAVINGS_KEYS.reduce((total, key) => total + n(savings.breakdown[key]?.monthly), 0)
+      + sum(savings.customItems, (item) => item.monthly);
+    savings.annual = Math.round(savings.monthly * 12);
+  }
   savings.retirementAnnual = Math.round(n(savings.retirementMonthly) * 12);
   savings.additionalRetirementAnnual = Math.round(n(savings.additionalRetirementMonthly) * 12);
 

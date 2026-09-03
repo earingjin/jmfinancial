@@ -188,19 +188,40 @@ export function calculateNonPensionIncomeAtTarget({ input, aggregates, currentAg
 }
 
 function assetDataMissing(input) {
+  const liquidPaths = input.assets?.liquidAssets?.inputMode === 'simple'
+    ? ['assets.liquidAssets.total']
+    : [
+        'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
+        'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.emergencyFund',
+      ];
+  const financialPaths = input.assets?.financialAssets?.inputMode === 'simple'
+    ? ['assets.financialAssets.total']
+    : ['assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds'];
+  const pensionPaths = input.assets?.pensionAssetsInputMode === 'simple'
+    ? ['assets.pensionAssets']
+    : [
+        'assets.pensionAssetsBreakdown.variableAnnuity', 'assets.pensionAssetsBreakdown.pensionSavingsAccount',
+        'assets.pensionAssetsBreakdown.irp',
+      ];
+  const realEstatePaths = input.assets?.realEstateAssets?.inputMode === 'simple'
+    ? ['assets.realEstateAssets.total']
+    : ['assets.realEstateAssets.mainProperty'];
+  const otherAssetPaths = input.assets?.otherAssets?.inputMode === 'simple'
+    ? ['assets.otherAssets.total']
+    : [];
+
   return allBlankLeaf(input, [
-    'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
-    'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.emergencyFund',
-    'assets.financialAssets.stocks', 'assets.financialAssets.funds', 'assets.financialAssets.bonds',
-    'assets.pensionAssetsBreakdown.variableAnnuity', 'assets.pensionAssetsBreakdown.pensionSavingsAccount',
-    'assets.pensionAssetsBreakdown.irp', 'assets.realEstateAssets.mainProperty',
+    ...liquidPaths, ...financialPaths, ...pensionPaths, ...realEstatePaths, ...otherAssetPaths,
     'assets.debtStatus.breakdown.mortgage.principal', 'assets.debtStatus.breakdown.depositLoan.principal',
     'assets.debtStatus.breakdown.businessLoan.principal', 'assets.debtStatus.breakdown.buildingLoan.principal',
     'assets.debtStatus.breakdown.carLoan.principal', 'assets.debtStatus.breakdown.studentLoan.principal',
     'assets.debtStatus.breakdown.otherLoan.principal',
   ], [
-    'assets.liquidAssets.customItems', 'assets.financialAssets.otherItems',
-    'assets.pensionAssetsBreakdown.otherItems', 'assets.realEstateAssets.otherItems',
+    ...(input.assets?.liquidAssets?.inputMode === 'simple' ? [] : ['assets.liquidAssets.customItems']),
+    ...(input.assets?.financialAssets?.inputMode === 'simple' ? [] : ['assets.financialAssets.otherItems']),
+    ...(input.assets?.pensionAssetsInputMode === 'simple' ? [] : ['assets.pensionAssetsBreakdown.otherItems']),
+    ...(input.assets?.realEstateAssets?.inputMode === 'simple' ? [] : ['assets.realEstateAssets.otherItems']),
+    ...(input.assets?.otherAssets?.inputMode === 'simple' ? [] : ['assets.otherAssets.items']),
     'assets.debtStatus.customItems',
   ]);
 }

@@ -87,6 +87,19 @@ describe('A-4 reverse mortgage scenario - must not mix into severance/retirement
 });
 
 describe('A-5 real estate conversion scenario - asset conservation', () => {
+  it('preserves total assets when financial assets use simple-total mode', () => {
+    const scenarioInput = input({
+      assets: { financialAssets: { inputMode: 'simple', total: 1000, other: 9000 } },
+      scenarios: { realEstateConversion: { enabled: true, ageAtConversion: 60, cashOutAmount: 3000 } },
+    });
+    const before = buildAggregates(scenarioInput);
+    const { adjusted } = applyScenarios(scenarioInput);
+    const after = buildAggregates(adjusted);
+
+    expect(adjusted.assets.financialAssets.total).toBe(4000);
+    expect(after.totalAssets).toBeCloseTo(before.totalAssets, 6);
+  });
+
   it('preserves total assets when cashOutAmount is within the real estate holding', () => {
     const scenarioInput = input({ scenarios: { realEstateConversion: { enabled: true, ageAtConversion: 60, cashOutAmount: 3000 } } });
     const before = buildAggregates(scenarioInput);

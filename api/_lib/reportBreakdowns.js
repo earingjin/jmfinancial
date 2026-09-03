@@ -55,6 +55,10 @@ const savingsMonthly = (item) => (
 // 동일하게 breakdown 총액 + additionalRetirementMonthly가 되어야 한다).
 export function buildSavingsBreakdown(input) {
   const sp = input.assets?.savingsPlan || {};
+  if (sp.inputMode === 'simple') {
+    const value = n(sp.monthly);
+    return value > 0 ? [{ key: 'savings-simple', label: '간편 입력 저축', value }] : [];
+  }
   const breakdown = sp.breakdown || {};
   const items = Object.entries(SAVINGS_CATEGORY_LABELS)
     .map(([key, label]) => ({ key, label, value: savingsMonthly(breakdown[key]) }))
@@ -113,6 +117,7 @@ export function buildLivingExpenseItems(input) {
 // 합계에 포함되어 있으므로 여기서 다시 더하지 않는다 - 화면에 항목명을 보여주기 위한 표시용
 // 목록일 뿐이다(buildOtherLivingExpenseItems와 동일한 패턴).
 export function buildOtherLiquidAssetItems(input) {
+  if (input.assets?.liquidAssets?.inputMode === 'simple') return [];
   const customItems = input.assets?.liquidAssets?.customItems || [];
   return customItems
     .map((item, i) => ({ key: `other-liquid-${i}`, label: item.name || '기타 현금성자산', value: n(item.amount) }))
