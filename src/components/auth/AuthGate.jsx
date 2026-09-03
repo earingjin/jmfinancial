@@ -148,6 +148,12 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
 
           <form onSubmit={handleSubmit} className="auth-form">
             {mode === 'signup' && (
+              <p className="auth-signup-reassurance">
+                이메일은 진단 결과를 다음에도 안전하게 확인하기 위한 로그인 수단으로만 사용됩니다.<br />
+                전화번호 등 추가 개인정보는 요구하지 않으며, 광고성 이메일은 보내지 않습니다.
+              </p>
+            )}
+            {mode === 'signup' && (
               <label className="field">
                 <span className="field-label">이름</span>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="홍길동" />

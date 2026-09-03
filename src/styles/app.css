@@ -732,6 +732,7 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
 }
 .auth-consent-trigger:hover { background: #ff8612; filter: brightness(.98); }
 .auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-signup-reassurance { margin: 0; padding: 10px 12px; color: #36546a; background: #f4f8fb; border-radius: 8px; font-size: 12.5px; line-height: 1.55; }
 .auth-form .field input {
   width: 100%;
   padding: 11px 12px;
