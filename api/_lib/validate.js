@@ -110,6 +110,8 @@ const AMOUNT_FIELDS = [
   'assets.currentIncome.annual',
   'assets.currentLivingCost.monthly',
   'assets.currentLivingCost.annual',
+  'assets.currentLivingCost.simpleMonthly',
+  'assets.currentLivingCost.simpleAnnual',
   // carLoan(차량할부)·debtRepayment(원리금상환)은 assets.debtStatus가 단일 기준값이라 여기 없다.
   ...['rent', 'maintenance', 'utilities', 'fuel', 'carInsurance', 'clothing', 'fourInsurances', 'food', 'communication', 'medical', 'subscription', 'other'].map(
     (k) => `assets.currentLivingCost.breakdown.${k}`
@@ -141,6 +143,8 @@ const AMOUNT_FIELDS = [
   'assets.otherAssets.simpleTotal',
   'assets.debtStatus.totalBalance',
   'assets.debtStatus.monthlyRepayment',
+  'assets.debtStatus.simpleTotalBalance',
+  'assets.debtStatus.simpleMonthlyRepayment',
   'assets.insurance.monthlyPremium',
   'assets.insurance.coverageAmount',
   'assets.savingsPlan.monthly',

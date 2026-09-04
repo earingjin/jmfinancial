@@ -16,6 +16,7 @@ globalThis.React = React;
 describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 1, legacy)', () => {
   it('keeps the retirement monthly amount enabled when it is included in general savings', () => {
     const formData = structuredClone(initialFormData);
+    formData.assets.savingsPlan.inputMode = 'detailed';
     formData.assets.savingsPlan.retirementSavingsInputVersion = 1;
     formData.assets.savingsPlan.retirementIncludedInTotal = true;
 
@@ -35,6 +36,7 @@ describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 
 
   it('still shows the legacy "이미 포함되어 있어요" checkbox for v1 data', () => {
     const formData = structuredClone(initialFormData);
+    formData.assets.savingsPlan.inputMode = 'detailed';
     formData.assets.savingsPlan.retirementSavingsInputVersion = 1;
 
     const html = renderToStaticMarkup(
@@ -61,7 +63,7 @@ describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 
     expect(html).toContain('항목별로 자세히 입력');
   });
 
-  it('defaults to v2 for a brand-new form (initialFormData as-is)', () => {
+  it('defaults a brand-new form to entering the savings total at once', () => {
     const formData = structuredClone(initialFormData);
 
     const html = renderToStaticMarkup(
@@ -70,14 +72,16 @@ describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 
       </FormContext.Provider>
     );
 
-    expect(html).toContain('추가 노후준비 저축');
-    expect(html).toContain('입력한 연금저축과 IRP는 노후준비 저축으로 자동 포함됩니다.');
+    expect(html).toContain('현재 월 저축액');
+    expect(html).toContain('radio-pill is-active">총액으로 한 번에 입력');
+    expect(html).not.toContain('추가 노후준비 저축');
     expect(html).not.toContain('노후준비 월 저축액');
     expect(html).not.toContain('위 노후준비 저축액은 일반 저축액에 이미 포함되어 있어요');
   });
 
   it('shows 연금저축/IRP monthly amounts and the retirement savings total', () => {
     const formData = structuredClone(initialFormData);
+    formData.assets.savingsPlan.inputMode = 'detailed';
     formData.assets.savingsPlan.breakdown.pensionSavings.monthly = 20;
     formData.assets.savingsPlan.breakdown.irp.monthly = 30;
     formData.assets.savingsPlan.additionalRetirementMonthly = 10;
@@ -115,6 +119,7 @@ describe('Step3Savings - 저축 없음 → 저축 있음 전환(retirementSaving
     // setHasSavings(false)가 additionalRetirementMonthly/Annual을 0으로 만들어 둔 뒤,
     // 사용자가 다시 "저축 있음"을 선택한 직후의 상태를 재현한다.
     const formData = structuredClone(initialFormData);
+    formData.assets.savingsPlan.inputMode = 'detailed';
     formData.assets.savingsPlan.hasSavings = true;
     formData.assets.savingsPlan.additionalRetirementMonthly = 0;
     formData.assets.savingsPlan.additionalRetirementAnnual = 0;
@@ -134,6 +139,7 @@ describe('Step3Savings - 저축 없음 → 저축 있음 전환(retirementSaving
 
   it('월 납입액만 0으로 만들고 연결 자산과 사용자 추가 항목을 보존한다', () => {
     let formData = structuredClone(initialFormData);
+    formData.assets.savingsPlan.inputMode = 'detailed';
     Object.assign(formData.assets.savingsPlan.breakdown.stocks, { monthly: 50, remainingMonths: 24, interestRate: 5 });
     Object.assign(formData.assets.savingsPlan.breakdown.irp, { monthly: 30, remainingMonths: 120, interestRate: 3 });
     formData.assets.savingsPlan.customItems = [{ name: '여행저축', monthly: 10, remainingMonths: 12, interestRate: 2 }];

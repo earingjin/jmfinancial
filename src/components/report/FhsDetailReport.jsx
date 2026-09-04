@@ -75,6 +75,10 @@ function IndicatorDirectionBadge({ indicatorKey }) {
 // 게이지·등급 배지·구간표는 app.css에 이미 정의되어 있던 스타일(.indicator-detail, .gauge-*,
 // .pill-good/caution/risk, .indicator-benchmark-table)을 그대로 쓴다 - 새 디자인을 만들지 않는다.
 function IndicatorGauge({ gauge, ratioClass, unit, value }) {
+  // gauge가 없으면(과거 저장 결과·불완전 데이터) 게이지만 표시하지 않는다 - notCalculable/value==null이
+  // 아닌데도 gauge 자체가 비어 있는 예외적인 경우를 대비한 최소 방어다(A7의 카드 전체 대체와는 다른
+  // 층위: 카드의 나머지 부분(정의·구간표·breakdown)은 그대로 보여줄 수 있으므로 그대로 둔다).
+  if (!gauge) return null;
   const labelTransform = gauge.valuePct <= 12 ? 'translateX(0)' : gauge.valuePct >= 88 ? 'translateX(-100%)' : 'translateX(-50%)';
 
   return (
@@ -188,7 +192,11 @@ function IndicatorDefinition({ indicator }) {
 function IndicatorDetailCard({ indicator }) {
   const unit = indicator.unit || '%';
 
-  if (indicator.notCalculable) {
+  // notCalculable(분모 0 등으로 지표 자체 산출 불가)뿐 아니라, notApplicable이면서도 value가
+  // null인 경우(예: 65세 이상 + 총저축액 0원 - indicators.js 참고)도 게이지·구간표 없이 같은
+  // 카드로 사유만 보여준다. gauge/benchmark가 없는 상태에서 아래 전체 카드를 그리면 값을
+  // 지어내거나 렌더링이 깨질 수 있다.
+  if (indicator.notCalculable || indicator.value == null) {
     return (
       <div className="report-composition-card indicator-detail">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

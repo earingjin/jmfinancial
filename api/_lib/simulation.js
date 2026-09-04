@@ -5,7 +5,6 @@
 
 import { n, getCurrentAge, buildAggregates } from './aggregate.js';
 import { GENERAL_INFLATION_RATE } from './constants.js';
-import { calcPensionAdequacyTrend } from './pensionProjection.js';
 
 const BASE_INFLATION = GENERAL_INFLATION_RATE; // 일반 물가상승률(CPI), 연 3%
 
@@ -85,10 +84,6 @@ export function calcRetirementSimulation(input, currentYear = new Date().getFull
   const goalPreparedAmount = Math.min(availableForGoals, totalGoalAmount);
   const goalPreparationRate = totalGoalAmount > 0 ? (goalPreparedAmount / totalGoalAmount) * 100 : 100;
 
-  // 노후소득보장률의 연차별 추이(물가연동 vs 정액형 연금 반영). FHS 지표9 점수 자체에는 영향을 주지 않고,
-  // 은퇴자산 시뮬레이션 화면에서만 "시간이 지날수록 보장률이 낮아질 수 있다"는 것을 보여주는 참고 정보다.
-  const pensionAdequacyTrend = calcPensionAdequacyTrend(input);
-
   // "물가상승률에 따라 달라지는 목표 도달 나이" - 은퇴시점 준비자산을 은퇴 후에도 인출 없이
   // 계속 investRate로 굴린다고 가정하는(실제 인출 모델과는 다른) 참고용 가상 시나리오.
   // 물가상승률이 높을수록 필요자금(목표)이 커지므로 같은 자산으로도 목표 도달이 늦어짐을 보여준다.
@@ -132,7 +127,6 @@ export function calcRetirementSimulation(input, currentYear = new Date().getFull
     shortfall: Math.round(shortfall),
     preparationRate: round1(preparationRate),
     inflationScenarios,
-    pensionAdequacyTrend,
     goalReachAnalysis,
     lifeGoals: {
       totalGoalAmount: Math.round(totalGoalAmount),

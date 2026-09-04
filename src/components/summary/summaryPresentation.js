@@ -15,6 +15,26 @@ export function formatIndicatorStatusBadge(indicator) {
   return FHS_STATUS_BADGE_LABELS[indicator.status] || indicator.status;
 }
 
+export function formatPensionIncomeAtRetirement(amount, status, schedules = []) {
+  if (status === 'notCalculable') return '산출 불가';
+  if (status === 'beforeStart') {
+    const scheduleText = schedules
+      .filter((schedule) => Number.isFinite(schedule?.startAge) && Number.isFinite(schedule?.monthly))
+      .map((schedule) => `${formatNumber(schedule.startAge)}세부터 월 ${formatWon(schedule.monthly)}`)
+      .join(' · ');
+    return scheduleText ? `수령 전 · ${scheduleText}` : '수령 전';
+  }
+  if (status === 'lumpSum') return '일시금 수령 예정';
+  return formatWon(amount);
+}
+
+export function formatRetirementLivingCostBasis({ livingCostMonthly, retirementLivingCostAtRetirement, inflationRate }) {
+  if (!Number.isFinite(retirementLivingCostAtRetirement) || !Number.isFinite(inflationRate)) {
+    return '현재 입력한 노후 월 필요생활비를 기준으로 비교합니다.';
+  }
+  return `현재 입력한 월 필요생활비 ${formatWon(livingCostMonthly)}을 기준으로, 은퇴까지 연 ${formatPercent(inflationRate)} 물가상승률을 반영하면 은퇴 시점에는 월 ${formatWon(retirementLivingCostAtRetirement)}이 필요하다고 계산했습니다.`;
+}
+
 // 서버가 계산한 ratioClass만 사용해 결과 화면의 안내 문구를 선택한다.
 export function getFinancialHealthStatus(reps) {
   const known = (reps || []).filter((r) => r && !r.notCalculable);

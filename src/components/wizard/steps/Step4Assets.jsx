@@ -351,7 +351,7 @@ export default function Step4Assets() {
                 <label className="field">
                   <span className="field-label">금액</span>
                   <div className="field-input-row">
-                    <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                    <FormattedNumberInput min={0} value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
                     <span className="field-unit">만원</span>
                   </div>
                 </label>
@@ -424,7 +424,7 @@ export default function Step4Assets() {
                 <label className="field">
                   <span className="field-label">금액</span>
                   <div className="field-input-row">
-                    <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                    <FormattedNumberInput min={0} value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
                     <span className="field-unit">만원</span>
                   </div>
                 </label>
@@ -480,6 +480,7 @@ export default function Step4Assets() {
                 <span className="field-label">시세</span>
                 <div className="field-input-row">
                   <FormattedNumberInput
+                    min={0}
                     value={item.amount}
                     disabled={!(item.type || item.name)}
                     onChange={(e) => update('amount', Number(e.target.value))}
@@ -521,7 +522,7 @@ export default function Step4Assets() {
                 <label className="field">
                   <span className="field-label">현재 가치</span>
                   <div className="field-input-row">
-                    <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', e.target.value === '' ? '' : Number(e.target.value))} />
+                    <FormattedNumberInput min={0} value={item.amount} onChange={(e) => update('amount', e.target.value === '' ? '' : Number(e.target.value))} />
                     <span className="field-unit">만원</span>
                   </div>
                 </label>

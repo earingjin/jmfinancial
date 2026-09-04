@@ -3,9 +3,8 @@ import { calcRetirementSimulation } from './_lib/simulation.js';
 import { buildPeerComparison } from './_lib/peerComparison.js';
 import { validateInput } from './_lib/validate.js';
 import { buildFamilyAges, getCurrentAge } from './_lib/aggregate.js';
-import { buildFinancialHealthInterpretation, enrichIndicators, enrichSimulation } from './_lib/reportEnrichment.js';
+import { buildFinancialHealthInterpretation, enrichIndicators } from './_lib/reportEnrichment.js';
 import { buildCashFlowOutlookFeedback, buildExecutiveFinancialPositionFeedback, buildExecutiveRetirementFeedback, buildFinancialCashFlowFeedback, buildPeerComparisonFeedback, buildSavingsInvestmentFeedback } from './_lib/executiveSummary.js';
-import { buildSimpleSummary } from './_lib/simpleSummary.js';
 import { buildSavingsBreakdown, buildDebtBreakdown, buildLivingExpenseItems, buildOtherLivingExpenseItems, buildOtherLiquidAssetItems } from './_lib/reportBreakdowns.js';
 import { buildWebSummary, allBlankLeaf } from './_lib/summaryOverview.js';
 import { obfuscate } from '../src/utils/obfuscate.js';
@@ -133,13 +132,12 @@ export default async function handler(req, res) {
       financialAssetsMissing,
     });
 
-    // 리포트 렌더링에 필요한 게이지 위치·참고 범위 비교 문구·생활수준 구간 같은
+    // 리포트 렌더링에 필요한 게이지 위치·참고 범위 비교 문구 같은
     // "표시용 파생값"을 서버에서 미리 계산해 붙인다. 클라이언트는 이 값을 그대로 그리기만
     // 하면 되므로, 게이지 임계값·등급 커트라인 같은 기준 데이터가 클라이언트에 존재하지 않는다.
     const retirementLivingCost = simulation.retirementLivingCostNow;
     const enriched = enrichIndicators({ indicators, weakest, strongest, aggregates, retirementLivingCost, age: currentAge });
     const financialHealthInterpretation = buildFinancialHealthInterpretation(enriched.indicators);
-    const enrichedSimulation = enrichSimulation(simulation, retirementLivingCost);
     const financialStatusFeedback = buildFinancialCashFlowFeedback({
       indicators: enriched.indicators,
       aggregates,
@@ -158,7 +156,6 @@ export default async function handler(req, res) {
       simulation,
     });
     const peerComparisonFeedback = buildPeerComparisonFeedback({ peerComparison });
-    const simpleSummary = buildSimpleSummary({ input, aggregates, simulation });
     const savingsBreakdown = buildSavingsBreakdown(input);
     const debtBreakdown = buildDebtBreakdown(input);
     // "현재 생활비 상세"의 기타지출, "현금성 자산"의 기타 항목 - 값은 이미 각 합계
@@ -170,11 +167,11 @@ export default async function handler(req, res) {
     // 다운로드 전 웹 요약 화면(SimpleSummaryReport.jsx) 전용 파생값. 기존 필드(indicators/aggregates/
     // simulation/...)는 전혀 바뀌지 않으므로 PDF 리포트 렌더링에는 영향이 없다(하위호환 유지).
     const webSummary = buildWebSummary({
-      input, aggregates, simulation: enrichedSimulation, indicators: enriched.indicators,
+      input, aggregates, simulation, indicators: enriched.indicators,
       savingsBreakdown, debtBreakdown, livingExpenseItems, otherLiquidAssetItems,
     });
     const executiveRetirementFeedback = buildExecutiveRetirementFeedback({
-      simulation: enrichedSimulation,
+      simulation,
       retirementAssetProjection: webSummary?.futureFinance?.retirementAssetProjection,
     });
 
@@ -199,7 +196,7 @@ export default async function handler(req, res) {
       indicators: clientIndicators,
       financialHealthInterpretation,
       aggregates,
-      simulation: enrichedSimulation,
+      simulation,
       peerComparison,
       familyAges: buildFamilyAges(input),
       aiFeedback: {
@@ -214,7 +211,6 @@ export default async function handler(req, res) {
         cashFlowOutlook: cashFlowOutlookFeedback,
         peerComparison: peerComparisonFeedback,
       },
-      simpleSummary,
       savingsBreakdown,
       debtBreakdown,
       otherLivingExpenseItems,

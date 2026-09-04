@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildAggregates, calcRetirementIncomeByPerson } from './aggregate.js';
 import { calculatePensionIncomeAtTarget } from './futureFinance.js';
-import { pensionIncomeSeries } from './pensionProjection.js';
 
 function inputFor(selfPension, spousePension) {
   return {
@@ -25,14 +24,13 @@ function inputFor(selfPension, spousePension) {
 }
 
 describe('national pension eligibility is consistent across calculation paths', () => {
-  it('lumpSumPossible은 aggregate·futureFinance·pensionProjection에서 모두 월소득 0이다', () => {
+  it('lumpSumPossible은 aggregate·futureFinance에서 모두 월소득 0이다', () => {
     const input = inputFor({ inputMode: 'direct', paymentMonths: 60, futureContributionPlan: 'stop' });
     expect(buildAggregates(input).nationalPensionMonthly).toBe(0);
     expect(calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 40 }).nationalPension).toBe(0);
-    expect(pensionIncomeSeries(input, [0, 10], 2026).every((point) => point.pensionIncome === 0)).toBe(true);
   });
 
-  it('continue 신규 입력은 세 경로에서 unknown이고 futureFinance는 산출 불가다', () => {
+  it('continue 신규 입력은 두 경로에서 unknown이고 futureFinance는 산출 불가다', () => {
     const input = inputFor({ inputMode: 'direct', paymentMonths: 60, futureContributionPlan: 'continue' });
     const aggregates = buildAggregates(input);
     const future = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 40 });
@@ -42,19 +40,15 @@ describe('national pension eligibility is consistent across calculation paths', 
     expect(future.components.find((component) => component.key === 'self.nationalPension')).toMatchObject({
       eligibilityStatus: 'unknown', inclusionStatus: 'unknown', amount: null,
     });
-    expect(pensionIncomeSeries(input, [0], 2026)[0]).toMatchObject({
-      pensionIncome: null, calculable: false, eligibilityStatus: 'unknown',
-    });
   });
 
-  it('사용자가 입력한 실제+추가 납부 개월이 120개월이면 세 경로에서 국민연금을 포함한다', () => {
+  it('사용자가 입력한 실제+추가 납부 개월이 120개월이면 두 경로에서 국민연금을 포함한다', () => {
     const input = inputFor({
       inputMode: 'direct', paymentMonths: 60, futureContributionPlan: 'continue',
       expectedAdditionalContributionMonths: 60,
     });
     expect(buildAggregates(input).nationalPensionMonthly).toBe(100);
     expect(calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 40 }).nationalPension).toBeGreaterThan(0);
-    expect(pensionIncomeSeries(input, [0])[0]).toMatchObject({ pensionIncome: 100, calculable: true });
   });
 
   it('본인과 배우자를 독립 판정한다', () => {
@@ -79,7 +73,6 @@ describe('national pension eligibility is consistent across calculation paths', 
     const input = inputFor({ inputMode: 'none', paymentMonths: 240, monthly: 999 });
     expect(buildAggregates(input).nationalPensionMonthly).toBe(0);
     expect(calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 40 }).nationalPension).toBe(0);
-    expect(pensionIncomeSeries(input, [0], 2026)[0].pensionIncome).toBe(0);
     expect(buildAggregates(input).nationalPensionEligibility.self).toBe('none');
   });
 
@@ -99,7 +92,5 @@ describe('national pension eligibility is consistent across calculation paths', 
     expect(calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 40 })).toMatchObject({
       nationalPension: 0, calculable: true,
     });
-    // pensionProjection은 기존에 가입기간 게이트가 없었으므로 레거시 초안의 월액을 그대로 보존한다.
-    expect(pensionIncomeSeries(input, [0], 2026)[0].pensionIncome).toBe(100);
   });
 });

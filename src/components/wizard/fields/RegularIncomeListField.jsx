@@ -67,6 +67,7 @@ export default function RegularIncomeListField({ path, businessMonthlyPath, busi
               <div className="field-input-row">
                 <FormattedNumberInput
                   type="number"
+                  min={0}
                   value={item.annual}
                   onChange={(e) => updateItem(index, 'annual', e.target.value === '' ? '' : Number(e.target.value))}
                 />

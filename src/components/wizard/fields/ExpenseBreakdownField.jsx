@@ -109,11 +109,11 @@ export default function ExpenseBreakdownField({
   const otherTotal = otherItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
 
   useEffect(() => {
-    if (Number(breakdown.other) === otherTotal) return;
+    if (mode !== 'detailed' || Number(breakdown.other) === otherTotal) return;
     setField(`${basePath}.other`, otherTotal);
     recomputeTotal({ ...breakdown, other: otherTotal });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [otherTotal]);
+  }, [mode, otherTotal]);
 
   const openCategories = categories.filter((c) => openKeys.has(c.key));
   const openNumberCategories = openCategories.filter((c) => c.key !== 'other');

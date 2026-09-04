@@ -53,6 +53,43 @@ describe('liquid asset subscription validation', () => {
   });
 });
 
+// A11: simple 모드 그림자 필드(총액입력 모드에서 세부입력 값을 보관해 두는 필드)도 다른
+// simple 그림자 필드(예: assets.savingsPlan.simpleMonthly)와 동일하게 AMOUNT_FIELDS로
+// 검증되어야 한다. 실제 계산에는 쓰이지 않지만(모드 전환 시 원본으로 다시 복사될 뿐) 원본
+// 데이터에 음수 등 비정상 값이 영구 저장되는 것을 막는 방어선이다.
+describe('A11: simple 모드 그림자 금액 필드 검증(assets.currentLivingCost / assets.debtStatus)', () => {
+  const SHADOW_AMOUNT_FIELDS = [
+    'assets.currentLivingCost.simpleMonthly',
+    'assets.currentLivingCost.simpleAnnual',
+    'assets.debtStatus.simpleTotalBalance',
+    'assets.debtStatus.simpleMonthlyRepayment',
+  ];
+
+  it.each(SHADOW_AMOUNT_FIELDS)('필드가 없으면(레거시 데이터) 그대로 통과한다: %s', (path) => {
+    // makeInput()의 VALID 베이스에는 이 그림자 필드들이 전혀 없다 - 기존 검증 결과가 그대로
+    // 유지되는지(새 필드 추가로 레거시/기존 데이터가 깨지지 않는지) 확인한다.
+    expect(validateInput(makeInput()).ok).toBe(true);
+    void path;
+  });
+
+  it.each(SHADOW_AMOUNT_FIELDS)('%s: 0과 양수를 허용한다', (path) => {
+    [0, 100].forEach((value) => {
+      const overrides = path.split('.').reduceRight((acc, key) => ({ [key]: acc }), value);
+      const result = validateInput(makeInput(overrides));
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  it.each(SHADOW_AMOUNT_FIELDS)('%s: 음수·NaN·Infinity·비정상 숫자 표현을 거부한다', (path) => {
+    [-1, 'abc', '1e3', '0x10', NaN, Infinity].forEach((value) => {
+      const overrides = path.split('.').reduceRight((acc, key) => ({ [key]: acc }), value);
+      const result = validateInput(makeInput(overrides));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toContain(path);
+    });
+  });
+});
+
 describe('required spouse retirement fields', () => {
   const spouseInput = {
     basic: { hasSpouse: true },

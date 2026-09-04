@@ -1441,11 +1441,6 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .asset-focus-item { flex: 1 1 0; min-width: 0; text-align: center; }
 .asset-focus-bar-area { height: 150px; width: 30px; margin: 0 auto; }
 
-/* ---------- 은퇴 후 생활수준 트랙 ---------- */
-.lifestyle-track { position: relative; height: 14px; background: #f0e8d8; border-radius: 8px; margin: 20px 0 6px; }
-.lifestyle-seg { position: absolute; top: 0; height: 100%; }
-.lifestyle-labels { display: flex; font-size: 11.5px; color: var(--ink-soft); }
-.lifestyle-labels span { flex: 1; text-align: center; }
 .cost-table-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 2px; }
 .cost-table-grid .grade-table th,
 .cost-table-grid .grade-table td { font-size: 10.5px; padding: 3px 7px; line-height: 1.25; }

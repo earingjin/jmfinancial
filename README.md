@@ -70,7 +70,7 @@ api/
     scenarios.js         4개 대응방안 시나리오 적용 및 전/후 비교 (주택연금 등)  ← 핵심 로직
     peerComparison.js    동일연령대 비교 로직 (재무건강 총점만 placeholder, 나머지는 실제 통계)
     peerBenchmarks.js    동일연령대 실제 통계 원천 데이터(2025년 가계금융복지조사 등)
-    pensionProjection.js / pensionEligibility.js   국민연금 등 연금 추정
+    pensionEligibility.js                          국민연금 수급 상태 판정
     futureFinance.js     목표 나이별 연금소득 기준 생활비 충당률 계산
     finite.js            비유한 계산 결과(NaN/Infinity) 차단
     reportBreakdowns.js / reportEnrichment.js / executiveSummary.js / summaryOverview.js

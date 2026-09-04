@@ -22,6 +22,8 @@ export function computeWizardRequiredFields(formData) {
     ['income.personalPension.startAge', '개인연금 수령 시작 나이', getIn(formData, 'income.personalPension.type') === 'installment'],
     ['spouse.severance.pensionStartAge', '배우자 퇴직연금 수령 시작 나이', hasSpouse && getIn(formData, 'spouse.severance.type') === 'pension'],
     ['spouse.personalPension.startAge', '배우자 개인연금 수령 시작 나이', hasSpouse && getIn(formData, 'spouse.personalPension.type') === 'installment'],
+    ['income.nationalPension.expectedAdditionalContributionMonths', '국민연금 추가 납부 예정 개월 수', getIn(formData, 'income.nationalPension.futureContributionPlan') === 'continue'],
+    ['spouse.nationalPension.expectedAdditionalContributionMonths', '배우자 국민연금 추가 납부 예정 개월 수', hasSpouse && getIn(formData, 'spouse.nationalPension.futureContributionPlan') === 'continue'],
   ];
   const missingIncomeFields = incomeRequiredFields.filter(([path, , active]) => active && !isFilled(getIn(formData, path)));
   const basicInfoMissing = missingIncomeFields.length > 0;

@@ -27,7 +27,9 @@ function buildReportData({ withIncome }) {
     raw.income.salary.monthly = 500;
     raw.assets.currentLivingCost.monthly = 250;
     raw.assets.liquidAssets.hasAssets = true;
+    raw.assets.liquidAssets.inputMode = 'detailed';
     raw.assets.liquidAssets.breakdown.emergencyFund = 1500;
+    raw.assets.savingsPlan.inputMode = 'detailed';
     raw.assets.savingsPlan.breakdown.installment.monthly = 100;
     raw.assets.savingsPlan.retirementMonthly = 50;
   }
@@ -308,6 +310,84 @@ describe('IndicatorDetailCard - breakdown 표(구분/금액/비율)', () => {
     // 같은 래퍼 안에서 게이지(gauge-track)가 표(indicator-breakdown-table)보다 먼저 나온다.
     expect(afterRow.indexOf('gauge-track')).toBeLessThan(afterRow.indexOf('indicator-breakdown-table'));
   });
+});
+
+// A7 회귀 테스트: notCalculable이 아니어도 value가 null인 지표(65세 이상 + 총저축액 0원인
+// 노후대비저축지표)가 게이지·구간표 없이 사유만 보여주는 카드로 표시되는지, 0%나 "50%p 부족"
+// 같은 값을 지어내지 않는지 확인한다.
+describe('IndicatorDetailCard - notApplicable이면서 value가 null인 경우(A7)', () => {
+  it('실제 계산 파이프라인(65세 이상 + 총저축 0원)에서 게이지 대신 사유 카드를 보여준다', () => {
+    const raw = JSON.parse(JSON.stringify(initialFormData));
+    raw.basic.birthYear = String(new Date().getFullYear() - 66);
+    raw.basic.retirementAge = 65;
+    raw.basic.lifeExpectancy = 90;
+    raw.basic.serviceYears = 20;
+    raw.expense.retirementLivingCost = 300;
+    raw.income.personalPension.startAge = 65;
+    raw.income.salary.hasSalary = true;
+    raw.income.salary.monthly = 500;
+    raw.assets.currentLivingCost.monthly = 250;
+    raw.assets.liquidAssets.hasAssets = true;
+    raw.assets.liquidAssets.breakdown.emergencyFund = 1500;
+    // 총저축액을 명시적으로 0원으로 둔다(65세 이상이면서도 분모 0인 조건).
+    raw.assets.savingsPlan.monthly = 0;
+    raw.assets.savingsPlan.annual = 0;
+    raw.assets.savingsPlan.retirementMonthly = 0;
+    raw.assets.savingsPlan.retirementAnnual = 0;
+
+    const input = buildCanonicalInput(raw);
+    const { indicators, weakest, strongest, aggregates, currentAge } = calcIndicators(input);
+    const enrichedIndicators = enrichIndicators({
+      indicators, weakest, strongest, aggregates, retirementLivingCost: 300, age: currentAge,
+    }).indicators;
+    const retirementSavings = enrichedIndicators.find((ind) => ind.key === 'retirementSavings');
+    expect(retirementSavings.notApplicable).toBe(true);
+    expect(retirementSavings.value).toBeNull();
+    expect(retirementSavings.gauge).toBeNull();
+
+    const html = renderToStaticMarkup(
+      <FhsDetailReport
+        result={{ generatedAt: '2026-08-25T00:00:00.000Z', indicators: enrichedIndicators, financialHealthInterpretation: { categories: [] } }}
+        onRestart={() => {}}
+        onBack={() => {}}
+        onHome={() => {}}
+        clientName="테스트"
+      />
+    );
+
+    expect(html).toContain(retirementSavings.reason);
+    expect(html).not.toContain('undefined');
+    expect(html).not.toContain('NaN');
+    // 65세 이상 + 분모 0 카드에는 게이지(gauge-track)가 없어야 한다 - 다른 지표의 게이지는
+    // 페이지 안에 계속 존재하므로, 이 지표 이름 바로 뒤 구간에서만 gauge-track이 없는지 확인한다.
+    const cardStart = html.indexOf('노후대비저축지표');
+    const nextCardStart = html.indexOf('금융자산비중지표', cardStart);
+    const cardHtml = html.slice(cardStart, nextCardStart);
+    expect(cardHtml).not.toContain('gauge-track');
+    expect(cardHtml).not.toContain('50.0%p 부족');
+  });
+
+  it('단위 테스트: notApplicable + value=null 인디케이터는 산출 불가 카드(게이지 없음)로 렌더링된다', () => {
+    const html = renderWithIndicators([buildIndicator({
+      key: 'retirementSavings',
+      label: '노후대비저축지표',
+      value: null,
+      rawValue: null,
+      displayValue: null,
+      score: 0,
+      maxScore: 0,
+      status: '해당 없음',
+      notCalculable: false,
+      notApplicable: true,
+      reason: '65세 이상이며 총저축액이 0원이어서 노후대비저축지표를 산출할 수 없습니다.',
+      gauge: null,
+      benchmark: null,
+      breakdown: null,
+    })]);
+    expect(html).toContain('65세 이상이며 총저축액이 0원이어서 노후대비저축지표를 산출할 수 없습니다.');
+    expect(html).not.toContain('gauge-track');
+    expect(html).not.toContain('indicator-benchmark-table');
+  });
 
   it('breakdown이 없으면 게이지를 다시 전체 폭으로 되돌리는 --gauge-only 수정자가 붙는다', () => {
     const html = renderWithIndicators([buildIndicator()]);
@@ -347,5 +427,67 @@ describe('IndicatorDetailCard - breakdown 표(구분/금액/비율)', () => {
 
     const printBlockStart = css.lastIndexOf('@media print');
     expect(css.slice(printBlockStart)).not.toContain('.indicator-gauge-breakdown-row { flex-direction: column; }');
+  });
+});
+
+// A13 회귀 테스트: notCalculable도 아니고 value도 있는데(A7 대상 아님) gauge 자체만 없는
+// 과거 저장 결과/불완전 데이터를 흉내낸다. 목표는 "게이지만 표시하지 않고 크래시하지 않음" -
+// 카드의 나머지(정의·구간표)는 그대로 보여야 한다.
+describe('IndicatorDetailCard - gauge가 없는 경우의 방어 (A13)', () => {
+  it('정상 gauge가 있으면 기존과 완전히 동일하게 게이지를 보여준다(회귀 확인)', () => {
+    const html = renderWithIndicators([buildIndicator()]);
+    expect(html).toContain('gauge-track');
+    expect(html).toContain('gauge-fill');
+  });
+
+  it('gauge가 undefined여도 crash하지 않고 게이지만 생략한다', () => {
+    expect(() => renderWithIndicators([buildIndicator({ gauge: undefined })])).not.toThrow();
+    const html = renderWithIndicators([buildIndicator({ gauge: undefined })]);
+    expect(html).not.toContain('gauge-track');
+  });
+
+  it('gauge가 null이어도 crash하지 않고 게이지만 생략한다', () => {
+    expect(() => renderWithIndicators([buildIndicator({ gauge: null })])).not.toThrow();
+    const html = renderWithIndicators([buildIndicator({ gauge: null })]);
+    expect(html).not.toContain('gauge-track');
+  });
+
+  it('gauge가 없어도 카드의 나머지 영역(라벨·정의·구간표)은 정상적으로 표시된다', () => {
+    const html = renderWithIndicators([buildIndicator({ gauge: null })]);
+    expect(html).toContain('가계수지지표');
+    expect(html).toContain('이 지표는');
+    expect(html).toContain('indicator-benchmark-table');
+    expect(html).toContain('테스트 사유 1');
+  });
+
+  it('breakdown은 있는데 gauge만 없는 경우에도 breakdown 표는 정상 표시된다(다른 지표 영역에 영향 없음)', () => {
+    const html = renderWithIndicators([buildIndicator({
+      gauge: null,
+      breakdown: {
+        numerator: { label: '총지출(저축 제외)', amount: 12974 },
+        denominator: { label: '총소득', amount: 28514 },
+      },
+    })]);
+    expect(html).not.toContain('gauge-track');
+    expect(html).toContain('indicator-breakdown-table');
+  });
+
+  it('A7의 notApplicable+value=null 산출불가 카드와 충돌하지 않는다(그 경로는 애초에 IndicatorGauge까지 가지 않음)', () => {
+    const html = renderWithIndicators([buildIndicator({
+      notCalculable: false,
+      notApplicable: true,
+      value: null,
+      rawValue: null,
+      displayValue: null,
+      gauge: null,
+      benchmark: null,
+      breakdown: null,
+      reason: '65세 이상이며 총저축액이 0원이어서 노후대비저축지표를 산출할 수 없습니다.',
+    })]);
+    expect(html).toContain('65세 이상이며 총저축액이 0원이어서 노후대비저축지표를 산출할 수 없습니다.');
+    expect(html).not.toContain('gauge-track');
+    // A7 카드는 구간표(indicator-benchmark-table)도 아예 렌더링하지 않는다(카드 전체 대체) -
+    // A13(게이지만 생략)과는 다른 분기임을 확인한다.
+    expect(html).not.toContain('indicator-benchmark-table');
   });
 });

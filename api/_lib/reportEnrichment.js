@@ -1,12 +1,11 @@
 // 리포트 렌더링에 필요한 "표시용 파생값"을 서버에서 미리 계산해 응답에 실어 보낸다.
-// (게이지 위치, 참고 범위 비교 문구, 등급 배지 색, 생활수준 구간 등)
+// (게이지 위치, 참고 범위 비교 문구, 등급 배지 색 등)
 // 9개 지표의 점수·등급 산출 자체(indicators.js)에는 전혀 관여하지 않는다 — 이미 계산된
 // 결과를 화면에 "그리기 좋은 형태"로 한 번 더 가공하는 단계일 뿐이다.
-// 클라이언트는 이 값을 그대로 렌더링만 하면 되므로, 게이지 임계값·등급 커트라인·생활수준
-// 구간표 같은 기준 데이터가 클라이언트 번들에 존재하지 않는다.
+// 클라이언트는 이 값을 그대로 렌더링만 하면 되므로, 게이지 임계값·등급 커트라인 같은
+// 기준 데이터가 클라이언트 번들에 존재하지 않는다.
 
 import { getIndicatorMeta, pct, describeBenchmark, classifyByRatio } from './indicatorMeta.js';
-import { buildLifestyleTrack } from './lifestyleTiers.js';
 import { buildIndicatorComposition } from './indicatorComposition.js';
 
 const FINANCIAL_HEALTH_GROUPS = [
@@ -144,8 +143,11 @@ function enrichIndicator(indicator, aggregates, retirementLivingCost, age) {
 
   // 분모 0 등으로 산출 자체가 불가능한 지표는 게이지·벤치마크·구성분석을 만들지 않는다(null 산술로
   // "0%"처럼 조용히 잘못 표시되는 것을 막는다) - 화면은 notCalculable/reason을 보고 "산출 불가"를 표시한다.
+  // notCalculable이 아니어도 value가 null인 경우가 있다(예: 65세 이상 노후대비저축지표는
+  // notApplicable로 배점만 제외하지만, 총저축액이 0원이면 참고용 비율 자체를 만들 수 없다 -
+  // indicators.js 참고). 이런 값 없는 지표도 같은 방식으로 게이지·벤치마크를 만들지 않는다.
   // 다만 recommendedLabel/guideline은 값과 무관한 지표 설명(가이드라인)이므로 N/A여도 계속 제공한다.
-  if (indicator.notCalculable) {
+  if (indicator.notCalculable || indicator.value == null) {
     return {
       ...indicator,
       recommendedLabel: meta?.recommendedLabel,
@@ -203,8 +205,4 @@ export function enrichIndicators({ indicators, weakest, strongest, aggregates, r
     strongest: strongest ? byKey(strongest.key) || strongest : null,
     belowRecommendedCount,
   };
-}
-
-export function enrichSimulation(simulation, retirementLivingCost) {
-  return { ...simulation, lifestyleTrack: buildLifestyleTrack(retirementLivingCost) };
 }

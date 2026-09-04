@@ -281,11 +281,10 @@
 - `api/_lib/indicatorMeta.js`, `api/_lib/reportEnrichment.js`: 표시용 참고범위, 게이지 및 참고범위 비교 정보를 붙인다.
 - `api/_lib/summaryOverview.js`: 기존 지표 결과를 웹 요약의 `retirementReadiness.retirementIncomeIndicator`로 전달한다.
 - `api/_lib/scenarios.js`: 대응 시나리오 계산 모듈은 유지하지만 현재 계산 API와 리포트에서는 행동제안 관련 입력값을 반영하지 않는다.
-- `api/_lib/pensionProjection.js`, `api/_lib/simulation.js`: 지표 점수와 별개로 연차별 연금소득 기준 생활비 충당 추이를 계산·전달한다.
+- `api/_lib/simulation.js`: 지표 점수와 별개로 은퇴 필요자금·준비자산·부족액을 계산·전달한다.
 - `src/components/summary/SimpleSummaryReport.jsx`: 웹 요약 화면에 현재 노후소득보장률 값과 해석을 표시한다.
 - `src/components/report/pages/ShortfallFillPage.jsx`: 일반 리포트에 같은 값을 `연금소득 기준 충당률`이라는 명칭으로 표시한다.
 - `src/components/report/FhsDetailReport.jsx`: FHS 요약·상세 지표 그룹에서는 노후소득보장률을 제외하고 8개 지표만 표시한다.
-- `src/components/report/pages/ConclusionPage.jsx`: 노후소득보장률 참조 코드가 남아 있으나 현재 `Report.jsx`에서 불러오거나 렌더링하지 않는 비활성 컴포넌트다.
 
 ## 8. 영역별 사용자 피드백 해석 원칙
 

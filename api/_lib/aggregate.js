@@ -1,4 +1,4 @@
-import { assessNationalPensionEligibility, nationalPensionMonthlyEligible } from './pensionEligibility.js';
+import { assessNationalPensionEligibility, getNationalPensionStartAge, nationalPensionMonthlyEligible } from './pensionEligibility.js';
 
 // 원본 입력값(input)에서 지표 계산에 필요한 집계값을 만든다.
 // 이 파일이 곧 "현재 시점 가계 재무 스냅샷"을 만드는 핵심 로직이며, 서버에서만 실행된다.
@@ -184,40 +184,77 @@ export function buildAggregates(input) {
   };
 }
 
+const present = (value) => value !== '' && value !== null && value !== undefined;
+
+// 노후소득보장률(지표⑨)이 쓰는 "월예상 노후소득"은 현재 나이가 아니라 사용자가 입력한 은퇴 예정
+// 나이(retirementAge) 시점의 예상 연금소득을 뜻한다(연차별 미래 변화는 futureFinance.js가 별도로
+// 담당). 퇴직연금·개인연금은 이 시점이 활성구간(시작 나이 포함, 종료 시점 제외 - futureFinance.js의
+// evaluateFinitePension과 동일한 경계) 안에 있을 때만 포함한다. startAge 또는 retirementAge 정보가
+// 없는 레거시 데이터는 이 시점을 판정할 수 없으므로 null을 반환해 호출부가 기존 동작(개월수만으로
+// 판정)을 그대로 유지하도록 한다.
+export function isFinitePensionActiveAtRetirement(startAge, months, retirementAge) {
+  if (!present(startAge) || !present(retirementAge)) return null;
+  const start = n(startAge);
+  return start <= n(retirementAge) && n(retirementAge) < start + n(months) / 12;
+}
+
+// 국민연금이 은퇴 예정 나이 시점에 이미 법정 수급개시연령(출생연도별)에 도달했는지 판정한다.
+// 가입기간 자격(assessNationalPensionEligibility) 판정과는 별개로, "이미 자격은 있지만 아직
+// 개시나이 전"인 경우를 걸러내기 위함이다. 출생연도 또는 retirementAge 정보가 없는 레거시 데이터는
+// 판정할 수 없으므로 null을 반환해 호출부가 기존 동작(가입기간 자격만으로 판정)을 유지하게 한다.
+export function isNationalPensionStartedByRetirement(birthYear, retirementAge) {
+  if (!present(birthYear) || !present(retirementAge)) return null;
+  const startAge = getNationalPensionStartAge(n(birthYear));
+  return startAge == null ? null : n(retirementAge) >= startAge;
+}
+
 // 은퇴 후 예상 월소득 = 본인 국민연금·퇴직연금·개인연금 + 배우자 국민연금·퇴직연금·개인연금
 // (수령 개월수가 0 이하인 항목은 이미 종료된 것으로 보고 0 처리)
 //
 // 퇴직연금·개인연금은 수령방식이 "일시금"이면 월 소득에 포함하지 않는다 - 일시금은 자산으로
 // 잡히는 별개 항목이라, 이걸 빼먹으면 예전에 '연금(월지급)'을 눌러보다 '일시금'으로 바꾼 뒤에도
-// 남아있는 월 수령액이 계속 노후소득에 합산되는 문제가 있었다(pensionProjection.js의 연차별
+// 남아있는 월 수령액이 계속 노후소득에 합산되는 문제가 있었다(연차별
 // 추이 계산과 동일한 기준으로 맞춤).
 export function calcRetirementIncomeByCategory(input) {
   const income = input.income || {};
   const spouse = input.spouse || {};
+  const basic = input.basic || {};
+  const retirementAge = basic.retirementAge;
+  const spouseRetirementAge = spouse.retirementAge;
 
   const pick = (monthly, months) => (n(months) > 0 ? n(monthly) : 0);
 
-  const pickNationalPension = (pension) => {
+  const pickNationalPension = (pension, birthYear, personRetirementAge) => {
     const p = pension || {};
     const eligibility = assessNationalPensionEligibility({ pension: p });
     if (!nationalPensionMonthlyEligible(eligibility)) return 0;
-    return pick(p.monthly, p.months);
+    const baseAmount = pick(p.monthly, p.months);
+    if (baseAmount === 0) return 0;
+    const started = isNationalPensionStartedByRetirement(birthYear, personRetirementAge);
+    return started === false ? 0 : baseAmount;
   };
 
-  const pickSeverancePension = (severance) => {
+  const pickSeverancePension = (severance, personRetirementAge) => {
     const s = severance || {};
     if ('type' in s && s.type !== 'pension') return 0; // 일시금 선택 시 제외
-    return pick(s.pensionMonthly, s.pensionMonths);
+    const baseAmount = pick(s.pensionMonthly, s.pensionMonths);
+    if (baseAmount === 0) return 0;
+    const active = isFinitePensionActiveAtRetirement(s.pensionStartAge, s.pensionMonths, personRetirementAge);
+    return active === false ? 0 : baseAmount;
   };
 
-  const pickPersonalPension = (personalPension) => {
+  const pickPersonalPension = (personalPension, personRetirementAge) => {
     const p = personalPension || {};
     if ('type' in p && p.type !== 'installment') return 0; // 일시금 선택 시 제외
-    return pick(p.monthly, p.months);
+    const baseAmount = pick(p.monthly, p.months);
+    if (baseAmount === 0) return 0;
+    const active = isFinitePensionActiveAtRetirement(p.startAge, p.months, personRetirementAge);
+    return active === false ? 0 : baseAmount;
   };
 
   const nationalPension =
-    pickNationalPension(income.nationalPension) + pickNationalPension(spouse.nationalPension);
+    pickNationalPension(income.nationalPension, basic.birthYear, retirementAge) +
+    pickNationalPension(spouse.nationalPension, spouse.birthYear, spouseRetirementAge);
 
   const nationalPensionEligibility = {
     self: assessNationalPensionEligibility({ pension: income.nationalPension || {} }).status,
@@ -226,9 +263,11 @@ export function calcRetirementIncomeByCategory(input) {
       : 'none',
   };
 
-  const severancePension = pickSeverancePension(income.severance) + pickSeverancePension(spouse.severance);
+  const severancePension =
+    pickSeverancePension(income.severance, retirementAge) + pickSeverancePension(spouse.severance, spouseRetirementAge);
 
-  const personalPension = pickPersonalPension(income.personalPension) + pickPersonalPension(spouse.personalPension);
+  const personalPension =
+    pickPersonalPension(income.personalPension, retirementAge) + pickPersonalPension(spouse.personalPension, spouseRetirementAge);
 
   return {
     nationalPension,
@@ -245,20 +284,38 @@ export function calcRetirementIncomeByCategory(input) {
 export function calcRetirementIncomeByPerson(input) {
   const income = input.income || {};
   const spouse = input.spouse || {};
+  const basic = input.basic || {};
+  const retirementAge = basic.retirementAge;
+  const spouseRetirementAge = spouse.retirementAge;
 
   const pick = (monthly, months) => (n(months) > 0 ? n(monthly) : 0);
-  const pickNationalPension = (pension) => {
+  const pickNationalPension = (pension, birthYear, personRetirementAge) => {
     const p = pension || {};
     const eligibility = assessNationalPensionEligibility({ pension: p });
     if (!nationalPensionMonthlyEligible(eligibility)) return 0;
-    return pick(p.monthly, p.months);
+    const baseAmount = pick(p.monthly, p.months);
+    if (baseAmount === 0) return 0;
+    const started = isNationalPensionStartedByRetirement(birthYear, personRetirementAge);
+    return started === false ? 0 : baseAmount;
   };
   const nationalPensionStatus = (pension) => assessNationalPensionEligibility({ pension: pension || {} }).status;
 
-  const personalPensionMonthly = (personalPension) => {
+  const personalPensionMonthly = (personalPension, personRetirementAge) => {
     const p = personalPension || {};
     if ('type' in p && p.type !== 'installment') return 0; // 일시금 선택 시 제외(월 수령액이 아님)
-    return pick(p.monthly, p.months);
+    const baseAmount = pick(p.monthly, p.months);
+    if (baseAmount === 0) return 0;
+    const active = isFinitePensionActiveAtRetirement(p.startAge, p.months, personRetirementAge);
+    return active === false ? 0 : baseAmount;
+  };
+
+  const severancePensionMonthly = (severance, personRetirementAge) => {
+    const s = severance || {};
+    if (s.type !== 'pension') return 0;
+    const baseAmount = pick(s.pensionMonthly, s.pensionMonths);
+    if (baseAmount === 0) return 0;
+    const active = isFinitePensionActiveAtRetirement(s.pensionStartAge, s.pensionMonths, personRetirementAge);
+    return active === false ? 0 : baseAmount;
   };
 
   // 표시용 퇴직금(일시금)은 type이 'lumpsum'일 때만 사용한다. 'pension'·'none'으로 바꾼 뒤에도
@@ -274,22 +331,18 @@ export function calcRetirementIncomeByPerson(input) {
 
   return {
     self: {
-      nationalPensionMonthly: pickNationalPension(income.nationalPension),
+      nationalPensionMonthly: pickNationalPension(income.nationalPension, basic.birthYear, retirementAge),
       nationalPensionEligibilityStatus: nationalPensionStatus(income.nationalPension),
-      severancePensionMonthly: income.severance?.type === 'pension'
-        ? pick(income.severance?.pensionMonthly, income.severance?.pensionMonths)
-        : 0,
+      severancePensionMonthly: severancePensionMonthly(income.severance, retirementAge),
       severanceLumpsum: severanceLumpsum(income.severance),
-      personalPensionMonthly: personalPensionMonthly(income.personalPension),
+      personalPensionMonthly: personalPensionMonthly(income.personalPension, retirementAge),
     },
     spouse: {
-      nationalPensionMonthly: pickNationalPension(spouse.nationalPension),
+      nationalPensionMonthly: pickNationalPension(spouse.nationalPension, spouse.birthYear, spouseRetirementAge),
       nationalPensionEligibilityStatus: input.basic?.hasSpouse ? nationalPensionStatus(spouse.nationalPension) : 'none',
-      severancePensionMonthly: spouse.severance?.type === 'pension'
-        ? pick(spouse.severance?.pensionMonthly, spouse.severance?.pensionMonths)
-        : 0,
+      severancePensionMonthly: severancePensionMonthly(spouse.severance, spouseRetirementAge),
       severanceLumpsum: severanceLumpsum(spouse.severance),
-      personalPensionMonthly: personalPensionMonthly(spouse.personalPension),
+      personalPensionMonthly: personalPensionMonthly(spouse.personalPension, spouseRetirementAge),
     },
   };
 }

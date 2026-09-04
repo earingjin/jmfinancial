@@ -9,3 +9,14 @@ describe('initialFormData pension start ages', () => {
     expect(initialFormData.spouse.personalPension.startAge).toBe('');
   });
 });
+
+describe('initialFormData total input modes', () => {
+  it('defaults savings and every asset category to entering a total amount', () => {
+    expect(initialFormData.assets.savingsPlan.inputMode).toBe('simple');
+    expect(initialFormData.assets.liquidAssets.inputMode).toBe('simple');
+    expect(initialFormData.assets.financialAssets.inputMode).toBe('simple');
+    expect(initialFormData.assets.pensionAssetsInputMode).toBe('simple');
+    expect(initialFormData.assets.realEstateAssets.inputMode).toBe('simple');
+    expect(initialFormData.assets.otherAssets.inputMode).toBe('simple');
+  });
+});

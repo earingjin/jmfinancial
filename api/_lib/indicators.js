@@ -189,7 +189,12 @@ export function calcIndicators(input) {
         status: '해당 없음',
         notCalculable: false,
         notApplicable: true,
-        reason: null,
+        // 65세 이상이라 배점에서는 제외(notApplicable)하지만, 총저축액이 0원이면 참고용 비율조차
+        // 계산할 수 없다(분모 0). 이 경우 화면이 0%/50%p 부족 같은 값을 지어내지 않도록 reason을
+        // 채워 downstream(reportEnrichment.js)이 게이지·구간표 대신 산출 불가 카드로 표시하게 한다.
+        reason: retirementSavingsRaw === null
+          ? '65세 이상이며 총저축액이 0원이어서 노후대비저축지표를 산출할 수 없습니다.'
+          : null,
         table: [
           {
             rangeLabel: '전 구간',
