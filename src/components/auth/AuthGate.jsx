@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../../state/authState';
+import { isValidLoginId, normalizeLoginId } from '../../state/authIdentifier';
 import heroImage from '../../assets/리포트 표지 디자인.png';
 import AppCopyright from '../AppCopyright';
 
 function translateAuthError(message) {
   if (!message) return '알 수 없는 오류가 발생했습니다.';
-  if (message.includes('Invalid login credentials')) return '이메일 또는 비밀번호가 올바르지 않습니다.';
-  if (message.includes('User already registered')) return '이미 가입된 이메일입니다. 로그인해 주세요.';
+  if (message.includes('Invalid login credentials')) return '아이디 또는 이메일, 비밀번호가 올바르지 않습니다.';
+  if (message.includes('User already registered')) return '이미 가입된 아이디입니다. 로그인해 주세요.';
   if (message.includes('Password should be at least')) return '비밀번호는 6자 이상이어야 합니다.';
   if (message.toLowerCase().includes('rate limit')) return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
   return message;
@@ -33,7 +34,7 @@ function PrivacyConsentModal({ onClose, onConfirm }) {
 
           <h5>2. 수집항목</h5>
           <p><strong>필수항목</strong></p>
-          <p>이메일 주소</p>
+          <p>아이디</p>
           <p>비밀번호</p>
           <p>출생연도</p>
 
@@ -66,7 +67,7 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -88,16 +89,21 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
       setError('개인정보 수집·이용에 동의해야 회원가입할 수 있습니다.');
       return;
     }
+    const loginId = normalizeLoginId(identifier);
+    if (mode === 'signup' && !isValidLoginId(loginId)) {
+      setError('아이디는 영문 소문자와 숫자로 4~20자까지 입력해 주세요.');
+      return;
+    }
     setSubmitting(true);
     try {
       if (mode === 'signup') {
-        const { data, error: err } = await signUp(email, password, name);
+        const { data, error: err } = await signUp(loginId, password, name);
         if (err) throw err;
         if (!data.session) {
-          setNotice('가입해 주셔서 감사합니다. 이메일로 전송된 확인 링크를 클릭하면 로그인할 수 있습니다.');
+          setNotice('회원가입이 완료되었습니다.');
         }
       } else {
-        const { error: err } = await signIn(email, password);
+        const { error: err } = await signIn(identifier, password);
         if (err) throw err;
       }
     } catch (err) {
@@ -149,9 +155,9 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
           <form onSubmit={handleSubmit} className="auth-form">
             {mode === 'signup' && (
               <p className="auth-signup-reassurance">
-                이메일은 진단 중 중도 이탈할 경우 저장된 기록을 찾기 위해 입력합니다.<br />
+                아이디는 진단 중 중도 이탈할 경우 저장된 기록을 찾기 위해 사용합니다.<br />
                 진단 결과는 진단 완료 후 7일 이내에 자동 삭제됩니다.<br />
-                전화번호 등 추가 개인정보는 요구하지 않으며, 광고성 이메일은 보내지 않습니다.
+                전화번호 등 추가 개인정보는 요구하지 않습니다.
               </p>
             )}
             {mode === 'signup' && (
@@ -161,14 +167,14 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
               </label>
             )}
             <label className="field">
-              <span className="field-label">이메일</span>
+              <span className="field-label">{mode === 'signup' ? '아이디' : '아이디 또는 이메일'}</span>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(mode === 'signup' ? e.target.value.toLowerCase() : e.target.value)}
                 required
-                placeholder="you@example.com"
-                autoComplete="email"
+                placeholder={mode === 'signup' ? '영문 소문자와 숫자 4~20자' : '아이디 또는 이메일'}
+                autoComplete="username"
               />
             </label>
             <label className="field">

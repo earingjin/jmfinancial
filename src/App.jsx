@@ -544,7 +544,7 @@ function AdminRoute() {
       <AuthGate
         title="관리자 로그인"
         allowSignup={false}
-        noticeMessage={`현재 ${user.email} 계정은 관리자 권한이 없습니다. 다른 관리자 계정으로 로그인해 주세요.`}
+        noticeMessage="현재 계정은 관리자 권한이 없습니다. 다른 관리자 계정으로 로그인해 주세요."
         secondaryAction={{ label: '로그아웃', onClick: signOut }}
       />
     );
