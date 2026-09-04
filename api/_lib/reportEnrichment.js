@@ -144,8 +144,11 @@ function enrichIndicator(indicator, aggregates, retirementLivingCost, age) {
 
   // 분모 0 등으로 산출 자체가 불가능한 지표는 게이지·벤치마크·구성분석을 만들지 않는다(null 산술로
   // "0%"처럼 조용히 잘못 표시되는 것을 막는다) - 화면은 notCalculable/reason을 보고 "산출 불가"를 표시한다.
+  // notCalculable이 아니어도 value가 null인 경우가 있다(예: 65세 이상 노후대비저축지표는
+  // notApplicable로 배점만 제외하지만, 총저축액이 0원이면 참고용 비율 자체를 만들 수 없다 -
+  // indicators.js 참고). 이런 값 없는 지표도 같은 방식으로 게이지·벤치마크를 만들지 않는다.
   // 다만 recommendedLabel/guideline은 값과 무관한 지표 설명(가이드라인)이므로 N/A여도 계속 제공한다.
-  if (indicator.notCalculable) {
+  if (indicator.notCalculable || indicator.value == null) {
     return {
       ...indicator,
       recommendedLabel: meta?.recommendedLabel,

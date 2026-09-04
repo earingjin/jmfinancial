@@ -59,6 +59,23 @@ describe('App.jsx - "새 진단"이 아닌 흐름은 서버 draft를 지우지 �
   });
 });
 
+// A5 관련 검증(코드 변경 없음, 기존 동작 확인): draft 저장 실패가 계산 제출을 막지 않도록
+// Wizard.jsx만 고쳤을 뿐, 계산 API 실패·최종 결과 저장 실패는 원래도 handleSubmit/finishSubmission이
+// 각자 명확한 오류 화면으로 전환하고 있었다. 이 두 경로가 이번 변경으로 깨지지 않았는지 잠가둔다.
+describe('App.jsx handleSubmit/finishSubmission - 실패 시 사용자에게 명확한 상태를 보여준다(A5 관련 회귀 방지)', () => {
+  it('handleSubmit: 계산 API 실패 시 오류 메시지와 함께 error 화면으로 전환한다', async () => {
+    const body = extractFunctionBody(await readAppSource(), 'const handleSubmit = async (formData)');
+    expect(body).toContain('setErrorMessage(err.message');
+    expect(body).toContain("setPhase('error')");
+  });
+
+  it('finishSubmission: 최종 결과 저장 실패 시 입력값을 보존한 채 save-error 화면으로 전환한다', async () => {
+    const body = extractFunctionBody(await readAppSource(), 'const finishSubmission = async ()');
+    expect(body).toContain("setPhase('save-error')");
+    expect(body).toContain('입력 내용과 임시 초안은 유지됩니다');
+  });
+});
+
 describe('App.jsx wizard header result history button', () => {
   it('opens history only when a saved result exists', async () => {
     const source = await readAppSource();

@@ -36,7 +36,12 @@ export function FormProvider({ children, userId, initialDraft }) {
     return setIn(merged, 'assets.savingsPlan.retirementSavingsInputVersion', retirementSavingsInputVersion);
   });
   const [draftState, setDraftState] = useState(() => ({
-    status: initialDraft ? 'saved' : 'idle',
+    // A14: "저장됨" 배지는 실제로 저장된 시각(updated_at)이 있을 때만 표시한다. initialDraft가
+    // 객체로 존재한다는 사실만으로 'saved'를 판정하면, editHistoryResult(App.jsx)처럼 저장된
+    // 결과(planner_results)를 위저드에 불러오면서 draft로서는 아직 한 번도 저장된 적이
+    // 없는(updated_at: null) 경우에도 배지는 "저장됨"인데 문구는 "아직 저장되지 않았습니다"로
+    // 보이는 모순이 생긴다.
+    status: initialDraft?.updated_at ? 'saved' : 'idle',
     updatedAt: initialDraft?.updated_at || null,
     error: null,
     dirty: false,

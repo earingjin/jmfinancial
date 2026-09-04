@@ -12,6 +12,29 @@ function formatHistoryDate(iso) {
   return `${yyyy}.${mm}.${dd}`;
 }
 
+// 삭제 API 호출만 분리해, 컴포넌트 클로저 밖에서 성공/실패 응답과 네트워크 예외를 동일한
+// { ok, error } 형태로 정규화한다. handleSeveranceType(Step1Income.jsx)과 같은 이유로
+// top-level에 둔다 - 클릭 시뮬레이션이 가능한 테스트 환경이 없어 fetch/세션 결과만 바꿔가며
+// 성공·실패 경로를 단위 테스트하기 위함이다.
+export async function deletePlannerResult(id, session) {
+  if (!session) return { ok: false, error: '로그인 세션을 확인할 수 없어 서버에서 삭제하지 못했습니다.' };
+  const response = await fetch(`/api/delete-result?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  if (response.ok) return { ok: true };
+  const body = await response.json().catch(() => ({}));
+  return { ok: false, error: body.error || '진단 결과를 삭제하지 못했습니다.' };
+}
+
+// 삭제 실패 시 화면에서 먼저 지웠던 행을 되돌린다. 그 사이 같은 행이 이미 다시 들어와 있으면
+// (예: 이전 실패 복원이 먼저 반영된 경우) 중복 추가하지 않고, 없으면 원래 정렬 기준
+// (created_at 내림차순)에 맞는 위치로 되돌려 놓는다 - 다른 행의 성공한 삭제 결과는 건드리지 않는다.
+export function restoreRowAfterFailedDelete(rows, removedRow) {
+  if (!removedRow || rows.some((row) => row.id === removedRow.id)) return rows;
+  return [...rows, removedRow].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
 // 이 계정으로 저장된 과거 진단 결과 목록. planner_results 테이블을 그대로 조회하며
 // (RLS의 "Users can read own planner results" SELECT 정책으로 본인 행만 조회됨), 별도
 // 상세 조회 API 없이 result_json을 그대로 받아 클릭 시 요약 화면에 바로 넘긴다.
@@ -47,23 +70,28 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
 
   // RLS의 "Users can delete own planner results" DELETE 정책으로 본인 행만 삭제 가능.
   // 되돌릴 수 없는 작업이라 먼저 확인을 받고, 성공하면 화면 목록에서도 바로 제거한다.
+  // 실패하면(응답 실패 또는 네트워크 예외) 화면에서 지웠던 그 행만 복원한다 - 연속으로 다른
+  // 행을 삭제 중이었다면 그 결과에는 영향을 주지 않는다(restoreRowAfterFailedDelete 참고).
   const handleDelete = async (id) => {
     if (!window.confirm('이 진단 결과를 삭제하시겠습니까? 삭제하면 되돌릴 수 없습니다.')) return;
     setDeleteError('');
     setDeletingId(id);
+    const removedRow = rows.find((row) => row.id === id);
     setRows((prev) => prev.filter((row) => row.id !== id));
-    const { data: { session } } = await supabase.auth.getSession();
-    const response = session
-      ? await fetch(`/api/delete-result?id=${encodeURIComponent(id)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        })
-      : null;
-    setDeletingId(null);
-    if (!response?.ok) {
-      const body = response ? await response.json().catch(() => ({})) : {};
-      setDeleteError(body.error || '로그인 세션을 확인할 수 없어 서버에서 삭제하지 못했습니다.');
-      return;
+
+    let outcome;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      outcome = await deletePlannerResult(id, session);
+    } catch (err) {
+      outcome = { ok: false, error: err?.message || '진단 결과를 삭제하지 못했습니다.' };
+    }
+    // 다른 행 삭제가 그 사이 deletingId를 바꿔놨다면(연속 삭제) 그 표시는 건드리지 않는다.
+    setDeletingId((current) => (current === id ? null : current));
+
+    if (!outcome.ok) {
+      setDeleteError(outcome.error);
+      setRows((prev) => restoreRowAfterFailedDelete(prev, removedRow));
     }
   };
 

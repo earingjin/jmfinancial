@@ -329,3 +329,205 @@ describe('savingsPlan.retirementIncludedInTotal - retirementIncludedInSavings is
     expect(agg.retirementIncludedInSavings).toBe(false);
   });
 });
+
+// A2: "월예상 노후소득"(노후소득보장률의 분자)은 현재 나이가 아니라 사용자가 입력한 은퇴 예정
+// 나이(basic.retirementAge / spouse.retirementAge) 시점의 예상 연금소득을 뜻한다. 퇴직연금·개인연금은
+// 그 시점이 활성구간(시작 나이 포함, 종료 시점 제외) 안에 있을 때만 포함하고, 국민연금은 그 시점에
+// 법정 수급개시연령(출생연도별)에 도달했는지를 추가로 확인한다. startAge/retirementAge/birthYear
+// 정보가 없는 레거시 데이터는 이 시점을 판정할 수 없으므로 기존 동작(개월수·가입기간 자격만으로
+// 판정)을 그대로 유지한다.
+describe('연금 startAge/retirementAge 기준 활성구간 판정 (A2)', () => {
+  describe('퇴직연금·개인연금', () => {
+    const pensionInput = (retirementAge) => input({
+      basic: { retirementAge },
+      income: {
+        severance: { type: 'pension', pensionMonthly: 100, pensionMonths: 240, pensionStartAge: 70 },
+        personalPension: { type: 'installment', monthly: 100, months: 240, startAge: 70 },
+      },
+    });
+
+    it('은퇴나이 < startAge -> 0', () => {
+      const agg = buildAggregates(pensionInput(60));
+      expect(agg.severancePensionMonthly).toBe(0);
+      expect(agg.personalPensionMonthly).toBe(0);
+    });
+
+    it('은퇴나이 = startAge -> 포함', () => {
+      const agg = buildAggregates(pensionInput(70));
+      expect(agg.severancePensionMonthly).toBe(100);
+      expect(agg.personalPensionMonthly).toBe(100);
+    });
+
+    it('startAge < 은퇴나이 < 종료나이(90) -> 포함', () => {
+      const agg = buildAggregates(pensionInput(85));
+      expect(agg.severancePensionMonthly).toBe(100);
+      expect(agg.personalPensionMonthly).toBe(100);
+    });
+
+    it('은퇴나이 = 종료나이(90) -> 0 (종료 시점 제외)', () => {
+      const agg = buildAggregates(pensionInput(90));
+      expect(agg.severancePensionMonthly).toBe(0);
+      expect(agg.personalPensionMonthly).toBe(0);
+    });
+
+    it('은퇴나이 > 종료나이 -> 0', () => {
+      const agg = buildAggregates(pensionInput(95));
+      expect(agg.severancePensionMonthly).toBe(0);
+      expect(agg.personalPensionMonthly).toBe(0);
+    });
+
+    it('months가 12의 배수가 아니어도 종료 경계(startAge70+235/12=89.58세)를 정확히 처리한다', () => {
+      const finiteInput = (retirementAge) => input({
+        basic: { retirementAge },
+        income: {
+          severance: { type: 'pension', pensionMonthly: 100, pensionMonths: 235, pensionStartAge: 70 },
+          personalPension: { type: 'installment', monthly: 100, months: 235, startAge: 70 },
+        },
+      });
+      const before = buildAggregates(finiteInput(89));
+      expect(before.severancePensionMonthly).toBe(100); // 89 < 89.58 -> 포함
+      expect(before.personalPensionMonthly).toBe(100);
+
+      const after = buildAggregates(finiteInput(90));
+      expect(after.severancePensionMonthly).toBe(0); // 90 >= 89.58 -> 제외
+      expect(after.personalPensionMonthly).toBe(0);
+    });
+
+    it('일시금 선택 시에는 startAge 활성구간과 무관하게 기존처럼 0이다', () => {
+      const agg = buildAggregates(input({
+        basic: { retirementAge: 75 }, // startAge(70) 이후라 연금방식이었다면 포함될 조건
+        income: {
+          severance: { type: 'lumpsum', lumpsum: 5000 },
+          personalPension: { type: 'lumpsum', lumpsum: 3000 },
+        },
+      }));
+      expect(agg.severancePensionMonthly).toBe(0);
+      expect(agg.personalPensionMonthly).toBe(0);
+    });
+
+    it('startAge가 없는 레거시 입력은 기존 동작(개월수만으로 판정)을 그대로 유지한다', () => {
+      const agg = buildAggregates(input({
+        basic: { retirementAge: 60 }, // startAge(70)보다 이른 은퇴나이여도
+        income: {
+          severance: { type: 'pension', pensionMonthly: 100, pensionMonths: 240 }, // pensionStartAge 없음
+          personalPension: { type: 'installment', monthly: 100, months: 240 }, // startAge 없음
+        },
+      }));
+      expect(agg.severancePensionMonthly).toBe(100);
+      expect(agg.personalPensionMonthly).toBe(100);
+    });
+
+    it('retirementAge가 없는 레거시 입력도 기존 동작을 그대로 유지한다', () => {
+      const agg = buildAggregates(input({
+        income: {
+          severance: { type: 'pension', pensionMonthly: 100, pensionMonths: 240, pensionStartAge: 70 },
+          personalPension: { type: 'installment', monthly: 100, months: 240, startAge: 70 },
+        },
+      })); // basic.retirementAge 없음
+      expect(agg.severancePensionMonthly).toBe(100);
+      expect(agg.personalPensionMonthly).toBe(100);
+    });
+
+    it('본인과 배우자의 은퇴나이가 다르면 각자 독립적으로 판정된다', () => {
+      const agg = buildAggregates(input({
+        basic: { hasSpouse: true, retirementAge: 60 }, // 본인: startAge(70) 전 -> 제외
+        income: { personalPension: { type: 'installment', monthly: 100, months: 240, startAge: 70 } },
+        spouse: {
+          retirementAge: 72, // 배우자: startAge(70) 이후 -> 포함
+          personalPension: { type: 'installment', monthly: 50, months: 240, startAge: 70 },
+        },
+      }));
+      expect(agg.retirementIncomeByPerson.self.personalPensionMonthly).toBe(0);
+      expect(agg.retirementIncomeByPerson.spouse.personalPensionMonthly).toBe(50);
+      expect(agg.personalPensionMonthly).toBe(50); // 합계에도 배우자분만 반영
+    });
+  });
+
+  describe('국민연금', () => {
+    it('가입요건 충족 + 은퇴나이 < 법정 개시나이 -> 0', () => {
+      // 출생연도 1975 -> '1969년 이후' 코호트 -> 법정 개시나이 65세
+      const agg = buildAggregates(input({
+        basic: { birthYear: 1975, retirementAge: 60 },
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 120 } },
+      }));
+      expect(agg.nationalPensionMonthly).toBe(0);
+    });
+
+    it('가입요건 충족 + 은퇴나이 = 법정 개시나이 -> 포함', () => {
+      const agg = buildAggregates(input({
+        basic: { birthYear: 1975, retirementAge: 65 },
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 120 } },
+      }));
+      expect(agg.nationalPensionMonthly).toBe(100);
+    });
+
+    it('가입요건 충족 + 은퇴나이 > 법정 개시나이 -> 포함', () => {
+      const agg = buildAggregates(input({
+        basic: { birthYear: 1975, retirementAge: 68 },
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 120 } },
+      }));
+      expect(agg.nationalPensionMonthly).toBe(100);
+    });
+
+    it('가입요건 미충족이면 은퇴나이와 무관하게 기존처럼 0이다', () => {
+      const agg = buildAggregates(input({
+        basic: { birthYear: 1975, retirementAge: 70 }, // 개시나이(65)보다 늦게 은퇴해도
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 60 } }, // 가입기간 미충족
+      }));
+      expect(agg.nationalPensionMonthly).toBe(0);
+    });
+
+    it('가입상태 unknown이면 기존 산출불가 흐름이 깨지지 않는다', () => {
+      const agg = buildAggregates(input({
+        basic: { birthYear: 1975, retirementAge: 70 },
+        income: {
+          nationalPension: {
+            inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 60, futureContributionPlan: 'continue',
+          },
+        },
+      }));
+      expect(agg.nationalPensionMonthly).toBe(0);
+      expect(agg.nationalPensionEligibility.self).toBe('unknown');
+    });
+
+    it('birthYear가 없는 레거시 입력은 기존 동작(가입기간 자격만으로 판정)을 그대로 유지한다', () => {
+      const agg = buildAggregates(input({
+        basic: { retirementAge: 60 }, // birthYear 없음
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 120 } },
+      }));
+      expect(agg.nationalPensionMonthly).toBe(100);
+    });
+
+    it('본인과 배우자의 출생연도가 달라 법정 개시나이가 다르면 각자 독립적으로 판정된다', () => {
+      const agg = buildAggregates(input({
+        basic: { hasSpouse: true, birthYear: 1975, retirementAge: 62 }, // 본인 개시나이 65세 -> 아직
+        income: { nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 120 } },
+        spouse: {
+          birthYear: 1955, retirementAge: 62, // 배우자 코호트(1953~1956) 개시나이 61세 -> 이미 지남
+          nationalPension: { inputMode: 'direct', monthly: 80, months: 240, paymentMonths: 120 },
+        },
+      }));
+      expect(agg.retirementIncomeByPerson.self.nationalPensionMonthly).toBe(0);
+      expect(agg.retirementIncomeByPerson.spouse.nationalPensionMonthly).toBe(80);
+    });
+  });
+
+  describe('대표 시나리오(감사 예시): 은퇴 60세, 개인연금 startAge 70세, 240개월, 월 100만원', () => {
+    const scenario = (retirementAge) => input({
+      basic: { retirementAge },
+      income: { personalPension: { type: 'installment', monthly: 100, months: 240, startAge: 70 } },
+    });
+
+    it('은퇴 60세 -> 개인연금 미포함(0)', () => {
+      const agg = buildAggregates(scenario(60));
+      expect(agg.personalPensionMonthly).toBe(0);
+      expect(agg.monthlyRetirementIncome).toBe(0);
+    });
+
+    it('은퇴 70세(=startAge) -> 개인연금 100만원 정상 포함', () => {
+      const agg = buildAggregates(scenario(70));
+      expect(agg.personalPensionMonthly).toBe(100);
+      expect(agg.monthlyRetirementIncome).toBe(100);
+    });
+  });
+});

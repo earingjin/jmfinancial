@@ -113,6 +113,89 @@ describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
   });
 });
 
+// 국민연금 "계속 납부 예정"(futureContributionPlan==='continue') 선택 시 서버(api/_lib/validate.js)는
+// expectedAdditionalContributionMonths를 필수로 요구해 400을 반환하지만, 위저드는 이 항목을 필수로
+// 취급하지 않아 사용자가 원인을 알 수 없이 제출에 반복 실패했다. 이 describe는 그 회귀를 방지한다.
+describe('computeWizardRequiredFields - 국민연금 계속 납부 예정 추가 납부개월', () => {
+  it('가입기간 120개월 미만 + 계속 납부 예정인데 추가 납부개월을 안 채우면 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.nationalPension.paymentMonths = 60;
+    formData.income.nationalPension.futureContributionPlan = 'continue';
+
+    const result = computeWizardRequiredFields(formData);
+
+    expect(result.basicInfoMissing).toBe(true);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual([
+      'income.nationalPension.expectedAdditionalContributionMonths',
+    ]);
+    expect(result.requiredErrorMessage).toBe('"1. 수입"에서 다음 항목을 입력해 주세요: 국민연금 추가 납부 예정 개월 수');
+  });
+
+  it('가입기간 120개월 미만 + 계속 납부 예정 + 유효한 추가 납부개월을 채우면 통과한다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.nationalPension.paymentMonths = 60;
+    formData.income.nationalPension.futureContributionPlan = 'continue';
+    formData.income.nationalPension.expectedAdditionalContributionMonths = 60;
+
+    const result = computeWizardRequiredFields(formData);
+
+    expect(result.basicInfoMissing).toBe(false);
+  });
+
+  it('"계속 납부 예정"이 아니면(중단/모름/미선택) 추가 납부개월을 필수로 요구하지 않는다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.nationalPension.paymentMonths = 60;
+
+    formData.income.nationalPension.futureContributionPlan = 'stop';
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+
+    formData.income.nationalPension.futureContributionPlan = 'unknown';
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+
+    formData.income.nationalPension.futureContributionPlan = '';
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+
+  it('배우자도 동일한 조건으로 독립 판정되며, 채우면 더 이상 걸리지 않는다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.basic.hasSpouse = true;
+    formData.spouse.birthYear = 1972;
+    formData.spouse.retirementAge = 65;
+    formData.spouse.lifeExpectancy = 88;
+    formData.spouse.personalPension.startAge = 60;
+    formData.spouse.nationalPension.paymentMonths = 60;
+    formData.spouse.nationalPension.futureContributionPlan = 'continue';
+
+    const result = computeWizardRequiredFields(formData);
+
+    expect(result.basicInfoMissing).toBe(true);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual([
+      'spouse.nationalPension.expectedAdditionalContributionMonths',
+    ]);
+
+    formData.spouse.nationalPension.expectedAdditionalContributionMonths = 24;
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+
+  it('배우자 정보를 끄면 배우자 국민연금 계속 납부 여부와 무관하게 걸리지 않는다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.basic.hasSpouse = false;
+    formData.spouse.nationalPension.futureContributionPlan = 'continue';
+
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+});
+
 describe('computeWizardRequiredFields - 지출(2. 지출)', () => {
   const fullyFilledIncome = (formData) => {
     fillBasicRequired(formData);

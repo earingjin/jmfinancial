@@ -214,7 +214,7 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">예상 금액</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                  <FormattedNumberInput min={0} value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
@@ -246,7 +246,7 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">월 보험료</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput value={item.monthly} onChange={(e) => update('monthly', Number(e.target.value))} />
+                  <FormattedNumberInput min={0} value={item.monthly} onChange={(e) => update('monthly', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
@@ -271,21 +271,21 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">학자금</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput value={item.educationCost} onChange={(e) => update('educationCost', Number(e.target.value))} />
+                  <FormattedNumberInput min={0} value={item.educationCost} onChange={(e) => update('educationCost', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
               <label className="field">
                 <span className="field-label">결혼지원비</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput value={item.marriageSupport} onChange={(e) => update('marriageSupport', Number(e.target.value))} />
+                  <FormattedNumberInput min={0} value={item.marriageSupport} onChange={(e) => update('marriageSupport', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
               <label className="field">
                 <span className="field-label">기타</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput value={item.otherCost} onChange={(e) => update('otherCost', Number(e.target.value))} />
+                  <FormattedNumberInput min={0} value={item.otherCost} onChange={(e) => update('otherCost', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
@@ -310,7 +310,7 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">연간 지출 금액</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput value={item.annual} onChange={(e) => update('annual', Number(e.target.value))} />
+                  <FormattedNumberInput min={0} value={item.annual} onChange={(e) => update('annual', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>

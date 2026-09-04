@@ -212,6 +212,33 @@ describe('financial-health indicator integrity', () => {
     expect(retirementIncome.maxScore).toBe(15);
     expect(retirementIncome.score).toBeLessThanOrEqual(15);
   });
+
+  // A7: 65세 이상(notApplicable)이라도 분모(총저축액)가 0이면 참고용 비율조차 계산할 수 없다.
+  // 이 경우를 "0%"나 "해당 없음이니 아무 값"으로 뭉개지 않고, value/rawValue는 null로 유지하며
+  // reason에 사유를 남긴다(reportEnrichment.js·FhsDetailReport.jsx가 이 null을 보고 게이지 대신
+  // 산출 불가 카드를 그린다).
+  it('65세 이상 + 총저축액 0원이면 value를 0으로 위장하지 않고 null로 유지하며 사유를 남긴다', () => {
+    const result = calcIndicators(input({
+      basic: { birthYear: new Date().getFullYear() - 66 },
+      assets: { savingsPlan: { monthly: 0, annual: 0, retirementMonthly: 0, retirementAnnual: 0 } },
+    }));
+    const retirementSavings = findIndicator(result, 'retirementSavings');
+    expect(result.is65Plus).toBe(true);
+    expect(retirementSavings.notApplicable).toBe(true);
+    expect(retirementSavings.notCalculable).toBe(false); // 정책 제외이지 "산출 불가" 플래그는 아님
+    expect(retirementSavings.rawValue).toBeNull();
+    expect(retirementSavings.value).toBeNull();
+    expect(retirementSavings.displayValue).toBeNull();
+    expect(retirementSavings.reason).toMatch(/총저축액이 0원/);
+  });
+
+  it('65세 이상 + 실제 저축이 있으면 기존처럼 참고 비율(value)을 그대로 보여준다(회귀 방지)', () => {
+    const result = calcIndicators(input({ basic: { birthYear: new Date().getFullYear() - 66 } }));
+    const retirementSavings = findIndicator(result, 'retirementSavings');
+    expect(retirementSavings.notApplicable).toBe(true);
+    expect(retirementSavings.value).not.toBeNull();
+    expect(retirementSavings.reason).toBeNull();
+  });
 });
 
 describe('A-2 / N/A handling - denominator 0 must never score best or worst silently', () => {
@@ -359,6 +386,27 @@ describe('A-2 / N/A handling - denominator 0 must never score best or worst sile
       spouse: { nationalPension: { inputMode: 'direct', monthly: 50, months: 240, paymentMonths: 60, futureContributionPlan: 'unknown' } },
     }));
     expect(findIndicator(result, 'retirementIncome').notCalculable).toBe(true);
+  });
+
+  // A2: "월예상 노후소득"은 현재 나이가 아니라 은퇴 예정 나이(retirementAge) 시점 기준이다.
+  // HEALTHY_BASE는 retirementAge=65, 국민연금 monthly=100/months=240(startAge 없는 레거시 형태),
+  // 개인연금 monthly=20/months=120(startAge 없음)이라 레거시 경로로 그대로 포함되어 rawValue=60이다.
+  it('retirementIncome: 개인연금 startAge가 은퇴 예정 나이 이후면 은퇴 시점 예상소득에서 제외한다(A2)', () => {
+    const legacy = calcIndicators(input());
+    expect(findIndicator(legacy, 'retirementIncome').rawValue).toBeCloseTo(60, 8); // (국민연금100+개인연금20)/생활비200
+
+    const result = calcIndicators(input({
+      income: { personalPension: { type: 'installment', monthly: 20, months: 120, startAge: 70 } },
+    }));
+    // 은퇴나이(65) < startAge(70) -> 개인연금은 제외되고 국민연금(100)만 남는다.
+    expect(findIndicator(result, 'retirementIncome').rawValue).toBeCloseTo(50, 8);
+  });
+
+  it('retirementIncome: 개인연금 startAge가 은퇴 예정 나이 이하이면 그대로 포함된다(A2)', () => {
+    const result = calcIndicators(input({
+      income: { personalPension: { type: 'installment', monthly: 20, months: 120, startAge: 65 } },
+    }));
+    expect(findIndicator(result, 'retirementIncome').rawValue).toBeCloseTo(60, 8);
   });
 
   it('reports missing inputs for the eight-indicator assessment without exposing a composite score', () => {

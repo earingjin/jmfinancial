@@ -354,6 +354,24 @@ describe('buildRetirementReadiness', () => {
     expect(readiness.incomeGap.hasGap).toBe(false);
   });
 
+  // A2: incomeGap이 "은퇴 후 국민연금 개시 전 소득공백"이 있다고 판단하면서 동시에
+  // monthlyIncomeCompare가 그 국민연금을 이미 받는 것처럼 집계하면 두 값이 서로 모순된다.
+  it('은퇴나이가 국민연금 개시나이보다 이르면 incomeGap과 모순 없이 monthlyIncomeCompare도 국민연금을 0으로 집계한다(A2)', () => {
+    const scoped = input({ basic: { birthYear: 1985, retirementAge: 60 } });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
+    expect(readiness.incomeGap.hasGap).toBe(true);
+    expect(readiness.monthlyIncomeCompare.nationalPensionMonthly).toBe(0);
+  });
+
+  it('은퇴나이가 국민연금 개시나이 이상이면 monthlyIncomeCompare에 정상 포함된다(A2)', () => {
+    const scoped = input({ basic: { birthYear: 1985, retirementAge: 70 } });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
+    expect(readiness.incomeGap.hasGap).toBe(false);
+    expect(readiness.monthlyIncomeCompare.nationalPensionMonthly).toBe(90);
+  });
+
   it('marks the income gap as not calculable (not a guessed age) when birthYear is missing', () => {
     const noBirthYear = input({ basic: { birthYear: '' } });
     const { aggregates, simulation, indicators } = calc(noBirthYear);

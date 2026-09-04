@@ -22,6 +22,16 @@ const STEPS = [
   ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios }] : []),
 ];
 
+// 최종 제출 시 "임시 저장 실패가 계산·결과 저장 자체를 막으면 안 된다"는 규칙만 분리해 둔다
+// (App.jsx의 handleSubmit → completePlannerSubmission은 이 formData를 그대로 쓰고 서버에 저장된
+// 초안을 다시 읽지 않으므로, 임시 저장은 최종 제출의 필수 선행조건이 아니다). 클릭 시뮬레이션이
+// 가능한 테스트 환경이 없어, Step1Income.jsx의 handleSeveranceType과 같은 이유로 컴포넌트 클로저
+// 밖의 top-level 함수로 두어 saveCurrentDraft/onSubmit을 목(mock)으로 바꿔가며 단위 테스트한다.
+export async function submitAfterDraftSave(saveCurrentDraft, stepIndex, onSubmit, formData) {
+  await saveCurrentDraft(stepIndex).catch(() => {});
+  await onSubmit(formData);
+}
+
 const formatSavedAt = (value) => value
   ? new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
   : null;
@@ -160,12 +170,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
       return;
     }
     setShowRequiredError(false);
-    try {
-      await saveCurrentDraft(stepIndex);
-      await onSubmit(formData);
-    } catch {
-      // saveCurrentDraft keeps the input in memory and exposes the retry state.
-    }
+    await submitAfterDraftSave(saveCurrentDraft, stepIndex, onSubmit, formData);
   };
 
   return (
