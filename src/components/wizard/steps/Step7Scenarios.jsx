@@ -26,7 +26,7 @@ export default function Step7Scenarios() {
         />
         {reverseMortgageOn && (
           <div className="field-grid" style={{ marginTop: 14 }}>
-            <NumberField path="scenarios.reverseMortgage.ageAtStart" label="가입 시 나이" unit="세" />
+            <NumberField path="scenarios.reverseMortgage.ageAtStart" label="가입 시 나이" unit="세" max={120} />
             <NumberField path="scenarios.reverseMortgage.housePrice" label="주택 가격" unit="만원" />
           </div>
         )}
@@ -40,7 +40,7 @@ export default function Step7Scenarios() {
         />
         {realEstateConversionOn && (
           <div className="field-grid" style={{ marginTop: 14 }}>
-            <NumberField path="scenarios.realEstateConversion.ageAtConversion" label="전환 시 나이" unit="세" />
+            <NumberField path="scenarios.realEstateConversion.ageAtConversion" label="전환 시 나이" unit="세" max={120} />
             <NumberField path="scenarios.realEstateConversion.cashOutAmount" label="현금화 조정 금액" unit="만원" />
           </div>
         )}
@@ -55,7 +55,7 @@ export default function Step7Scenarios() {
         {expenseReductionOn && (
           <div style={{ marginTop: 14 }}>
             <div className="field-grid">
-              <NumberField path="scenarios.expenseReduction.reductionRate" label="절감 비율" unit="%" />
+              <NumberField path="scenarios.expenseReduction.reductionRate" label="절감 비율" unit="%" max={100} />
             </div>
             <CheckboxGroupField
               path="scenarios.expenseReduction.targets"

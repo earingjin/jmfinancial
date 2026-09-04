@@ -119,6 +119,7 @@ const AMOUNT_FIELDS = [
   'assets.liquidAssets.breakdown.deposit',
   'assets.liquidAssets.breakdown.savings',
   'assets.liquidAssets.breakdown.cma',
+  'assets.liquidAssets.breakdown.subscription',
   'assets.liquidAssets.breakdown.emergencyFund',
   'assets.financialAssets.stocks',
   'assets.financialAssets.total',
