@@ -5,7 +5,7 @@ import FormattedNumberInput from './FormattedNumberInput';
 /**
  * 숫자 입력 필드. path는 "income.salary.monthly" 형태의 점 표기.
  */
-export default function NumberField({ path, label, unit, helper, placeholder, min = 0, required = false, disabled = false, integerOnly = false, useGrouping = true, onValueChange }) {
+export default function NumberField({ path, label, unit, helper, placeholder, min = 0, max, required = false, disabled = false, integerOnly = false, useGrouping = true, onValueChange }) {
   const { formData, setField } = useFormData();
   const value = getIn(formData, path);
 
@@ -16,6 +16,7 @@ export default function NumberField({ path, label, unit, helper, placeholder, mi
         <FormattedNumberInput
           id={path}
           min={min}
+          max={max}
           inputMode={integerOnly ? 'numeric' : 'decimal'}
           integerOnly={integerOnly}
           useGrouping={useGrouping}

@@ -470,11 +470,12 @@ export default function Step1Income() {
         <h3><span className="step-icon">📝</span> 기본 정보</h3>
         <div className="field-grid">
           <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required integerOnly useGrouping={false} />
-          <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" required />
+          <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" max={120} required />
           <NumberField
             path="basic.lifeExpectancy"
             label="기대수명 * (직접 수정 가능)"
             unit="세"
+            max={120}
             required
             onValueChange={() => { lifeExpectancyEditedRef.current = true; }}
             helper={<>
@@ -525,7 +526,7 @@ export default function Step1Income() {
               integerOnly
               useGrouping={false}
             />
-            <NumberField path="spouse.retirementAge" label="배우자 은퇴(예정) 연령 *" unit="세" required />
+            <NumberField path="spouse.retirementAge" label="배우자 은퇴(예정) 연령 *" unit="세" max={120} required />
             <NumberField
               path="spouse.lifeExpectancy"
               label="배우자 기대여명 * (직접 수정 가능)"
@@ -659,7 +660,7 @@ export default function Step1Income() {
           <>
             <div className="field-grid">
               <NumberField path="income.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" />
-              <NumberField path="income.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" required />
+              <NumberField path="income.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" max={120} required />
               <NumberField path="income.severance.pensionYears" label="수령 기간" unit="년" />
               <label className="field">
                 <span className="field-label">수령 개월 수</span>
@@ -713,7 +714,7 @@ export default function Step1Income() {
               <>
                 <div className="field-grid">
                   <NumberField path="spouse.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" />
-                  <NumberField path="spouse.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" required />
+                  <NumberField path="spouse.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" max={120} required />
                   <NumberField path="spouse.severance.pensionYears" label="수령 기간" unit="년" />
                   <label className="field">
                     <span className="field-label">수령 개월 수</span>
@@ -947,7 +948,7 @@ export default function Step1Income() {
           ) : (
             <>
               <NumberField path="income.personalPension.monthly" label="개인연금 월 수령액" unit="만원" />
-              <NumberField path="income.personalPension.startAge" label="수령 시작 나이 *" unit="세" required />
+              <NumberField path="income.personalPension.startAge" label="수령 시작 나이 *" unit="세" max={120} required />
               <NumberField path="income.personalPension.months" label="수령 개월 수" unit="개월" />
             </>
           )}
@@ -980,7 +981,7 @@ export default function Step1Income() {
               ) : (
                 <>
                   <NumberField path="spouse.personalPension.monthly" label="개인연금 월 수령액" unit="만원" />
-                  <NumberField path="spouse.personalPension.startAge" label="수령 시작 나이 *" unit="세" required />
+                  <NumberField path="spouse.personalPension.startAge" label="수령 시작 나이 *" unit="세" max={120} required />
                   <NumberField path="spouse.personalPension.months" label="수령 개월 수" unit="개월" />
                 </>
               )}

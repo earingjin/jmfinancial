@@ -207,7 +207,7 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">예상 지출 나이</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput value={item.expectedAge} onChange={(e) => update('expectedAge', Number(e.target.value))} />
+                  <FormattedNumberInput max={120} value={item.expectedAge} onChange={(e) => update('expectedAge', Number(e.target.value))} />
                   <span className="field-unit">세</span>
                 </div>
               </label>

@@ -16,7 +16,7 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
 
   const handleChange = (event) => {
     const allowsNegative = min == null || Number(min) < 0;
-    const update = getNumericInputUpdate(event.target.value, { integerOnly, allowsNegative });
+    const update = getNumericInputUpdate(event.target.value, { integerOnly, allowsNegative, max });
 
     if (!update.shouldCommit) {
       setInputError(update.error);
@@ -49,7 +49,9 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
       ? '0 이상의 숫자만 입력할 수 있습니다.'
       : inputError === 'numeric'
         ? '숫자만 입력할 수 있습니다.'
-        : null;
+        : inputError === 'max'
+          ? `${max} 이하로 입력해 주세요.`
+          : null;
 
   return (
     <>

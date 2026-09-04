@@ -14,8 +14,8 @@ export function formatNumericText(value, integerOnly = false, useGrouping = true
   return `${sign}${groupedInteger}${fraction}`;
 }
 
-export function normalizeNumericText(value, { integerOnly = false, allowsNegative = true } = {}) {
-  const result = getNumericInputUpdate(value, { integerOnly, allowsNegative });
+export function normalizeNumericText(value, { integerOnly = false, allowsNegative = true, max } = {}) {
+  const result = getNumericInputUpdate(value, { integerOnly, allowsNegative, max });
   return result.shouldCommit ? result.value : String(value ?? '').replace(/,/g, '');
 }
 
@@ -24,7 +24,7 @@ export function normalizeNumericText(value, { integerOnly = false, allowsNegativ
  * Commas are presentation-only; every other character must already form a
  * valid numeric value (or an intermediate value such as "2.").
  */
-export function getNumericInputUpdate(value, { integerOnly = false, allowsNegative = true } = {}) {
+export function getNumericInputUpdate(value, { integerOnly = false, allowsNegative = true, max } = {}) {
   const normalized = String(value ?? '').replace(/,/g, '');
 
   if (normalized === '') return { shouldCommit: true, value: '' };
@@ -39,6 +39,10 @@ export function getNumericInputUpdate(value, { integerOnly = false, allowsNegati
 
   if (integerOnly && normalized.includes('.')) {
     return { shouldCommit: false, error: 'integer' };
+  }
+
+  if (max !== undefined && max !== null && max !== '' && Number(normalized) > Number(max)) {
+    return { shouldCommit: false, error: 'max', max: Number(max) };
   }
 
   return { shouldCommit: true, value: normalized };

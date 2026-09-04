@@ -36,6 +36,23 @@ describe('validateInput - baseline', () => {
   });
 });
 
+describe('liquid asset subscription validation', () => {
+  it.each([0, 100])('accepts a valid subscription amount (%s)', (subscription) => {
+    const result = validateInput(makeInput({
+      assets: { liquidAssets: { breakdown: { subscription } } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it.each([-1, 'abc', '1e3', '0x10', NaN, Infinity])('rejects an invalid subscription amount (%s)', (subscription) => {
+    const result = validateInput(makeInput({
+      assets: { liquidAssets: { breakdown: { subscription } } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('assets.liquidAssets.breakdown.subscription');
+  });
+});
+
 describe('required spouse retirement fields', () => {
   const spouseInput = {
     basic: { hasSpouse: true },

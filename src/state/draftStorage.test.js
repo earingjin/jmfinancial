@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../lib/supabaseClient', () => ({ supabase: {} }));
 
-import { clearDraftSessionCache, createLatestDraftSaver, deleteDraft, DRAFT_SCHEMA_VERSION, fetchDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, resolveRetirementSavingsInputVersion, upsertDraft, validateDraft } from './draftStorage.js';
+import { clearDraftSessionCache, createLatestDraftSaver, deleteDraft, DRAFT_SCHEMA_VERSION, fetchDraft, fetchDraftOnce, mergeDraft, migrateLegacyDraft, readLegacyLocalDraft, resolveRetirementSavingsInputVersion, upsertDraft, validateDraft } from './draftStorage.js';
 
 const compatibleFormData = () => ({ basic: {}, income: {}, spouse: {}, expense: {}, assets: {} });
 
@@ -12,6 +12,27 @@ function storageWith(value) {
 }
 
 describe('Supabase planner drafts', () => {
+  it('preserves blank and explicit zero other-expense amounts as distinct values', () => {
+    const defaults = { assets: { currentLivingCost: { breakdown: { otherItems: [] } } } };
+    const saved = {
+      assets: {
+        currentLivingCost: {
+          breakdown: {
+            otherItems: [
+              { name: '미입력', amount: '' },
+              { name: '0원', amount: 0 },
+            ],
+          },
+        },
+      },
+    };
+
+    const restored = mergeDraft(defaults, JSON.parse(JSON.stringify(saved)));
+
+    expect(restored.assets.currentLivingCost.breakdown.otherItems).toEqual(saved.assets.currentLivingCost.breakdown.otherItems);
+    expect(restored.assets.currentLivingCost.breakdown.otherItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)).toBe(0);
+  });
+
   it('saves one user-owned row with an upsert and the current schema version', async () => {
     const single = vi.fn().mockResolvedValue({ data: { updated_at: '2026-08-19T00:00:00Z' }, error: null });
     const select = vi.fn(() => ({ single }));

@@ -70,7 +70,8 @@ export default async function handler(req, res) {
       ? ['assets.liquidAssets.total']
       : [
           'assets.liquidAssets.breakdown.deposit', 'assets.liquidAssets.breakdown.savings',
-          'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.emergencyFund',
+          'assets.liquidAssets.breakdown.cma', 'assets.liquidAssets.breakdown.subscription',
+          'assets.liquidAssets.breakdown.emergencyFund',
         ];
     const financialAssetLeafPaths = input.assets?.financialAssets?.inputMode === 'simple'
       ? ['assets.financialAssets.total']

@@ -99,3 +99,19 @@ describe('retirementSavingsInputVersion: 2 - 전체 API 흐름(validate → cano
     expect(indicator.displayValue).toBeCloseTo(54.5, 5);
   });
 });
+
+describe('POST /api/calculate liquid asset subscription input', () => {
+  it('does not classify detailed liquid assets as missing when only subscription is entered', async () => {
+    const input = buildMinimalValidInput();
+    input.assets.liquidAssets.inputMode = 'detailed';
+    input.assets.liquidAssets.breakdown.subscription = '1000';
+
+    const result = await callHandler(input);
+
+    expect(result.aggregates.liquidAssets).toBe(1000);
+    expect(result.aggregates.totalAssets).toBe(1000);
+    expect(result.aggregates.netWorth).toBe(1000);
+    expect(result.peerComparison.netWorth.value).toBe(1000);
+    expect(result.peerComparison.financialAssets.value).toBe(1000);
+  });
+});
