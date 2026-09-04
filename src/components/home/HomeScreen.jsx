@@ -40,12 +40,11 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
               <div><span aria-hidden="true">▤</span><strong>맞춤 리포트</strong></div>
             </div>
             <ul className="home-orientation-notes">
-               
-              <li>현재 재무현황, 또래 비교, 미래 자산전망 등 확인</li>
-              <li>소득·생활비·자산·대출·연금 정보 필요</li>
-              <li>중간에 멈춰도 입력한 내용 임시저장 가능</li>
-              <li>재무정보 보호를 위한 진단결과 자동 삭제(7일 후)</li>
+              <li>총액만 입력해도 진단 가능</li>
+              <li>항목별 세부 입력은 필요할 때만 선택</li>
+              <li>중간 입력 내용 임시저장 가능</li>
               <li>진단 완료 후 맞춤 리포트 제공</li>
+              <li>진단 결과 7일 후 자동 삭제</li>
             </ul>
           </div>
 

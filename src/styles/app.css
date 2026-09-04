@@ -315,8 +315,11 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
   font-size: 14px;
   font-family: inherit;
 }
+.field-input-row input[aria-invalid="true"],
+.field input[aria-invalid="true"] { border-color: #d64a3a; }
 .field-unit { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
 .field-helper { font-size: 11px; color: var(--ink-soft); }
+.field-helper--error { color: #b63b2d; }
 .field-helper--prominent { color: var(--navy-900); font-size: 12px; font-weight: 700; line-height: 1.55; }
 
 .property-type-field { gap: 8px; }

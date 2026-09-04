@@ -15,9 +15,31 @@ export function formatNumericText(value, integerOnly = false, useGrouping = true
 }
 
 export function normalizeNumericText(value, { integerOnly = false, allowsNegative = true } = {}) {
-  const raw = String(value).replace(/,/g, '').replace(/[^\d.-]/g, '');
-  const unsigned = raw.replace(/-/g, '');
-  return `${allowsNegative && raw.startsWith('-') ? '-' : ''}${integerOnly
-    ? unsigned.split('.')[0]
-    : unsigned.replace(/\.(?=.*\.)/g, '')}`;
+  const result = getNumericInputUpdate(value, { integerOnly, allowsNegative });
+  return result.shouldCommit ? result.value : String(value ?? '').replace(/,/g, '');
+}
+
+/**
+ * Classifies user-entered numeric text before it reaches form state.
+ * Commas are presentation-only; every other character must already form a
+ * valid numeric value (or an intermediate value such as "2.").
+ */
+export function getNumericInputUpdate(value, { integerOnly = false, allowsNegative = true } = {}) {
+  const normalized = String(value ?? '').replace(/,/g, '');
+
+  if (normalized === '') return { shouldCommit: true, value: '' };
+
+  if (!allowsNegative && normalized.startsWith('-')) {
+    return { shouldCommit: false, error: 'negative' };
+  }
+
+  if (!/^-?\d*(?:\.\d*)?$/.test(normalized)) {
+    return { shouldCommit: false, error: 'numeric' };
+  }
+
+  if (integerOnly && normalized.includes('.')) {
+    return { shouldCommit: false, error: 'integer' };
+  }
+
+  return { shouldCommit: true, value: normalized };
 }
