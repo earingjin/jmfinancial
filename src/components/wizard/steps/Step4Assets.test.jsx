@@ -73,6 +73,11 @@ describe('Step4Assets - 반복입력 금액 필드의 음수 방어 (A12)', () =
 
   function renderWithOtherItems() {
     const formData = structuredClone(initialFormData);
+    formData.assets.liquidAssets.inputMode = 'detailed';
+    formData.assets.financialAssets.inputMode = 'detailed';
+    formData.assets.pensionAssetsInputMode = 'detailed';
+    formData.assets.realEstateAssets.inputMode = 'detailed';
+    formData.assets.otherAssets.inputMode = 'detailed';
     formData.assets.financialAssets.otherItems = [{ name: '가상자산', amount: 100 }];
     // pensionAssetsBreakdown.other(합계 스칼라)가 있어야 "기타" 패널이 열린다(openPensionKeys
     // 초기화 로직 - otherItems 배열 길이가 아니라 합계 값으로 판단함).

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAssetProjectionOutlook, formatAssetProjectionReason, getFinancialHealthStatus } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus } from './summaryPresentation';
 
 // getFinancialHealthStatus는 새 재무점수·임계값을 만들지 않고, 서버가 이미 계산한
 // ratioClass(good/caution/risk)만 세어 화면 문구를 고르는 순수 표시 헬퍼다.
@@ -93,5 +93,31 @@ describe('formatAssetProjectionOutlook', () => {
     });
     expect(text).toContain('약 0.6년 먼저');
     expect(text).not.toContain('0.599999');
+  });
+});
+
+describe('formatPensionIncomeAtRetirement', () => {
+  it('은퇴 시점에 받는 연금은 금액으로 표시한다', () => {
+    expect(formatPensionIncomeAtRetirement(100, 'amount')).toBe('100만원');
+  });
+
+  it('수령 전·일시금·산출 불가 상태를 금액과 구분한다', () => {
+    expect(formatPensionIncomeAtRetirement(0, 'beforeStart', [{ startAge: 65, monthly: 90 }])).toBe('수령 전 · 65세부터 월 90만원');
+    expect(formatPensionIncomeAtRetirement(0, 'lumpSum')).toBe('일시금 수령 예정');
+    expect(formatPensionIncomeAtRetirement(null, 'notCalculable')).toBe('산출 불가');
+  });
+
+  it('실제 0원은 0만원으로 유지한다', () => {
+    expect(formatPensionIncomeAtRetirement(0, 'zero')).toBe('0만원');
+  });
+});
+
+describe('formatRetirementLivingCostBasis', () => {
+  it('현재가치 생활비와 물가 반영 은퇴 시점 생활비의 관계를 설명한다', () => {
+    expect(formatRetirementLivingCostBasis({
+      livingCostMonthly: 200,
+      retirementLivingCostAtRetirement: 431.3,
+      inflationRate: 3,
+    })).toBe('현재 입력한 월 필요생활비 200만원을 기준으로, 은퇴까지 연 3% 물가상승률을 반영하면 은퇴 시점에는 월 431.3만원이 필요하다고 계산했습니다.');
   });
 });

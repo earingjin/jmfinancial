@@ -205,12 +205,12 @@
 }
 
 .ss-guidance {
-  background: var(--amber-soft);
-  border-left: 4px solid var(--amber);
-  border-radius: 8px;
-  padding: 12px 14px;
+  margin: 8px 0 14px;
+  padding: 8px 2px;
+  border-top: 1px solid #e6d8c5;
+  border-bottom: 1px solid #e6d8c5;
   font-size: 13px;
-  color: #8A5A12;
+  color: #766b5d;
   line-height: 1.6;
 }
 
@@ -421,10 +421,8 @@
 }
 .overview-card-explanation {
   margin: 12px 0 0;
-  padding: 11px 13px;
-  border-left: 3px solid var(--gold);
-  border-radius: 0 8px 8px 0;
-  background: var(--paper);
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
   color: var(--ink);
   font-size: 12px;
   line-height: 1.6;
@@ -793,11 +791,12 @@
 .future-method-list strong { color: var(--navy-800); font-size: 10.5px; }
 .future-method-list span { min-width: 0; }
 .future-method-note--in-card { margin: 8px 0 15px; background: var(--paper); }
-.future-method-note--purchasing { gap: 8px; padding: 13px 14px; }
+.future-method-note--purchasing { gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-left: 0; border-radius: 0; background: transparent; }
 .future-method-note--purchasing b,
 .future-method-note--purchasing .future-method-formula { font-size: 13px; }
 .future-method-note--purchasing > span { font-size: 12px; }
-.future-purchasing-warning { display: block; padding: 9px 10px; border-radius: 7px; background: #fff1eb; color: var(--red); font-size: 13px; line-height: 1.5; }
+.future-method-note--purchasing .future-method-formula { padding: 8px 0; border: 1px solid var(--line); border-radius: 0; background: var(--card); }
+.future-purchasing-warning { display: block; padding: 4px 0 4px 10px; border-left: 2px solid var(--red); border-radius: 0; background: transparent; color: var(--red); font-size: 13px; line-height: 1.5; }
 .future-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
 .future-card-age { color: var(--navy-800); font-size: 15px; font-weight: 800; }
 .future-card-label { display: block; margin-top: 10px; color: var(--ink-soft); font-size: 11px; }
@@ -1046,6 +1045,12 @@
 .ss-total-row { background: var(--paper); }
 .ss-row-label { font-size: 13.5px; }
 .ss-row-value-sm { font-size: 14px; font-weight: 700; color: var(--navy-800); }
+.ss-retirement-income-note {
+  margin: 8px 4px 18px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
 
 /* ---------- 5. 다운로드 ---------- */
 .ss-download-section { text-align: center; }

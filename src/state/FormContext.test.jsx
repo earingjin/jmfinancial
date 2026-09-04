@@ -163,6 +163,7 @@ describe('FormProvider - detailed debt draft restoration', () => {
       { name: '신용대출', repaymentType: 'interestOnly', principal: 8000, monthlyInterest: 8, monthlyRepayment: '', months: 24 },
       { name: '가족대출', repaymentType: 'equalPrincipal', principal: 0, monthlyInterest: '', monthlyRepayment: 0, months: '' },
     ];
+    original.assets.liquidAssets.inputMode = 'detailed';
     original.assets.liquidAssets.breakdown.deposit = 50000;
 
     let storedRow;

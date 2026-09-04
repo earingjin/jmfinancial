@@ -141,7 +141,7 @@ export const initialFormData = {
     },
     liquidAssets: {
       hasAssets: true,
-      total: '', inputMode: 'detailed', simpleTotal: '', simpleInputStored: false,
+      total: '', inputMode: 'simple', simpleTotal: '', simpleInputStored: false,
       breakdown: {           // 현금성 자산 세부 항목(총액은 이 값들 + customItems의 합으로 자동 계산됨)
         deposit: '',         // 예금
         savings: '',         // 적금
@@ -153,14 +153,14 @@ export const initialFormData = {
     },
     financialAssets: {
       hasAssets: true,
-      total: '', inputMode: 'detailed', simpleTotal: '', simpleInputStored: false,
+      total: '', inputMode: 'simple', simpleTotal: '', simpleInputStored: false,
       stocks: '', funds: '', bonds: '', other: '',
       otherItems: [], // [{ name, amount }] "기타 금융자산"의 종류별 세부 항목(합계가 other에 자동 반영됨)
     },
     // 연금자산(개인연금·퇴직연금·IRP 등 잔액) 총액 - 금융자산과 분리. 아래 pensionAssetsBreakdown 4개
     // 항목의 합으로 자동 계산된다(변액연금·연금저축계좌·IRP는 "3. 저축"과 연동, 기타는 여기서 직접 입력).
     pensionAssets: '',
-    pensionAssetsInputMode: 'detailed', pensionAssetsSimpleTotal: '', pensionAssetsSimpleInputStored: false,
+    pensionAssetsInputMode: 'simple', pensionAssetsSimpleTotal: '', pensionAssetsSimpleInputStored: false,
     hasPensionAssets: true,
     pensionAssetsBreakdown: {
       variableAnnuity: '',        // 변액연금(저축 파트와 연동)
@@ -171,7 +171,7 @@ export const initialFormData = {
     },
     realEstateAssets: {
       hasAssets: true,
-      inputMode: 'detailed', simpleTotal: '', simpleInputStored: false,
+      inputMode: 'simple', simpleTotal: '', simpleInputStored: false,
       // total은 mainProperty + otherItems 합으로 자동 계산된다(직접 입력하지 않음).
       total: '',
       mainPropertyType: '',      // 주요 부동산 매물 종류
@@ -181,7 +181,7 @@ export const initialFormData = {
     },
     otherAssets: {
       hasAssets: true,
-      inputMode: 'detailed', simpleTotal: '', simpleInputStored: false,
+      inputMode: 'simple', simpleTotal: '', simpleInputStored: false,
       total: '',                 // items 금액의 합으로 자동 계산됨
       items: [],                 // [{ name, amount }] 기타 자산 항목
     },
@@ -206,7 +206,7 @@ export const initialFormData = {
     insurance: { hasInsurance: true, monthlyPremium: '', coverageAmount: '' },
     savingsPlan: {
       hasSavings: true,
-      monthly: '', annual: '', inputMode: 'detailed', simpleMonthly: '', simpleAnnual: '', simpleInputStored: false,
+      monthly: '', annual: '', inputMode: 'simple', simpleMonthly: '', simpleAnnual: '', simpleInputStored: false,
       // 월 저축액 세부 항목(월 저축액 합계는 이 값들의 monthly + customItems의 monthly 합으로 자동 계산됨).
       // 저축 종류마다 앞으로 저축할 개월수·이자율이 서로 다를 수 있어(예: 적금 24개월 vs IRP 120개월)
       // 종류별로 따로 갖는다 - 종류 전체에 하나의 개월수·이자율만 두지 않는다.

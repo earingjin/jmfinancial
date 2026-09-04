@@ -27,7 +27,9 @@ function buildReportData({ withIncome }) {
     raw.income.salary.monthly = 500;
     raw.assets.currentLivingCost.monthly = 250;
     raw.assets.liquidAssets.hasAssets = true;
+    raw.assets.liquidAssets.inputMode = 'detailed';
     raw.assets.liquidAssets.breakdown.emergencyFund = 1500;
+    raw.assets.savingsPlan.inputMode = 'detailed';
     raw.assets.savingsPlan.breakdown.installment.monthly = 100;
     raw.assets.savingsPlan.retirementMonthly = 50;
   }

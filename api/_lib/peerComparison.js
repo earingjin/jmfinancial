@@ -52,7 +52,6 @@ export function buildPeerComparison({
     userBracketKey: userBracket.key,
     userBracketLabel: userBracket.label,
     userNetWorth: netWorth,
-    percentileRank: null,
     focusCompare: {
       peerAverage: userBracket.netWorth,
       userNetWorth: netWorth,

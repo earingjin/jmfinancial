@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
-import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, getFinancialHealthStatus } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -620,7 +620,12 @@ export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, on
   // 국민연금 가입기간 판정이 'unknown'이면 monthlyIncomeCompare.nationalPensionMonthly는 0원으로
   // 집계되어 있다(aggregate.js) - "확정된 0원"이 아니므로 이 값을 포함하는 파생값은 확정 숫자로
   // 표시하지 않는다.
-  const pensionCell = (amount) => (rr.monthlyIncomeCompare.nationalPensionUnknown ? '확인 필요' : formatWon(amount));
+  const pensionCell = formatPensionIncomeAtRetirement;
+  const nationalPensionStatus = rr.monthlyIncomeCompare.pensionDisplayStatus?.nationalPension
+    ?? (rr.monthlyIncomeCompare.nationalPensionUnknown ? 'notCalculable' : 'amount');
+  const retirementPensionStatus = rr.monthlyIncomeCompare.pensionDisplayStatus?.retirementPension ?? 'amount';
+  const personalPensionStatus = rr.monthlyIncomeCompare.pensionDisplayStatus?.personalPension ?? 'amount';
+  const pensionDisplaySchedules = rr.monthlyIncomeCompare.pensionDisplaySchedules || {};
   // 이전에 저장된 결과에도 계산 근거가 보이도록 기존 필드에서 안전하게 역산한다.
   const retirementMonths = rr.retirementYears * 12;
   const livingCostNow = rr.retirementLivingCostNow ?? rr.monthlyIncomeCompare.livingCostMonthly;
@@ -939,37 +944,44 @@ export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, on
               </div>
             )}
 
-            <h3 className="ss-section-title">월 노후소득 비교</h3>
+            <h3 className="ss-section-title">은퇴 시점 월소득 비교</h3>
+            <p className="ss-guidance">{formatNumber(rr.retirementAge)}세 은퇴 직후를 기준으로 받을 수 있는 연금과 필요한 생활비를 비교합니다.</p>
             <div className="ss-card-list">
               <div className="ss-card-row">
-                <div className="ss-row-label">노후 월 필요생활비</div>
+                <div className="ss-row-label">노후 월 필요생활비 (현재가치)</div>
                 <div className="ss-row-value-sm">{formatWon(rr.monthlyIncomeCompare.livingCostMonthly)}</div>
               </div>
               <div className="ss-card-row">
                 <div className="ss-row-label">국민연금 예상 월소득</div>
-                <div className="ss-row-value-sm">{pensionCell(rr.monthlyIncomeCompare.nationalPensionMonthly)}</div>
+                <div className="ss-row-value-sm">{pensionCell(rr.monthlyIncomeCompare.nationalPensionMonthly, nationalPensionStatus, pensionDisplaySchedules.nationalPension)}</div>
               </div>
               <div className="ss-card-row">
                 <div className="ss-row-label">퇴직연금 예상 월소득</div>
-                <div className="ss-row-value-sm">{formatWon(rr.monthlyIncomeCompare.severancePensionMonthly)}</div>
+                <div className="ss-row-value-sm">{pensionCell(rr.monthlyIncomeCompare.severancePensionMonthly, retirementPensionStatus, pensionDisplaySchedules.retirementPension)}</div>
               </div>
               <div className="ss-card-row">
                 <div className="ss-row-label">개인연금 예상 월소득</div>
-                <div className="ss-row-value-sm">{formatWon(rr.monthlyIncomeCompare.personalPensionMonthly)}</div>
+                <div className="ss-row-value-sm">{pensionCell(rr.monthlyIncomeCompare.personalPensionMonthly, personalPensionStatus, pensionDisplaySchedules.personalPension)}</div>
               </div>
               <div className="ss-card-row ss-total-row">
                 <div className="ss-row-label"><b>연금 합계</b></div>
-                <div className="ss-row-value-sm">{pensionCell(pensionMonthlyTotal)}</div>
+                <div className="ss-row-value-sm">{rr.monthlyIncomeCompare.nationalPensionUnknown ? '확인 필요' : formatWon(pensionMonthlyTotal)}</div>
               </div>
               <div className="ss-card-row">
                 <div className="ss-row-label">월 소득 부족액</div>
                 <div className="ss-row-value-sm" style={{ color: rr.monthlyIncomeCompare.shortfallMonthly > 0 ? 'var(--red)' : 'inherit' }}>
-                  {pensionCell(rr.monthlyIncomeCompare.shortfallMonthly)}
+                  {rr.monthlyIncomeCompare.nationalPensionUnknown ? '확인 필요' : formatWon(rr.monthlyIncomeCompare.shortfallMonthly)}
                 </div>
               </div>
             </div>
-
             <h3 className="ss-section-title">은퇴시점 필요자금 · 소득공백기간</h3>
+            <p className="ss-retirement-income-note">
+              {formatRetirementLivingCostBasis({
+                livingCostMonthly: rr.monthlyIncomeCompare.livingCostMonthly,
+                retirementLivingCostAtRetirement: rr.retirementLivingCostAtRetirement,
+                inflationRate: rr.inflationRate,
+              })}
+            </p>
             {rr.incomeGap.notCalculable ? (
               <p className="ss-guidance">{rr.incomeGap.reason}</p>
             ) : rr.incomeGap.hasGap ? (

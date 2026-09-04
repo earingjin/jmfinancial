@@ -11,6 +11,11 @@ globalThis.React = React;
 
 function makeFormData({ bonds = 0, otherAssets = 0, debt = 0 } = {}) {
   const formData = structuredClone(initialFormData);
+  formData.assets.liquidAssets.inputMode = 'detailed';
+  formData.assets.financialAssets.inputMode = 'detailed';
+  formData.assets.pensionAssetsInputMode = 'detailed';
+  formData.assets.realEstateAssets.inputMode = 'detailed';
+  formData.assets.otherAssets.inputMode = 'detailed';
   formData.assets.financialAssets.bonds = bonds;
   formData.assets.otherAssets.items = otherAssets ? [{ name: '차량', amount: otherAssets }] : [];
   formData.assets.otherAssets.total = otherAssets;

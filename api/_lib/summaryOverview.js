@@ -3,7 +3,7 @@
 // 재조합하거나(카드·도넛차트) 최소한의 게이팅(입력 누락 판정)만 추가한다. 새로운 재무 기준·배점·
 // 벤치마크는 만들지 않는다.
 
-import { n } from './aggregate.js';
+import { isFinitePensionActiveAtRetirement, isNationalPensionStartedByRetirement, n } from './aggregate.js';
 import { getNationalPensionStartAge } from './pensionEligibility.js';
 import { buildFutureFinanceProjection, buildRetirementAssetProjection } from './futureFinance.js';
 
@@ -306,6 +306,65 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
     : rawRetirementIncomeIndicator;
   let retirementIncomeZeroReason = null;
 
+  // 월소득 비교표의 문구만 위한 상태다. 아래 계산값이나 합계에는 관여하지 않는다.
+  const selfRetirementAge = input.basic?.retirementAge;
+  const spouseRetirementAge = input.spouse?.retirementAge;
+  const pensionPeople = [
+    { person: input.income || {}, birthYear: input.basic?.birthYear, retirementAge: selfRetirementAge, eligibility: aggregates.nationalPensionEligibility?.self },
+    ...(input.basic?.hasSpouse ? [{ person: input.spouse || {}, birthYear: input.spouse?.birthYear, retirementAge: spouseRetirementAge, eligibility: aggregates.nationalPensionEligibility?.spouse }] : []),
+  ];
+  const isBeforeStart = (type) => pensionPeople.some(({ person, birthYear, retirementAge, eligibility }) => {
+    if (isBlank(retirementAge)) return false;
+    if (type === 'nationalPension') {
+      return eligibility === 'eligible'
+        && n(person.nationalPension?.monthly) > 0
+        && isNationalPensionStartedByRetirement(birthYear, retirementAge) === false;
+    }
+    const pension = type === 'retirementPension' ? person.severance : person.personalPension;
+    const monthly = type === 'retirementPension' ? pension?.pensionMonthly : pension?.monthly;
+    const startAge = type === 'retirementPension' ? pension?.pensionStartAge : pension?.startAge;
+    const expectedType = type === 'retirementPension' ? 'pension' : 'installment';
+    return pension?.type === expectedType
+      && n(monthly) > 0
+      && isFinitePensionActiveAtRetirement(startAge, pension?.months, retirementAge) === false
+      && n(startAge) > n(retirementAge);
+  });
+  const isLumpSum = (type) => type !== 'nationalPension' && pensionPeople.some(({ person }) => (
+    (type === 'retirementPension' ? person.severance?.type : person.personalPension?.type) === 'lumpsum'
+  ));
+  const pensionDisplaySchedule = (type) => pensionPeople.flatMap(({ person, birthYear, retirementAge, eligibility }) => {
+    if (isBlank(retirementAge)) return [];
+    if (type === 'nationalPension') {
+      const monthly = n(person.nationalPension?.monthly);
+      const startAge = getNationalPensionStartAge(n(birthYear));
+      return eligibility === 'eligible' && monthly > 0 && isNationalPensionStartedByRetirement(birthYear, retirementAge) === false
+        ? [{ startAge, monthly }]
+        : [];
+    }
+    const pension = type === 'retirementPension' ? person.severance : person.personalPension;
+    const monthly = n(type === 'retirementPension' ? pension?.pensionMonthly : pension?.monthly);
+    const startAge = type === 'retirementPension' ? pension?.pensionStartAge : pension?.startAge;
+    const expectedType = type === 'retirementPension' ? 'pension' : 'installment';
+    return pension?.type === expectedType
+      && monthly > 0
+      && isFinitePensionActiveAtRetirement(startAge, pension?.months, retirementAge) === false
+      && n(startAge) > n(retirementAge)
+      ? [{ startAge: n(startAge), monthly }]
+      : [];
+  });
+  const displayStatus = (type, amount) => {
+    if (type === 'nationalPension' && nationalPensionUnknown) return 'notCalculable';
+    if (amount > 0) return 'amount';
+    if (isLumpSum(type)) return 'lumpSum';
+    if (isBeforeStart(type)) return 'beforeStart';
+    return 'zero';
+  };
+  const pensionDisplayStatus = {
+    nationalPension: displayStatus('nationalPension', aggregates.nationalPensionMonthly),
+    retirementPension: displayStatus('retirementPension', aggregates.severancePensionMonthly),
+    personalPension: displayStatus('personalPension', aggregates.personalPensionMonthly),
+  };
+
   if (!nationalPensionUnknown && !retirementIncomeIndicator?.notCalculable && retirementIncomeIndicator?.value === 0) {
     const pensionOwners = [input.income || {}, input.spouse || {}];
     const hasMonthlyAmountWithoutPeriod = pensionOwners.some((owner) => (
@@ -358,6 +417,12 @@ export function buildRetirementReadiness({ input, simulation, indicators, aggreg
       nationalPensionMonthly: nationalPensionUnknown ? null : aggregates.nationalPensionMonthly,
       nationalPensionUnknown,
       nationalPensionEligibility: aggregates.nationalPensionEligibility,
+      pensionDisplayStatus,
+      pensionDisplaySchedules: {
+        nationalPension: pensionDisplaySchedule('nationalPension'),
+        retirementPension: pensionDisplaySchedule('retirementPension'),
+        personalPension: pensionDisplaySchedule('personalPension'),
+      },
       calculable: !nationalPensionUnknown,
       calculationReason: nationalPensionUnknown ? '국민연금 향후 가입기간을 확정할 수 없음' : null,
       severancePensionMonthly: aggregates.severancePensionMonthly,

@@ -12,7 +12,22 @@ export const mergeDraft = (defaults, saved) => {
   if (Array.isArray(defaults)) return Array.isArray(saved) ? saved : defaults;
   if (!defaults || typeof defaults !== 'object') return saved === undefined ? defaults : saved;
   const source = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
-  return Object.fromEntries(Object.keys(defaults).map((key) => [key, mergeDraft(defaults[key], source[key])]));
+  const merged = Object.fromEntries(Object.keys(defaults).map((key) => [key, mergeDraft(defaults[key], source[key])]));
+
+  // 입력 방식 선택 전 저장된 초안은 상세 항목만 유효했다. 새 진단의 기본값이 총액 입력으로
+  // 바뀌어도, 이 초안의 상세 값을 숨기거나 계산에서 제외하지 않도록 기존 방식을 명시한다.
+  const savedAssets = source.assets;
+  if (!isRecord(savedAssets) || !isRecord(merged.assets)) return merged;
+  const restoreDetailedMode = (savedSection, mergedSection, key = 'inputMode') => {
+    if (isRecord(savedSection) && !Object.hasOwn(savedSection, key)) mergedSection[key] = 'detailed';
+  };
+  restoreDetailedMode(savedAssets.liquidAssets, merged.assets.liquidAssets);
+  restoreDetailedMode(savedAssets.financialAssets, merged.assets.financialAssets);
+  restoreDetailedMode(savedAssets.realEstateAssets, merged.assets.realEstateAssets);
+  restoreDetailedMode(savedAssets.otherAssets, merged.assets.otherAssets);
+  restoreDetailedMode(savedAssets.savingsPlan, merged.assets.savingsPlan);
+  restoreDetailedMode(savedAssets, merged.assets, 'pensionAssetsInputMode');
+  return merged;
 };
 
 // 노후저축 입력 버전(v1/v2) 판정. mergeDraft로 initialFormData 기본값을 채워 넣은 "이후"의

@@ -87,6 +87,7 @@ describe('POST /api/calculate 응답에서 화면 미사용 필드 제외', () =
 describe('retirementSavingsInputVersion: 2 - 전체 API 흐름(validate → canonicalInput → aggregate → indicators)', () => {
   it('breakdown 총저축 100(연금저축 20 + IRP 30 포함) + 추가 노후저축 10 → 총저축 110 / 노후저축 60 / 지표 약 54.5%', async () => {
     const input = buildMinimalValidInput();
+    input.assets.savingsPlan.inputMode = 'detailed';
     input.assets.savingsPlan.breakdown.installment.monthly = '50';
     input.assets.savingsPlan.breakdown.pensionSavings.monthly = '20';
     input.assets.savingsPlan.breakdown.irp.monthly = '30';

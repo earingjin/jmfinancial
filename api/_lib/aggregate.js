@@ -192,7 +192,7 @@ const present = (value) => value !== '' && value !== null && value !== undefined
 // evaluateFinitePension과 동일한 경계) 안에 있을 때만 포함한다. startAge 또는 retirementAge 정보가
 // 없는 레거시 데이터는 이 시점을 판정할 수 없으므로 null을 반환해 호출부가 기존 동작(개월수만으로
 // 판정)을 그대로 유지하도록 한다.
-function isFinitePensionActiveAtRetirement(startAge, months, retirementAge) {
+export function isFinitePensionActiveAtRetirement(startAge, months, retirementAge) {
   if (!present(startAge) || !present(retirementAge)) return null;
   const start = n(startAge);
   return start <= n(retirementAge) && n(retirementAge) < start + n(months) / 12;
@@ -202,7 +202,7 @@ function isFinitePensionActiveAtRetirement(startAge, months, retirementAge) {
 // 가입기간 자격(assessNationalPensionEligibility) 판정과는 별개로, "이미 자격은 있지만 아직
 // 개시나이 전"인 경우를 걸러내기 위함이다. 출생연도 또는 retirementAge 정보가 없는 레거시 데이터는
 // 판정할 수 없으므로 null을 반환해 호출부가 기존 동작(가입기간 자격만으로 판정)을 유지하게 한다.
-function isNationalPensionStartedByRetirement(birthYear, retirementAge) {
+export function isNationalPensionStartedByRetirement(birthYear, retirementAge) {
   if (!present(birthYear) || !present(retirementAge)) return null;
   const startAge = getNationalPensionStartAge(n(birthYear));
   return startAge == null ? null : n(retirementAge) >= startAge;
@@ -213,7 +213,7 @@ function isNationalPensionStartedByRetirement(birthYear, retirementAge) {
 //
 // 퇴직연금·개인연금은 수령방식이 "일시금"이면 월 소득에 포함하지 않는다 - 일시금은 자산으로
 // 잡히는 별개 항목이라, 이걸 빼먹으면 예전에 '연금(월지급)'을 눌러보다 '일시금'으로 바꾼 뒤에도
-// 남아있는 월 수령액이 계속 노후소득에 합산되는 문제가 있었다(pensionProjection.js의 연차별
+// 남아있는 월 수령액이 계속 노후소득에 합산되는 문제가 있었다(연차별
 // 추이 계산과 동일한 기준으로 맞춤).
 export function calcRetirementIncomeByCategory(input) {
   const income = input.income || {};

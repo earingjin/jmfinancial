@@ -4,9 +4,6 @@ import { buildPeerComparison } from './peerComparison.js';
 const BASE_ARGS = { age: 41, totalAssets: 40000, totalDebt: 5000, annualIncome: 12000, financialAssetsTotal: 5000 };
 
 describe('buildPeerComparison - wording must never assert a confident percentile without real distribution data', () => {
-  it('does not return an estimated percentile rank without distribution data', () => {
-    expect(buildPeerComparison(BASE_ARGS).percentileRank).toBeNull();
-  });
   it('never uses a definitive "상위 N%" style claim in percentileLabel', () => {
     const result = buildPeerComparison(BASE_ARGS);
     for (const key of ['netWorth', 'householdIncome', 'financialAssets']) {

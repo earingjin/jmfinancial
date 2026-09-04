@@ -1,12 +1,11 @@
 // 리포트 렌더링에 필요한 "표시용 파생값"을 서버에서 미리 계산해 응답에 실어 보낸다.
-// (게이지 위치, 참고 범위 비교 문구, 등급 배지 색, 생활수준 구간 등)
+// (게이지 위치, 참고 범위 비교 문구, 등급 배지 색 등)
 // 9개 지표의 점수·등급 산출 자체(indicators.js)에는 전혀 관여하지 않는다 — 이미 계산된
 // 결과를 화면에 "그리기 좋은 형태"로 한 번 더 가공하는 단계일 뿐이다.
-// 클라이언트는 이 값을 그대로 렌더링만 하면 되므로, 게이지 임계값·등급 커트라인·생활수준
-// 구간표 같은 기준 데이터가 클라이언트 번들에 존재하지 않는다.
+// 클라이언트는 이 값을 그대로 렌더링만 하면 되므로, 게이지 임계값·등급 커트라인 같은
+// 기준 데이터가 클라이언트 번들에 존재하지 않는다.
 
 import { getIndicatorMeta, pct, describeBenchmark, classifyByRatio } from './indicatorMeta.js';
-import { buildLifestyleTrack } from './lifestyleTiers.js';
 import { buildIndicatorComposition } from './indicatorComposition.js';
 
 const FINANCIAL_HEALTH_GROUPS = [
@@ -206,8 +205,4 @@ export function enrichIndicators({ indicators, weakest, strongest, aggregates, r
     strongest: strongest ? byKey(strongest.key) || strongest : null,
     belowRecommendedCount,
   };
-}
-
-export function enrichSimulation(simulation, retirementLivingCost) {
-  return { ...simulation, lifestyleTrack: buildLifestyleTrack(retirementLivingCost) };
 }

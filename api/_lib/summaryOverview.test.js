@@ -372,6 +372,63 @@ describe('buildRetirementReadiness', () => {
     expect(readiness.monthlyIncomeCompare.nationalPensionMonthly).toBe(90);
   });
 
+  it('은퇴 시점 월소득 비교용 표시 상태는 계산값을 바꾸지 않고 수령 시점·방식만 구분한다', () => {
+    const scoped = input({
+      basic: { birthYear: 1985, retirementAge: 60 },
+      income: {
+        nationalPension: { monthly: 90, months: 240 },
+        severance: { type: 'pension', pensionMonthly: 30, pensionStartAge: 65, pensionMonths: 120 },
+        personalPension: { type: 'installment', monthly: 20, startAge: 65, months: 120 },
+      },
+    });
+    const { aggregates, simulation, indicators } = calc(scoped);
+    const readiness = buildRetirementReadiness({ input: scoped, simulation, indicators, aggregates });
+
+    expect(readiness.monthlyIncomeCompare).toMatchObject({
+      nationalPensionMonthly: 0,
+      severancePensionMonthly: 0,
+      personalPensionMonthly: 0,
+      shortfallMonthly: 320,
+      pensionDisplayStatus: {
+        nationalPension: 'beforeStart',
+        retirementPension: 'beforeStart',
+        personalPension: 'beforeStart',
+      },
+      pensionDisplaySchedules: {
+        nationalPension: [{ startAge: 65, monthly: 90 }],
+        retirementPension: [{ startAge: 65, monthly: 30 }],
+        personalPension: [{ startAge: 65, monthly: 20 }],
+      },
+    });
+  });
+
+  it('일시금 선택과 실제 0원은 월소득 비교에서 서로 다른 표시 상태다', () => {
+    const lumpSumInput = input({
+      income: {
+        severance: { type: 'lumpsum', lumpsum: 5000 },
+        personalPension: { type: 'lumpsum', lumpsum: 1000 },
+      },
+    });
+    const lumpSumCalc = calc(lumpSumInput);
+    const lumpSumReadiness = buildRetirementReadiness({ input: lumpSumInput, ...lumpSumCalc });
+    expect(lumpSumReadiness.monthlyIncomeCompare.pensionDisplayStatus).toMatchObject({
+      retirementPension: 'lumpSum', personalPension: 'lumpSum',
+    });
+
+    const zeroInput = input({
+      income: {
+        nationalPension: { monthly: 0, months: 240 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+    });
+    const zeroCalc = calc(zeroInput);
+    const zeroReadiness = buildRetirementReadiness({ input: zeroInput, ...zeroCalc });
+    expect(zeroReadiness.monthlyIncomeCompare.pensionDisplayStatus).toMatchObject({
+      nationalPension: 'zero', retirementPension: 'zero', personalPension: 'zero',
+    });
+  });
+
   it('marks the income gap as not calculable (not a guessed age) when birthYear is missing', () => {
     const noBirthYear = input({ basic: { birthYear: '' } });
     const { aggregates, simulation, indicators } = calc(noBirthYear);
@@ -428,6 +485,7 @@ describe('buildRetirementReadiness', () => {
     });
     expect(readiness.retirementIncomeIndicator).toMatchObject({ notCalculable: true });
     expect(readiness.retirementIncomeZeroReason).toBeNull();
+    expect(readiness.monthlyIncomeCompare.pensionDisplayStatus.nationalPension).toBe('notCalculable');
   });
 
   it('computes the total funding needed to bridge the income gap using the inflation-adjusted living cost at retirement (not today\'s cost)', () => {
