@@ -19,6 +19,7 @@ export default function Step6NetWorth() {
   return (
     <div className="step">
       <h2 className="step-title">6. 순자산</h2>
+      <p className="step-complete-message">입력이 완료되었습니다. 아래 금액을 확인한 뒤 진단 결과를 확인해 주세요.</p>
 
       <section className="step-section">
         <h3><span className="step-icon">⚖️</span> 현재 순자산</h3>

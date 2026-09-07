@@ -265,8 +265,57 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
   padding: 28px 30px;
 }
 
+.wizard-substep-progress {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .76);
+}
+.wizard-substep-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--navy-900);
+  font-size: 12.5px;
+}
+.wizard-substep-progress-head span { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.wizard-substep-progress-track {
+  height: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eadfce;
+}
+.wizard-substep-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #c76108;
+  transition: width .18s ease;
+}
+
 .step-title { font-size: 20px; font-weight: 800; color: var(--navy-900); margin: 0 0 6px; }
 .step-desc { color: var(--ink-soft); font-size: 13px; margin: 0 0 18px; }
+.step-complete-message {
+  margin: 10px 0 20px;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: #f6ead7;
+  color: #5b3a24;
+  font-size: 13px;
+  font-weight: 700;
+}
+.empty-plan-message {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  text-align: center;
+}
 
 .step-section { margin-bottom: 26px; }
 .step-section + .step-section:not(.scenario-card) { border-top: 1px solid var(--line); padding-top: 24px; }
@@ -1137,6 +1186,7 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   .wizard--keyboard-open .wizard-progress-more { display: none; }
 
   .wizard-body { padding: 18px 16px; }
+  .wizard-substep-progress { padding: 9px 12px; }
   .wizard-nav { gap: 10px; }
   .wizard-nav button { flex: 1; }
 

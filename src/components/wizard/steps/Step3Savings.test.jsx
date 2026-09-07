@@ -68,7 +68,7 @@ describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 
 
     const html = renderToStaticMarkup(
       <FormContext.Provider value={{ formData, setField: vi.fn() }}>
-        <Step3Savings />
+        <Step3Savings subStepIndex={0} />
       </FormContext.Provider>
     );
 
@@ -77,6 +77,19 @@ describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 
     expect(html).not.toContain('추가 노후준비 저축');
     expect(html).not.toContain('노후준비 월 저축액');
     expect(html).not.toContain('위 노후준비 저축액은 일반 저축액에 이미 포함되어 있어요');
+  });
+
+  it('simple mode에서도 다음 sub-step에서 노후준비 저축 입력과 합계를 확인할 수 있다', () => {
+    const formData = structuredClone(initialFormData);
+    const html = renderToStaticMarkup(
+      <FormContext.Provider value={{ formData, setField: vi.fn() }}>
+        <Step3Savings subStepIndex={1} />
+      </FormContext.Provider>
+    );
+
+    expect(html).toContain('추가 노후준비 저축');
+    expect(html).toContain('노후준비 저축 합계');
+    expect(html).not.toContain('입력 방식을 선택해 주세요');
   });
 
   it('shows 연금저축/IRP monthly amounts and the retirement savings total', () => {

@@ -87,7 +87,7 @@ export function handleSeveranceType(setField, basePath, value) {
   }
 }
 
-export default function Step1Income() {
+export default function Step1Income({ subStepIndex }) {
   const { formData, setField } = useFormData();
   const birthYear = getIn(formData, 'basic.birthYear');
   const retirementAge = getIn(formData, 'basic.retirementAge');
@@ -461,15 +461,16 @@ export default function Step1Income() {
   const spouseSeveranceStartAge = spouseSeveranceType === 'pension' ? getIn(formData, 'spouse.severance.pensionStartAge') : null;
   const selfPersonalPensionStartAge = personalPensionType === 'installment' ? getIn(formData, 'income.personalPension.startAge') : null;
   const spousePersonalPensionStartAge = spousePersonalPensionType === 'installment' ? getIn(formData, 'spouse.personalPension.startAge') : null;
+  const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
 
   return (
     <div className="step">
       <h2 className="step-title">1. 수입</h2>
       <p className="step-desc">본인의 수입 항목을 입력합니다. 해당 사항이 없으면 0으로 입력해 주세요. 배우자가 있다면 아래에서 "배우자 정보 입력"을 선택해 주세요.</p>
 
-      <section className="step-section">
+      {showSubStep(0) && <section className="step-section">
         <h3><span className="step-icon">📝</span> 기본 정보</h3>
-        <div className="field-grid">
+        <div className="field-grid field-grid--compact-pair">
           <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" max={120} required />
           <NumberField
             path="basic.lifeExpectancy"
@@ -517,7 +518,7 @@ export default function Step1Income() {
           </div>
         </div>
         {hasSpouse && (
-          <div className="field-grid" style={{ marginTop: 14 }}>
+          <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
             <NumberField path="spouse.retirementAge" label="배우자 은퇴(예정) 연령 *" unit="세" max={120} required />
             <NumberField
               path="spouse.lifeExpectancy"
@@ -538,8 +539,9 @@ export default function Step1Income() {
             />
           </div>
         )}
-      </section>
+      </section>}
 
+      {showSubStep(1) && <>
       <section className="step-section">
         <h3><span className="step-icon">💵</span> 급여</h3>
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
@@ -625,8 +627,9 @@ export default function Step1Income() {
         <TotalAmountBox label="가구 급여총액" amount={householdSalaryLifetimeTotal} />
         <span className="field-helper">본인·배우자 각자의 은퇴까지 남은 기간을 반영한 급여 누적 총액의 합입니다</span>
       </section>
+      </>}
 
-      <section className="step-section">
+      {showSubStep(2) && <section className="step-section">
         <h3><span className="step-icon">💼</span> 퇴직금 · 퇴직연금</h3>
         <PensionPortalNotice />
         <p className="field-helper" style={{ marginBottom: 12 }}>
@@ -759,9 +762,9 @@ export default function Step1Income() {
         )}
 
         <TotalAmountBox label="퇴직금·퇴직연금 총액" amount={combinedSeveranceTotal} valueLabel="총액은" />
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(3) && <section className="step-section">
         <h3><span className="step-icon">🏛️</span> 국민연금</h3>
         <PensionPortalNotice />
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
@@ -944,9 +947,9 @@ export default function Step1Income() {
         )}
 
         <TotalAmountBox label="국민연금 수령 총액(본인+배우자)" amount={combinedNationalPensionTotal} valueLabel="총액은" />
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(4) && <section className="step-section">
         <h3><span className="step-icon">🐷</span> 개인연금</h3>
         <PensionPortalNotice />
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
@@ -1016,9 +1019,9 @@ export default function Step1Income() {
         )}
 
         <TotalAmountBox label="개인연금 수령 총액(본인+배우자)" amount={combinedPersonalPensionTotal} valueLabel="총액은" />
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(5) && <section className="step-section">
         <h3><span className="step-icon">📈</span> 기타 정기수입 (사업소득 포함)</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           사업소득은 본인·배우자 구분 없이 아래 목록에 합산해 입력해 주세요. "사업소득"으로 표시한 항목은
@@ -1050,9 +1053,9 @@ export default function Step1Income() {
             <span className="field-helper">항목별 "연간 수입 금액 × 수령 기간"을 합산한 값입니다</span>
           </>
         )}
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(6) && <section className="step-section">
         <h3><span className="step-icon">🧮</span> 총 수입 합계</h3>
         <table className="grade-table compact">
           <thead>
@@ -1118,7 +1121,7 @@ export default function Step1Income() {
           연금 금액은 실제로 받고 있는 돈이 아니라, 입력하신 수령 시작 나이부터 적용되는 예상 수령액입니다.
           수령 개월 수(또는 기간)가 입력된 연금·수입만 합산됩니다.
         </span>
-      </section>
+      </section>}
     </div>
   );
 }

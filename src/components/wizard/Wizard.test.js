@@ -7,7 +7,41 @@ import { describe, expect, it, vi } from 'vitest';
 globalThis.React = React;
 vi.mock('../../lib/supabaseClient', () => ({ supabase: {} }));
 
-const { submitAfterDraftSave } = await import('./Wizard.jsx');
+const { getNextWizardPosition, getPreviousWizardPosition, getRequiredFieldSubStep, submitAfterDraftSave } = await import('./Wizard.jsx');
+
+describe('Wizard sub-step navigation', () => {
+  const counts = [7, 4, 2, 5, 1, 1];
+
+  it('첫 sub-step의 이전은 전체 첫 화면에 그대로 머문다', () => {
+    expect(getPreviousWizardPosition(0, 0, counts)).toEqual({ stepIndex: 0, subStepIndex: 0, stepChanged: false });
+  });
+
+  it('같은 대단계 안에서 다음과 이전으로 이동한다', () => {
+    expect(getNextWizardPosition(0, 2, counts)).toEqual({ stepIndex: 0, subStepIndex: 3, stepChanged: false });
+    expect(getPreviousWizardPosition(0, 2, counts)).toEqual({ stepIndex: 0, subStepIndex: 1, stepChanged: false });
+  });
+
+  it('마지막 sub-step의 다음은 다음 대단계 첫 sub-step으로 이동한다', () => {
+    expect(getNextWizardPosition(0, 6, counts)).toEqual({ stepIndex: 1, subStepIndex: 0, stepChanged: true });
+  });
+
+  it('대단계 첫 sub-step의 이전은 이전 대단계 마지막 sub-step으로 이동한다', () => {
+    expect(getPreviousWizardPosition(1, 0, counts)).toEqual({ stepIndex: 0, subStepIndex: 6, stepChanged: true });
+  });
+
+  it('마지막 화면의 다음은 마지막 화면에 그대로 머문다', () => {
+    expect(getNextWizardPosition(5, 0, counts)).toEqual({ stepIndex: 5, subStepIndex: 0, stepChanged: false });
+  });
+
+  it('숨겨진 필수 필드가 있는 sub-step을 찾아 기존 포커스 검증을 이어간다', () => {
+    expect(getRequiredFieldSubStep('income', 'basic.birthYear')).toBe(0);
+    expect(getRequiredFieldSubStep('income', 'income.severance.pensionStartAge')).toBe(2);
+    expect(getRequiredFieldSubStep('income', 'spouse.nationalPension.expectedAdditionalContributionMonths')).toBe(3);
+    expect(getRequiredFieldSubStep('income', 'income.personalPension.startAge')).toBe(4);
+    expect(getRequiredFieldSubStep('expense', 'expense.retirementLivingCost')).toBe(1);
+    expect(getRequiredFieldSubStep('expense', 'expense.retirementLumpSumExpenses.0.name')).toBe(2);
+  });
+});
 
 // A5 회귀 테스트: 위저드 최종 제출은 임시 저장(draft) 성공 여부와 무관하게 계산 제출(onSubmit)로
 // 이어져야 한다. completePlannerSubmission(plannerSubmission.js)이 formData를 그대로 쓰고 서버

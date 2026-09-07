@@ -77,7 +77,7 @@ const CURRENT_LIVING_COST_CATEGORIES = [
   { key: 'other', label: '기타지출' },
 ];
 
-export default function Step2Expense() {
+export default function Step2Expense({ subStepIndex }) {
   const [showCostGuide, setShowCostGuide] = useState(false);
   const { formData, setField } = useFormData();
   const monthlyLivingCost = Number(getIn(formData, 'assets.currentLivingCost.monthly')) || 0;
@@ -115,12 +115,14 @@ export default function Step2Expense() {
       : null;
   const retirementLivingCostTotal =
     retirementLivingMonths != null ? retirementLivingCost * retirementLivingMonths : null;
+  const retirementLumpSumExpenses = getIn(formData, 'expense.retirementLumpSumExpenses') || [];
+  const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
 
   return (
     <div className="step">
       <h2 className="step-title">2. 지출</h2>
 
-      <section className="step-section">
+      {showSubStep(0) && <section className="step-section">
         <h3><span className="step-icon">🧾</span> 현재 생활비 상세</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           대출 원리금상환액(차량대출 포함)은 여기가 아닌 "5. 부채" 단계에서 입력해 주세요. 두 곳에 중복으로 입력하면 총지출이 실제보다 크게 계산됩니다.
@@ -137,9 +139,9 @@ export default function Step2Expense() {
           totalLabel="현재 기준 월 생활비 합계"
           annualLabel="현재 기준 연 생활비 합계"
         />
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(1) && <section className="step-section">
         <h3><span className="step-icon">🏖️</span> 노후 생활비</h3>
         <p className="field-helper" style={{ marginBottom: 4 }}>
           국민연금연구원 조사 2024년 기준 적정 노후 생활비 자료입니다.
@@ -174,13 +176,16 @@ export default function Step2Expense() {
           </span>
         )}
         {showCostGuide && <RetirementCostGuideModal onClose={() => setShowCostGuide(false)} />}
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(2) && <section className="step-section">
         <h3><span className="step-icon">💰</span> 은퇴 후 예상 목돈지출</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           은퇴 후 차량 교체, 주택 수리, 자녀 학자금·결혼지원·기타 지원처럼 예상되는 큰 지출이 있다면 추가해 주세요. 없다면 입력하지 않아도 됩니다.
         </p>
+        {retirementLumpSumExpenses.length === 0 && (
+          <p className="empty-plan-message">현재 등록된 목돈지출 계획이 없습니다.</p>
+        )}
         <RepeatableList
           path="expense.retirementLumpSumExpenses"
           label="목돈지출 계획"
@@ -223,8 +228,9 @@ export default function Step2Expense() {
           }}
         />
         <span className="field-helper">예상 지출 나이는 은퇴(예정) 연령 이후 ~ 기대수명 이내로 입력해 주세요.</span>
-      </section>
+      </section>}
 
+      {showSubStep(3) && <>
       <section className="step-section">
         <h3><span className="step-icon">🛡️</span> 보장성 보험</h3>
         <PresenceField label="보장성 보험 여부" present={hasInsurance} onChange={setHasInsurance} presentLabel="보험 있음" absentLabel="보험 없음" />
@@ -305,6 +311,7 @@ export default function Step2Expense() {
           노후 생활비, 자녀 목돈 지출, 기타 지출은 발생 시점·주기가 달라 위 합계에 포함되지 않습니다.
         </span>
       </section>
+      </>}
     </div>
   );
 }

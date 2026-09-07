@@ -60,7 +60,7 @@ const PENSION_ASSET_CATEGORIES = [
 const PENSION_BREAKDOWN_NUMERIC_KEYS = ['variableAnnuity', 'pensionSavingsAccount', 'irp', 'other'];
 const RETIREMENT_PENSION_ASSET_KEYS = ['selfRetirementPension', 'spouseRetirementPension'];
 
-export default function Step4Assets() {
+export default function Step4Assets({ subStepIndex }) {
   const { formData, setField } = useFormData();
   const hasSpouse = getIn(formData, 'basic.hasSpouse') === true;
   const hasLiquidAssets = getIn(formData, 'assets.liquidAssets.hasAssets') !== false;
@@ -268,12 +268,13 @@ export default function Step4Assets() {
   }, [hasRealEstateDetailedInput, realEstateDetailedTotal, realEstateMode, setField]);
 
   const totalAssets = liquidAssets + financialAssetsTotal + pensionAssets + realEstateTotal + otherAssetsTotal;
+  const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
 
   return (
     <div className="step">
       <h2 className="step-title">4. 자산</h2>
 
-      <section className="step-section">
+      {showSubStep(0) && <section className="step-section">
         <h3><span className="step-icon">💵</span> 현금성 자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·비상금 등 즉시 인출 가능한 자산입니다.
@@ -296,9 +297,9 @@ export default function Step4Assets() {
           customAmountLabel="금액"
           addItemLabel="현금성 자산 항목 추가"
         /></TotalInputModeField> : <p className="field-helper">현금성 자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(1) && <section className="step-section">
         <h3><span className="step-icon">📈</span> 금융자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·CMA는 위 현금성 자산에서 입력해 주세요. 여기는 주식·펀드·채권 등 투자자산입니다.
@@ -370,9 +371,9 @@ export default function Step4Assets() {
         <TotalAmountBox label="금융자산 총액" amount={financialAssetsTotal} valueLabel="총액은" />
         <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
         </TotalInputModeField> : <p className="field-helper">금융자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(2) && <section className="step-section">
         <h3><span className="step-icon">🏦</span> 연금자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           해당하는 연금자산 종류를 눌러 금액을 확인·입력해 주세요. 변액연금·연금저축계좌·IRP개인퇴직계좌는
@@ -473,9 +474,9 @@ export default function Step4Assets() {
           이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요. 앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.
         </p>
         </> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section>}
 
-      <section className="step-section">
+      {showSubStep(3) && <section className="step-section">
         <h3><span className="step-icon">🏠</span> 부동산자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           매입가·공시가가 아닌 현재 시세 기준으로 입력해 주세요.
@@ -533,8 +534,9 @@ export default function Step4Assets() {
         <TotalAmountBox label="부동산자산 총액" amount={realEstateTotal} valueLabel="총액은" />
         <span className="field-helper">부동산 시세와 기타 부동산 시세의 합으로 자동 계산됩니다</span>
         </TotalInputModeField> : <p className="field-helper">부동산자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section>}
 
+      {showSubStep(4) && <>
       <section className="step-section">
         <h3><span className="step-icon">📦</span> 기타 자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
@@ -588,6 +590,7 @@ export default function Step4Assets() {
           </tbody>
         </table>
       </section>
+      </>}
     </div>
   );
 }

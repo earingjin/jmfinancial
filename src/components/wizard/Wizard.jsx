@@ -13,14 +13,47 @@ import DiagnosisAreaIcon from '../DiagnosisAreaIcon';
 const SHOW_SCENARIO_STEP = false;
 
 const STEPS = [
-  { key: 'income', title: '수입', Component: Step1Income },
-  { key: 'expense', title: '지출', Component: Step2Expense },
-  { key: 'savings', title: '저축', Component: Step3Savings },
-  { key: 'assets', title: '자산', Component: Step4Assets },
-  { key: 'debt', title: '부채', Component: Step5Debt },
-  { key: 'netWorth', title: '순자산', Component: Step6NetWorth },
-  ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios }] : []),
+  { key: 'income', title: '수입', Component: Step1Income, subSteps: ['기본 정보', '급여', '퇴직금 · 퇴직연금', '국민연금', '개인연금', '기타 정기수입', '수입 확인'] },
+  { key: 'expense', title: '지출', Component: Step2Expense, subSteps: ['현재 생활비', '노후 생활비', '은퇴 후 목돈지출', '보험 · 지출 확인'] },
+  { key: 'savings', title: '저축', Component: Step3Savings, subSteps: ['현재 저축', '노후준비 저축 · 확인'] },
+  { key: 'assets', title: '자산', Component: Step4Assets, subSteps: ['현금성 자산', '금융자산', '연금자산', '부동산', '기타자산 · 총자산'] },
+  { key: 'debt', title: '부채', Component: Step5Debt, subSteps: ['부채'] },
+  { key: 'netWorth', title: '순자산', Component: Step6NetWorth, subSteps: ['입력 확인'] },
+  ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios, subSteps: ['대응방안'] }] : []),
 ];
+
+const SUB_STEP_COUNTS = STEPS.map(({ subSteps }) => subSteps.length);
+
+// oxlint-disable-next-line react/only-export-components
+export function getNextWizardPosition(stepIndex, subStepIndex, subStepCounts = SUB_STEP_COUNTS) {
+  if (subStepIndex < subStepCounts[stepIndex] - 1) {
+    return { stepIndex, subStepIndex: subStepIndex + 1, stepChanged: false };
+  }
+  const nextStepIndex = Math.min(subStepCounts.length - 1, stepIndex + 1);
+  return { stepIndex: nextStepIndex, subStepIndex: 0, stepChanged: nextStepIndex !== stepIndex };
+}
+
+// oxlint-disable-next-line react/only-export-components
+export function getPreviousWizardPosition(stepIndex, subStepIndex, subStepCounts = SUB_STEP_COUNTS) {
+  if (subStepIndex > 0) {
+    return { stepIndex, subStepIndex: subStepIndex - 1, stepChanged: false };
+  }
+  const previousStepIndex = Math.max(0, stepIndex - 1);
+  return {
+    stepIndex: previousStepIndex,
+    subStepIndex: previousStepIndex === stepIndex ? 0 : subStepCounts[previousStepIndex] - 1,
+    stepChanged: previousStepIndex !== stepIndex,
+  };
+}
+
+// oxlint-disable-next-line react/only-export-components
+export function getRequiredFieldSubStep(stepKey, path) {
+  if (stepKey === 'expense') return path?.startsWith('expense.retirementLumpSumExpenses.') ? 2 : 1;
+  if (path?.includes('.severance.') || path?.includes('RetirementPension')) return 2;
+  if (path?.includes('.nationalPension.')) return 3;
+  if (path?.includes('.personalPension.')) return 4;
+  return 0;
+}
 
 // 최종 제출 시 "임시 저장 실패가 계산·결과 저장 자체를 막으면 안 된다"는 규칙만 분리해 둔다
 // (App.jsx의 handleSubmit → completePlannerSubmission은 이 formData를 그대로 쓰고 서버에 저장된
@@ -38,6 +71,7 @@ const formatSavedAt = (value) => value
 
 export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, onStepChange }) {
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
+  const [subStepIndex, setSubStepIndex] = useState(0);
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [showProgressHint, setShowProgressHint] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
@@ -45,8 +79,10 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const progressRef = useRef(null);
   const restingViewportHeightRef = useRef(0);
   const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
-  const { Component, key: currentStepKey } = STEPS[stepIndex];
-  const isLast = stepIndex === STEPS.length - 1;
+  const { Component, key: currentStepKey, subSteps } = STEPS[stepIndex];
+  const isLastSubStep = subStepIndex === subSteps.length - 1;
+  const isLast = stepIndex === STEPS.length - 1 && isLastSubStep;
+  const isFirst = stepIndex === 0 && subStepIndex === 0;
   // startAtLastStep일 때는 stepIndex의 초기값이 useState 초기화에서만 정해지므로(moveToStep을
   // 거치지 않음), 마운트 시 한 번 실제 시작 단계를 부모(App)에 동기화해 홈↔위저드 왕복 후에도
   // 정확한 단계를 이어갈 수 있게 한다.
@@ -108,16 +144,25 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     window.addEventListener('scroll', updateScrolledState, { passive: true });
     return () => window.removeEventListener('scroll', updateScrolledState);
   }, []);
-  const moveToStep = (next) => {
+  const prepareForScreenChange = () => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) activeElement.blur();
+    window.scrollTo(0, 0);
+    setIsScrolled(false);
+  };
+
+  const moveToSubStep = (nextSubStep) => {
+    if (nextSubStep === subStepIndex) return;
+    prepareForScreenChange();
+    setSubStepIndex(nextSubStep);
+  };
+
+  const moveToStep = (next, nextSubStep = 0) => {
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
-    if (resolved !== stepIndex) {
-      const activeElement = document.activeElement;
-      if (activeElement instanceof HTMLElement) activeElement.blur();
-      window.scrollTo(0, 0);
-      setIsScrolled(false);
-    }
+    if (resolved !== stepIndex || nextSubStep !== subStepIndex) prepareForScreenChange();
     setDraftStep(resolved);
     setStepIndexState(resolved);
+    setSubStepIndex(nextSubStep);
     onStepChange?.(resolved);
     void saveCurrentDraft(resolved).catch(() => {});
   };
@@ -142,30 +187,46 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   };
 
   const goNext = () => {
+    if (!isLastSubStep) {
+      moveToSubStep(subStepIndex + 1);
+      return;
+    }
     if (currentStepKey === 'income' && basicInfoMissing) {
       setShowRequiredError(true);
+      setSubStepIndex(getRequiredFieldSubStep('income', missingIncomeFields[0][0]));
       scrollToField(missingIncomeFields[0][0]);
       return;
     }
     if (currentStepKey === 'expense' && retirementLivingCostMissing) {
       setShowRequiredError(true);
+      setSubStepIndex(getRequiredFieldSubStep('expense', missingExpenseFields[0][0]));
       scrollToField(missingExpenseFields[0][0]);
       return;
     }
     setShowRequiredError(false);
-    moveToStep((i) => Math.min(STEPS.length - 1, i + 1));
+    const nextPosition = getNextWizardPosition(stepIndex, subStepIndex);
+    moveToStep(nextPosition.stepIndex, nextPosition.subStepIndex);
+  };
+
+  const goPrevious = () => {
+    const previousPosition = getPreviousWizardPosition(stepIndex, subStepIndex);
+    if (previousPosition.stepChanged) {
+      moveToStep(previousPosition.stepIndex, previousPosition.subStepIndex);
+      return;
+    }
+    moveToSubStep(previousPosition.subStepIndex);
   };
 
   const submit = async () => {
     if (basicInfoMissing) {
       setShowRequiredError(true);
-      moveToStep(STEPS.findIndex((s) => s.key === 'income'));
+      moveToStep(STEPS.findIndex((s) => s.key === 'income'), getRequiredFieldSubStep('income', missingIncomeFields[0][0]));
       scrollToField(missingIncomeFields[0][0]);
       return;
     }
     if (retirementLivingCostMissing) {
       setShowRequiredError(true);
-      moveToStep(STEPS.findIndex((s) => s.key === 'expense'));
+      moveToStep(STEPS.findIndex((s) => s.key === 'expense'), getRequiredFieldSubStep('expense', missingExpenseFields[0][0]));
       scrollToField(missingExpenseFields[0][0]);
       return;
     }
@@ -192,7 +253,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
               type="button"
               key={s.key}
               className={`wizard-progress-item ${i === stepIndex ? 'is-active' : ''} ${i < stepIndex ? 'is-done' : ''}`}
-              onClick={() => moveToStep(i)}
+              onClick={() => moveToStep(i, 0)}
               aria-current={i === stepIndex ? 'step' : undefined}
             >
               <span className="wizard-progress-dot" aria-hidden="true">{i + 1}</span>
@@ -212,8 +273,18 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
         </button>
       </div>
 
+      <div className="wizard-substep-progress" aria-label={`${STEPS[stepIndex].title} 소단계 진행`}>
+        <div className="wizard-substep-progress-head">
+          <strong>{subSteps[subStepIndex]}</strong>
+          <span>{subStepIndex + 1} / {subSteps.length}</span>
+        </div>
+        <div className="wizard-substep-progress-track" aria-hidden="true">
+          <span style={{ width: `${((subStepIndex + 1) / subSteps.length) * 100}%` }} />
+        </div>
+      </div>
+
       <div className="wizard-body">
-        <Component />
+        <Component subStepIndex={subStepIndex} />
       </div>
 
       {showRequiredError && (
@@ -224,8 +295,8 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
         <button
           type="button"
           className="btn-secondary"
-          disabled={stepIndex === 0}
-          onClick={() => moveToStep((i) => Math.max(0, i - 1))}
+          disabled={isFirst}
+          onClick={goPrevious}
         >
           이전
         </button>

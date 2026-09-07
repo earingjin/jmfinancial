@@ -46,7 +46,7 @@ export function updateSavingsPresence(formData, setField, value) {
   setField('assets.savingsPlan.additionalRetirementAnnual', '');
 }
 
-export default function Step3Savings() {
+export default function Step3Savings({ subStepIndex }) {
   const { formData, setField } = useFormData();
   const savingsMonthly = Number(getIn(formData, 'assets.savingsPlan.monthly')) || 0;
   const retirementSavingsMonthly = Number(getIn(formData, 'assets.savingsPlan.retirementMonthly')) || 0;
@@ -77,15 +77,19 @@ export default function Step3Savings() {
   const setHasSavings = (value) => {
     updateSavingsPresence(formData, setField, value);
   };
+  const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
 
   return (
     <div className="step">
       <h2 className="step-title">3. 저축</h2>
 
-      <section className="step-section">
-        <h3><span className="step-icon">🌱</span> 저축 · 노후준비</h3>
+      {showSubStep(0) && <section className="step-section">
+        <h3><span className="step-icon">🌱</span> 현재 저축</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           국민연금 · 개인연금 · 저축성보험(연금보험 등)처럼 노후를 위해 정기적으로 적립하는 금액을 포함해 입력해 주세요.
+        </p>
+        <p className="field-helper field-helper--prominent" style={{ marginBottom: 12 }}>
+          총액만 입력해도 진단할 수 있습니다. 항목별 금액을 확인하고 싶을 때만 상세입력을 이용해 주세요.
         </p>
         <PresenceField label="저축 여부" present={hasSavings} onChange={setHasSavings} presentLabel="저축 있음" absentLabel="저축 없음" />
         {hasSavings ? <TotalInputModeField
@@ -107,12 +111,17 @@ export default function Step3Savings() {
           annualPath="assets.savingsPlan.annual"
           categories={SAVINGS_CATEGORIES}
         />
-        {isRetirementSavingsV2 ? (
+        </TotalInputModeField> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
+      </section>}
+
+      {showSubStep(1) && <section className="step-section">
+        <h3><span className="step-icon">🏦</span> 노후준비 저축 · 확인</h3>
+        {hasSavings ? (isRetirementSavingsV2 ? (
           <>
-            <p className="field-helper" style={{ marginTop: 10 }}>
+            <p className="field-helper" style={{ marginBottom: 10 }}>
               입력한 연금저축과 IRP는 노후준비 저축으로 자동 포함됩니다.
             </p>
-            <div className="field-grid" style={{ marginTop: 10 }}>
+            <div className="field-grid">
               <AutoAnnualField
                 monthlyPath="assets.savingsPlan.additionalRetirementMonthly"
                 annualPath="assets.savingsPlan.additionalRetirementAnnual"
@@ -168,9 +177,8 @@ export default function Step3Savings() {
               </tbody>
             </table>
           </>
-        )}
-        </TotalInputModeField> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
-      </section>
+        )) : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
+      </section>}
     </div>
   );
 }
