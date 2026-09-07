@@ -60,6 +60,36 @@ body {
 .app-brand { font-size: 13px; letter-spacing: .18em; color: var(--gold); font-weight: 600; }
 .app-brand-sub { font-size: 20px; font-weight: 800; margin-top: 6px; }
 
+/* 진단 화면은 로고 바와 계정 동작을 한 줄로 합쳐 첫 입력 화면을 바로 볼 수 있게 한다. */
+body:has(.app-shell--diagnosis) .web-brand-bar {
+  min-height: 52px;
+  padding: max(8px, env(safe-area-inset-top)) 14px 6px;
+  background: linear-gradient(100deg, #fff7e9 0%, #fbe8c3 58%, #f6cf89 100%);
+}
+body:has(.app-shell--diagnosis) .web-brand-logo { width: 96px; }
+.app-shell--diagnosis .app-header--diagnosis {
+  position: relative;
+  z-index: 51;
+  min-height: 52px;
+  margin-top: -52px;
+  padding: 7px max(14px, calc((100vw - 880px) / 2 + 20px));
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+.app-shell--diagnosis .app-header-account { gap: 6px; }
+.app-shell--diagnosis .app-header-home-btn,
+.app-shell--diagnosis .app-header-signout {
+  padding: 6px 9px;
+  border-color: rgba(160, 103, 28, .26);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .56);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.app-shell--diagnosis .app-header-home-btn:hover,
+.app-shell--diagnosis .app-header-signout:hover { background: rgba(255, 255, 255, .82); }
+
 .app-main { max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; }
 
 /* ---------- 홈 랜딩 화면 / 이전 결과 목록 ---------- */
@@ -1098,6 +1128,23 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .fine-print { font-size: 11.5px; color: var(--ink-soft); background: #f8f5ee; border-radius: 6px; padding: 9px 13px; margin-top: 8px; }
 
 @media (max-width: 640px) {
+  body:has(.app-shell--diagnosis) .web-brand-bar {
+    min-height: 50px;
+    padding: max(7px, env(safe-area-inset-top)) 10px 6px;
+  }
+  body:has(.app-shell--diagnosis) .web-brand-logo { width: 78px; }
+  .app-shell--diagnosis .app-header--diagnosis {
+    min-height: 50px;
+    margin-top: -50px;
+    padding: 6px 10px;
+  }
+  .app-shell--diagnosis .app-header-account { gap: 4px; }
+  .app-shell--diagnosis .app-header-home-btn,
+  .app-shell--diagnosis .app-header-signout {
+    padding: 5px 6px;
+    font-size: 10px;
+  }
+
   .field-grid, .field-grid.three-col { grid-template-columns: 1fr; }
   /* 짧은 숫자 값(나이·기간·개월수 등) 두 개를 모바일에서도 한 줄에 배치하기 위한 예외.
      자유 텍스트나 긴 라벨이 섞인 grid에는 붙이지 않는다. */
