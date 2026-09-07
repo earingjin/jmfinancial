@@ -24,7 +24,6 @@ function renderStep() {
   const formData = structuredClone(initialFormData);
   formData.expense.retirementLumpSumExpenses = [{ name: '여행', expectedAge: 70, amount: 500 }];
   formData.expense.healthInsurance.items = [{ name: '건강보험', monthly: 10 }];
-  formData.expense.children = [{ educationCost: 100, marriageSupport: 200, otherCost: 50 }];
   formData.expense.otherExpenses = [{ name: '경조사', annual: 50, years: 5 }];
 
   return renderToStaticMarkup(
@@ -42,9 +41,6 @@ describe('Step2Expense - 반복입력 금액 필드의 음수 방어 (A12)', () 
   it.each([
     ['예상 금액', 'expense.retirementLumpSumExpenses[].amount'],
     ['월 보험료', 'expense.healthInsurance.items[].monthly'],
-    ['학자금', 'expense.children[].educationCost'],
-    ['결혼지원비', 'expense.children[].marriageSupport'],
-    ['기타', 'expense.children[].otherCost'],
     ['연간 지출 금액', 'expense.otherExpenses[].annual'],
   ])('%s(%s)에는 min=0이 적용되어 음수를 막는다', (label) => {
     expect(fieldWindow(html, label)).toContain('data-min="0"');
@@ -55,5 +51,12 @@ describe('Step2Expense - 반복입력 금액 필드의 음수 방어 (A12)', () 
     ['지출 기간', 'expense.otherExpenses[].years - 기간 필드, 이번 수정 대상 아님'],
   ])('%s는 금액이 아니므로 이번 수정에서 제외했다(%s)', (label) => {
     expect(fieldWindow(html, label)).not.toContain('data-min="0"');
+  });
+
+  it('removes the separate children lump-sum input and directs examples to post-retirement lump-sum expenses', () => {
+    expect(html).not.toContain('자녀별 학자금 · 결혼지원비 · 기타 목돈 지출 계획');
+    expect(html).not.toContain('자녀 추가');
+    expect(html).toContain('자녀 학자금·결혼지원·기타 지원처럼 예상되는 큰 지출');
+    expect(html).toContain('예: 자녀 결혼지원 또는 학자금');
   });
 });

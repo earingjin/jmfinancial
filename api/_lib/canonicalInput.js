@@ -52,8 +52,7 @@ export function buildCanonicalInput(input) {
   const pension = result.assets.pensionAssetsBreakdown;
   if (result.assets.pensionAssetsInputMode !== 'simple') {
     pension.other = sum(pension.otherItems, (item) => item.amount);
-    result.assets.pensionAssets = n(pension.variableAnnuity) + n(pension.pensionSavingsAccount) + n(pension.irp)
-      + n(pension.selfRetirementPension) + (hasSpouse ? n(pension.spouseRetirementPension) : 0) + pension.other;
+    result.assets.pensionAssets = n(pension.variableAnnuity) + n(pension.pensionSavingsAccount) + n(pension.irp) + pension.other;
   }
 
   const realEstate = result.assets.realEstateAssets;

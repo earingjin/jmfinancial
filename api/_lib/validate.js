@@ -328,6 +328,8 @@ export function validateInput(input) {
     ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'lumpsum', 'lumpsumAge'],
     ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'pension', 'pensionStartAge'],
     ['spouse.personalPension', input.basic?.hasSpouse === true && input.spouse?.personalPension?.type === 'installment', 'startAge'],
+    ['assets.pensionAssetsBreakdown', input.income?.severance?.type === 'pension', 'selfRetirementPension'],
+    ['assets.pensionAssetsBreakdown', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'pension', 'spouseRetirementPension'],
   ].forEach(([path, required, field]) => {
     if (required && isBlank(getPath(input, `${path}.${field}`))) {
       errors.push(`${path}.${field} 값은 선택한 퇴직급여·연금 수령 방식에서 필수입니다.`);
@@ -350,10 +352,17 @@ export function validateInput(input) {
   checkKindField(errors, input, 'basic.assumedReturnRate', 'returnRate');
   checkKindField(errors, input, 'scenarios.expenseReduction.reductionRate', 'rate');
 
-  if (input.assets?.pensionAssetsInputMode === 'simple') {
-    const identifiedRetirementPensionAssets = Number(input.assets?.pensionAssetsBreakdown?.selfRetirementPension || 0)
-      + (input.basic?.hasSpouse === true ? Number(input.assets?.pensionAssetsBreakdown?.spouseRetirementPension || 0) : 0);
-    const pensionAssetsTotal = Number(input.assets?.pensionAssets || 0);
+  {
+    const pensionBreakdown = input.assets?.pensionAssetsBreakdown;
+    const identifiedRetirementPensionAssets = Number(pensionBreakdown?.selfRetirementPension || 0)
+      + (input.basic?.hasSpouse === true ? Number(pensionBreakdown?.spouseRetirementPension || 0) : 0);
+    // 상세입력 모드의 assets.pensionAssets는 브라우저가 자동 합산해 보낸 값이라 신뢰하지 않는다
+    // (buildCanonicalInput 재계산 이전 시점이라 이 필드에 이미 이중계산이 반영되어 있을 수 있다).
+    // 대신 카테고리별 원본 입력(퇴직연금 항목 제외 4개)을 직접 합산해 비교한다.
+    const pensionAssetsTotal = input.assets?.pensionAssetsInputMode === 'simple'
+      ? Number(input.assets?.pensionAssets || 0)
+      : Number(pensionBreakdown?.variableAnnuity || 0) + Number(pensionBreakdown?.pensionSavingsAccount || 0)
+        + Number(pensionBreakdown?.irp || 0) + Number(pensionBreakdown?.other || 0);
     if (identifiedRetirementPensionAssets > pensionAssetsTotal) {
       errors.push('본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.');
     }

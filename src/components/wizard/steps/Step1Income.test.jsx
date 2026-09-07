@@ -83,12 +83,17 @@ describe('Step1Income - retirement-pension asset linkage', () => {
   it('shows the calculation guidance and current-balance inputs in Step 1', () => {
     const formData = structuredClone(initialFormData);
     formData.basic.hasSpouse = true;
+    formData.income.severance.type = 'pension';
+    formData.spouse.severance.type = 'pension';
     const html = renderStep(formData);
     expect(html).toContain('퇴직연금은 현재 적립되어 있는 금액은 자산으로');
     expect(html).toContain('앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.');
     expect(html).toContain('현재 본인 퇴직연금 적립금');
     expect(html).toContain('현재 배우자 퇴직연금 적립금');
     expect(html).toContain('Step 4 연금자산의 본인 퇴직연금 적립금과 연동됩니다.');
+    const selfPensionAssetIndex = html.indexOf('현재 본인 퇴직연금 적립금');
+    expect(html.indexOf('수령 시작 나이 *')).toBeLessThan(selfPensionAssetIndex);
+    expect(selfPensionAssetIndex).toBeLessThan(html.indexOf('수령 기간', selfPensionAssetIndex));
   });
 
   it('updates the simple pension-asset total by the changed balance delta', () => {
