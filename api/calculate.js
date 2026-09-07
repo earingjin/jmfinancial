@@ -45,10 +45,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  // 브라우저 자동 합계는 신뢰하지 않는다. 구조·숫자 검증을 통과한 세부 입력으로 서버에서 재계산한다.
-  input = buildCanonicalInput(input);
-
   try {
+    // 브라우저 자동 합계는 신뢰하지 않는다. 구조·숫자 검증을 통과한 세부 입력으로 서버에서 재계산한다.
+    input = buildCanonicalInput(input);
     const { indicators, notCalculable, missingInputs, weakest, strongest, aggregates, currentAge } = calcIndicators(input);
     const simulation = calcRetirementSimulation(input);
     // netWorth/annualIncome/financialAssetsTotal은 미입력 시 n()이 0으로 채우므로, 아래 경로가

@@ -119,6 +119,10 @@ export function buildAggregates(input) {
   const fa = assets.financialAssets || {};
   const financialAssetsTotal = fa.inputMode === 'simple' ? n(fa.total) : n(fa.stocks) + n(fa.funds) + n(fa.bonds) + n(fa.other);
   const pensionAssets = n(assets.pensionAssets);
+  const retirementPensionAssetsByPerson = {
+    self: n(assets.pensionAssetsBreakdown?.selfRetirementPension),
+    spouse: input.basic?.hasSpouse === true ? n(assets.pensionAssetsBreakdown?.spouseRetirementPension) : 0,
+  };
   const realEstateTotal = n(assets.realEstateAssets?.total);
   // 현금성자산(예금·적금·비상금 등, 비상예비금지표에도 쓰이는 값)은 총자산에도 포함된다.
   const liquidAssets = n(assets.liquidAssets?.total);
@@ -161,6 +165,7 @@ export function buildAggregates(input) {
     totalExpenseMonthlyExSavings,
     financialAssetsTotal,
     pensionAssets,
+    retirementPensionAssetsByPerson,
     realEstateTotal,
     otherAssetsTotal,
     totalAssets,

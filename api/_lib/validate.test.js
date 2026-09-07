@@ -36,6 +36,96 @@ describe('validateInput - baseline', () => {
   });
 });
 
+describe('retirement severance input requirements', () => {
+  it('requires both amount and receipt age for a future lump-sum selection', () => {
+    const result = validateInput(makeInput({ income: { severance: { type: 'lumpsum', lumpsum: '', lumpsumAge: '' } } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.severance.lumpsum');
+    expect(result.errors.join(' ')).toContain('income.severance.lumpsumAge');
+  });
+
+  it('rejects a lump-sum receipt age outside the supported age range', () => {
+    const result = validateInput(makeInput({
+      income: { severance: { type: 'lumpsum', lumpsum: 3000, lumpsumAge: 121 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.severance.lumpsumAge');
+  });
+
+  it('rejects identified retirement-pension balances above the pension-asset total in simple mode', () => {
+    const result = validateInput(makeInput({
+      assets: {
+        pensionAssetsInputMode: 'simple', pensionAssets: 3000,
+        pensionAssetsBreakdown: { selfRetirementPension: 2000, spouseRetirementPension: 2000 },
+      },
+      basic: { hasSpouse: true },
+      spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90 },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain('본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.');
+  });
+
+  it('rejects identified retirement-pension balances above the category total in detailed mode too', () => {
+    const result = validateInput(makeInput({
+      assets: {
+        pensionAssetsInputMode: 'detailed',
+        // detailed 모드의 assets.pensionAssets는 브라우저 자동합계라 신뢰하지 않는다 - 여기서는
+        // 4개 카테고리(variableAnnuity/pensionSavingsAccount/irp/other) 합계(3000)만 기준으로 삼는다.
+        pensionAssets: 999999,
+        pensionAssetsBreakdown: { irp: 3000, selfRetirementPension: 2000, spouseRetirementPension: 2000 },
+      },
+      basic: { hasSpouse: true },
+      spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90 },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain('본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.');
+  });
+
+  it('accepts identified retirement-pension balances that are within the detailed category total (carve-out, not additive)', () => {
+    const result = validateInput(makeInput({
+      assets: {
+        pensionAssetsInputMode: 'detailed',
+        pensionAssetsBreakdown: { irp: 5000, selfRetirementPension: 5000 },
+      },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('requires selfRetirementPension when income.severance.type is pension', () => {
+    const result = validateInput(makeInput({
+      income: { severance: { type: 'pension', pensionStartAge: 65 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('assets.pensionAssetsBreakdown.selfRetirementPension');
+  });
+
+  it('accepts an explicit 0 for selfRetirementPension when income.severance.type is pension', () => {
+    const result = validateInput(makeInput({
+      income: { severance: { type: 'pension', pensionStartAge: 65 } },
+      assets: { pensionAssetsBreakdown: { selfRetirementPension: 0 } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('requires spouseRetirementPension when spouse.severance.type is pension', () => {
+    const result = validateInput(makeInput({
+      basic: { hasSpouse: true },
+      spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90, severance: { type: 'pension', pensionStartAge: 65 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('assets.pensionAssetsBreakdown.spouseRetirementPension');
+  });
+
+  it('accepts an explicit 0 for spouseRetirementPension when spouse.severance.type is pension', () => {
+    const result = validateInput(makeInput({
+      basic: { hasSpouse: true },
+      spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90, severance: { type: 'pension', pensionStartAge: 65 } },
+      assets: { pensionAssetsBreakdown: { spouseRetirementPension: 0 } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe('liquid asset subscription validation', () => {
   it.each([0, 100])('accepts a valid subscription amount (%s)', (subscription) => {
     const result = validateInput(makeInput({
@@ -719,6 +809,7 @@ describe('monthly pension start age requirements', () => {
         severance: { type: 'pension', pensionStartAge: 60 },
         personalPension: { type: 'installment', startAge: 65 },
       },
+      assets: { pensionAssetsBreakdown: { selfRetirementPension: 0 } },
     }));
     expect(result.ok).toBe(true);
   });

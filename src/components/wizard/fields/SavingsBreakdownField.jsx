@@ -11,7 +11,9 @@ import TotalAmountBox from './TotalAmountBox';
 const LIQUID_PRESET_KEYS = ['deposit', 'savings', 'cma', 'subscription', 'emergencyFund'];
 // pensionAssetsBreakdown의 숫자 항목만 명시적으로 나열한다(otherItems는 배열이라 합산 대상이 아님 -
 // "기타" 총액은 이미 그 배열의 합으로 계산되어 있는 값이라 여기서 다시 더하면 이중 계산이 된다).
-const PENSION_BREAKDOWN_NUMERIC_KEYS = ['variableAnnuity', 'pensionSavingsAccount', 'irp', 'other'];
+const PENSION_BREAKDOWN_NUMERIC_KEYS = [
+  'variableAnnuity', 'pensionSavingsAccount', 'irp', 'selfRetirementPension', 'spouseRetirementPension', 'other',
+];
 
 // 저축 종류의 "현재까지 누적된 금액"이 "4. 자산" 파트의 어느 값과 연동되는지 계산한다(사용자 승인된 매핑:
 // 적금→현금성자산 적금, 주식→금융자산 주식, ISA·청약·파킹통장→현금성자산의 "기본 항목 외 추가" 목록,
@@ -185,7 +187,11 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
       const pensionBreakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
       const nextPensionBreakdown = { ...pensionBreakdown, [assetLink.field]: value };
       setField(`assets.pensionAssetsBreakdown.${assetLink.field}`, value);
-      const pensionTotal = PENSION_BREAKDOWN_NUMERIC_KEYS.reduce((s, k) => s + (Number(nextPensionBreakdown[k]) || 0), 0);
+      const pensionTotal = PENSION_BREAKDOWN_NUMERIC_KEYS.reduce((s, k) => (
+        k === 'spouseRetirementPension' && formData.basic?.hasSpouse !== true
+          ? s
+          : s + (Number(nextPensionBreakdown[k]) || 0)
+      ), 0);
       setField('assets.pensionAssets', pensionTotal);
       return;
     }

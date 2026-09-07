@@ -45,6 +45,26 @@ describe('buildCanonicalInput', () => {
     expect(buildCanonicalInput(source).assets.debtStatus.totalBalance).toBe(9999);
   });
 
+  it('does not add self/spouse retirement-pension carve-outs on top of the detailed pension total', () => {
+    const source = input();
+    source.assets.pensionAssetsInputMode = 'detailed';
+    source.assets.pensionAssetsBreakdown.selfRetirementPension = 50;
+    source.assets.pensionAssetsBreakdown.spouseRetirementPension = 60;
+    // selfRetirementPension/spouseRetirementPension은 4개 카테고리(variableAnnuity/pensionSavingsAccount/
+    // irp/other) 중 이미 입력한 금액의 일부를 가리키는 carve-out이라 총액에 더해지지 않는다.
+    // 기존 baseline 테스트와 동일하게 4개 카테고리 합(10+20+30+40)인 100 그대로다.
+    expect(buildCanonicalInput(source).assets.pensionAssets).toBe(100);
+  });
+
+  it('does not infer or migrate retirement-pension assets from legacy other items', () => {
+    const source = input();
+    source.assets.pensionAssetsInputMode = 'detailed';
+    source.assets.pensionAssetsBreakdown.otherItems = [{ name: '퇴직연금(DC형)', amount: 40 }];
+    const result = buildCanonicalInput(source);
+    expect(result.assets.pensionAssetsBreakdown.selfRetirementPension).toBeUndefined();
+    expect(result.assets.pensionAssets).toBe(100);
+  });
+
   it('preserves direct living-cost totals in simple mode', () => {
     const source = input();
     source.assets.currentLivingCost.inputMode = 'simple';

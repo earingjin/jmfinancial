@@ -44,3 +44,55 @@ describe('calcRetirementSimulation - inflation rate', () => {
     expect(result.retirementLivingCostAtRetirement).toBe(expected);
   });
 });
+
+describe('calcRetirementSimulation - retirement-pension asset conversion', () => {
+  const retirementInput = ({ type, asset = 3000, severance = {}, withNewField = true }) => ({
+    ...BASE,
+    basic: { ...BASE.basic, birthYear: 1986, retirementAge: 65, assumedReturnRate: 10, hasSpouse: false },
+    income: { severance: { type, ...severance } },
+    assets: {
+      ...BASE.assets,
+      pensionAssets: asset,
+      pensionAssetsBreakdown: withNewField ? { selfRetirementPension: asset } : {},
+      savingsPlan: { monthly: 0, annual: 0 },
+    },
+  });
+
+  it('keeps the identified balance in current assets but converts a future lump sum only at its receipt age', () => {
+    const result = calcRetirementSimulation(retirementInput({
+      type: 'lumpsum', severance: { lumpsum: 5000, lumpsumAge: 60 },
+    }), 2026);
+    expect(result.currentReadyAssets).toBe(3000);
+    expect(result.currentAssetsAtRetirement).toBe(Math.round(5000 * (1.1 ** 5)));
+  });
+
+  it('includes a lump sum received exactly at retirement without pre-receipt investment growth', () => {
+    const result = calcRetirementSimulation(retirementInput({
+      type: 'lumpsum', severance: { lumpsum: 5000, lumpsumAge: 65 },
+    }), 2026);
+    expect(result.currentAssetsAtRetirement).toBe(5000);
+    expect(result.readyAssetsAtRetirement).toBe(5000);
+  });
+
+  it('does not keep the same principal in future starting assets when it becomes monthly pension income', () => {
+    const result = calcRetirementSimulation(retirementInput({
+      type: 'pension', severance: { pensionMonthly: 80, pensionStartAge: 65, pensionMonths: 120 },
+    }), 2026);
+    expect(result.currentReadyAssets).toBe(3000);
+    expect(result.currentAssetsAtRetirement).toBe(0);
+    expect(result.readyAssetsAtRetirement).toBe(0);
+  });
+
+  it('keeps an identified currently held asset in the future base when no future severance benefit remains', () => {
+    const result = calcRetirementSimulation(retirementInput({ type: 'none' }), 2026);
+    expect(result.currentAssetsAtRetirement).toBe(Math.round(3000 * (1.1 ** 25)));
+  });
+
+  it('keeps legacy calculations unchanged when the new identification field is absent', () => {
+    const result = calcRetirementSimulation(retirementInput({
+      type: 'pension', withNewField: false,
+      severance: { pensionMonthly: 80, pensionStartAge: 65, pensionMonths: 120 },
+    }), 2026);
+    expect(result.currentAssetsAtRetirement).toBe(Math.round(3000 * (1.1 ** 25)));
+  });
+});

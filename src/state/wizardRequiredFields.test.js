@@ -11,6 +11,10 @@ const fillBasicRequired = (formData) => {
   formData.basic.retirementAge = 65;
   formData.basic.lifeExpectancy = 90;
   formData.basic.serviceYears = 10;
+  formData.income.severance.lumpsum = 5000;
+  formData.income.severance.lumpsumAge = 65;
+  formData.spouse.severance.lumpsum = 3000;
+  formData.spouse.severance.lumpsumAge = 65;
 };
 
 describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
@@ -25,6 +29,8 @@ describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
       'basic.retirementAge',
       'basic.lifeExpectancy',
       'basic.serviceYears',
+      'income.severance.lumpsum',
+      'income.severance.lumpsumAge',
       'income.personalPension.startAge',
     ]);
     expect(result.requiredErrorMessage).toContain('"1. 수입"');
@@ -58,6 +64,9 @@ describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
     fillBasicRequired(formData);
     formData.income.personalPension.startAge = 60;
     formData.income.severance.type = 'pension';
+    // 퇴직연금 적립금(assets.pensionAssetsBreakdown.selfRetirementPension)도 동시에 필수가 되지만,
+    // 이 테스트는 수령 시작 나이만 검증하므로 별도로 채워 다른 항목만 남긴다.
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 0;
 
     const result = computeWizardRequiredFields(formData);
 
@@ -193,6 +202,59 @@ describe('computeWizardRequiredFields - 국민연금 계속 납부 예정 추가
     formData.spouse.nationalPension.futureContributionPlan = 'continue';
 
     expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+});
+
+// 퇴직연금퇴직금중복해결: income.severance.type(또는 배우자)을 "월지급(연금)"으로 선택했으면
+// assets.pensionAssetsBreakdown.selfRetirementPension(또는 spouseRetirementPension)이 서버(validate.js)
+// 필수값이다. 이 필드는 assets 섹션 데이터이지만 Step1Income.jsx가 정확히 같은 조건(severance.type
+// === 'pension')일 때 "1. 수입" 화면에 함께 렌더링하므로, 안내 문구도 "1. 수입"을 그대로 가리키면 된다.
+describe('computeWizardRequiredFields - 퇴직연금 월지급 시 적립금 필수(1. 수입)', () => {
+  it('본인 퇴직연금을 "월지급"으로 선택하고 적립금을 비워두면 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.severance.type = 'pension';
+    formData.income.severance.pensionStartAge = 65;
+
+    const result = computeWizardRequiredFields(formData);
+
+    expect(result.basicInfoMissing).toBe(true);
+    expect(result.missingIncomeFields.map(([path]) => path)).toContain('assets.pensionAssetsBreakdown.selfRetirementPension');
+    expect(result.requiredErrorMessage).toContain('"1. 수입"');
+    expect(result.requiredErrorMessage).toContain('본인 퇴직연금 적립금');
+  });
+
+  it('적립금에 명시적으로 0을 입력하면 더 이상 걸리지 않는다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.severance.type = 'pension';
+    formData.income.severance.pensionStartAge = 65;
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 0;
+
+    const result = computeWizardRequiredFields(formData);
+
+    expect(result.basicInfoMissing).toBe(false);
+  });
+
+  it('배우자 퇴직연금을 "월지급"으로 선택하고 적립금을 비워두면 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.basic.hasSpouse = true;
+    formData.spouse.birthYear = 1972;
+    formData.spouse.retirementAge = 65;
+    formData.spouse.lifeExpectancy = 88;
+    formData.spouse.personalPension.startAge = 60;
+    formData.spouse.severance.type = 'pension';
+    formData.spouse.severance.pensionStartAge = 65;
+
+    const result = computeWizardRequiredFields(formData);
+
+    expect(result.basicInfoMissing).toBe(true);
+    expect(result.missingIncomeFields.map(([path]) => path)).toContain('assets.pensionAssetsBreakdown.spouseRetirementPension');
+    expect(result.requiredErrorMessage).toContain('"1. 수입"');
   });
 });
 

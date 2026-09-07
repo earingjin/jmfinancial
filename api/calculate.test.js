@@ -20,6 +20,9 @@ function buildMinimalValidInput() {
   input.basic.lifeExpectancy = '90';
   input.basic.serviceYears = '20';
   input.expense.retirementLivingCost = '300';
+  // severance.type 기본값(lumpsum)은 미래 수령액과 수령 나이가 모두 필수다.
+  input.income.severance.lumpsum = '0';
+  input.income.severance.lumpsumAge = '65';
   // personalPension.type 기본값(installment)은 startAge가 필수라 채워준다(validate.js 참고).
   input.income.personalPension.startAge = '65';
   return input;

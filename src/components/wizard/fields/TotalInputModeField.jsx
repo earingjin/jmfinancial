@@ -9,7 +9,7 @@ const amount = (value) => Number(value) || 0;
 
 export default function TotalInputModeField({
   modePath, totalPath, simpleTotalPath, simpleStoredPath, detailedTotal,
-  detailedHasInput = true, totalLabel, inputLabel, children, annualPath, simpleAnnualPath,
+  detailedHasInput = true, totalLabel, inputLabel, children, annualPath, simpleAnnualPath, beforeTotal,
 }) {
   const { formData, setField } = useFormData();
   const mode = getIn(formData, modePath) || 'detailed';
@@ -47,6 +47,7 @@ export default function TotalInputModeField({
         <span className="field-label">{inputLabel || totalLabel}</span>
         <div className="field-input-row"><FormattedNumberInput min={0} value={total ?? ''} onChange={(e) => updateSimple(e.target.value)} /><span className="field-unit">만원</span></div>
       </label>
+      {beforeTotal}
       <TotalAmountBox label={totalLabel} amount={amount(total)} valueLabel="총액은" />
     </> : children}
   </div>;

@@ -179,7 +179,7 @@ export default function Step2Expense() {
       <section className="step-section">
         <h3><span className="step-icon">💰</span> 은퇴 후 예상 목돈지출</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
-          은퇴 후 차량 교체, 주택 수리, 자녀 지원처럼 예상되는 큰 지출이 있다면 추가해 주세요. 없다면 입력하지 않아도 됩니다.
+          은퇴 후 차량 교체, 주택 수리, 자녀 학자금·결혼지원·기타 지원처럼 예상되는 큰 지출이 있다면 추가해 주세요. 없다면 입력하지 않아도 됩니다.
         </p>
         <RepeatableList
           path="expense.retirementLumpSumExpenses"
@@ -198,7 +198,7 @@ export default function Step2Expense() {
                 <input
                   id={`expense.retirementLumpSumExpenses.${i}.name`}
                   type="text"
-                  placeholder="예: 자녀 결혼지원"
+                  placeholder="예: 자녀 결혼지원 또는 학자금"
                   value={item.name}
                   onChange={(e) => update('name', e.target.value)}
                   required={nameRequired}
@@ -247,45 +247,6 @@ export default function Step2Expense() {
                 <span className="field-label">월 보험료</span>
                 <div className="field-input-row">
                   <FormattedNumberInput min={0} value={item.monthly} onChange={(e) => update('monthly', Number(e.target.value))} />
-                  <span className="field-unit">만원</span>
-                </div>
-              </label>
-            </div>
-          )}
-        />
-      </section>
-
-      <section className="step-section">
-        <h3><span className="step-icon">🎓</span> 자녀 학자금 · 결혼지원 · 기타 (목돈 지출)</h3>
-        <p className="field-helper" style={{ marginBottom: 10 }}>
-          향후 목돈 지출 예정인 항목을 입력해주세요.
-        </p>
-        <RepeatableList
-          path="expense.children"
-          label="자녀별 학자금 · 결혼지원비 · 기타 목돈 지출 계획"
-          addLabel="자녀 추가"
-          maxItems={3}
-          emptyItem={{ educationCost: '', marriageSupport: '', otherCost: '' }}
-          renderItem={(item, _i, update) => (
-            <div className="field-grid three-col">
-              <label className="field">
-                <span className="field-label">학자금</span>
-                <div className="field-input-row">
-                  <FormattedNumberInput min={0} value={item.educationCost} onChange={(e) => update('educationCost', Number(e.target.value))} />
-                  <span className="field-unit">만원</span>
-                </div>
-              </label>
-              <label className="field">
-                <span className="field-label">결혼지원비</span>
-                <div className="field-input-row">
-                  <FormattedNumberInput min={0} value={item.marriageSupport} onChange={(e) => update('marriageSupport', Number(e.target.value))} />
-                  <span className="field-unit">만원</span>
-                </div>
-              </label>
-              <label className="field">
-                <span className="field-label">기타</span>
-                <div className="field-input-row">
-                  <FormattedNumberInput min={0} value={item.otherCost} onChange={(e) => update('otherCost', Number(e.target.value))} />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
