@@ -1,32 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { isValidLoginId, normalizeLoginId, toAuthEmail } from './authIdentifier.js';
+import { isValidLoginId, normalizeLoginId, normalizeSignupLoginId, toAuthEmail } from './authIdentifier.js';
 
 describe('auth identifier helpers', () => {
   it('converts a new login id to the internal auth email', () => {
-    expect(toAuthEmail('minsu123')).toBe('minsu123@jmfinancial.local');
+    expect(toAuthEmail('12345678')).toBe('12345678@jmfinancial.local');
   });
 
   it('keeps an existing email login compatible', () => {
     expect(toAuthEmail('olduser@gmail.com')).toBe('olduser@gmail.com');
   });
 
-  it('trims and lowercases login ids', () => {
-    expect(normalizeLoginId('  MINSU123  ')).toBe('minsu123');
-    expect(isValidLoginId('  MINSU123  ')).toBe(true);
+  it('trims login ids and keeps only up to eight digits for signup', () => {
+    expect(normalizeLoginId('  12345678  ')).toBe('12345678');
+    expect(normalizeSignupLoginId('12a34-567890')).toBe('12345678');
+    expect(isValidLoginId('  12345678  ')).toBe(true);
   });
 
-  it('accepts login ids at the inclusive length boundaries', () => {
-    expect(isValidLoginId('abcd')).toBe(true);
-    expect(isValidLoginId('a'.repeat(20))).toBe(true);
+  it('accepts exactly eight numeric characters', () => {
+    expect(isValidLoginId('12345678')).toBe(true);
   });
 
   it.each([
-    'abc',
-    'a'.repeat(21),
+    '1234567',
+    '123456789',
     '김민수',
-    'min su',
+    '1234 5678',
     'abc@naver.com',
-    'abc!',
+    '1234-5678',
   ])('rejects an invalid new login id: %s', (loginId) => {
     expect(isValidLoginId(loginId)).toBe(false);
   });

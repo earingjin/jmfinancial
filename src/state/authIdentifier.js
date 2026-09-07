@@ -1,7 +1,11 @@
-export const LOGIN_ID_PATTERN = /^[a-z0-9]{4,20}$/;
+export const LOGIN_ID_PATTERN = /^\d{8}$/;
 
 export function normalizeLoginId(value) {
   return String(value ?? '').trim().toLowerCase();
+}
+
+export function normalizeSignupLoginId(value) {
+  return String(value ?? '').replace(/\D/g, '').slice(0, 8);
 }
 
 export function isValidLoginId(value) {

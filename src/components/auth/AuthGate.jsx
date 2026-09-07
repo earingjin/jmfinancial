@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../state/authState';
-import { isValidLoginId, normalizeLoginId } from '../../state/authIdentifier';
+import { isValidLoginId, normalizeLoginId, normalizeSignupLoginId } from '../../state/authIdentifier';
 import heroImage from '../../assets/리포트 표지 디자인.png';
 import AppCopyright from '../AppCopyright';
 
@@ -91,7 +91,7 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
     }
     const loginId = normalizeLoginId(identifier);
     if (mode === 'signup' && !isValidLoginId(loginId)) {
-      setError('아이디는 영문 소문자와 숫자로 4~20자까지 입력해 주세요.');
+      setError('아이디는 본인 휴대폰 번호 뒤 8자리 숫자로 입력해 주세요.');
       return;
     }
     setSubmitting(true);
@@ -156,8 +156,9 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
             {mode === 'signup' && (
               <p className="auth-signup-reassurance">
                 아이디는 진단 중 중도 이탈할 경우 저장된 기록을 찾기 위해 사용합니다.<br />
+                본인 휴대폰 번호의 뒤 8자리만 아이디로 사용합니다.<br />
                 진단 결과는 진단 완료 후 7일 이내에 자동 삭제됩니다.<br />
-                전화번호 등 추가 개인정보는 요구하지 않습니다.
+                휴대폰 번호 전체는 입력하거나 저장하지 않습니다.
               </p>
             )}
             {mode === 'signup' && (
@@ -167,13 +168,16 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
               </label>
             )}
             <label className="field">
-              <span className="field-label">{mode === 'signup' ? '아이디' : '아이디 또는 이메일'}</span>
+              <span className="field-label">{mode === 'signup' ? '아이디 (휴대폰 번호 뒤 8자리)' : '아이디 또는 이메일'}</span>
               <input
                 type="text"
                 value={identifier}
-                onChange={(e) => setIdentifier(mode === 'signup' ? e.target.value.toLowerCase() : e.target.value)}
+                onChange={(e) => setIdentifier(mode === 'signup' ? normalizeSignupLoginId(e.target.value) : e.target.value)}
                 required
-                placeholder={mode === 'signup' ? '영문 소문자와 숫자 4~20자' : '아이디 또는 이메일'}
+                placeholder={mode === 'signup' ? '예: 12345678' : '아이디 또는 이메일'}
+                inputMode={mode === 'signup' ? 'numeric' : undefined}
+                pattern={mode === 'signup' ? '[0-9]{8}' : undefined}
+                maxLength={mode === 'signup' ? 8 : undefined}
                 autoComplete="username"
               />
             </label>
