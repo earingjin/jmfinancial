@@ -1050,6 +1050,12 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 
 @media (max-width: 640px) {
   .field-grid, .field-grid.three-col { grid-template-columns: 1fr; }
+  /* 짧은 숫자 값(나이·기간·개월수 등) 두 개를 모바일에서도 한 줄에 배치하기 위한 예외.
+     자유 텍스트나 긴 라벨이 섞인 grid에는 붙이지 않는다. */
+  .field-grid.field-grid--compact-pair {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 12px;
+  }
   .sim-summary { grid-template-columns: 1fr; }
 
   .indicator-gauge-breakdown-row { flex-direction: column; }
