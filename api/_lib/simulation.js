@@ -41,8 +41,32 @@ export function calcRetirementSimulation(input, currentYear = new Date().getFull
   const agg = buildAggregates(input);
   const { financialAssetsTotal, liquidAssets, pensionAssets } = agg;
   const currentReadyAssets = financialAssetsTotal + liquidAssets + pensionAssets;
+  const retirementPensionAssets = agg.retirementPensionAssetsByPerson || { self: 0, spouse: 0 };
+  const severanceOwners = [
+    { severance: input.income?.severance, asset: n(retirementPensionAssets.self) },
+    ...(input.basic?.hasSpouse === true
+      ? [{ severance: input.spouse?.severance, asset: n(retirementPensionAssets.spouse) }]
+      : []),
+  ];
+  // 현재 재무상태에서는 퇴직연금 적립금을 자산으로 유지한다. 미래 계산에서만 일시금 또는 월 연금으로
+  // 전환될 원금을 현재 보유자산의 미래가치에서 제외해 같은 재원이 두 경로에 동시에 들어가지 않게 한다.
+  const convertedRetirementPensionAssets = severanceOwners.reduce(
+    (total, owner) => total + (owner.severance?.type === 'lumpsum' || owner.severance?.type === 'pension' ? owner.asset : 0),
+    0,
+  );
+  const futureReadyAssetsBase = Math.max(0, currentReadyAssets - convertedRetirementPensionAssets);
+  let preRetirementSeveranceLumpsums = 0;
+  severanceOwners.forEach(({ severance }) => {
+    if (severance?.type !== 'lumpsum') return;
+    const amount = n(severance.lumpsum);
+    const receiptAge = n(severance.lumpsumAge);
+    if (amount <= 0 || receiptAge > retirementAge) return;
+    const yearsInvested = Math.max(0, retirementAge - Math.max(currentAge, receiptAge));
+    preRetirementSeveranceLumpsums += amount * Math.pow(1 + returnRate, yearsInvested);
+  });
 
-  const fvCurrentAssets = currentReadyAssets * Math.pow(1 + returnRate, yearsToRetirement);
+  const fvCurrentAssets = futureReadyAssetsBase * Math.pow(1 + returnRate, yearsToRetirement)
+    + preRetirementSeveranceLumpsums;
 
   // aggregate.js와 동일한 포함 규칙을 사용한다. 노후저축이 총저축에 포함되지 않는다고
   // 명시한 경우(retirementIncludedInTotal === false)에는 별도 노후저축도 합산한다.

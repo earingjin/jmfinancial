@@ -102,6 +102,8 @@ testPayload.basic.lifeExpectancy = 90;
 testPayload.basic.serviceYears = 10;
 testPayload.expense.retirementLivingCost = 300;
 testPayload.assets.currentIncome.monthly = 500;
+testPayload.income.severance.lumpsum = 0;
+testPayload.income.severance.lumpsumAge = 60;
 testPayload.income.personalPension.startAge = 65;
 
 const results = [];

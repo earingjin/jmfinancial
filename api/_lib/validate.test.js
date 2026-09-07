@@ -36,6 +36,36 @@ describe('validateInput - baseline', () => {
   });
 });
 
+describe('retirement severance input requirements', () => {
+  it('requires both amount and receipt age for a future lump-sum selection', () => {
+    const result = validateInput(makeInput({ income: { severance: { type: 'lumpsum', lumpsum: '', lumpsumAge: '' } } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.severance.lumpsum');
+    expect(result.errors.join(' ')).toContain('income.severance.lumpsumAge');
+  });
+
+  it('rejects a lump-sum receipt age outside the supported age range', () => {
+    const result = validateInput(makeInput({
+      income: { severance: { type: 'lumpsum', lumpsum: 3000, lumpsumAge: 121 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.severance.lumpsumAge');
+  });
+
+  it('rejects identified retirement-pension balances above the pension-asset total in simple mode', () => {
+    const result = validateInput(makeInput({
+      assets: {
+        pensionAssetsInputMode: 'simple', pensionAssets: 3000,
+        pensionAssetsBreakdown: { selfRetirementPension: 2000, spouseRetirementPension: 2000 },
+      },
+      basic: { hasSpouse: true },
+      spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90 },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain('본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.');
+  });
+});
+
 describe('liquid asset subscription validation', () => {
   it.each([0, 100])('accepts a valid subscription amount (%s)', (subscription) => {
     const result = validateInput(makeInput({

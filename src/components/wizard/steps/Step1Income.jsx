@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import NumberField from '../fields/NumberField';
+import { syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
 import RadioField from '../fields/RadioField';
 import MonthlyIncomeField from '../fields/MonthlyIncomeField';
 import SeveranceCalculatorButton from '../fields/SeveranceCalculatorButton';
@@ -628,6 +629,26 @@ export default function Step1Income() {
       <section className="step-section">
         <h3><span className="step-icon">💼</span> 퇴직금 · 퇴직연금</h3>
         <PensionPortalNotice />
+        <p className="field-helper" style={{ marginBottom: 12 }}>
+          퇴직연금은 현재 적립되어 있는 금액은 자산으로, 앞으로 일시금으로 받는 금액은 수령 시점의 자산으로, 매월 받는 금액은 연금소득으로 계산합니다.
+          이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요. 앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.
+        </p>
+        <div className="field-grid" style={{ marginBottom: 12 }}>
+          <NumberField
+            path="assets.pensionAssetsBreakdown.selfRetirementPension"
+            label="현재 본인 퇴직연금 적립금"
+            unit="만원"
+            helper="Step 4 연금자산의 본인 퇴직연금 적립금과 연동됩니다."
+            onValueChange={(value) => syncRetirementPensionAssetTotal(formData, setField, 'assets.pensionAssetsBreakdown.selfRetirementPension', value)}
+          />
+          {hasSpouse && <NumberField
+            path="assets.pensionAssetsBreakdown.spouseRetirementPension"
+            label="현재 배우자 퇴직연금 적립금"
+            unit="만원"
+            helper="Step 4 연금자산의 배우자 퇴직연금 적립금과 연동됩니다."
+            onValueChange={(value) => syncRetirementPensionAssetTotal(formData, setField, 'assets.pensionAssetsBreakdown.spouseRetirementPension', value)}
+          />}
+        </div>
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <RadioField
           path="income.severance.type"
@@ -643,8 +664,8 @@ export default function Step1Income() {
         {severanceType === 'lumpsum' && (
           <>
             <div className="field-grid">
-              <NumberField path="income.severance.lumpsum" label="퇴직금 총 수령 금액" unit="만원" />
-              <NumberField path="income.severance.lumpsumAge" label="수령 나이" unit="세" />
+              <NumberField path="income.severance.lumpsum" label="퇴직금 총 수령 금액 *" unit="만원" required />
+              <NumberField path="income.severance.lumpsumAge" label="수령 나이 *" unit="세" max={120} required />
             </div>
             <SeveranceCalculatorButton
               calcBasePath="income.severance.calc"
@@ -700,8 +721,8 @@ export default function Step1Income() {
             {spouseSeveranceType === 'lumpsum' && (
               <>
                 <div className="field-grid">
-                  <NumberField path="spouse.severance.lumpsum" label="퇴직금 총 수령 금액" unit="만원" />
-                  <NumberField path="spouse.severance.lumpsumAge" label="수령 나이" unit="세" />
+                  <NumberField path="spouse.severance.lumpsum" label="퇴직금 총 수령 금액 *" unit="만원" required />
+                  <NumberField path="spouse.severance.lumpsumAge" label="수령 나이 *" unit="세" max={120} required />
                 </div>
                 <SeveranceCalculatorButton
                   calcBasePath="spouse.severance.calc"

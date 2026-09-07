@@ -11,6 +11,22 @@ import Step4Assets from './Step4Assets';
 globalThis.React = React;
 
 describe('Step4Assets input mode selectors', () => {
+  it('shows separate retirement-pension balances and the asset/income treatment guidance', () => {
+    const formData = structuredClone(initialFormData);
+    formData.basic.hasSpouse = true;
+    const html = renderToStaticMarkup(
+      <FormContext.Provider value={{ formData, setField: vi.fn() }}>
+        <Step4Assets />
+      </FormContext.Provider>
+    );
+    expect(html).toContain('연금자산 총액 중 본인 퇴직연금 적립금');
+    expect(html).toContain('연금자산 총액 중 배우자 퇴직연금 적립금');
+    expect(html).toContain('이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요.');
+    expect(html).toContain('앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.');
+    expect(html).toContain('앞으로 일시금으로 받는 금액은 수령 시점의 자산');
+    expect(html).toContain('매월 받는 금액은 연금소득으로 계산합니다.');
+  });
+
   it('renders an independent total/detail selector for every asset category', () => {
     const html = renderToStaticMarkup(
       <FormContext.Provider value={{ formData: structuredClone(initialFormData), setField: vi.fn() }}>

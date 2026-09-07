@@ -413,6 +413,44 @@ describe('buildRetirementAssetProjection', () => {
     expect(after.income).toBe(0);
   });
 
+  it('converts an identified retirement-pension balance into monthly income without retaining the same principal', () => {
+    const result = project({
+      basic: { birthYear: 1961, retirementAge: 65, lifeExpectancy: 67, assumedReturnRate: 0, hasSpouse: false },
+      income: { severance: { type: 'pension', pensionMonthly: 80, pensionStartAge: 65, pensionMonths: 24 } },
+      expense: { retirementLivingCost: 0 },
+      assets: { pensionAssets: 3000, pensionAssetsBreakdown: { selfRetirementPension: 3000 } },
+    });
+    expect(result.startingAssets).toBe(0);
+    expect(result.points[0]).toMatchObject({ income: 960, retirementLumpSumIncome: 0, endingBalance: 960 });
+    expect(result.points[1].income).toBe(960);
+    expect(result.points[2].income).toBe(0);
+  });
+
+  it('adds a retirement lump sum once at its retirement-age receipt point', () => {
+    const result = project({
+      basic: { birthYear: 1961, retirementAge: 65, lifeExpectancy: 67, assumedReturnRate: 0, hasSpouse: false },
+      income: { severance: { type: 'lumpsum', lumpsum: 5000, lumpsumAge: 66 } },
+      expense: { retirementLivingCost: 0 },
+      assets: { pensionAssets: 3000, pensionAssetsBreakdown: { selfRetirementPension: 3000 } },
+    });
+    expect(result.startingAssets).toBe(0);
+    expect(result.points.map((point) => point.retirementLumpSumIncome)).toEqual([0, 5000, 0]);
+    expect(result.points[1].endingBalance).toBe(5000);
+    expect(result.explanation.totalRetirementLumpSumIncome).toBe(5000);
+  });
+
+  it('does not add again a lump sum already included at the retirement boundary', () => {
+    const result = project({
+      basic: { birthYear: 1961, retirementAge: 65, lifeExpectancy: 66, assumedReturnRate: 0, hasSpouse: false },
+      income: { severance: { type: 'lumpsum', lumpsum: 5000, lumpsumAge: 65 } },
+      expense: { retirementLivingCost: 0 },
+      assets: { pensionAssets: 3000, pensionAssetsBreakdown: { selfRetirementPension: 3000 } },
+    });
+    expect(result.startingAssets).toBe(5000);
+    expect(result.points[0].retirementLumpSumIncome).toBe(0);
+    expect(result.points[0].endingBalance).toBe(5000);
+  });
+
   it('9) applies a 0% return rate as no investment growth', () => {
     const result = project({ basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 90, assumedReturnRate: 0, hasSpouse: false }, assets: { liquidAssets: { total: 100000 } } });
     expect(result.points[0].investmentReturn).toBe(0);

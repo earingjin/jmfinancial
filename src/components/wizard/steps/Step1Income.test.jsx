@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { FormContext } from '../../../state/formState';
 import { initialFormData } from '../../../state/initialFormData';
+import { syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
 import Step1Income, { handleSeveranceType } from './Step1Income';
 
 globalThis.React = React;
@@ -75,6 +76,43 @@ describe('Step1Income national pension future contribution plan', () => {
     const html = renderStep(formData);
     expect(html).not.toContain('앞으로 국민연금 보험료를 계속 납부할 예정인가요?');
     expect(html).not.toContain('반환일시금 대상이 될 수 있습니다.');
+  });
+});
+
+describe('Step1Income - retirement-pension asset linkage', () => {
+  it('shows the calculation guidance and current-balance inputs in Step 1', () => {
+    const formData = structuredClone(initialFormData);
+    formData.basic.hasSpouse = true;
+    const html = renderStep(formData);
+    expect(html).toContain('퇴직연금은 현재 적립되어 있는 금액은 자산으로');
+    expect(html).toContain('앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.');
+    expect(html).toContain('현재 본인 퇴직연금 적립금');
+    expect(html).toContain('현재 배우자 퇴직연금 적립금');
+    expect(html).toContain('Step 4 연금자산의 본인 퇴직연금 적립금과 연동됩니다.');
+  });
+
+  it('updates the simple pension-asset total by the changed balance delta', () => {
+    const formData = structuredClone(initialFormData);
+    formData.assets.pensionAssetsInputMode = 'simple';
+    formData.assets.pensionAssets = 5000;
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 2000;
+    const setField = vi.fn();
+    syncRetirementPensionAssetTotal(
+      formData, setField, 'assets.pensionAssetsBreakdown.selfRetirementPension', 3000
+    );
+    expect(setField).toHaveBeenCalledWith('assets.pensionAssets', 6000);
+    expect(setField).toHaveBeenCalledWith('assets.pensionAssetsSimpleTotal', 6000);
+    expect(setField).toHaveBeenCalledWith('assets.pensionAssetsSimpleInputStored', true);
+  });
+
+  it('leaves the total to the canonical detailed aggregation in detailed mode', () => {
+    const formData = structuredClone(initialFormData);
+    formData.assets.pensionAssetsInputMode = 'detailed';
+    const setField = vi.fn();
+    syncRetirementPensionAssetTotal(
+      formData, setField, 'assets.pensionAssetsBreakdown.selfRetirementPension', 3000
+    );
+    expect(setField).not.toHaveBeenCalled();
   });
 });
 

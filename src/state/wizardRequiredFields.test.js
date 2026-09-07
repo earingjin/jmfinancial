@@ -11,6 +11,10 @@ const fillBasicRequired = (formData) => {
   formData.basic.retirementAge = 65;
   formData.basic.lifeExpectancy = 90;
   formData.basic.serviceYears = 10;
+  formData.income.severance.lumpsum = 5000;
+  formData.income.severance.lumpsumAge = 65;
+  formData.spouse.severance.lumpsum = 3000;
+  formData.spouse.severance.lumpsumAge = 65;
 };
 
 describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
@@ -25,6 +29,8 @@ describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
       'basic.retirementAge',
       'basic.lifeExpectancy',
       'basic.serviceYears',
+      'income.severance.lumpsum',
+      'income.severance.lumpsumAge',
       'income.personalPension.startAge',
     ]);
     expect(result.requiredErrorMessage).toContain('"1. 수입"');

@@ -278,7 +278,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
                   홈으로
                 </button>
                 <button type="button" className="app-header-home-btn" onClick={() => void viewHistoryFromHeader()}>
-                  결과 보기
+                  이전 결과 보기
                 </button>
               </>
             )}
@@ -425,13 +425,13 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
 
   const continueDraft = async () => {
     if (draftLoad.source === 'remote') {
-      setDraftDecision({ userId: user.id, draft: draftLoad.draft });
+      setDraftDecision({ userId: user.id, draft: draftLoad.draft, startWithWizard: true });
       return;
     }
     setDraftLoad((state) => ({ ...state, status: 'loading' }));
     try {
       const migrated = await migrateLegacyDraft(user.id, draftLoad.draft);
-      setDraftDecision({ userId: user.id, draft: migrated });
+      setDraftDecision({ userId: user.id, draft: migrated, startWithWizard: true });
     } catch {
       setDraftLoad((state) => ({ ...state, status: 'error', message: '기존 초안을 이전하지 못했습니다. 다시 시도해 주세요.' }));
     }
@@ -442,10 +442,14 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
     try {
       if (draftLoad.source === 'remote') await deleteDraft(user.id);
       removeLegacyLocalDraft(user.id);
-      setDraftDecision({ userId: user.id, draft: null });
+      setDraftDecision({ userId: user.id, draft: null, startWithWizard: true });
     } catch {
       setDraftLoad((state) => ({ ...state, status: 'error', message: '기존 초안을 삭제하지 못했습니다. 다시 시도해 주세요.' }));
     }
+  };
+
+  const goHomeFromDraftChoice = () => {
+    setDraftDecision({ userId: user.id, draft: draftLoad.draft, startWithWizard: false });
   };
 
   if (loading) {
@@ -488,6 +492,7 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
           <p>{draftLoad.source === 'legacy' ? '기존 로컬 초안을 Supabase로 이전해 다른 기기에서도 이어서 작성하시겠습니까?' : '다른 기기에서 저장한 내용까지 포함해 이어서 작성할 수 있습니다.'}</p>
           <button type="button" className="btn-primary" onClick={() => void continueDraft()}>이어서 입력</button>
           <button type="button" className="btn-secondary" onClick={() => void startNew()}>새로 입력</button>
+          <button type="button" className="btn-secondary" onClick={goHomeFromDraftChoice}>홈으로 이동</button>
         </div>
       </div>
     );
@@ -501,7 +506,10 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
     return <div className="draft-choice"><div className="draft-choice-card"><h2>초안을 확인하지 못했습니다</h2><p>{draftLoad.message}</p><button type="button" className="btn-primary" onClick={() => { clearDraftSessionCache(user.id); setLoadAttempt((value) => value + 1); }}>다시 시도</button></div></div>;
   }
 
-  return <AppContent initialDraft={currentDecision?.draft || null} startWithWizard={Boolean(currentDecision)} />;
+  return <AppContent
+    initialDraft={currentDecision?.draft || null}
+    startWithWizard={currentDecision?.startWithWizard ?? false}
+  />;
 }
 
 function AdminRoute() {

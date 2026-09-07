@@ -134,6 +134,8 @@ const AMOUNT_FIELDS = [
   'assets.pensionAssetsBreakdown.variableAnnuity',
   'assets.pensionAssetsBreakdown.pensionSavingsAccount',
   'assets.pensionAssetsBreakdown.irp',
+  'assets.pensionAssetsBreakdown.selfRetirementPension',
+  'assets.pensionAssetsBreakdown.spouseRetirementPension',
   'assets.pensionAssetsBreakdown.other',
   'assets.realEstateAssets.total',
   'assets.realEstateAssets.simpleTotal',
@@ -203,7 +205,6 @@ const AMOUNT_FIELDS = [
 const COUNT_FIELDS = [
   'income.salary.months',
   'income.severance.pensionMonths',
-  'income.severance.lumpsumAge',
   'income.nationalPension.months',
   'income.nationalPension.paymentMonths',
   'income.nationalPension.simulate.contributionMonths',
@@ -212,7 +213,6 @@ const COUNT_FIELDS = [
   'income.personalPension.lumpsumAge',
   'spouse.salary.months',
   'spouse.severance.pensionMonths',
-  'spouse.severance.lumpsumAge',
   'spouse.nationalPension.months',
   'spouse.nationalPension.paymentMonths',
   'spouse.nationalPension.simulate.contributionMonths',
@@ -227,7 +227,9 @@ const COUNT_FIELDS = [
 const AGE_FIELDS = [
   'basic.retirementAge',
   'spouse.retirementAge',
+  'income.severance.lumpsumAge',
   'income.severance.pensionStartAge',
+  'spouse.severance.lumpsumAge',
   'spouse.severance.pensionStartAge',
   'income.personalPension.startAge',
   'spouse.personalPension.startAge',
@@ -318,13 +320,17 @@ export function validateInput(input) {
   }
 
   [
+    ['income.severance', input.income?.severance?.type === 'lumpsum', 'lumpsum'],
+    ['income.severance', input.income?.severance?.type === 'lumpsum', 'lumpsumAge'],
     ['income.severance', input.income?.severance?.type === 'pension', 'pensionStartAge'],
     ['income.personalPension', input.income?.personalPension?.type === 'installment', 'startAge'],
+    ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'lumpsum', 'lumpsum'],
+    ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'lumpsum', 'lumpsumAge'],
     ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'pension', 'pensionStartAge'],
     ['spouse.personalPension', input.basic?.hasSpouse === true && input.spouse?.personalPension?.type === 'installment', 'startAge'],
   ].forEach(([path, required, field]) => {
     if (required && isBlank(getPath(input, `${path}.${field}`))) {
-      errors.push(`${path}.${field} 값은 월 연금 수령 방식에서 필수입니다.`);
+      errors.push(`${path}.${field} 값은 선택한 퇴직급여·연금 수령 방식에서 필수입니다.`);
     }
   });
 
@@ -343,6 +349,15 @@ export function validateInput(input) {
   AGE_DECIMAL_FIELDS.forEach((path) => checkKindField(errors, input, path, 'ageDecimal'));
   checkKindField(errors, input, 'basic.assumedReturnRate', 'returnRate');
   checkKindField(errors, input, 'scenarios.expenseReduction.reductionRate', 'rate');
+
+  if (input.assets?.pensionAssetsInputMode === 'simple') {
+    const identifiedRetirementPensionAssets = Number(input.assets?.pensionAssetsBreakdown?.selfRetirementPension || 0)
+      + (input.basic?.hasSpouse === true ? Number(input.assets?.pensionAssetsBreakdown?.spouseRetirementPension || 0) : 0);
+    const pensionAssetsTotal = Number(input.assets?.pensionAssets || 0);
+    if (identifiedRetirementPensionAssets > pensionAssetsTotal) {
+      errors.push('본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.');
+    }
+  }
 
   ['income.nationalPension.futureContributionPlan', 'spouse.nationalPension.futureContributionPlan'].forEach((path) => {
     const value = getPath(input, path);

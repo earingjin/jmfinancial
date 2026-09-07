@@ -38,6 +38,13 @@ describe('App.jsx - "새 진단"이 아닌 흐름은 서버 draft를 지우지 �
     expect(body).not.toContain('resetFormSession');
   });
 
+  it('초안 선택 화면의 홈 이동은 초안을 삭제하거나 초기화하지 않는다', async () => {
+    const body = extractFunctionBody(await readAppSource(), 'const goHomeFromDraftChoice = ()');
+    expect(body).not.toContain('deleteDraft');
+    expect(body).not.toContain('resetFormSession');
+    expect(body).toContain('startWithWizard: false');
+  });
+
   it('restart/startDiagnosis는 resetFormSession(서버 draft 삭제 경유)을 shouldResetFormSession 판정 뒤에만 호출한다(회귀 확인)', async () => {
     const source = await readAppSource();
     expect(extractFunctionBody(source, 'const restart = async ()')).toContain('resetFormSession()');
@@ -81,7 +88,7 @@ describe('App.jsx wizard header result history button', () => {
     const source = await readAppSource();
     const body = extractFunctionBody(source, 'const viewHistoryFromHeader = async ()');
 
-    expect(source).toContain('결과 보기');
+    expect(source).toContain('이전 결과 보기');
     expect(body).toContain('hasSavedPlannerResults(user.id)');
     expect(body).toContain("window.alert('이전 결과가 없습니다.')");
     expect(body).toContain("setPhase('history')");

@@ -45,6 +45,23 @@ describe('buildCanonicalInput', () => {
     expect(buildCanonicalInput(source).assets.debtStatus.totalBalance).toBe(9999);
   });
 
+  it('includes separately identified self and spouse retirement-pension assets in the detailed pension total', () => {
+    const source = input();
+    source.assets.pensionAssetsInputMode = 'detailed';
+    source.assets.pensionAssetsBreakdown.selfRetirementPension = 50;
+    source.assets.pensionAssetsBreakdown.spouseRetirementPension = 60;
+    expect(buildCanonicalInput(source).assets.pensionAssets).toBe(210);
+  });
+
+  it('does not infer or migrate retirement-pension assets from legacy other items', () => {
+    const source = input();
+    source.assets.pensionAssetsInputMode = 'detailed';
+    source.assets.pensionAssetsBreakdown.otherItems = [{ name: '퇴직연금(DC형)', amount: 40 }];
+    const result = buildCanonicalInput(source);
+    expect(result.assets.pensionAssetsBreakdown.selfRetirementPension).toBeUndefined();
+    expect(result.assets.pensionAssets).toBe(100);
+  });
+
   it('preserves direct living-cost totals in simple mode', () => {
     const source = input();
     source.assets.currentLivingCost.inputMode = 'simple';

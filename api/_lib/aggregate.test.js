@@ -82,6 +82,31 @@ describe('simple savings and asset totals', () => {
   });
 });
 
+describe('identified retirement-pension assets', () => {
+  it('keeps self and spouse balances in current total assets and net worth', () => {
+    const result = buildAggregates(input({
+      basic: { hasSpouse: true },
+      assets: {
+        pensionAssets: 5000,
+        pensionAssetsBreakdown: { selfRetirementPension: 3000, spouseRetirementPension: 2000 },
+        debtStatus: { totalBalance: 1000 },
+      },
+    }));
+    expect(result.pensionAssets).toBe(5000);
+    expect(result.retirementPensionAssetsByPerson).toEqual({ self: 3000, spouse: 2000 });
+    expect(result.totalAssets).toBe(5000);
+    expect(result.netWorth).toBe(4000);
+  });
+
+  it('does not map a stale spouse balance when no spouse is active', () => {
+    const result = buildAggregates(input({
+      basic: { hasSpouse: false },
+      assets: { pensionAssets: 3000, pensionAssetsBreakdown: { selfRetirementPension: 3000, spouseRetirementPension: 2000 } },
+    }));
+    expect(result.retirementPensionAssetsByPerson).toEqual({ self: 3000, spouse: 0 });
+  });
+});
+
 describe('buildFamilyAges', () => {
   it('includes the spouse retirement age and life expectancy in report data', () => {
     const result = buildFamilyAges({

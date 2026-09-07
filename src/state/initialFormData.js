@@ -166,6 +166,8 @@ export const initialFormData = {
       variableAnnuity: '',        // 변액연금(저축 파트와 연동)
       pensionSavingsAccount: '',  // 연금저축계좌(저축 파트와 연동)
       irp: '',                    // IRP개인퇴직계좌(저축 파트와 연동)
+      selfRetirementPension: '',  // 본인 퇴직연금 적립금(income.severance 수령방식과 연결)
+      spouseRetirementPension: '', // 배우자 퇴직연금 적립금(spouse.severance 수령방식과 연결)
       other: '',                  // 기타 총액 - 아래 otherItems의 합으로 자동 계산됨(직접 입력하지 않음)
       otherItems: [],              // [{ name, amount }] "기타" 연금자산의 종류별 세부 항목
     },

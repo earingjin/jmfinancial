@@ -58,9 +58,11 @@ const PENSION_ASSET_CATEGORIES = [
 
 // pensionAssetsBreakdown의 숫자 항목만 명시적으로 나열한다(otherItems는 배열이라 합산 대상이 아님).
 const PENSION_BREAKDOWN_NUMERIC_KEYS = ['variableAnnuity', 'pensionSavingsAccount', 'irp', 'other'];
+const RETIREMENT_PENSION_ASSET_KEYS = ['selfRetirementPension', 'spouseRetirementPension'];
 
 export default function Step4Assets() {
   const { formData, setField } = useFormData();
+  const hasSpouse = getIn(formData, 'basic.hasSpouse') === true;
   const hasLiquidAssets = getIn(formData, 'assets.liquidAssets.hasAssets') !== false;
   const hasFinancialAssets = getIn(formData, 'assets.financialAssets.hasAssets') !== false;
   const hasPensionAssets = getIn(formData, 'assets.hasPensionAssets') !== false;
@@ -91,6 +93,7 @@ export default function Step4Assets() {
 
   const clearPensionAssets = () => {
     PENSION_ASSET_CATEGORIES.forEach(({ key }) => setField(`assets.pensionAssetsBreakdown.${key}`, ''));
+    RETIREMENT_PENSION_ASSET_KEYS.forEach((key) => setField(`assets.pensionAssetsBreakdown.${key}`, ''));
     setField('assets.pensionAssetsBreakdown.otherItems', []);
     setField('assets.pensionAssets', '');
   };
@@ -189,14 +192,17 @@ export default function Step4Assets() {
   }, [hasPensionOtherInput, pensionMode, pensionOtherTotal, setField]);
 
   const pensionBreakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
-  const hasPensionDetailedInput = ['variableAnnuity', 'pensionSavingsAccount', 'irp'].some((key) => {
+  const activeRetirementPensionAssetKeys = hasSpouse
+    ? RETIREMENT_PENSION_ASSET_KEYS
+    : ['selfRetirementPension'];
+  const hasPensionDetailedInput = ['variableAnnuity', 'pensionSavingsAccount', 'irp', ...activeRetirementPensionAssetKeys].some((key) => {
     const value = pensionBreakdown[key];
     return value !== '' && value != null;
   }) || hasPensionOtherInput;
   const pensionAssetsTotal = PENSION_BREAKDOWN_NUMERIC_KEYS.reduce(
     (s, k) => s + (k === 'other' ? pensionOtherTotal : Number(pensionBreakdown[k]) || 0),
     0
-  );
+  ) + activeRetirementPensionAssetKeys.reduce((sum, key) => sum + (Number(pensionBreakdown[key]) || 0), 0);
 
   useEffect(() => {
     if (pensionMode === 'simple') return;
@@ -371,7 +377,7 @@ export default function Step4Assets() {
           "3. 저축"과 값이 연동되며, 여기서 직접 입력·수정할 수도 있습니다.
         </p>
         <PresenceField label="연금자산 여부" present={hasPensionAssets} onChange={(value) => setAssetPresence('assets.hasPensionAssets', value, clearPensionAssets)} presentLabel="자산 있음" absentLabel="자산 없음" />
-        {hasPensionAssets ? <TotalInputModeField
+        {hasPensionAssets ? <><TotalInputModeField
           modePath="assets.pensionAssetsInputMode" totalPath="assets.pensionAssets"
           simpleTotalPath="assets.pensionAssetsSimpleTotal" simpleStoredPath="assets.pensionAssetsSimpleInputStored"
           detailedTotal={pensionAssetsTotal} detailedHasInput={hasPensionDetailedInput} totalLabel="연금자산 총액"
@@ -433,8 +439,17 @@ export default function Step4Assets() {
           />
         )}
         <TotalAmountBox label="연금자산 총액" amount={pensionAssets} valueLabel="총액은" />
-        <span className="field-helper">위 4개 항목의 합으로 자동 계산됩니다. 금융자산비중지표 계산 시 금융자산과 별도로 취급됩니다.</span>
-        </TotalInputModeField> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
+        <span className="field-helper">입력한 연금자산 항목의 합으로 자동 계산됩니다. 금융자산비중지표 계산 시 금융자산과 별도로 취급됩니다.</span>
+        </TotalInputModeField>
+        <div className="field-grid" style={{ marginTop: 14 }}>
+          <NumberField path="assets.pensionAssetsBreakdown.selfRetirementPension" label={pensionMode === 'simple' ? '연금자산 총액 중 본인 퇴직연금 적립금' : '본인 퇴직연금 적립금'} unit="만원" />
+          {hasSpouse && <NumberField path="assets.pensionAssetsBreakdown.spouseRetirementPension" label={pensionMode === 'simple' ? '연금자산 총액 중 배우자 퇴직연금 적립금' : '배우자 퇴직연금 적립금'} unit="만원" />}
+        </div>
+        <p className="field-helper" style={{ marginTop: 8 }}>
+          퇴직연금은 현재 적립되어 있는 금액은 자산으로, 앞으로 일시금으로 받는 금액은 수령 시점의 자산으로, 매월 받는 금액은 연금소득으로 계산합니다.
+          이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요. 앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.
+        </p>
+        </> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
       </section>
 
       <section className="step-section">

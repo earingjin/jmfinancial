@@ -4,6 +4,17 @@ const n = (value) => Number(value) || 0;
 const won = (value) => `${n(value).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}만원`;
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 
+export function syncRetirementPensionAssetTotal(formData, setField, assetPath, nextValue) {
+  if ((getIn(formData, 'assets.pensionAssetsInputMode') || 'detailed') !== 'simple') return;
+  const previousValue = n(getIn(formData, assetPath));
+  const currentTotal = n(getIn(formData, 'assets.pensionAssets'));
+  const updatedTotal = Math.max(0, currentTotal - previousValue + n(nextValue));
+  const storedValue = updatedTotal === 0 && nextValue === '' ? '' : updatedTotal;
+  setField('assets.pensionAssets', storedValue);
+  setField('assets.pensionAssetsSimpleTotal', storedValue);
+  setField('assets.pensionAssetsSimpleInputStored', true);
+}
+
 export function livingDetailedTotal(formData, basePath, categories) {
   const breakdown = getIn(formData, basePath) || {};
   const otherItems = breakdown.otherItems || [];

@@ -355,6 +355,27 @@ function buildLumpSumByAge(retirementLumpSumExpenses, retirementAge, lifeExpecta
   return byAge;
 }
 
+function buildSeveranceLumpSumByAge(input, retirementAge, lifeExpectancy) {
+  const byAge = new Map();
+  const owners = [
+    { owner: 'self', severance: input.income?.severance },
+    ...(input.basic?.hasSpouse === true ? [{ owner: 'spouse', severance: input.spouse?.severance }] : []),
+  ];
+  owners.forEach(({ owner, severance }) => {
+    if (severance?.type !== 'lumpsum') return;
+    const amount = Number(severance.lumpsum);
+    const age = Number(severance.lumpsumAge);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(age)) return;
+    // 은퇴 나이에 받는 일시금은 simulation.readyAssetsAtRetirement에 이미 포함된다.
+    if (age <= retirementAge || age > lifeExpectancy) return;
+    const bucket = byAge.get(age) || { total: 0, events: [] };
+    bucket.total += amount;
+    bucket.events.push({ owner, amount: round(amount) });
+    byAge.set(age, bucket);
+  });
+  return byAge;
+}
+
 function retirementAssetProjectionNotCalculable(reason) {
   return {
     notCalculable: true,
@@ -434,6 +455,7 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
   const livingCostNow = simulation.retirementLivingCostNow;
   const lumpSumByAge = buildLumpSumByAge(input.expense?.retirementLumpSumExpenses, retirementAge, lifeExpectancy);
   const lumpSumExpenseIncluded = lumpSumByAge.size > 0;
+  const severanceLumpSumByAge = buildSeveranceLumpSumByAge(input, retirementAge, lifeExpectancy);
 
   const points = [];
   let balance = simulation.readyAssetsAtRetirement;
@@ -461,10 +483,12 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
     const livingExpense = calculateFutureLivingExpense(livingCostNow, years) * 12;
     const lumpSumBucket = lumpSumByAge.get(age);
     const lumpSumExpense = lumpSumBucket ? lumpSumBucket.total : 0;
+    const severanceLumpSumBucket = severanceLumpSumByAge.get(age);
+    const retirementLumpSumIncome = severanceLumpSumBucket ? severanceLumpSumBucket.total : 0;
 
     const startingBalance = balance;
     const investmentReturn = startingBalance * returnRate;
-    const rawEndingBalance = startingBalance + investmentReturn + income - livingExpense - lumpSumExpense;
+    const rawEndingBalance = startingBalance + investmentReturn + income + retirementLumpSumIncome - livingExpense - lumpSumExpense;
     const endingBalance = Math.max(0, rawEndingBalance);
     const unfundedExpense = Math.max(0, -rawEndingBalance);
     if (unfundedExpense > 0 && depletionAge === null) depletionAge = age;
@@ -474,6 +498,8 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
       startingBalance: round(startingBalance),
       investmentReturn: round(investmentReturn),
       income: round(income),
+      retirementLumpSumIncome: round(retirementLumpSumIncome),
+      retirementLumpSumEvents: severanceLumpSumBucket ? severanceLumpSumBucket.events : [],
       livingExpense: round(livingExpense),
       lumpSumExpense: round(lumpSumExpense),
       lumpSumEvents: lumpSumBucket ? lumpSumBucket.events : [],
@@ -488,6 +514,7 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
     && points.some((p) => p.age > depletionAge && p.endingBalance > 0);
   const endingAssets = points[points.length - 1]?.endingBalance ?? simulation.readyAssetsAtRetirement;
   const totalIncome = points.reduce((sum, point) => sum + point.income, 0);
+  const totalRetirementLumpSumIncome = points.reduce((sum, point) => sum + point.retirementLumpSumIncome, 0);
   const totalInvestmentReturn = points.reduce((sum, point) => sum + point.investmentReturn, 0);
   const totalLivingExpense = points.reduce((sum, point) => sum + point.livingExpense, 0);
   const totalLumpSumExpense = points.reduce((sum, point) => sum + point.lumpSumExpense, 0);
@@ -515,10 +542,11 @@ export function buildRetirementAssetProjection({ input, aggregates, simulation, 
       assetChange,
       assetChangeRate,
       totalIncome: round(totalIncome),
+      totalRetirementLumpSumIncome: round(totalRetirementLumpSumIncome),
       totalInvestmentReturn: round(totalInvestmentReturn),
       totalLivingExpense: round(totalLivingExpense),
       totalLumpSumExpense: round(totalLumpSumExpense),
-      totalInflow: round(totalIncome + totalInvestmentReturn),
+      totalInflow: round(totalIncome + totalRetirementLumpSumIncome + totalInvestmentReturn),
       totalOutflow: round(totalLivingExpense + totalLumpSumExpense),
     },
     points,
