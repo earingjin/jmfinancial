@@ -159,7 +159,7 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
               </label>
             )}
             <label className="field">
-              <span className="field-label">휴대폰 번호 8자리</span>
+              <span className="field-label">휴대폰 번호 8자리 (010 제외)</span>
               <input
                 type="text"
                 value={identifier}
@@ -172,7 +172,7 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
               />
             </label>
             <label className="field">
-              <span className="field-label">비밀번호</span>
+              <span className="field-label">비밀번호 (입력하는 번호가 최초 비밀번호 입니다.)</span>
               <input
                 type="password"
                 value={password}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Activity, useState, useEffect } from 'react';
 import NumberField from '../fields/NumberField';
 import CategoryBreakdownField from '../fields/CategoryBreakdownField';
 import RepeatableList from '../fields/RepeatableList';
@@ -274,7 +274,7 @@ export default function Step4Assets({ subStepIndex }) {
     <div className="step">
       <h2 className="step-title">4. 자산</h2>
 
-      {showSubStep(0) && <section className="step-section">
+      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">💵</span> 현금성 자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·비상금 등 즉시 인출 가능한 자산입니다.
@@ -297,9 +297,9 @@ export default function Step4Assets({ subStepIndex }) {
           customAmountLabel="금액"
           addItemLabel="현금성 자산 항목 추가"
         /></TotalInputModeField> : <p className="field-helper">현금성 자산 없음으로 선택했습니다.</p>}
-      </section>}
+      </section></Activity>
 
-      {showSubStep(1) && <section className="step-section">
+      <Activity mode={showSubStep(1) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">📈</span> 금융자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·CMA는 위 현금성 자산에서 입력해 주세요. 여기는 주식·펀드·채권 등 투자자산입니다.
@@ -371,9 +371,9 @@ export default function Step4Assets({ subStepIndex }) {
         <TotalAmountBox label="금융자산 총액" amount={financialAssetsTotal} valueLabel="총액은" />
         <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
         </TotalInputModeField> : <p className="field-helper">금융자산 없음으로 선택했습니다.</p>}
-      </section>}
+      </section></Activity>
 
-      {showSubStep(2) && <section className="step-section">
+      <Activity mode={showSubStep(2) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🏦</span> 연금자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           해당하는 연금자산 종류를 눌러 금액을 확인·입력해 주세요. 변액연금·연금저축계좌·IRP개인퇴직계좌는
@@ -474,9 +474,9 @@ export default function Step4Assets({ subStepIndex }) {
           이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요. 앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.
         </p>
         </> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
-      </section>}
+      </section></Activity>
 
-      {showSubStep(3) && <section className="step-section">
+      <Activity mode={showSubStep(3) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🏠</span> 부동산자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           매입가·공시가가 아닌 현재 시세 기준으로 입력해 주세요.
@@ -534,10 +534,9 @@ export default function Step4Assets({ subStepIndex }) {
         <TotalAmountBox label="부동산자산 총액" amount={realEstateTotal} valueLabel="총액은" />
         <span className="field-helper">부동산 시세와 기타 부동산 시세의 합으로 자동 계산됩니다</span>
         </TotalInputModeField> : <p className="field-helper">부동산자산 없음으로 선택했습니다.</p>}
-      </section>}
+      </section></Activity>
 
-      {showSubStep(4) && <>
-      <section className="step-section">
+      <Activity mode={showSubStep(4) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">📦</span> 기타 자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           위 자산 분류에 포함되지 않는 기타 보유 자산을 입력해 주세요.
@@ -572,9 +571,9 @@ export default function Step4Assets({ subStepIndex }) {
           <TotalAmountBox label="기타 자산 총액" amount={otherAssetsTotal} valueLabel="총액은" />
           <span className="field-helper">입력하신 기타 자산의 현재 가치를 자동으로 합산한 금액입니다.</span>
         </TotalInputModeField> : <p className="field-helper">기타 자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(5) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧮</span> 자산 합계</h3>
         <table className="grade-table compact">
           <thead>
@@ -589,8 +588,7 @@ export default function Step4Assets({ subStepIndex }) {
             <tr><td>기타 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(otherAssetsTotal)}</td></tr>
           </tbody>
         </table>
-      </section>
-      </>}
+      </section></Activity>
     </div>
   );
 }

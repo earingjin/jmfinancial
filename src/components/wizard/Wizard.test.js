@@ -1,5 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { getWizardScreens, resolveWizardScreenIndex } from '../../state/wizardScreens';
 
 // Wizard.jsx가 Step1~7을 정적으로 import하고, 그중 DiagnosisAreaIcon.jsx는 모듈 최상위에서
 // JSX를 평가한다(classic 런타임, globalThis.React 필요) - 정적 import는 이 대입문보다 먼저
@@ -35,12 +36,65 @@ describe('Wizard sub-step navigation', () => {
 
   it('숨겨진 필수 필드가 있는 sub-step을 찾아 기존 포커스 검증을 이어간다', () => {
     expect(getRequiredFieldSubStep('income', 'basic.birthYear')).toBe(0);
-    expect(getRequiredFieldSubStep('income', 'income.severance.pensionStartAge')).toBe(2);
-    expect(getRequiredFieldSubStep('income', 'spouse.nationalPension.expectedAdditionalContributionMonths')).toBe(3);
-    expect(getRequiredFieldSubStep('income', 'income.personalPension.startAge')).toBe(4);
+    expect(getRequiredFieldSubStep('income', 'income.severance.pensionStartAge')).toBe(4);
+    expect(getRequiredFieldSubStep('income', 'spouse.nationalPension.expectedAdditionalContributionMonths', true)).toBe(9);
+    expect(getRequiredFieldSubStep('income', 'income.personalPension.startAge')).toBe(8);
     expect(getRequiredFieldSubStep('expense', 'expense.retirementLivingCost')).toBe(1);
     expect(getRequiredFieldSubStep('expense', 'expense.retirementLumpSumExpenses.0.name')).toBe(2);
   });
+});
+
+describe.each([false, true])('소화면 전체 경로 (배우자: %s)', (hasSpouse) => {
+  const keys = ['income', 'expense', 'savings', 'assets', 'debt', 'netWorth'];
+  const screens = keys.map((key) => getWizardScreens(key, hasSpouse));
+  const counts = screens.map((items) => items.length);
+
+  it('본인/배우자/합계 순서와 항상 접근 가능한 배우자 선택 화면을 유지한다', () => {
+    expect(screens[0].map(({ id }) => id)).toEqual([
+      'basic-self', 'basic-spouse', 'salary-self', ...(hasSpouse ? ['salary-spouse'] : []), 'salary-total',
+      'severance-self', ...(hasSpouse ? ['severance-spouse'] : []), 'severance-total',
+      'national-self', ...(hasSpouse ? ['national-spouse'] : []), 'national-total',
+      'personal-self', ...(hasSpouse ? ['personal-spouse'] : []), 'personal-total', 'regular', 'income-total',
+    ]);
+    expect(counts).toEqual([hasSpouse ? 16 : 12, 6, 2, 6, 1, 1]);
+  });
+
+  it('모든 다음/이전 이동은 정확히 반대이며 영역 경계에서 누락이 없다', () => {
+    const positions = screens.flatMap((items, stepIndex) => items.map((_, subStepIndex) => ({ stepIndex, subStepIndex })));
+    positions.slice(0, -1).forEach((position, index) => {
+      const next = getNextWizardPosition(position.stepIndex, position.subStepIndex, counts);
+      expect(next).toMatchObject(positions[index + 1]);
+      expect(getPreviousWizardPosition(next.stepIndex, next.subStepIndex, counts)).toMatchObject(position);
+    });
+  });
+
+  it('연금 필수항목과 적립금 오류는 각 소유자의 입력 화면으로 이동한다', () => {
+    for (const [path, id] of [
+      ['basic.serviceYears', 'basic-self'], ['spouse.birthYear', 'basic-spouse'],
+      ['income.severance.lumpsumAge', 'severance-self'],
+      ['assets.pensionAssetsBreakdown.selfRetirementPension', 'severance-self'],
+      ['income.personalPension.startAge', 'personal-self'],
+      ['income.nationalPension.expectedAdditionalContributionMonths', 'national-self'],
+      ...(hasSpouse ? [
+        ['spouse.severance.pensionStartAge', 'severance-spouse'],
+        ['assets.pensionAssetsBreakdown.spouseRetirementPension', 'severance-spouse'],
+        ['spouse.personalPension.startAge', 'personal-spouse'],
+        ['spouse.nationalPension.expectedAdditionalContributionMonths', 'national-spouse'],
+      ] : []),
+    ]) {
+      expect(screens[0][getRequiredFieldSubStep('income', path, hasSpouse)].id).toBe(id);
+    }
+  });
+});
+
+it('배우자 제외 시 해당 묶음 본인 화면으로 보정하고 기존 합계 화면은 유지한다', () => {
+  const screens = getWizardScreens('income', false);
+  for (const group of ['salary', 'severance', 'national', 'personal']) {
+    expect(screens[resolveWizardScreenIndex('income', `${group}-spouse`, false)].id).toBe(`${group}-self`);
+    expect(screens[resolveWizardScreenIndex('income', `${group}-total`, false)].id).toBe(`${group}-total`);
+  }
+  expect(resolveWizardScreenIndex('income', null)).toBe(0);
+  expect(resolveWizardScreenIndex('income', 'unknown')).toBe(0);
 });
 
 // A5 회귀 테스트: 위저드 최종 제출은 임시 저장(draft) 성공 여부와 무관하게 계산 제출(onSubmit)로

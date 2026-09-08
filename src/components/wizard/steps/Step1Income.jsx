@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { Activity, useEffect, useRef } from 'react';
 import NumberField from '../fields/NumberField';
 import { syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
 import RadioField from '../fields/RadioField';
@@ -87,7 +87,7 @@ export function handleSeveranceType(setField, basePath, value) {
   }
 }
 
-export default function Step1Income({ subStepIndex }) {
+export default function Step1Income({ subStepIndex, screenId }) {
   const { formData, setField } = useFormData();
   const birthYear = getIn(formData, 'basic.birthYear');
   const retirementAge = getIn(formData, 'basic.retirementAge');
@@ -461,15 +461,20 @@ export default function Step1Income({ subStepIndex }) {
   const spouseSeveranceStartAge = spouseSeveranceType === 'pension' ? getIn(formData, 'spouse.severance.pensionStartAge') : null;
   const selfPersonalPensionStartAge = personalPensionType === 'installment' ? getIn(formData, 'income.personalPension.startAge') : null;
   const spousePersonalPensionStartAge = spousePersonalPensionType === 'installment' ? getIn(formData, 'spouse.personalPension.startAge') : null;
-  const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
+  const groupIds = ['basic-', 'salary-', 'severance-', 'national-', 'personal-', 'regular', 'income-total'];
+  const showSubStep = (index) => screenId != null
+    ? screenId.startsWith(groupIds[index])
+    : subStepIndex == null || subStepIndex === index;
+  const showPart = (id) => screenId == null || screenId === id;
 
   return (
     <div className="step">
       <h2 className="step-title">1. 수입</h2>
       <p className="step-desc">본인의 수입 항목을 입력합니다. 해당 사항이 없으면 0으로 입력해 주세요. 배우자가 있다면 아래에서 "배우자 정보 입력"을 선택해 주세요.</p>
 
-      {showSubStep(0) && <section className="step-section">
+      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">📝</span> 기본 정보</h3>
+        <Activity mode={showPart('basic-self') ? 'visible' : 'hidden'}>
         <div className="field-grid">
           <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required integerOnly useGrouping={false} />
           <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" max={120} required />
@@ -506,6 +511,8 @@ export default function Step1Income({ subStepIndex }) {
           </span>
         </div>
 
+        </Activity>
+        <Activity mode={showPart('basic-spouse') ? 'visible' : 'hidden'}>
         <div className="field" style={{ marginTop: 16 }}>
           <span className="field-label">배우자</span>
           <div className="radio-group" style={{ marginTop: 6 }}>
@@ -539,11 +546,14 @@ export default function Step1Income({ subStepIndex }) {
             />
           </div>
         )}
-      </section>}
+        </Activity>
+      </section></Activity>
 
-      {showSubStep(1) && <>
+      <Activity mode={showSubStep(1) ? 'visible' : 'hidden'}>
+      <Activity mode={!showPart('salary-total') || screenId == null ? 'visible' : 'hidden'}>
       <section className="step-section">
         <h3><span className="step-icon">💵</span> 급여</h3>
+        <Activity mode={showPart('salary-self') ? 'visible' : 'hidden'}>
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <div className="field" style={{ marginBottom: 16 }}>
           <span className="field-label">급여 여부</span>
@@ -571,8 +581,9 @@ export default function Step1Income({ subStepIndex }) {
           </>
         ) : <p className="field-helper">급여 없음으로 선택했습니다. 급여와 상여금은 소득 계산에서 제외됩니다.</p>}
 
+        </Activity>
         {hasSpouse && (
-          <>
+          <Activity mode={showPart('salary-spouse') ? 'visible' : 'hidden'}>
             <p className="field-subgroup-label">배우자</p>
             <div className="field" style={{ marginBottom: 16 }}>
               <span className="field-label">급여 여부</span>
@@ -599,10 +610,12 @@ export default function Step1Income({ subStepIndex }) {
                 <span className="field-helper">현재 소득(월급+상여금) 기준, 은퇴까지 남은 기간 동안 급여가 동일하게 유지된다고 가정한 누적 총액입니다</span>
               </>
             ) : <p className="field-helper">배우자 급여 없음으로 선택했습니다. 급여와 상여금은 소득 계산에서 제외됩니다.</p>}
-          </>
+          </Activity>
         )}
       </section>
 
+      </Activity>
+      <Activity mode={showPart('salary-total') ? 'visible' : 'hidden'}>
       <section className="step-section">
         <h3><span className="step-icon">📊</span> 현재 기준 소득</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
@@ -627,15 +640,19 @@ export default function Step1Income({ subStepIndex }) {
         <TotalAmountBox label="가구 급여총액" amount={householdSalaryLifetimeTotal} />
         <span className="field-helper">본인·배우자 각자의 은퇴까지 남은 기간을 반영한 급여 누적 총액의 합입니다</span>
       </section>
-      </>}
+      </Activity>
+      </Activity>
 
-      {showSubStep(2) && <section className="step-section">
+      <Activity mode={showSubStep(2) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">💼</span> 퇴직금 · 퇴직연금</h3>
+        <Activity mode={screenId === 'severance-total' ? 'hidden' : 'visible'}>
         <PensionPortalNotice />
         <p className="field-helper" style={{ marginBottom: 12 }}>
           퇴직연금은 현재 적립되어 있는 금액은 자산으로, 앞으로 일시금으로 받는 금액은 수령 시점의 자산으로, 매월 받는 금액은 연금소득으로 계산합니다.
           이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요. 앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.
         </p>
+        </Activity>
+        <Activity mode={showPart('severance-self') ? 'visible' : 'hidden'}>
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <RadioField
           path="income.severance.type"
@@ -698,8 +715,9 @@ export default function Step1Income({ subStepIndex }) {
           </>
         )}
 
+        </Activity>
         {hasSpouse && (
-          <>
+          <Activity mode={showPart('severance-spouse') ? 'visible' : 'hidden'}>
             <p className="field-subgroup-label">배우자</p>
             <RadioField
               path="spouse.severance.type"
@@ -758,15 +776,20 @@ export default function Step1Income({ subStepIndex }) {
                 />
               </>
             )}
-          </>
+          </Activity>
         )}
 
+        <Activity mode={showPart('severance-total') ? 'visible' : 'hidden'}>
         <TotalAmountBox label="퇴직금·퇴직연금 총액" amount={combinedSeveranceTotal} valueLabel="총액은" />
-      </section>}
+        </Activity>
+      </section></Activity>
 
-      {showSubStep(3) && <section className="step-section">
+      <Activity mode={showSubStep(3) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🏛️</span> 국민연금</h3>
+        <Activity mode={screenId === 'national-total' ? 'hidden' : 'visible'}>
         <PensionPortalNotice />
+        </Activity>
+        <Activity mode={showPart('national-self') ? 'visible' : 'hidden'}>
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <RadioField
           path="income.nationalPension.inputMode"
@@ -857,8 +880,9 @@ export default function Step1Income({ subStepIndex }) {
           <TotalAmountBox label="국민연금 수령 총액" amount={selfNationalPensionTotal} valueLabel="수령 총액은" />
         )}
 
+        </Activity>
         {hasSpouse && (
-          <>
+          <Activity mode={showPart('national-spouse') ? 'visible' : 'hidden'}>
             <p className="field-subgroup-label">배우자</p>
             <RadioField
               path="spouse.nationalPension.inputMode"
@@ -943,15 +967,20 @@ export default function Step1Income({ subStepIndex }) {
             {spouseNationalPensionMonthly > 0 && spouseNationalPensionMonths > 0 && (
               <TotalAmountBox label="국민연금 수령 총액" amount={spouseNationalPensionTotal} valueLabel="수령 총액은" />
             )}
-          </>
+          </Activity>
         )}
 
+        <Activity mode={showPart('national-total') ? 'visible' : 'hidden'}>
         <TotalAmountBox label="국민연금 수령 총액(본인+배우자)" amount={combinedNationalPensionTotal} valueLabel="총액은" />
-      </section>}
+        </Activity>
+      </section></Activity>
 
-      {showSubStep(4) && <section className="step-section">
+      <Activity mode={showSubStep(4) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🐷</span> 개인연금</h3>
+        <Activity mode={screenId === 'personal-total' ? 'hidden' : 'visible'}>
         <PensionPortalNotice />
+        </Activity>
+        <Activity mode={showPart('personal-self') ? 'visible' : 'hidden'}>
         {hasSpouse && <p className="field-subgroup-label">본인</p>}
         <RadioField
           path="income.personalPension.type"
@@ -983,8 +1012,9 @@ export default function Step1Income({ subStepIndex }) {
           <TotalAmountBox label="개인연금 수령 총액" amount={selfPersonalPensionTotal} valueLabel="수령 총액은" />
         )}
 
+        </Activity>
         {hasSpouse && (
-          <>
+          <Activity mode={showPart('personal-spouse') ? 'visible' : 'hidden'}>
             <p className="field-subgroup-label">배우자</p>
             <RadioField
               path="spouse.personalPension.type"
@@ -1015,13 +1045,15 @@ export default function Step1Income({ subStepIndex }) {
             {spousePersonalPensionTotal > 0 && (
               <TotalAmountBox label="개인연금 수령 총액" amount={spousePersonalPensionTotal} valueLabel="수령 총액은" />
             )}
-          </>
+          </Activity>
         )}
 
+        <Activity mode={showPart('personal-total') ? 'visible' : 'hidden'}>
         <TotalAmountBox label="개인연금 수령 총액(본인+배우자)" amount={combinedPersonalPensionTotal} valueLabel="총액은" />
-      </section>}
+        </Activity>
+      </section></Activity>
 
-      {showSubStep(5) && <section className="step-section">
+      <Activity mode={showSubStep(5) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">📈</span> 기타 정기수입 (사업소득 포함)</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           사업소득은 본인·배우자 구분 없이 아래 목록에 합산해 입력해 주세요. "사업소득"으로 표시한 항목은
@@ -1053,9 +1085,9 @@ export default function Step1Income({ subStepIndex }) {
             <span className="field-helper">항목별 "연간 수입 금액 × 수령 기간"을 합산한 값입니다</span>
           </>
         )}
-      </section>}
+      </section></Activity>
 
-      {showSubStep(6) && <section className="step-section">
+      <Activity mode={showSubStep(6) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧮</span> 총 수입 합계</h3>
         <table className="grade-table compact">
           <thead>
@@ -1121,7 +1153,7 @@ export default function Step1Income({ subStepIndex }) {
           연금 금액은 실제로 받고 있는 돈이 아니라, 입력하신 수령 시작 나이부터 적용되는 예상 수령액입니다.
           수령 개월 수(또는 기간)가 입력된 연금·수입만 합산됩니다.
         </span>
-      </section>}
+      </section></Activity>
     </div>
   );
 }

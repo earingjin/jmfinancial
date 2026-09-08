@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Activity, useState, useEffect } from 'react';
 import NumberField from '../fields/NumberField';
 import RepeatableList from '../fields/RepeatableList';
 import ExpenseBreakdownField from '../fields/ExpenseBreakdownField';
@@ -122,7 +122,7 @@ export default function Step2Expense({ subStepIndex }) {
     <div className="step">
       <h2 className="step-title">2. 지출</h2>
 
-      {showSubStep(0) && <section className="step-section">
+      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧾</span> 현재 생활비 상세</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           대출 원리금상환액(차량대출 포함)은 여기가 아닌 "5. 부채" 단계에서 입력해 주세요. 두 곳에 중복으로 입력하면 총지출이 실제보다 크게 계산됩니다.
@@ -139,9 +139,9 @@ export default function Step2Expense({ subStepIndex }) {
           totalLabel="현재 기준 월 생활비 합계"
           annualLabel="현재 기준 연 생활비 합계"
         />
-      </section>}
+      </section></Activity>
 
-      {showSubStep(1) && <section className="step-section">
+      <Activity mode={showSubStep(1) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🏖️</span> 노후 생활비</h3>
         <p className="field-helper" style={{ marginBottom: 4 }}>
           국민연금연구원 조사 2024년 기준 적정 노후 생활비 자료입니다.
@@ -176,9 +176,9 @@ export default function Step2Expense({ subStepIndex }) {
           </span>
         )}
         {showCostGuide && <RetirementCostGuideModal onClose={() => setShowCostGuide(false)} />}
-      </section>}
+      </section></Activity>
 
-      {showSubStep(2) && <section className="step-section">
+      <Activity mode={showSubStep(2) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">💰</span> 은퇴 후 예상 목돈지출</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           은퇴 후 차량 교체, 주택 수리, 자녀 학자금·결혼지원·기타 지원처럼 예상되는 큰 지출이 있다면 추가해 주세요. 없다면 입력하지 않아도 됩니다.
@@ -228,10 +228,9 @@ export default function Step2Expense({ subStepIndex }) {
           }}
         />
         <span className="field-helper">예상 지출 나이는 은퇴(예정) 연령 이후 ~ 기대수명 이내로 입력해 주세요.</span>
-      </section>}
+      </section></Activity>
 
-      {showSubStep(3) && <>
-      <section className="step-section">
+      <Activity mode={showSubStep(3) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🛡️</span> 보장성 보험</h3>
         <PresenceField label="보장성 보험 여부" present={hasInsurance} onChange={setHasInsurance} presentLabel="보험 있음" absentLabel="보험 없음" />
         {hasInsurance ? <div className="field-grid">
@@ -259,9 +258,9 @@ export default function Step2Expense({ subStepIndex }) {
             </div>
           )}
         />
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(4) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">💸</span> 기타 지출</h3>
         <RepeatableList
           path="expense.otherExpenses"
@@ -291,9 +290,9 @@ export default function Step2Expense({ subStepIndex }) {
             </div>
           )}
         />
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(5) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧮</span> 총 지출 합계</h3>
         <table className="grade-table compact">
           <thead>
@@ -310,8 +309,7 @@ export default function Step2Expense({ subStepIndex }) {
         <span className="field-helper">
           노후 생활비, 자녀 목돈 지출, 기타 지출은 발생 시점·주기가 달라 위 합계에 포함되지 않습니다.
         </span>
-      </section>
-      </>}
+      </section></Activity>
     </div>
   );
 }

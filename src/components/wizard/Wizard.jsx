@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Activity, useEffect, useRef, useState } from 'react';
 import Step1Income from './steps/Step1Income';
 import Step2Expense from './steps/Step2Expense';
 import Step3Savings from './steps/Step3Savings';
@@ -8,21 +8,22 @@ import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
 import { computeWizardRequiredFields } from '../../state/wizardRequiredFields';
+import { getWizardScreens, resolveWizardScreenIndex, getRequiredScreenIndex } from '../../state/wizardScreens';
 import DiagnosisAreaIcon from '../DiagnosisAreaIcon';
 
 const SHOW_SCENARIO_STEP = false;
 
 const STEPS = [
-  { key: 'income', title: '수입', Component: Step1Income, subSteps: ['기본 정보', '급여', '퇴직금 · 퇴직연금', '국민연금', '개인연금', '기타 정기수입', '수입 확인'] },
-  { key: 'expense', title: '지출', Component: Step2Expense, subSteps: ['현재 생활비', '노후 생활비', '은퇴 후 목돈지출', '보험 · 지출 확인'] },
-  { key: 'savings', title: '저축', Component: Step3Savings, subSteps: ['현재 저축', '노후준비 저축 · 확인'] },
-  { key: 'assets', title: '자산', Component: Step4Assets, subSteps: ['현금성 자산', '금융자산', '연금자산', '부동산', '기타자산 · 총자산'] },
-  { key: 'debt', title: '부채', Component: Step5Debt, subSteps: ['부채'] },
-  { key: 'netWorth', title: '순자산', Component: Step6NetWorth, subSteps: ['입력 확인'] },
-  ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios, subSteps: ['대응방안'] }] : []),
+  { key: 'income', title: '수입', Component: Step1Income },
+  { key: 'expense', title: '지출', Component: Step2Expense },
+  { key: 'savings', title: '저축', Component: Step3Savings },
+  { key: 'assets', title: '자산', Component: Step4Assets },
+  { key: 'debt', title: '부채', Component: Step5Debt },
+  { key: 'netWorth', title: '순자산', Component: Step6NetWorth },
+  ...(SHOW_SCENARIO_STEP ? [{ key: 'scenarios', title: '대응방안', Component: Step7Scenarios }] : []),
 ];
 
-const SUB_STEP_COUNTS = STEPS.map(({ subSteps }) => subSteps.length);
+const SUB_STEP_COUNTS = STEPS.map(({ key }) => getWizardScreens(key).length);
 
 // oxlint-disable-next-line react/only-export-components
 export function getNextWizardPosition(stepIndex, subStepIndex, subStepCounts = SUB_STEP_COUNTS) {
@@ -47,12 +48,8 @@ export function getPreviousWizardPosition(stepIndex, subStepIndex, subStepCounts
 }
 
 // oxlint-disable-next-line react/only-export-components
-export function getRequiredFieldSubStep(stepKey, path) {
-  if (stepKey === 'expense') return path?.startsWith('expense.retirementLumpSumExpenses.') ? 2 : 1;
-  if (path?.includes('.severance.') || path?.includes('RetirementPension')) return 2;
-  if (path?.includes('.nationalPension.')) return 3;
-  if (path?.includes('.personalPension.')) return 4;
-  return 0;
+export function getRequiredFieldSubStep(stepKey, path, hasSpouse = false) {
+  return getRequiredScreenIndex(stepKey, path, hasSpouse);
 }
 
 // 최종 제출 시 "임시 저장 실패가 계산·결과 저장 자체를 막으면 안 된다"는 규칙만 분리해 둔다
@@ -71,7 +68,8 @@ const formatSavedAt = (value) => value
 
 export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, onStepChange }) {
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
-  const [subStepIndex, setSubStepIndex] = useState(0);
+  const [screenId, setScreenId] = useState(null);
+  const [visitedSteps, setVisitedSteps] = useState(() => new Set([stepIndex]));
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [showProgressHint, setShowProgressHint] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
@@ -79,7 +77,15 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const progressRef = useRef(null);
   const restingViewportHeightRef = useRef(0);
   const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
-  const { Component, key: currentStepKey, subSteps } = STEPS[stepIndex];
+  const { key: currentStepKey } = STEPS[stepIndex];
+  const hasSpouse = !!formData.basic.hasSpouse;
+  const subSteps = getWizardScreens(currentStepKey, hasSpouse);
+  const subStepCounts = STEPS.map(({ key }) => getWizardScreens(key, hasSpouse).length);
+  const subStepIndex = resolveWizardScreenIndex(currentStepKey, screenId, hasSpouse);
+  const resolvedScreenId = subSteps[subStepIndex].id;
+  // 식별자로 현재 묶음을 유지하고, 제외된 배우자 화면은 렌더링 전에 보정한다.
+  if (screenId !== resolvedScreenId) setScreenId(resolvedScreenId);
+  const setSubStepIndex = (index) => setScreenId(subSteps[index].id);
   const isLastSubStep = subStepIndex === subSteps.length - 1;
   const isLast = stepIndex === STEPS.length - 1 && isLastSubStep;
   const isFirst = stepIndex === 0 && subStepIndex === 0;
@@ -161,8 +167,9 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
     if (resolved !== stepIndex || nextSubStep !== subStepIndex) prepareForScreenChange();
     setDraftStep(resolved);
+    setVisitedSteps((previous) => previous.has(resolved) ? previous : new Set([...previous, resolved]));
     setStepIndexState(resolved);
-    setSubStepIndex(nextSubStep);
+    setScreenId(getWizardScreens(STEPS[resolved].key, hasSpouse)[nextSubStep].id);
     onStepChange?.(resolved);
     void saveCurrentDraft(resolved).catch(() => {});
   };
@@ -193,23 +200,23 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     }
     if (currentStepKey === 'income' && basicInfoMissing) {
       setShowRequiredError(true);
-      setSubStepIndex(getRequiredFieldSubStep('income', missingIncomeFields[0][0]));
+      moveToSubStep(getRequiredFieldSubStep('income', missingIncomeFields[0][0], hasSpouse));
       scrollToField(missingIncomeFields[0][0]);
       return;
     }
     if (currentStepKey === 'expense' && retirementLivingCostMissing) {
       setShowRequiredError(true);
-      setSubStepIndex(getRequiredFieldSubStep('expense', missingExpenseFields[0][0]));
+      moveToSubStep(getRequiredFieldSubStep('expense', missingExpenseFields[0][0]));
       scrollToField(missingExpenseFields[0][0]);
       return;
     }
     setShowRequiredError(false);
-    const nextPosition = getNextWizardPosition(stepIndex, subStepIndex);
+    const nextPosition = getNextWizardPosition(stepIndex, subStepIndex, subStepCounts);
     moveToStep(nextPosition.stepIndex, nextPosition.subStepIndex);
   };
 
   const goPrevious = () => {
-    const previousPosition = getPreviousWizardPosition(stepIndex, subStepIndex);
+    const previousPosition = getPreviousWizardPosition(stepIndex, subStepIndex, subStepCounts);
     if (previousPosition.stepChanged) {
       moveToStep(previousPosition.stepIndex, previousPosition.subStepIndex);
       return;
@@ -220,7 +227,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const submit = async () => {
     if (basicInfoMissing) {
       setShowRequiredError(true);
-      moveToStep(STEPS.findIndex((s) => s.key === 'income'), getRequiredFieldSubStep('income', missingIncomeFields[0][0]));
+      moveToStep(STEPS.findIndex((s) => s.key === 'income'), getRequiredFieldSubStep('income', missingIncomeFields[0][0], hasSpouse));
       scrollToField(missingIncomeFields[0][0]);
       return;
     }
@@ -275,7 +282,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
 
       <div className="wizard-substep-progress" aria-label={`${STEPS[stepIndex].title} 소단계 진행`}>
         <div className="wizard-substep-progress-head">
-          <strong>{subSteps[subStepIndex]}</strong>
+          <strong>{subSteps[subStepIndex].label}</strong>
           <span>{subStepIndex + 1} / {subSteps.length}</span>
         </div>
         <div className="wizard-substep-progress-track" aria-hidden="true">
@@ -284,7 +291,15 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
       </div>
 
       <div className="wizard-body">
-        <Component subStepIndex={subStepIndex} />
+        {/* Activity는 화면의 내부 상태를 보존하고 비활성 영역의 effect는 중지한다. */}
+        {STEPS.map(({ key, Component }, index) => visitedSteps.has(index) && (
+          <Activity key={key} mode={index === stepIndex ? 'visible' : 'hidden'}>
+            <Component
+              subStepIndex={index === stepIndex ? subStepIndex : 0}
+              screenId={index === stepIndex ? resolvedScreenId : getWizardScreens(key, hasSpouse)[0].id}
+            />
+          </Activity>
+        ))}
       </div>
 
       {showRequiredError && (
