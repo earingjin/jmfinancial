@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { initialFormData } from './initialFormData';
-import { computeWizardRequiredFields } from './wizardRequiredFields';
+import { computeWizardRequiredFields, getWizardRequiredFieldDefinitions } from './wizardRequiredFields';
+import { WIZARD_SCREENS, getRequiredScreenIndex, getWizardScreens } from './wizardScreens';
 
 // 2026-09-01 실제 문의 재현 케이스: 배우자 개인연금 수령방식이 기본값 "분할 수령"인 채로
 // 수령 시작 나이(startAge)를 채우지 않고 제출하면 서버(api/_lib/validate.js)가 400으로
@@ -304,6 +305,11 @@ describe('computeWizardRequiredFields - 지출(2. 지출)', () => {
     expect(result.missingExpenseFields.map(([path]) => path)).toEqual([
       'expense.retirementLumpSumExpenses.0.name',
     ]);
+    expect(getWizardRequiredFieldDefinitions(formData).expenseRequiredFields).toContainEqual([
+      'expense.retirementLumpSumExpenses.0.name',
+      '목돈지출 계획 1번째 항목의 지출 용도',
+      true,
+    ]);
     expect(result.requiredErrorMessage).toBe('"2. 지출"에서 다음 항목을 입력해 주세요: 목돈지출 계획 1번째 항목의 지출 용도');
   });
 
@@ -328,5 +334,54 @@ describe('computeWizardRequiredFields - 지출(2. 지출)', () => {
 
     expect(result.basicInfoMissing).toBe(false);
     expect(result.retirementLivingCostMissing).toBe(false);
+  });
+});
+
+describe('필수 입력 필드 → wizardScreens 오류 이동 연결', () => {
+  const mappingForms = () => {
+    const lumpsum = structuredClone(initialFormData);
+    lumpsum.basic.hasSpouse = true;
+    lumpsum.income.nationalPension.futureContributionPlan = 'continue';
+    lumpsum.spouse.nationalPension.futureContributionPlan = 'continue';
+    lumpsum.expense.retirementLumpSumExpenses = [{ name: '', expectedAge: 70, amount: 1000 }];
+
+    const pension = structuredClone(lumpsum);
+    pension.income.severance.type = 'pension';
+    pension.spouse.severance.type = 'pension';
+
+    return [lumpsum, pension];
+  };
+
+  it('필수 필드 정의의 모든 path가 정확히 한 소화면 prefix에 포함된다', () => {
+    for (const formData of mappingForms()) {
+      const definitions = getWizardRequiredFieldDefinitions(formData);
+      for (const [stepKey, fields] of [
+        ['income', definitions.incomeRequiredFields],
+        ['expense', definitions.expenseRequiredFields],
+      ]) {
+        for (const [path] of fields) {
+          const matchingScreens = WIZARD_SCREENS[stepKey]
+            .filter(({ prefixes }) => prefixes.some((prefix) => path.startsWith(prefix)));
+          expect(matchingScreens.map(({ id }) => id), `${path}의 소화면 연결`).toHaveLength(1);
+        }
+      }
+    }
+  });
+
+  it('실제로 누락 판정된 모든 필드가 배우자 포함 화면 목록의 해당 소화면으로 이동한다', () => {
+    for (const formData of mappingForms()) {
+      const required = computeWizardRequiredFields(formData);
+      for (const [stepKey, fields] of [
+        ['income', required.missingIncomeFields],
+        ['expense', required.missingExpenseFields],
+      ]) {
+        const screens = getWizardScreens(stepKey, true);
+        for (const [path] of fields) {
+          const expected = WIZARD_SCREENS[stepKey]
+            .find(({ prefixes }) => prefixes.some((prefix) => path.startsWith(prefix)));
+          expect(screens[getRequiredScreenIndex(stepKey, path, true)]?.id, `${path}의 오류 이동`).toBe(expected.id);
+        }
+      }
+    }
   });
 });

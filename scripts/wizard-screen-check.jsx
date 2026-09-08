@@ -21,6 +21,7 @@ let context;
 let submitted;
 let result;
 let mountKey = 0;
+// oxlint-disable-next-line react/only-export-components
 function Probe() { context = useFormData(); return null; }
 const wait = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 const flush = async (fn = () => {}) => { await act(async () => { await fn(); }); };

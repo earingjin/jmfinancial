@@ -8,7 +8,7 @@ const isFilled = (value) => value !== '' && value !== null && value !== undefine
 // 수령방식을 "월지급/분할 수령"으로 선택하면 수령 시작 나이가 서버 필수값). Wizard.jsx는 DOM API·
 // 컴포넌트 트리에 의존해 렌더링 없이 테스트하기 어려우므로, 이 판정만 밖으로 분리해 formData만으로
 // 단위 테스트할 수 있게 한다(App.jsx의 formSessionPolicy.js와 동일한 이유).
-export function computeWizardRequiredFields(formData) {
+export function getWizardRequiredFieldDefinitions(formData) {
   const hasSpouse = !!getIn(formData, 'basic.hasSpouse');
   const incomeRequiredFields = [
     ['basic.birthYear', '출생년도', true],
@@ -34,18 +34,27 @@ export function computeWizardRequiredFields(formData) {
     ['assets.pensionAssetsBreakdown.selfRetirementPension', '본인 퇴직연금 적립금', getIn(formData, 'income.severance.type') === 'pension'],
     ['assets.pensionAssetsBreakdown.spouseRetirementPension', '배우자 퇴직연금 적립금', hasSpouse && getIn(formData, 'spouse.severance.type') === 'pension'],
   ];
-  const missingIncomeFields = incomeRequiredFields.filter(([path, , active]) => active && !isFilled(getIn(formData, path)));
-  const basicInfoMissing = missingIncomeFields.length > 0;
-
   // 나이·금액 중 하나라도 입력된 목돈지출 항목은 지출 용도(name)가 서버 필수값이다(validate.js의 isInUse와 동일 기준).
   const retirementLumpSumExpenses = getIn(formData, 'expense.retirementLumpSumExpenses') || [];
   const missingLumpSumNameFields = retirementLumpSumExpenses
-    .map((item, index) => [`expense.retirementLumpSumExpenses.${index}.name`, `목돈지출 계획 ${index + 1}번째 항목의 지출 용도`, item])
-    .filter(([, , item]) => (isFilled(item?.expectedAge) || isFilled(item?.amount) || isFilled(item?.name)) && !isFilled(item?.name));
-  const missingExpenseFields = [
-    ...(isFilled(getIn(formData, 'expense.retirementLivingCost')) ? [] : [['expense.retirementLivingCost', '노후 월 평균 생활비']]),
+    .flatMap((item, index) => (
+      (isFilled(item?.expectedAge) || isFilled(item?.amount) || isFilled(item?.name)) && !isFilled(item?.name)
+        ? [[`expense.retirementLumpSumExpenses.${index}.name`, `목돈지출 계획 ${index + 1}번째 항목의 지출 용도`, true]]
+        : []
+    ));
+  const expenseRequiredFields = [
+    ['expense.retirementLivingCost', '노후 월 평균 생활비', true],
     ...missingLumpSumNameFields,
   ];
+
+  return { incomeRequiredFields, expenseRequiredFields };
+}
+
+export function computeWizardRequiredFields(formData) {
+  const { incomeRequiredFields, expenseRequiredFields } = getWizardRequiredFieldDefinitions(formData);
+  const missingIncomeFields = incomeRequiredFields.filter(([path, , active]) => active && !isFilled(getIn(formData, path)));
+  const basicInfoMissing = missingIncomeFields.length > 0;
+  const missingExpenseFields = expenseRequiredFields.filter(([path, , active = true]) => active && !isFilled(getIn(formData, path)));
   const retirementLivingCostMissing = missingExpenseFields.length > 0;
 
   const requiredErrorMessage = basicInfoMissing

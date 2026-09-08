@@ -11,7 +11,8 @@ vi.mock('../../lib/supabaseClient', () => ({ supabase: {} }));
 const { getNextWizardPosition, getPreviousWizardPosition, getRequiredFieldSubStep, submitAfterDraftSave } = await import('./Wizard.jsx');
 
 describe('Wizard sub-step navigation', () => {
-  const counts = [7, 4, 2, 5, 1, 1];
+  const keys = ['income', 'expense', 'savings', 'assets', 'debt', 'netWorth'];
+  const counts = keys.map((key) => getWizardScreens(key, false).length);
 
   it('첫 sub-step의 이전은 전체 첫 화면에 그대로 머문다', () => {
     expect(getPreviousWizardPosition(0, 0, counts)).toEqual({ stepIndex: 0, subStepIndex: 0, stepChanged: false });
@@ -23,11 +24,11 @@ describe('Wizard sub-step navigation', () => {
   });
 
   it('마지막 sub-step의 다음은 다음 대단계 첫 sub-step으로 이동한다', () => {
-    expect(getNextWizardPosition(0, 6, counts)).toEqual({ stepIndex: 1, subStepIndex: 0, stepChanged: true });
+    expect(getNextWizardPosition(0, counts[0] - 1, counts)).toEqual({ stepIndex: 1, subStepIndex: 0, stepChanged: true });
   });
 
   it('대단계 첫 sub-step의 이전은 이전 대단계 마지막 sub-step으로 이동한다', () => {
-    expect(getPreviousWizardPosition(1, 0, counts)).toEqual({ stepIndex: 0, subStepIndex: 6, stepChanged: true });
+    expect(getPreviousWizardPosition(1, 0, counts)).toEqual({ stepIndex: 0, subStepIndex: counts[0] - 1, stepChanged: true });
   });
 
   it('마지막 화면의 다음은 마지막 화면에 그대로 머문다', () => {
