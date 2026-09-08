@@ -13,8 +13,7 @@ function translateAuthError(message) {
   return message;
 }
 
-function PrivacyConsentModal({ onClose, onConfirm }) {
-  const [checked, setChecked] = useState(false);
+function PrivacyConsentModal({ onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
@@ -51,13 +50,6 @@ function PrivacyConsentModal({ onClose, onConfirm }) {
 
           <p className="consent-quote">"입력된 재무정보는 진단 결과 생성 목적으로만 사용되며 제3자에게 제공되지 않습니다."</p>
         </div>
-        <label className="consent-checkbox">
-          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
-          <span>개인정보 수집·이용에 동의합니다.</span>
-        </label>
-        <button type="button" className="btn-primary consent-confirm" disabled={!checked} onClick={onConfirm}>
-          확인
-        </button>
       </div>
     </div>
   );
@@ -146,12 +138,6 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
             </div>
           )}
 
-          {mode === 'signup' && (
-            <button type="button" className="auth-consent-trigger" onClick={() => setShowConsentModal(true)}>
-              개인정보 수집 동의하기
-            </button>
-          )}
-
           <form onSubmit={handleSubmit} className="auth-form">
             {mode === 'signup' && (
               <p className="auth-signup-reassurance">
@@ -163,18 +149,18 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
             )}
             {mode === 'signup' && (
               <label className="field">
-                <span className="field-label">이름</span>
+                <span className="field-label">이름 (닉네임)</span>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="홍길동" />
               </label>
             )}
             <label className="field">
-              <span className="field-label">{mode === 'signup' ? '아이디 (휴대폰 번호 뒤 8자리)' : '아이디 또는 이메일'}</span>
+              <span className="field-label">휴대폰 번호 8자리</span>
               <input
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(mode === 'signup' ? normalizeSignupLoginId(e.target.value) : e.target.value)}
                 required
-                placeholder={mode === 'signup' ? '예: 12345678' : '아이디 또는 이메일'}
+                placeholder="예: 12345678"
                 inputMode={mode === 'signup' ? 'numeric' : undefined}
                 pattern={mode === 'signup' ? '[0-9]{8}' : undefined}
                 autoComplete="username"
@@ -192,6 +178,22 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
                 autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               />
             </label>
+
+            {mode === 'signup' && (
+              <div className="auth-consent-row">
+                <label className="auth-consent-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={consentGiven}
+                    onChange={(e) => setConsentGiven(e.target.checked)}
+                  />
+                  <span>개인정보 수집·이용에 동의합니다.</span>
+                </label>
+                <button type="button" className="auth-consent-details" onClick={() => setShowConsentModal(true)}>
+                  내용 보기
+                </button>
+              </div>
+            )}
 
             {error && <p className="auth-error">{error}</p>}
             {notice && <p className="auth-notice">{notice}</p>}
@@ -215,10 +217,6 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
       {showConsentModal && (
         <PrivacyConsentModal
           onClose={() => setShowConsentModal(false)}
-          onConfirm={() => {
-            setConsentGiven(true);
-            setShowConsentModal(false);
-          }}
         />
       )}
       <AppCopyright className="auth-copyright" />
