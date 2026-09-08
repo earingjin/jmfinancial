@@ -72,6 +72,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const [visitedSteps, setVisitedSteps] = useState(() => new Set([stepIndex]));
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [showProgressHint, setShowProgressHint] = useState(false);
+  const [isSubStepMenuOpen, setIsSubStepMenuOpen] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const progressRef = useRef(null);
@@ -158,6 +159,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   };
 
   const moveToSubStep = (nextSubStep) => {
+    setIsSubStepMenuOpen(false);
     if (nextSubStep === subStepIndex) return;
     prepareForScreenChange();
     setSubStepIndex(nextSubStep);
@@ -165,6 +167,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
 
   const moveToStep = (next, nextSubStep = 0) => {
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
+    setIsSubStepMenuOpen(false);
     if (resolved !== stepIndex || nextSubStep !== subStepIndex) prepareForScreenChange();
     setDraftStep(resolved);
     setVisitedSteps((previous) => previous.has(resolved) ? previous : new Set([...previous, resolved]));
@@ -280,14 +283,48 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
         </button>
       </div>
 
-      <div className="wizard-substep-progress" aria-label={`${STEPS[stepIndex].title} 소단계 진행`}>
-        <div className="wizard-substep-progress-head">
-          <strong>{subSteps[subStepIndex].label}</strong>
-          <span>{subStepIndex + 1} / {subSteps.length}</span>
-        </div>
+      <div className={`wizard-substep-progress${isSubStepMenuOpen ? ' is-open' : ''}`} aria-label={`${STEPS[stepIndex].title} 소단계 진행`}>
+        <button
+          type="button"
+          className="wizard-substep-toggle"
+          aria-expanded={subSteps.length > 1 ? isSubStepMenuOpen : undefined}
+          aria-controls={subSteps.length > 1 ? 'wizard-substep-menu' : undefined}
+          disabled={subSteps.length <= 1}
+          onClick={() => setIsSubStepMenuOpen((open) => !open)}
+        >
+          <span className="wizard-substep-progress-head">
+            <strong>
+              <span className="wizard-substep-category">{STEPS[stepIndex].title}<span aria-hidden="true"> · </span></span>
+              {subSteps[subStepIndex].label}
+            </strong>
+            <span className="wizard-substep-position">
+              {subStepIndex + 1} / {subSteps.length}
+              {subSteps.length > 1 && <span className="wizard-substep-chevron" aria-hidden="true">{isSubStepMenuOpen ? '▲' : '▼'}</span>}
+            </span>
+          </span>
+        </button>
         <div className="wizard-substep-progress-track" aria-hidden="true">
           <span style={{ width: `${((subStepIndex + 1) / subSteps.length) * 100}%` }} />
         </div>
+        {subSteps.length > 1 && isSubStepMenuOpen && (
+          <div className="wizard-substep-menu" id="wizard-substep-menu">
+            <strong className="wizard-substep-menu-title">{STEPS[stepIndex].title} 단계</strong>
+            <div className="wizard-substep-menu-list">
+              {subSteps.map((subStep, index) => (
+                <button
+                  type="button"
+                  key={subStep.id}
+                  className={`wizard-substep-menu-item${index === subStepIndex ? ' is-current' : ''}`}
+                  aria-current={index === subStepIndex ? 'step' : undefined}
+                  onClick={() => moveToSubStep(index)}
+                >
+                  <span className="wizard-substep-menu-check" aria-hidden="true">{index === subStepIndex ? '✓' : ''}</span>
+                  <span>{subStep.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="wizard-body">

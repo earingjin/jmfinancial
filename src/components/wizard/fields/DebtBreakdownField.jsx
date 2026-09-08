@@ -310,7 +310,7 @@ export default function DebtBreakdownField({
             </button>
           </div>
 
-          <table className="grade-table compact" style={{ marginTop: 18 }}>
+          <table className="grade-table compact finance-summary-desktop" style={{ marginTop: 18 }}>
             <thead>
               <tr><th>대출 종류</th><th style={{ textAlign: 'right' }}>원금</th><th style={{ textAlign: 'right' }}>월 상환부담</th></tr>
             </thead>
@@ -339,6 +339,30 @@ export default function DebtBreakdownField({
               ))}
             </tbody>
           </table>
+          <div className="finance-summary-mobile finance-summary-mobile--spaced">
+            <div className="income-summary-totals">
+              <div className="income-summary-total-card"><span>총 부채</span><strong>{formatWon(balanceTotal || 0)}</strong></div>
+              <div className="income-summary-total-card"><span>총 월 상환액</span><strong>{formatWon(repaymentTotal || 0)}</strong></div>
+            </div>
+            <div className="income-summary-group">
+              <h4>부채 구성</h4>
+              {openCategories.map((c) => {
+                const item = breakdown[c.key] || {};
+                return (
+                  <div className="income-summary-item income-summary-item--child" key={c.key}>
+                    <div className="income-summary-item-main"><span>{c.label}</span><strong>{formatWon(Number(item.principal) || 0)}</strong></div>
+                    <p>월 상환부담 · {formatWon(monthlyBurdenOf(item))}</p>
+                  </div>
+                );
+              })}
+              {customItems.map((item, i) => (
+                <div className="income-summary-item income-summary-item--child" key={`custom-mobile-${i}`}>
+                  <div className="income-summary-item-main"><span>{item.name || '(이름 미입력)'}</span><strong>{formatWon(Number(item.principal) || 0)}</strong></div>
+                  <p>월 상환부담 · {formatWon(monthlyBurdenOf(item))}</p>
+                </div>
+              ))}
+            </div>
+          </div>
           <span className="field-helper">선택·추가하신 항목의 대출 원금·월 이자·상환액을 자동으로 합산한 값입니다</span>
         </>
       )}

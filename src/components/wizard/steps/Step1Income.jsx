@@ -642,7 +642,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
       <section className="step-section">
         <h3><span className="step-icon">📊</span> 현재 기준 소득</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
-          위 급여(월급+상여금, 본인+배우자) 합계로 자동 계산됩니다. 사업소득은 아래 "기타 정기수입"에서 별도로 합산됩니다.
+          위 급여(월급+상여금, 본인+배우자) 합계로 자동 계산됩니다.
         </p>
         <div className="field-grid">
           <label className="field">
@@ -679,9 +679,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
         <Activity mode={screenId === 'severance-total' ? 'hidden' : 'visible'}>
         <PensionPortalNotice />
         <p className="field-helper" style={{ marginBottom: 12 }}>
-          퇴직연금은 현재 적립되어 있는 금액은 자산으로, 앞으로 일시금으로 받는 금액은 수령 시점의 자산으로, 매월 받는 금액은 연금소득으로 계산합니다.
-          퇴직 시 일시금으로 받을 것으로 예상되는 퇴직급여 총액을 입력해 주세요. 현재 퇴직연금 적립금을 포함한 예상 수령액입니다.
-          이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요.
+          퇴직연금은 현재 쌓인 금액과 퇴직 후 받을 금액을 구분해 입력해 주세요.
         </p>
         </Activity>
         <Activity mode={showPart('severance-self') ? 'visible' : 'hidden'}>
@@ -700,7 +698,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
         {severanceType === 'lumpsum' && (
           <>
             <div className="field-grid">
-              <NumberField path="income.severance.lumpsum" label="퇴직 시 예상 퇴직급여 일시금 *" unit="만원" required />
+              <NumberField path="income.severance.lumpsum" label="퇴직 시 예상 퇴직급여 일시금 *" unit="만원" helper="퇴직 시 받을 것으로 예상되는 총액을 입력해 주세요. 현재 퇴직연금 적립금도 포함합니다." required />
               <NumberField path="income.severance.lumpsumAge" label="수령 나이 *" unit="세" max={120} required />
             </div>
             <SeveranceCalculatorButton
@@ -718,7 +716,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
             <div className="field-grid">
               <NumberField path="income.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" max={120} required />
               <NumberField path="income.severance.pensionYears" label="수령 기간" unit="년" />
-              <NumberField path="income.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" />
+              <NumberField path="income.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" helper="퇴직 후 매월 받을 것으로 예상되는 금액을 입력해 주세요." />
               <label className="field">
                 <span className="field-label">수령 개월 수</span>
                 <div className="field-input-row">
@@ -732,7 +730,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
               path="assets.pensionAssetsBreakdown.selfRetirementPension"
               label="현재 본인 퇴직연금 적립금"
               unit="만원"
-              helper="Step 4 연금자산의 본인 퇴직연금 적립금과 연동됩니다."
+              helper="지금까지 쌓여 있는 퇴직연금 금액을 입력해 주세요. Step 4 연금자산과 연동됩니다."
               onValueChange={(value) => syncRetirementPensionAssetTotal(formData, setField, 'assets.pensionAssetsBreakdown.selfRetirementPension', value)}
             />
             {selfPensionMonthly > 0 && selfPensionMonths > 0 && (
@@ -765,7 +763,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
             {spouseSeveranceType === 'lumpsum' && (
               <>
                 <div className="field-grid">
-                  <NumberField path="spouse.severance.lumpsum" label="퇴직 시 예상 퇴직급여 일시금 *" unit="만원" required />
+                  <NumberField path="spouse.severance.lumpsum" label="퇴직 시 예상 퇴직급여 일시금 *" unit="만원" helper="퇴직 시 받을 것으로 예상되는 총액을 입력해 주세요. 현재 퇴직연금 적립금도 포함합니다." required />
                   <NumberField path="spouse.severance.lumpsumAge" label="수령 나이 *" unit="세" max={120} required />
                 </div>
                 <SeveranceCalculatorButton
@@ -780,7 +778,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
                 <div className="field-grid">
                   <NumberField path="spouse.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" max={120} required />
                   <NumberField path="spouse.severance.pensionYears" label="수령 기간" unit="년" />
-                  <NumberField path="spouse.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" />
+                  <NumberField path="spouse.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" helper="퇴직 후 매월 받을 것으로 예상되는 금액을 입력해 주세요." />
                   <label className="field">
                     <span className="field-label">수령 개월 수</span>
                     <div className="field-input-row">
@@ -794,7 +792,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
                   path="assets.pensionAssetsBreakdown.spouseRetirementPension"
                   label="현재 배우자 퇴직연금 적립금"
                   unit="만원"
-                  helper="Step 4 연금자산의 배우자 퇴직연금 적립금과 연동됩니다."
+                  helper="지금까지 쌓여 있는 퇴직연금 금액을 입력해 주세요. Step 4 연금자산과 연동됩니다."
                   onValueChange={(value) => syncRetirementPensionAssetTotal(formData, setField, 'assets.pensionAssetsBreakdown.spouseRetirementPension', value)}
                 />
                 {spousePensionMonthly > 0 && spousePensionMonths > 0 && (
@@ -822,6 +820,9 @@ export default function Step1Income({ subStepIndex, screenId }) {
           ] : []}
         />
         </Activity>
+        <p className="field-helper" style={{ marginTop: 10 }}>
+          이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산에 포함해 주세요.
+        </p>
       </section></Activity>
 
       <Activity mode={showSubStep(3) ? 'visible' : 'hidden'}><section className="step-section">
@@ -1110,15 +1111,12 @@ export default function Step1Income({ subStepIndex, screenId }) {
       </section></Activity>
 
       <Activity mode={showSubStep(5) ? 'visible' : 'hidden'}><section className="step-section">
-        <h3><span className="step-icon">📈</span> 기타 정기수입 (사업소득 포함)</h3>
+        <h3><span className="step-icon">📈</span> 기타 정기수입</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
-          사업소득은 본인·배우자 구분 없이 아래 목록에 합산해 입력해 주세요. "사업소득"으로 표시한 항목은
-          총소득(가계수지비율 · 보험료비율 등) 계산에 포함되고, "기타 수입"은 참고용 정기수입으로 별도 집계됩니다.
+          임대수입, 배당수입 등 급여·연금 외 정기적으로 들어오는 수입을 입력해 주세요.
         </p>
         <RegularIncomeListField
           path="income.regularIncomes"
-          businessMonthlyPath="income.business.monthly"
-          businessAnnualPath="income.business.annual"
           otherIncomesPath="income.otherIncomes"
         />
         {businessAnnual > 0 && (
@@ -1145,7 +1143,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
 
       <Activity mode={showSubStep(6) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧮</span> 총 수입 합계</h3>
-        <table className="grade-table compact">
+        <table className="grade-table compact income-summary-desktop">
           <thead>
             <tr>
               <th>항목</th>
@@ -1205,10 +1203,64 @@ export default function Step1Income({ subStepIndex, screenId }) {
             </tr>
           </tbody>
         </table>
-        <span className="field-helper">
+        <span className="field-helper income-summary-desktop">
           연금 금액은 실제로 받고 있는 돈이 아니라, 입력하신 수령 시작 나이부터 적용되는 예상 수령액입니다.
           수령 개월 수(또는 기간)가 입력된 연금·수입만 합산됩니다.
         </span>
+        <div className="income-summary-mobile">
+          <div className="income-summary-totals">
+            <div className="income-summary-total-card">
+              <span>총 월 수입</span>
+              <strong>{formatWon(Math.round(totalMonthlyIncome))}</strong>
+            </div>
+            <div className="income-summary-total-card">
+              <span>총 연 수입</span>
+              <strong>{formatWon(Math.round(totalMonthlyIncome) * 12)}</strong>
+            </div>
+          </div>
+
+          <div className="income-summary-group">
+            <h4>근로소득</h4>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>급여(상여금 포함)</span><strong>{formatWon(Math.round(currentSalaryMonthly))}</strong></div>
+              <p>수입 기간 · {formatPeriodRow(selfYearsToRetirement, spouseYearsToRetirement)}</p>
+            </div>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>사업소득</span><strong>{formatWon(businessMonthly)}</strong></div>
+              <p>수입 기간 · {formatYears(selfYearsToRetirement)}</p>
+            </div>
+          </div>
+
+          <div className="income-summary-group">
+            <h4>연금소득</h4>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>국민연금</span><strong>{formatWon(nationalPensionTotal)}</strong></div>
+              <p>수령 시작 · {formatStartAgeRow(selfNpEligible ? selfNpStartAge : null, spouseNpEligible ? spouseNpStartAge : null)}</p>
+              <p>수입 기간 · {formatPeriodRow(selfNationalPensionMonths / 12, spouseNationalPensionMonths / 12)}</p>
+            </div>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>퇴직연금</span><strong>{formatWon(severanceTotal)}</strong></div>
+              <p>수령 시작 · {formatStartAgeRow(selfSeveranceStartAge, spouseSeveranceStartAge)}</p>
+              <p>수입 기간 · {formatPeriodRow(selfSeverancePensionYears, spouseSeverancePensionYears)}</p>
+            </div>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>개인연금</span><strong>{formatWon(personalPensionTotal)}</strong></div>
+              <p>수령 시작 · {formatStartAgeRow(selfPersonalPensionStartAge, spousePersonalPensionStartAge)}</p>
+              <p>수입 기간 · {formatPeriodRow(selfPersonalPensionYears, spousePersonalPensionYears)}</p>
+            </div>
+          </div>
+
+          <div className="income-summary-item income-summary-item--standalone">
+            <div className="income-summary-item-main"><span>기타 정기수입(연 환산)</span><strong>{formatWon(Math.round(otherIncomesMonthly))}</strong></div>
+            <p>수입 기간 · {otherIncomes.length > 0 ? '항목별 상이' : '-'}</p>
+          </div>
+
+          <p className="income-summary-mobile-note">연금 금액은 수령 시작 나이부터 적용되는 예상 금액입니다.</p>
+          <details className="income-summary-details">
+            <summary>계산 기준 보기</summary>
+            <p>수령 개월 수(또는 기간)가 입력된 연금·수입만 합산됩니다.</p>
+          </details>
+        </div>
       </section></Activity>
     </div>
   );

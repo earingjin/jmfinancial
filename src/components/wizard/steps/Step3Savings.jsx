@@ -132,7 +132,7 @@ export default function Step3Savings({ subStepIndex }) {
               />
             </div>
 
-            <table className="grade-table compact" style={{ marginTop: 16 }}>
+            <table className="grade-table compact finance-summary-desktop" style={{ marginTop: 16 }}>
               <tbody>
                 <tr className="total-row"><td>총 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthlyV2)}</td></tr>
                 <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthlyV2 * 12)}</td></tr>
@@ -142,6 +142,18 @@ export default function Step3Savings({ subStepIndex }) {
                 <tr className="total-row"><td>노후준비 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalRetirementSavingsMonthly)}</td></tr>
               </tbody>
             </table>
+            <div className="finance-summary-mobile finance-summary-mobile--spaced">
+              <div className="income-summary-totals">
+                <div className="income-summary-total-card"><span>총 월 저축</span><strong>{formatWon(totalSavingsMonthlyV2)}</strong></div>
+                <div className="income-summary-total-card"><span>총 연 저축</span><strong>{formatWon(totalSavingsMonthlyV2 * 12)}</strong></div>
+              </div>
+              <div className="income-summary-group">
+                <h4>노후준비 저축 <strong>{formatWon(totalRetirementSavingsMonthly)}</strong></h4>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>연금저축(월)</span><strong>{formatWon(pensionSavingsMonthly)}</strong></div></div>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>IRP(월)</span><strong>{formatWon(irpMonthly)}</strong></div></div>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>추가 노후준비 저축(월)</span><strong>{formatWon(additionalRetirementMonthly)}</strong></div></div>
+              </div>
+            </div>
           </>
         ) : (
           <>
@@ -169,7 +181,7 @@ export default function Step3Savings({ subStepIndex }) {
                 : '일반 저축과 겹치지 않는 별도 금액으로 보고, 총 저축 합계에 두 금액을 더합니다.'}
             </span>
 
-            <table className="grade-table compact" style={{ marginTop: 16 }}>
+            <table className="grade-table compact finance-summary-desktop" style={{ marginTop: 16 }}>
               <tbody>
                 <tr className="total-row"><td>총 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthly)}</td></tr>
                 <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthly * 12)}</td></tr>
@@ -177,6 +189,17 @@ export default function Step3Savings({ subStepIndex }) {
                 <tr><td>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(retirementSavingsMonthly)}</td></tr>
               </tbody>
             </table>
+            <div className="finance-summary-mobile finance-summary-mobile--spaced">
+              <div className="income-summary-totals">
+                <div className="income-summary-total-card"><span>총 월 저축</span><strong>{formatWon(totalSavingsMonthly)}</strong></div>
+                <div className="income-summary-total-card"><span>총 연 저축</span><strong>{formatWon(totalSavingsMonthly * 12)}</strong></div>
+              </div>
+              <div className="income-summary-group">
+                <h4>저축 구성</h4>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>일반 저축</span><strong>{formatWon(savingsMonthly)}</strong></div></div>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</span><strong>{formatWon(retirementSavingsMonthly)}</strong></div></div>
+              </div>
+            </div>
           </>
         )) : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
       </section></Activity>

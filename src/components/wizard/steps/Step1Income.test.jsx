@@ -117,11 +117,11 @@ describe('Step1Income - retirement-pension asset linkage', () => {
     formData.income.severance.type = 'pension';
     formData.spouse.severance.type = 'pension';
     const html = renderStep(formData);
-    expect(html).toContain('퇴직연금은 현재 적립되어 있는 금액은 자산으로');
-    expect(html).toContain('퇴직 시 일시금으로 받을 것으로 예상되는 퇴직급여 총액을 입력해 주세요. 현재 퇴직연금 적립금을 포함한 예상 수령액입니다.');
+    expect(html).toContain('퇴직연금은 현재 쌓인 금액과 퇴직 후 받을 금액을 구분해 입력해 주세요.');
+    expect(html).toContain('퇴직 후 매월 받을 것으로 예상되는 금액을 입력해 주세요.');
+    expect(html).toContain('지금까지 쌓여 있는 퇴직연금 금액을 입력해 주세요. Step 4 연금자산과 연동됩니다.');
     expect(html).toContain('현재 본인 퇴직연금 적립금');
     expect(html).toContain('현재 배우자 퇴직연금 적립금');
-    expect(html).toContain('Step 4 연금자산의 본인 퇴직연금 적립금과 연동됩니다.');
     const selfPensionAssetIndex = html.indexOf('현재 본인 퇴직연금 적립금');
     expect(html.indexOf('수령 시작 나이 *')).toBeLessThan(selfPensionAssetIndex);
     expect(selfPensionAssetIndex).toBeLessThan(html.indexOf('수령 기간', selfPensionAssetIndex));
@@ -134,7 +134,8 @@ describe('Step1Income - retirement-pension asset linkage', () => {
     formData.spouse.severance.type = 'lumpsum';
     const html = renderStep(formData);
     expect((html.match(/퇴직 시 예상 퇴직급여 일시금/g) || [])).toHaveLength(4);
-    expect(html).toContain('이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요.');
+    expect(html).toContain('퇴직 시 받을 것으로 예상되는 총액을 입력해 주세요. 현재 퇴직연금 적립금도 포함합니다.');
+    expect(html).toContain('이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산에 포함해 주세요.');
   });
 
   it('updates the simple pension-asset total by the changed balance delta', () => {
@@ -179,6 +180,20 @@ describe('Step1Income - 배우자 포함 합계', () => {
     const html = renderStep(formData);
     expect((html.match(/본인 금액은/g) || [])).toHaveLength(4);
     expect((html.match(/배우자 금액은/g) || [])).toHaveLength(4);
+  });
+});
+
+describe('Step1Income - 총 수입 합계 반응형 표시', () => {
+  it('데스크톱 4열 표와 동일 값을 사용하는 모바일 요약을 함께 렌더링한다', () => {
+    const html = renderStep(structuredClone(initialFormData));
+
+    expect(html).toContain('grade-table compact income-summary-desktop');
+    expect(html).toContain('income-summary-mobile');
+    expect(html).toContain('총 월 수입');
+    expect(html).toContain('총 연 수입');
+    expect(html).toContain('계산 기준 보기');
+    expect(html).toContain('수령 시작 나이');
+    expect(html).toContain('수입 기간');
   });
 });
 

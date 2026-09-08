@@ -21,10 +21,8 @@ describe('Step4Assets input mode selectors', () => {
     );
     expect(html).toContain('연금자산 총액 중 본인 퇴직연금 적립금');
     expect(html).toContain('연금자산 총액 중 배우자 퇴직연금 적립금');
-    expect(html).toContain('이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요.');
-    expect(html).toContain('퇴직 시 일시금으로 받을 것으로 예상되는 퇴직급여 총액을 입력해 주세요. 현재 퇴직연금 적립금을 포함한 예상 수령액입니다.');
-    expect(html).toContain('앞으로 일시금으로 받는 금액은 수령 시점의 자산');
-    expect(html).toContain('매월 받는 금액은 연금소득으로 계산합니다.');
+    expect(html).toContain('지금까지 쌓여 있는 퇴직연금 금액을 입력해 주세요.');
+    expect(html).toContain('연금자산 총액에 이미 포함된 금액입니다.');
   });
 
   it('renders an independent total/detail selector for every asset category', () => {
@@ -36,6 +34,9 @@ describe('Step4Assets input mode selectors', () => {
 
     expect(html.match(/총액으로 한 번에 입력/g)).toHaveLength(5);
     expect(html.match(/항목별로 자세히 입력/g)).toHaveLength(5);
+    expect(html).toContain('grade-table compact finance-summary-desktop');
+    expect(html).toContain('finance-summary-mobile');
+    expect(html).toContain('총 자산');
   });
 
   it('shows only the total input for a category in simple mode', () => {

@@ -183,9 +183,6 @@ export default function Step2Expense({ subStepIndex }) {
         <p className="field-helper" style={{ marginBottom: 10 }}>
           은퇴 후 차량 교체, 주택 수리, 자녀 학자금·결혼지원·기타 지원처럼 예상되는 큰 지출이 있다면 추가해 주세요. 없다면 입력하지 않아도 됩니다.
         </p>
-        {retirementLumpSumExpenses.length === 0 && (
-          <p className="empty-plan-message">현재 등록된 목돈지출 계획이 없습니다.</p>
-        )}
         <RepeatableList
           path="expense.retirementLumpSumExpenses"
           label="목돈지출 계획"
@@ -294,7 +291,7 @@ export default function Step2Expense({ subStepIndex }) {
 
       <Activity mode={showSubStep(5) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧮</span> 총 지출 합계</h3>
-        <table className="grade-table compact">
+        <table className="grade-table compact finance-summary-desktop">
           <thead>
             <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th></tr>
           </thead>
@@ -306,6 +303,30 @@ export default function Step2Expense({ subStepIndex }) {
             <tr><td>기타 보험료(건강보험료 등)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(healthInsurance)}</td></tr>
           </tbody>
         </table>
+        <div className="finance-summary-mobile">
+          <div className="income-summary-totals">
+            <div className="income-summary-total-card">
+              <span>현재 총 월 지출</span>
+              <strong>{formatWon(totalMonthlyExpense)}</strong>
+            </div>
+            <div className="income-summary-total-card">
+              <span>현재 총 연 지출</span>
+              <strong>{formatWon(totalMonthlyExpense * 12)}</strong>
+            </div>
+          </div>
+          <div className="income-summary-group">
+            <h4>현재 지출</h4>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>현재 생활비</span><strong>{formatWon(monthlyLivingCost)}</strong></div>
+            </div>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>보장성보험료</span><strong>{formatWon(insurancePremium)}</strong></div>
+            </div>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>기타 보험료(건강보험료 등)</span><strong>{formatWon(healthInsurance)}</strong></div>
+            </div>
+          </div>
+        </div>
         <span className="field-helper">
           노후 생활비, 자녀 목돈 지출, 기타 지출은 발생 시점·주기가 달라 위 합계에 포함되지 않습니다.
         </span>

@@ -334,7 +334,7 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
         </button>
       </div>
 
-      <table className="grade-table compact" style={{ marginTop: 18 }}>
+      <table className="grade-table compact finance-summary-desktop" style={{ marginTop: 18 }}>
         <thead>
           <tr>
             <th>저축 종류</th>
@@ -365,6 +365,28 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
           ))}
         </tbody>
       </table>
+      <div className="finance-summary-mobile finance-summary-mobile--spaced">
+        <div className="income-summary-group">
+          <h4>저축 항목</h4>
+          {openCategories.map((c) => {
+            const item = breakdown[c.key] || {};
+            return (
+              <div className="income-summary-item income-summary-item--child" key={c.key}>
+                <div className="income-summary-item-main"><span>{c.label}</span><strong>{formatWon(Number(item.monthly) || 0)}</strong></div>
+                <p>남은 기간 · {formatNumber(Number(item.remainingMonths) || 0)}개월</p>
+                <p>수익률 · {formatNumber(Number(item.interestRate) || 0)}%</p>
+              </div>
+            );
+          })}
+          {customItems.map((item, i) => (
+            <div className="income-summary-item income-summary-item--child" key={`custom-mobile-${i}`}>
+              <div className="income-summary-item-main"><span>{item.name || '(이름 미입력)'}</span><strong>{formatWon(Number(item.monthly) || 0)}</strong></div>
+              <p>남은 기간 · {formatNumber(Number(item.remainingMonths) || 0)}개월</p>
+              <p>수익률 · {formatNumber(Number(item.interestRate) || 0)}%</p>
+            </div>
+          ))}
+        </div>
+      </div>
       <TotalAmountBox label="저축 합계" amount={Number(total) || 0} valueLabel="총액은" />
       <span className="field-helper">선택·추가하신 항목의 월 저축액을 자동으로 합산한 값입니다. 개월수·이자율·누적액은 항목별로 다를 수 있어 합산하지 않습니다.</span>
 

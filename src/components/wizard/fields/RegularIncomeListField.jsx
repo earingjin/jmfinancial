@@ -3,24 +3,16 @@ import { getIn } from '../../../state/pathUtils';
 import FormattedNumberInput from './FormattedNumberInput';
 
 /**
- * 사업소득과 기타 정기수입(임대수입 등)을 본인·배우자 구분 없이 하나의 목록에서 입력받는 필드.
- * 각 항목에 유형("사업소득"/"기타 수입")을 지정하면, "사업소득"으로 표시된 항목들의 합계는
- * businessMonthlyPath/businessAnnualPath(income.business)에, 나머지("기타 수입")는
- * otherIncomesPath(income.otherIncomes)에 자동으로 반영되어 기존 계산 로직(총소득 산출 시
- * 사업소득 포함, 기타 정기수입은 별도 집계)이 그대로 동작한다.
+ * 기타 정기수입(임대수입 등)을 본인·배우자 구분 없이 하나의 목록에서 입력받는 필드.
+ * 기존 사업소득 데이터는 그대로 두고, 새로 추가하거나 수정하는 항목만 기타 수입으로 반영한다.
  */
-export default function RegularIncomeListField({ path, businessMonthlyPath, businessAnnualPath, otherIncomesPath }) {
+export default function RegularIncomeListField({ path, otherIncomesPath }) {
   const { formData, setField } = useFormData();
   const items = getIn(formData, path) || [];
 
   const sync = (nextItems) => {
     setField(path, nextItems);
-    const businessAnnual = nextItems
-      .filter((i) => i.type === 'business')
-      .reduce((s, i) => s + (Number(i.annual) || 0), 0);
     const otherItems = nextItems.filter((i) => i.type !== 'business');
-    setField(businessAnnualPath, businessAnnual);
-    setField(businessMonthlyPath, Math.round(businessAnnual / 12));
     setField(otherIncomesPath, otherItems);
   };
 
@@ -31,33 +23,17 @@ export default function RegularIncomeListField({ path, businessMonthlyPath, busi
   return (
     <div className="repeatable-list">
       <div className="repeatable-list-head">
-        <span className="field-label">급여·연금 외 정기적으로 들어오는 수입 (사업소득, 임대수입 등)</span>
+        <span className="field-label">급여·연금 외 정기적으로 들어오는 수입 (임대수입, 배당수입 등)</span>
       </div>
 
-      {items.map((item, index) => (
+      {items.map((item, index) => item.type !== 'business' && (
         <div className="repeatable-item" key={index}>
-          <div className="radio-group" style={{ marginBottom: 10 }}>
-            <button
-              type="button"
-              className={`radio-pill ${item.type !== 'business' ? 'is-active' : ''}`}
-              onClick={() => updateItem(index, 'type', 'other')}
-            >
-              기타 수입
-            </button>
-            <button
-              type="button"
-              className={`radio-pill ${item.type === 'business' ? 'is-active' : ''}`}
-              onClick={() => updateItem(index, 'type', 'business')}
-            >
-              사업소득
-            </button>
-          </div>
           <div className="field-grid three-col">
             <label className="field">
               <span className="field-label">수입 항목 이름</span>
               <input
                 type="text"
-                placeholder={item.type === 'business' ? '예: 사업소득' : '예: 임대수입, 배당수입 등'}
+                placeholder="예: 임대수입, 배당수입 등"
                 value={item.name}
                 onChange={(e) => updateItem(index, 'name', e.target.value)}
               />

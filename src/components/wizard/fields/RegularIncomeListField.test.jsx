@@ -23,8 +23,6 @@ function renderField() {
     <FormContext.Provider value={{ formData, setField: vi.fn() }}>
       <RegularIncomeListField
         path="income.regularIncomes"
-        businessMonthlyPath="income.business.monthly"
-        businessAnnualPath="income.business.annual"
         otherIncomesPath="income.otherIncomes"
       />
     </FormContext.Provider>
@@ -33,6 +31,10 @@ function renderField() {
 
 describe('RegularIncomeListField - 반복입력 금액 필드의 음수 방어 (A12)', () => {
   const html = renderField();
+
+  it('사업소득 선택 항목을 표시하지 않는다', () => {
+    expect(html).not.toContain('사업소득');
+  });
 
   it('연간 수입 금액에는 min=0이 적용되어 음수를 막는다', () => {
     expect(fieldWindow(html, '연간 수입 금액')).toContain('data-min="0"');

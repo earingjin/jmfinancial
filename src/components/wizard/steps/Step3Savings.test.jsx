@@ -110,6 +110,9 @@ describe('Step3Savings retirement savings input (retirementSavingsInputVersion: 
     expect(html).toContain('IRP');
     expect(html).toContain('추가 노후준비 저축');
     expect(html).toContain('노후준비 저축 합계');
+    expect(html).toContain('grade-table compact finance-summary-desktop');
+    expect(html).toContain('finance-summary-mobile');
+    expect(html).toContain('총 월 저축');
   });
 });
 

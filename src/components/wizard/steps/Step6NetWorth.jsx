@@ -19,17 +19,22 @@ export default function Step6NetWorth() {
   return (
     <div className="step">
       <h2 className="step-title">6. 순자산</h2>
-      <p className="step-complete-message">입력이 완료되었습니다. 아래 금액을 확인한 뒤 진단 결과를 확인해 주세요.</p>
-
       <section className="step-section">
         <h3><span className="step-icon">⚖️</span> 현재 순자산</h3>
-        <table className="grade-table compact">
+        <table className="grade-table compact finance-summary-desktop">
           <tbody>
             <tr className="total-row"><td>현재 순자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(netWorth)}</td></tr>
             <tr><td>총자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalAssets)}</td></tr>
             <tr><td>총부채</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalDebt)}</td></tr>
           </tbody>
         </table>
+        <div className="finance-summary-mobile net-worth-mobile-summary">
+          <div className="net-worth-mobile-item"><span>총 자산</span><strong>{formatWon(totalAssets)}</strong></div>
+          <span className="net-worth-mobile-operator" aria-hidden="true">−</span>
+          <div className="net-worth-mobile-item"><span>총 부채</span><strong>{formatWon(totalDebt)}</strong></div>
+          <span className="net-worth-mobile-operator" aria-hidden="true">=</span>
+          <div className="net-worth-mobile-item net-worth-mobile-item--result"><span>순자산</span><strong>{formatWon(netWorth)}</strong></div>
+        </div>
         <span className="field-helper">4. 자산, 5. 부채 단계에서 입력하신 값을 기준으로 자동 계산됩니다</span>
       </section>
     </div>

@@ -50,6 +50,17 @@ function serverAmounts(formData) {
 }
 
 describe('Step6NetWorth asset coverage', () => {
+  it('입력 완료 안내 배너를 표시하지 않는다', () => {
+    const html = renderToStaticMarkup(
+      <FormContext.Provider value={{ formData: makeFormData() }}>
+        <Step6NetWorth />
+      </FormContext.Provider>
+    );
+    expect(html).not.toContain('입력이 완료되었습니다. 아래 금액을 확인한 뒤 진단 결과를 확인해 주세요.');
+    expect(html).toContain('grade-table compact finance-summary-desktop');
+    expect(html).toContain('net-worth-mobile-summary');
+  });
+
   it.each([
     ['채권만 보유', { bonds: 1000 }, { totalAssets: '1,000만원', totalDebt: '0만원', netWorth: '1,000만원' }],
     ['기타자산만 보유', { otherAssets: 2000 }, { totalAssets: '2,000만원', totalDebt: '0만원', netWorth: '2,000만원' }],
