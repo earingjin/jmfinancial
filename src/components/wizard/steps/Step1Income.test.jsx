@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FormContext } from '../../../state/formState';
 import { initialFormData } from '../../../state/initialFormData';
 import { syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
-import Step1Income, { handleSeveranceType } from './Step1Income';
+import Step1Income, { handleSeveranceType, remainingRetirementYearsToMonths } from './Step1Income';
 
 globalThis.React = React;
 
@@ -24,6 +24,26 @@ describe('Step1Income basic information order', () => {
     for (let index = 1; index < labels.length; index += 1) {
       expect(html.indexOf(labels[index - 1])).toBeLessThan(html.indexOf(labels[index]));
     }
+  });
+});
+
+describe('남은 퇴직기간 입력', () => {
+  it('연 단위 사용자 입력을 기존 개월 저장 필드 값으로 변환한다', () => {
+    expect(remainingRetirementYearsToMonths(10)).toBe(120);
+    expect(remainingRetirementYearsToMonths(10.5)).toBe(126);
+    expect(remainingRetirementYearsToMonths('')).toBe('');
+  });
+
+  it('본인과 배우자 모두 남은 퇴직기간을 수정 가능한 입력칸으로 표시한다', () => {
+    const formData = structuredClone(initialFormData);
+    formData.basic.hasSpouse = true;
+
+    const html = renderStep(formData);
+
+    expect(html).toContain('id="income.salary.months"');
+    expect(html).toContain('id="spouse.salary.months"');
+    expect(html).not.toMatch(/id="income\.salary\.months"[^>]*readonly/);
+    expect(html).not.toMatch(/id="spouse\.salary\.months"[^>]*readonly/);
   });
 });
 
