@@ -177,7 +177,6 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
                 placeholder={mode === 'signup' ? '예: 12345678' : '아이디 또는 이메일'}
                 inputMode={mode === 'signup' ? 'numeric' : undefined}
                 pattern={mode === 'signup' ? '[0-9]{8}' : undefined}
-                maxLength={mode === 'signup' ? 8 : undefined}
                 autoComplete="username"
               />
             </label>

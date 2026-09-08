@@ -10,9 +10,10 @@ describe('auth identifier helpers', () => {
     expect(toAuthEmail('olduser@gmail.com')).toBe('olduser@gmail.com');
   });
 
-  it('trims login ids and keeps only up to eight digits for signup', () => {
+  it('trims login ids and keeps the last eight digits for signup', () => {
     expect(normalizeLoginId('  12345678  ')).toBe('12345678');
-    expect(normalizeSignupLoginId('12a34-567890')).toBe('12345678');
+    expect(normalizeSignupLoginId('010-1234-5678')).toBe('12345678');
+    expect(normalizeSignupLoginId('12a34-567890')).toBe('34567890');
     expect(isValidLoginId('  12345678  ')).toBe(true);
   });
 

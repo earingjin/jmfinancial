@@ -5,7 +5,7 @@ export function normalizeLoginId(value) {
 }
 
 export function normalizeSignupLoginId(value) {
-  return String(value ?? '').replace(/\D/g, '').slice(0, 8);
+  return String(value ?? '').replace(/\D/g, '').slice(-8);
 }
 
 export function isValidLoginId(value) {
