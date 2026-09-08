@@ -3,6 +3,7 @@ import { FormProvider } from './state/FormContext';
 import { AuthProvider } from './state/AuthContext';
 import { useAuth } from './state/authState';
 import AuthGate from './components/auth/AuthGate';
+import AccountResetGate from './components/auth/AccountResetGate';
 import WelcomeScreen from './components/welcome/WelcomeScreen';
 import HomeScreen from './components/home/HomeScreen';
 import HistoryList from './components/home/HistoryList';
@@ -470,11 +471,20 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
         />
       );
     }
+    if (authView === 'forgot-password') {
+      return (
+        <AccountResetGate
+          onCancel={() => onAuthViewChange('login')}
+          onComplete={() => onAuthViewChange('login')}
+        />
+      );
+    }
     return (
       <AuthGate
         key={authView}
         initialMode={authView}
         allowSignup={false}
+        onForgotPassword={authView === 'login' ? () => onAuthViewChange('forgot-password') : undefined}
         secondaryAction={{ label: '← 뒤로가기', onClick: () => onAuthViewChange('welcome') }}
       />
     );
@@ -570,6 +580,7 @@ export default function App() {
   const resolveAuthView = () => {
     if (window.location.pathname === '/login') return 'login';
     if (window.location.pathname === '/signup') return 'signup';
+    if (window.location.pathname === '/forgot-password') return 'forgot-password';
     return 'welcome';
   };
   const [authView, setAuthView] = useState(resolveAuthView);

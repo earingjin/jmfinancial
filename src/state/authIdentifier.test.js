@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidLoginId, normalizeLoginId, normalizeSignupLoginId, toAuthEmail } from './authIdentifier.js';
+import { isValidLoginId, normalizeLoginId, normalizeSignupLoginId, toAuthEmail, toPhoneLoginAuthEmail } from './authIdentifier.js';
 
 describe('auth identifier helpers', () => {
   it('converts a new login id to the internal auth email', () => {
@@ -8,6 +8,12 @@ describe('auth identifier helpers', () => {
 
   it('keeps an existing email login compatible', () => {
     expect(toAuthEmail('olduser@gmail.com')).toBe('olduser@gmail.com');
+  });
+
+  it('creates a reset lookup email only for an eight-digit phone login id', () => {
+    expect(toPhoneLoginAuthEmail('12345678')).toBe('12345678@jmfinancial.local');
+    expect(toPhoneLoginAuthEmail('olduser@gmail.com')).toBe('');
+    expect(toPhoneLoginAuthEmail('1234-5678')).toBe('');
   });
 
   it('trims login ids and keeps the last eight digits for signup', () => {

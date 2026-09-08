@@ -94,3 +94,15 @@ describe('App.jsx wizard header result history button', () => {
     expect(body).toContain("setPhase('history')");
   });
 });
+
+describe('App.jsx forgot-password route', () => {
+  it('routes the login entry point to the account reset screen and back to login', async () => {
+    const source = await readAppSource();
+
+    expect(source).toContain("window.location.pathname === '/forgot-password'");
+    expect(source).toContain("authView === 'forgot-password'");
+    expect(source).toContain('<AccountResetGate');
+    expect(source).toContain("onAuthViewChange('forgot-password')");
+    expect(source).toContain("onComplete={() => onAuthViewChange('login')}");
+  });
+});

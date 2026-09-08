@@ -17,7 +17,7 @@ function renderSignup() {
 function renderLogin() {
   return renderToStaticMarkup(
     <AuthContext.Provider value={{ signIn: vi.fn(), signUp: vi.fn() }}>
-      <AuthGate initialMode="login" />
+      <AuthGate initialMode="login" onForgotPassword={vi.fn()} />
     </AuthContext.Provider>
   );
 }
@@ -35,9 +35,22 @@ describe('AuthGate signup consent', () => {
     expect(html.slice(submitIndex)).toContain('disabled=""');
   });
 
+  it('shows the password-loss warning and requires its separate acknowledgement before signup', () => {
+    const html = renderSignup();
+    const warningIndex = html.indexOf('비밀번호를 꼭 기억해 주세요');
+    const acknowledgementIndex = html.indexOf('비밀번호 분실 시 기존 진단 기록이 삭제되는 것을 확인했습니다.');
+    const submitIndex = html.indexOf('auth-submit');
+
+    expect(warningIndex).toBeGreaterThan(-1);
+    expect(acknowledgementIndex).toBeGreaterThan(warningIndex);
+    expect(acknowledgementIndex).toBeLessThan(submitIndex);
+    expect(html.slice(submitIndex)).toContain('disabled=""');
+  });
+
   it('shows the phone-number label on login while retaining the existing email compatibility internally', () => {
     const html = renderLogin();
     expect(html).toContain('휴대폰 번호 8자리');
     expect(html).not.toContain('아이디 또는 이메일');
+    expect(html).toContain('비밀번호를 잊으셨나요?');
   });
 });

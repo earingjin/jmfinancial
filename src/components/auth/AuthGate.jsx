@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../state/authState';
-import { isValidLoginId, normalizeLoginId, normalizeSignupLoginId } from '../../state/authIdentifier';
+import { isValidLoginId, normalizeLoginId, normalizeSignupLoginId, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../state/authIdentifier';
 import heroImage from '../../assets/리포트 표지 디자인.png';
 import AppCopyright from '../AppCopyright';
 
@@ -55,7 +55,7 @@ function PrivacyConsentModal({ onClose }) {
   );
 }
 
-export default function AuthGate({ title = '잭앤리치', allowSignup = true, initialMode = 'login', noticeMessage, secondaryAction }) {
+export default function AuthGate({ title = '잭앤리치', allowSignup = true, initialMode = 'login', noticeMessage, secondaryAction, onForgotPassword }) {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [name, setName] = useState('');
@@ -65,6 +65,7 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [passwordLossAcknowledged, setPasswordLossAcknowledged] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
 
   const switchMode = (next) => {
@@ -79,6 +80,10 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
     setNotice('');
     if (mode === 'signup' && !consentGiven) {
       setError('개인정보 수집·이용에 동의해야 회원가입할 수 있습니다.');
+      return;
+    }
+    if (mode === 'signup' && !passwordLossAcknowledged) {
+      setError('비밀번호 분실 시 기존 진단 기록이 삭제되는 정책을 확인해 주세요.');
       return;
     }
     const loginId = normalizeLoginId(identifier);
@@ -173,11 +178,31 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={mode === 'signup' ? PASSWORD_MAX_LENGTH : undefined}
                 placeholder="6자 이상"
                 autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               />
             </label>
+
+            {mode === 'signup' && (
+              <div className="auth-password-policy">
+                <strong>비밀번호를 꼭 기억해 주세요</strong>
+                <p>개인정보 보호를 위해 이메일이나 전체 휴대폰 번호 등 별도의 복구 정보를 받지 않습니다.</p>
+                <p>비밀번호를 잊으면 기존 진단 기록을 모두 삭제한 후 새 비밀번호를 설정해야 합니다. 비밀번호는 별도로 안전하게 보관해 주세요.</p>
+              </div>
+            )}
+
+            {mode === 'signup' && (
+              <label className="auth-consent-checkbox auth-password-loss-check">
+                <input
+                  type="checkbox"
+                  checked={passwordLossAcknowledged}
+                  onChange={(e) => setPasswordLossAcknowledged(e.target.checked)}
+                />
+                <span>비밀번호 분실 시 기존 진단 기록이 삭제되는 것을 확인했습니다.</span>
+              </label>
+            )}
 
             {mode === 'signup' && (
               <div className="auth-consent-row">
@@ -201,11 +226,17 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
             <button
               type="submit"
               className="btn-primary auth-submit"
-              disabled={submitting || (mode === 'signup' && !consentGiven)}
+              disabled={submitting || (mode === 'signup' && (!consentGiven || !passwordLossAcknowledged))}
             >
               {submitting ? 'Loading...' : mode === 'signup' ? '회원가입' : '로그인'}
             </button>
           </form>
+
+          {mode === 'login' && onForgotPassword && (
+            <button type="button" className="auth-forgot-password" onClick={onForgotPassword}>
+              비밀번호를 잊으셨나요?
+            </button>
+          )}
 
           {secondaryAction && (
             <button type="button" className="auth-secondary-action" onClick={secondaryAction.onClick}>

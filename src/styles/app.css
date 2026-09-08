@@ -825,6 +825,12 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
   color: var(--ink-soft); font-size: 12.5px; cursor: pointer; margin-top: 14px; padding: 4px 0;
 }
 .auth-secondary-action:hover { color: var(--navy-800); }
+.auth-forgot-password {
+  display: block; width: max-content; margin: 13px auto 0; padding: 4px 8px;
+  border: 0; background: transparent; color: #a85d0c; font: inherit; font-size: 12.5px;
+  font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+.auth-forgot-password:hover { color: var(--navy-800); }
 .auth-error { color: var(--red); font-size: 12.5px; margin: 0; }
 .auth-notice { color: #0e6c5e; font-size: 12.5px; margin: 0; background: var(--teal-soft); padding: 10px 12px; border-radius: 8px; line-height: 1.5; }
 .auth-submit {
@@ -845,6 +851,36 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
   background: rgba(255, 255, 255, .68); color: #a85d0c; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
 }
 .auth-consent-details:hover { background: #fff; border-color: #d89e57; }
+.auth-password-policy {
+  padding: 11px 12px; border: 1px solid rgba(216, 158, 87, .34); border-radius: 9px;
+  background: rgba(255, 249, 238, .86); color: #685443; font-size: 11.5px; line-height: 1.55;
+}
+.auth-password-policy strong { display: block; margin-bottom: 4px; color: #9f560d; font-size: 12.5px; }
+.auth-password-policy p { margin: 2px 0; }
+.auth-password-loss-check { align-items: flex-start; line-height: 1.45; }
+
+.account-reset-gate .auth-card { max-width: 420px; }
+.account-reset-title {
+  margin: 0 0 16px; color: var(--navy-900); font-size: 21px; font-weight: 800;
+  line-height: 1.35; text-align: center; word-break: keep-all;
+}
+.account-reset-warning {
+  margin-bottom: 18px; padding: 15px 16px; border: 1px solid rgba(191, 75, 55, .25);
+  border-radius: 10px; background: rgba(255, 244, 239, .9); color: #68453e;
+  font-size: 12.5px; line-height: 1.6;
+}
+.account-reset-warning p { margin: 0 0 7px; }
+.account-reset-warning strong { display: block; color: var(--red); }
+.account-reset-warning ul { margin: 10px 0 0; padding-left: 20px; }
+.account-reset-actions { display: grid; grid-template-columns: minmax(88px, .7fr) minmax(0, 1.6fr); gap: 9px; margin-top: 16px; }
+.account-reset-actions button { min-height: 48px; padding: 11px 12px; }
+.account-reset-step-note {
+  margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--amber-soft);
+  color: #765221; font-size: 12px; line-height: 1.55;
+}
+.account-reset-complete { text-align: center; }
+.account-reset-complete p { margin: 0 0 18px; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+.account-reset-complete .btn-primary { width: 100%; }
 
 .consent-body { font-size: 13px; line-height: 1.7; color: var(--ink); text-align: left; }
 .consent-body h5 { font-size: 13.5px; font-weight: 800; color: var(--navy-900); margin: 16px 0 4px; }
@@ -1143,6 +1179,10 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   }
 
   .field-grid, .field-grid.three-col { grid-template-columns: 1fr; }
+  .account-reset-gate { justify-content: flex-start; padding-top: 18px; }
+  .account-reset-gate .auth-page-heading { margin-bottom: 16px; }
+  .account-reset-actions { grid-template-columns: 1fr; }
+  .account-reset-actions .btn-secondary { order: 2; }
   /* 짧은 숫자 값(나이·기간·개월수 등) 두 개를 모바일에서도 한 줄에 배치하기 위한 예외.
      자유 텍스트나 긴 라벨이 섞인 grid에는 붙이지 않는다. */
   .field-grid.field-grid--compact-pair {
