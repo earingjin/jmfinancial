@@ -1199,10 +1199,10 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
     color: #ff8612; font-size: 28px; font-weight: 800; line-height: 1; pointer-events: none;
     box-shadow: -8px 0 14px rgba(255, 250, 242, .92); transform: translateY(-50%);
   }
-  .wizard-progress-item { flex: 0 0 auto; min-width: 74px; font-size: 11px; padding: 7px 6px; }
+  .wizard-progress-item { flex: 0 0 auto; min-width: 74px; font-size: 11px; padding: 6px; }
   .wizard-progress-item:not(:last-child)::after { width: 8px; left: calc(100% + 1px); }
-  .wizard-progress-dot { width: 23px; height: 23px; margin-bottom: 2px; font-size: 11px; }
-  .wizard-progress-icon { width: 35px; height: 33px; margin-bottom: 3px; }
+  .wizard-progress-dot { width: 23px; height: 23px; margin-bottom: 3px; font-size: 11px; }
+  .wizard-progress-icon { display: none; }
 
   /* 본문을 스크롤할 때는 아이콘을 덜어내고 단계명과 즉시 저장 기능만 고정한다. */
   .wizard--scrolled .wizard-progress-wrap { display: flex; align-items: center; gap: 6px; }
