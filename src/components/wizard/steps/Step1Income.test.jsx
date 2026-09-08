@@ -16,6 +16,17 @@ function renderStep(formData) {
   );
 }
 
+describe('Step1Income basic information order', () => {
+  it('renders birth year, retirement age, life expectancy, then service years', () => {
+    const html = renderStep(structuredClone(initialFormData));
+    const labels = ['본인 출생년도 *', '은퇴(예정) 연령 *', '기대수명 * (직접 수정 가능)', '근속년수 *'];
+
+    for (let index = 1; index < labels.length; index += 1) {
+      expect(html.indexOf(labels[index - 1])).toBeLessThan(html.indexOf(labels[index]));
+    }
+  });
+});
+
 describe('Step1Income national pension future contribution plan', () => {
   it('continue는 추가 납부 예정 개월 수 입력을 요구한다', () => {
     const formData = structuredClone(initialFormData);

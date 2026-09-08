@@ -384,7 +384,7 @@ export default function Step4Assets({ subStepIndex }) {
           modePath="assets.pensionAssetsInputMode" totalPath="assets.pensionAssets"
           simpleTotalPath="assets.pensionAssetsSimpleTotal" simpleStoredPath="assets.pensionAssetsSimpleInputStored"
           detailedTotal={pensionAssetsTotal} detailedHasInput={hasPensionDetailedInput} totalLabel="연금자산 총액"
-          beforeTotal={pensionMode === 'simple' && <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}><NumberField path="assets.pensionAssetsBreakdown.selfRetirementPension" label="연금자산 총액 중 본인 퇴직연금 적립금" unit="만원" required={getIn(formData, 'income.severance.type') === 'pension'} />{hasSpouse && <NumberField path="assets.pensionAssetsBreakdown.spouseRetirementPension" label="연금자산 총액 중 배우자 퇴직연금 적립금" unit="만원" required={getIn(formData, 'spouse.severance.type') === 'pension'} />}</div>}
+          beforeTotal={pensionMode === 'simple' && <div className="field-grid" style={{ marginTop: 14 }}><NumberField path="assets.pensionAssetsBreakdown.selfRetirementPension" label="연금자산 총액 중 본인 퇴직연금 적립금" unit="만원" required={getIn(formData, 'income.severance.type') === 'pension'} />{hasSpouse && <NumberField path="assets.pensionAssetsBreakdown.spouseRetirementPension" label="연금자산 총액 중 배우자 퇴직연금 적립금" unit="만원" required={getIn(formData, 'income.severance.type') === 'pension'} />}</div>}
         >
         <div className="checkbox-group" style={{ marginBottom: 14 }}>
           {PENSION_ASSET_CATEGORIES.map((c) => (
@@ -442,7 +442,7 @@ export default function Step4Assets({ subStepIndex }) {
             )}
           />
         )}
-        {pensionMode === 'detailed' && <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
+        {pensionMode === 'detailed' && <div className="field-grid" style={{ marginTop: 14 }}>
           <NumberField path="assets.pensionAssetsBreakdown.selfRetirementPension" label="연금자산 총액 중 본인 퇴직연금 적립금" unit="만원" required={getIn(formData, 'income.severance.type') === 'pension'} />
           {hasSpouse && <NumberField path="assets.pensionAssetsBreakdown.spouseRetirementPension" label="연금자산 총액 중 배우자 퇴직연금 적립금" unit="만원" required={getIn(formData, 'spouse.severance.type') === 'pension'} />}
         </div>}

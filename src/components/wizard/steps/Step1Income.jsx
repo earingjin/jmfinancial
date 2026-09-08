@@ -470,7 +470,8 @@ export default function Step1Income({ subStepIndex }) {
 
       {showSubStep(0) && <section className="step-section">
         <h3><span className="step-icon">📝</span> 기본 정보</h3>
-        <div className="field-grid field-grid--compact-pair">
+        <div className="field-grid">
+          <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required integerOnly useGrouping={false} />
           <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" max={120} required />
           <NumberField
             path="basic.lifeExpectancy"
@@ -484,7 +485,6 @@ export default function Step1Income({ subStepIndex }) {
               <strong>(2024년 대한민국 예상 평균수명: 남성 81.6세, 여성 87.6세)</strong>
             </>}
           />
-          <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required integerOnly useGrouping={false} />
           <NumberField
             path="basic.serviceYears"
             label="근속년수 *"
@@ -518,7 +518,7 @@ export default function Step1Income({ subStepIndex }) {
           </div>
         </div>
         {hasSpouse && (
-          <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
+          <div className="field-grid" style={{ marginTop: 14 }}>
             <NumberField path="spouse.retirementAge" label="배우자 은퇴(예정) 연령 *" unit="세" max={120} required />
             <NumberField
               path="spouse.lifeExpectancy"
@@ -666,7 +666,7 @@ export default function Step1Income({ subStepIndex }) {
         )}
         {severanceType === 'pension' && (
           <>
-            <div className="field-grid field-grid--compact-pair">
+            <div className="field-grid">
               <NumberField path="income.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" max={120} required />
               <NumberField path="income.severance.pensionYears" label="수령 기간" unit="년" />
               <NumberField path="income.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" />
@@ -727,7 +727,7 @@ export default function Step1Income({ subStepIndex }) {
             )}
             {spouseSeveranceType === 'pension' && (
               <>
-                <div className="field-grid field-grid--compact-pair">
+                <div className="field-grid">
                   <NumberField path="spouse.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" max={120} required />
                   <NumberField path="spouse.severance.pensionYears" label="수령 기간" unit="년" />
                   <NumberField path="spouse.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" />
@@ -783,7 +783,7 @@ export default function Step1Income({ subStepIndex }) {
         ) : nationalPensionInputMode === 'simulate' ? (
           <>
             <NumberField path="income.nationalPension.simulate.averageMonthlyIncome" label="가입기간 중 월평균급여" unit="만원" />
-            <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
+            <div className="field-grid" style={{ marginTop: 14 }}>
               <NumberField
                 path="income.nationalPension.simulate.contributionMonths"
                 label="실제 보험료 납부 개월 수"
@@ -824,7 +824,7 @@ export default function Step1Income({ subStepIndex }) {
               unit="만원"
               helper="국민연금공단 예상연금 조회를 참고하셔도 됩니다"
             />
-            <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
+            <div className="field-grid" style={{ marginTop: 14 }}>
               <label className="field">
                 <span className="field-label">수령 개월 수</span>
                 <div className="field-input-row">
@@ -875,7 +875,7 @@ export default function Step1Income({ subStepIndex }) {
             ) : spouseNationalPensionInputMode === 'simulate' ? (
               <>
                 <NumberField path="spouse.nationalPension.simulate.averageMonthlyIncome" label="가입기간 중 월평균급여" unit="만원" />
-                <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
+                <div className="field-grid" style={{ marginTop: 14 }}>
                   <NumberField
                     path="spouse.nationalPension.simulate.contributionMonths"
                     label="실제 보험료 납부 개월 수"
@@ -911,7 +911,7 @@ export default function Step1Income({ subStepIndex }) {
             ) : (
               <>
                 <NumberField path="spouse.nationalPension.monthly" label="국민연금 월 수령(예상) 금액" unit="만원" />
-                <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
+                <div className="field-grid" style={{ marginTop: 14 }}>
                   <label className="field">
                     <span className="field-label">수령 개월 수</span>
                     <div className="field-input-row">
@@ -966,14 +966,14 @@ export default function Step1Income({ subStepIndex }) {
         {personalPensionType === 'none' ? (
           <p className="field-helper">본인 개인연금 없음으로 선택했습니다.</p>
         ) : personalPensionType === 'lumpsum' ? (
-          <div className="field-grid field-grid--compact-pair">
+          <div className="field-grid">
             <NumberField path="income.personalPension.lumpsum" label="개인연금 일시금 수령액" unit="만원" />
             <NumberField path="income.personalPension.lumpsumAge" label="수령 나이" unit="세" />
           </div>
         ) : (
           <>
             <NumberField path="income.personalPension.startAge" label="수령 시작 나이 *" unit="세" max={120} required />
-            <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
+            <div className="field-grid" style={{ marginTop: 14 }}>
               <NumberField path="income.personalPension.monthly" label="개인연금 월 수령액" unit="만원" />
               <NumberField path="income.personalPension.months" label="수령 개월 수" unit="개월" />
             </div>
@@ -999,14 +999,14 @@ export default function Step1Income({ subStepIndex }) {
             {spousePersonalPensionType === 'none' ? (
               <p className="field-helper">배우자 개인연금 없음으로 선택했습니다.</p>
             ) : spousePersonalPensionType === 'lumpsum' ? (
-              <div className="field-grid field-grid--compact-pair">
+              <div className="field-grid">
                 <NumberField path="spouse.personalPension.lumpsum" label="개인연금 일시금 수령액" unit="만원" />
                 <NumberField path="spouse.personalPension.lumpsumAge" label="수령 나이" unit="세" />
               </div>
             ) : (
               <>
                 <NumberField path="spouse.personalPension.startAge" label="수령 시작 나이 *" unit="세" max={120} required />
-                <div className="field-grid field-grid--compact-pair" style={{ marginTop: 14 }}>
+                <div className="field-grid" style={{ marginTop: 14 }}>
                   <NumberField path="spouse.personalPension.monthly" label="개인연금 월 수령액" unit="만원" />
                   <NumberField path="spouse.personalPension.months" label="수령 개월 수" unit="개월" />
                 </div>

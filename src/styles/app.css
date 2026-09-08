@@ -1183,12 +1183,6 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   .account-reset-gate .auth-page-heading { margin-bottom: 16px; }
   .account-reset-actions { grid-template-columns: 1fr; }
   .account-reset-actions .btn-secondary { order: 2; }
-  /* 짧은 숫자 값(나이·기간·개월수 등) 두 개를 모바일에서도 한 줄에 배치하기 위한 예외.
-     자유 텍스트나 긴 라벨이 섞인 grid에는 붙이지 않는다. */
-  .field-grid.field-grid--compact-pair {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px 12px;
-  }
   .sim-summary { grid-template-columns: 1fr; }
 
   .indicator-gauge-breakdown-row { flex-direction: column; }
@@ -1222,24 +1216,35 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   .app-main { padding: 16px 14px 60px; }
 
   .wizard-progress {
-    justify-content: flex-start;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    gap: 8px;
-    padding: 8px;
+    justify-content: space-between;
+    overflow: hidden;
+    gap: 0;
+    padding: 4px 3px;
+    border-radius: 10px;
   }
-  .wizard-progress::-webkit-scrollbar { display: none; }
-  .wizard-progress-more {
-    position: absolute; top: 50%; right: 5px; display: grid; width: 30px; height: 42px; place-items: center;
-    border: 1px solid rgba(255, 134, 18, .28); border-radius: 999px; background: rgba(255, 250, 242, .96);
-    color: #ff8612; font-size: 28px; font-weight: 800; line-height: 1; pointer-events: none;
-    box-shadow: -8px 0 14px rgba(255, 250, 242, .92); transform: translateY(-50%);
+  .wizard-progress-more { display: none; }
+  .wizard-progress-item {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 9px;
+    line-height: 1.1;
+    padding: 4px 1px 3px;
+    border-radius: 8px;
   }
-  .wizard-progress-item { flex: 0 0 auto; min-width: 74px; font-size: 11px; padding: 6px; }
-  .wizard-progress-item:not(:last-child)::after { width: 8px; left: calc(100% + 1px); }
-  .wizard-progress-dot { width: 23px; height: 23px; margin-bottom: 3px; font-size: 11px; }
+  .wizard-progress-item:not(:last-child)::after {
+    top: 18px;
+    left: calc(100% - 1px);
+    width: 5px;
+    height: 1px;
+  }
+  .wizard-progress-dot { width: 22px; height: 22px; margin: 0 auto 2px; font-size: 10px; }
+  .wizard-progress-item.is-active .wizard-progress-dot {
+    background: #fffaf2;
+    color: #c76108;
+    border: 1px solid #ff8612;
+  }
   .wizard-progress-icon { display: none; }
+  .wizard-progress-label { font-size: 9px; line-height: 1.1; white-space: nowrap; }
 
   /* 본문을 스크롤할 때는 아이콘을 덜어내고 단계명과 즉시 저장 기능만 고정한다. */
   .wizard--scrolled .wizard-progress-wrap { display: flex; align-items: center; gap: 6px; }

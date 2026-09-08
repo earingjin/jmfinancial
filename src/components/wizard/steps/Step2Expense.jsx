@@ -234,7 +234,7 @@ export default function Step2Expense({ subStepIndex }) {
       <section className="step-section">
         <h3><span className="step-icon">🛡️</span> 보장성 보험</h3>
         <PresenceField label="보장성 보험 여부" present={hasInsurance} onChange={setHasInsurance} presentLabel="보험 있음" absentLabel="보험 없음" />
-        {hasInsurance ? <div className="field-grid field-grid--compact-pair">
+        {hasInsurance ? <div className="field-grid">
           <NumberField path="assets.insurance.monthlyPremium" label="보장성보험 월 보험료" unit="만원" helper="실손보험 등" />
           <NumberField path="assets.insurance.coverageAmount" label="주요 보장금액" unit="만원" />
         </div> : <p className="field-helper">보장성 보험 없음으로 선택했습니다. 보험료와 보장금액은 0원으로 반영됩니다.</p>}
