@@ -74,6 +74,14 @@ describe('calcRetirementSimulation - retirement-pension asset conversion', () =>
     expect(result.readyAssetsAtRetirement).toBe(5000);
   });
 
+  it('includes only the future lump sum when there is no current retirement-pension balance', () => {
+    const result = calcRetirementSimulation(retirementInput({
+      type: 'lumpsum', asset: 0, severance: { lumpsum: 5000, lumpsumAge: 65 },
+    }), 2026);
+    expect(result.currentReadyAssets).toBe(0);
+    expect(result.readyAssetsAtRetirement).toBe(5000);
+  });
+
   it('does not keep the same principal in future starting assets when it becomes monthly pension income', () => {
     const result = calcRetirementSimulation(retirementInput({
       type: 'pension', severance: { pensionMonthly: 80, pensionStartAge: 65, pensionMonths: 120 },
@@ -85,6 +93,14 @@ describe('calcRetirementSimulation - retirement-pension asset conversion', () =>
 
   it('keeps an identified currently held asset in the future base when no future severance benefit remains', () => {
     const result = calcRetirementSimulation(retirementInput({ type: 'none' }), 2026);
+    expect(result.currentAssetsAtRetirement).toBe(Math.round(3000 * (1.1 ** 25)));
+  });
+
+  it('keeps an already-received severance amount entered as a current liquid asset', () => {
+    const input = retirementInput({ type: 'none', asset: 0 });
+    input.assets.liquidAssets = { total: 3000 };
+    const result = calcRetirementSimulation(input, 2026);
+    expect(result.currentReadyAssets).toBe(3000);
     expect(result.currentAssetsAtRetirement).toBe(Math.round(3000 * (1.1 ** 25)));
   });
 

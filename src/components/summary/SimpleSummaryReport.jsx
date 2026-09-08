@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
-import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getSeveranceLumpSumDisplayItems } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -603,7 +603,7 @@ function RetirementAssetProjectionChart({ projection }) {
   );
 }
 
-export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, onDownload, onShare }) {
+export default function SimpleSummaryReport({ result, input, onBack, onEdit, onHome, onSummaryReport, onDownload, onShare }) {
   const { generatedAt, peerComparison, webSummary, aggregates, indicators } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
@@ -639,6 +639,8 @@ export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, on
   const [retirementDetailKey, setRetirementDetailKey] = useState(null);
   const [showFiveYearTable, setShowFiveYearTable] = useState(false);
   const assetProjection = future?.retirementAssetProjection;
+  const severanceLumpSums = getSeveranceLumpSumDisplayItems(input, rr.retirementAge);
+  const retirementIncludedLumpSums = severanceLumpSums.filter((item) => item.includedAtRetirement);
 
   return (
     <div className="simple-summary">
@@ -660,6 +662,9 @@ export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, on
       <div className="ss-format-tabs" role="tablist" aria-label="리포트 형식 선택">
         <button type="button" className="ss-format-tab ss-format-tab--active" role="tab" aria-selected="true">
           <span>모바일</span><span className="ss-format-tab-type">(Lite)</span>
+        </button>
+        <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onSummaryReport}>
+          <span>1페이지 요약</span>
         </button>
         <button type="button" className="ss-format-tab" role="tab" aria-selected="false" onClick={onDownload}>
           <span>상세 리포트</span>
@@ -838,6 +843,17 @@ export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, on
                 <div className="overview-card-value">{formatWon(rr.requiredAtRetirement)}</div>
                 <span className="overview-card-hint">내역 보기</span>
               </button>
+              {severanceLumpSums.length > 0 && (
+                <div className="retirement-lump-sum-note">
+                  <span>향후 예정 목돈</span>
+                  {severanceLumpSums.map((item) => (
+                    <p key={`${item.label}-${item.age}`}>
+                      <strong>{item.label} 퇴직급여 일시금 {formatWon(item.amount)} · {formatNumber(item.age)}세 수령 예정</strong>
+                      <small>{item.includedAtRetirement ? '예상 준비자산에 반영되어 있습니다.' : '은퇴 후 자산 전망에 반영됩니다.'}</small>
+                    </p>
+                  ))}
+                </div>
+              )}
               <button
                 type="button"
                 className="overview-card overview-card--highlight overview-card--clickable"
@@ -915,6 +931,13 @@ export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, on
                             value={formatWon(rr.currentAssetsAtRetirement)}
                           />
                           <DetailRow label="은퇴 전까지 추가 저축의 예상금액" value={formatWon(rr.futureSavingsAtRetirement)} />
+                          {retirementIncludedLumpSums.map((item) => (
+                            <DetailRow
+                              key={`${item.label}-${item.age}`}
+                              label={`${item.label} 퇴직급여 일시금 (${formatNumber(item.age)}세 수령)`}
+                              value={formatWon(item.amount)}
+                            />
+                          ))}
                           <DetailRow label="은퇴 시점 예상 준비자산" value={formatWon(rr.readyAssetsAtRetirement)} bold />
                           <p className="need-breakdown-note">
                             준비자산은 현재 자산 {formatWon(rr.currentReadyAssets)}과 앞으로의 저축을 은퇴까지 연 {formatPercent(rr.assumedReturnRate)}로 운용한다고 가정한 금액입니다.
@@ -1220,9 +1243,10 @@ export default function SimpleSummaryReport({ result, onBack, onEdit, onHome, on
       <section className="ss-download-section" aria-labelledby="ss-h-download">
         <h2 id="ss-h-download" className="simple-summary-title">더 자세한 분석이 필요하신가요?</h2>
         <p className="simple-summary-subtitle">리포트에서 더 심화된 재무 현황을 확인해 보세요.</p>
-        <button type="button" className="btn-primary ss-download-btn" onClick={onDownload}>
-          상세 리포트 PDF
-        </button>
+        <div className="ss-download-actions">
+          <button type="button" className="btn-primary ss-download-btn" onClick={onSummaryReport}>1페이지 요약 PDF</button>
+          <button type="button" className="btn-secondary ss-download-btn" onClick={onDownload}>상세 리포트 PDF</button>
+        </div>
         <div className="ss-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>← 뒤로가기</button>
           {onEdit && (

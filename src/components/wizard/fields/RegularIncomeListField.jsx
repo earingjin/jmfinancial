@@ -57,7 +57,7 @@ export default function RegularIncomeListField({ path, businessMonthlyPath, busi
               <span className="field-label">수입 항목 이름</span>
               <input
                 type="text"
-                placeholder={item.type === 'business' ? '예: 사업소득' : '예: 임대수입'}
+                placeholder={item.type === 'business' ? '예: 사업소득' : '예: 임대수입, 배당수입 등'}
                 value={item.name}
                 onChange={(e) => updateItem(index, 'name', e.target.value)}
               />

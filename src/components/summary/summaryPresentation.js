@@ -28,6 +28,24 @@ export function formatPensionIncomeAtRetirement(amount, status, schedules = []) 
   return formatWon(amount);
 }
 
+// simulation.js와 futureFinance.js의 기존 경계(수령 나이 <= 은퇴 나이)를 화면 표시에도 그대로
+// 사용한다. 금액을 합산하거나 준비자산을 다시 계산하지 않고, 저장된 원본 입력의 일시금 항목을
+// 어느 결과 구간에 표시할지만 구분한다.
+export function getSeveranceLumpSumDisplayItems(input, retirementAge) {
+  const receiptBoundary = Number(retirementAge);
+  if (!Number.isFinite(receiptBoundary)) return [];
+  const owners = [
+    { label: '본인', severance: input?.income?.severance },
+    ...(input?.basic?.hasSpouse === true ? [{ label: '배우자', severance: input?.spouse?.severance }] : []),
+  ];
+  return owners.flatMap(({ label, severance }) => {
+    const amount = Number(severance?.lumpsum);
+    const age = Number(severance?.lumpsumAge);
+    if (severance?.type !== 'lumpsum' || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(age)) return [];
+    return [{ label, amount, age, includedAtRetirement: age <= receiptBoundary }];
+  });
+}
+
 export function formatRetirementLivingCostBasis({ livingCostMonthly, retirementLivingCostAtRetirement, inflationRate }) {
   if (!Number.isFinite(retirementLivingCostAtRetirement) || !Number.isFinite(inflationRate)) {
     return '현재 입력한 노후 월 필요생활비를 기준으로 비교합니다.';

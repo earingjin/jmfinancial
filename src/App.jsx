@@ -23,6 +23,7 @@ import './styles/app.css';
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
 const Report = lazy(() => import('./components/report/Report'));
 const FhsDetailReport = lazy(() => import('./components/report/FhsDetailReport'));
+const SummaryReport = lazy(() => import('./components/report/SummaryReport'));
 const SimpleSummaryReport = lazy(() => import('./components/summary/SimpleSummaryReport'));
 const Wizard = lazy(() => import('./components/wizard/Wizard'));
 
@@ -37,8 +38,9 @@ function LazyScreenFallback() {
 
 function AppContent({ initialDraft = null, startWithWizard = false }) {
   const { user, signOut, deleteAccount } = useAuth();
-  const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'report' | 'fhs-report' | 'error' | 'history'
+  const [phase, setPhase] = useState(startWithWizard ? 'wizard' : 'home'); // 'home' | 'wizard' | 'loading' | 'summary' | 'summary-report' | 'report' | 'fhs-report' | 'error' | 'history'
   const [result, setResult] = useState(null);
+  const [resultInput, setResultInput] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [wizardResume, setWizardResume] = useState(false);
   // 위저드에서 홈으로 나갔다가 "자산진단 시작하기"로 되돌아와도 마지막으로 입력하던 단계를
@@ -98,6 +100,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
       try {
         const completedResult = await completePlannerSubmission(pending, user);
         setResult(completedResult);
+        setResultInput(pending.formData);
         pendingSubmissionRef.current = null;
         // 이 formData로 진단이 완료·저장됐다 - 다음 "자산진단 시작하기"는 새 세션으로 리셋해야 한다.
         formSessionConsumedRef.current = true;
@@ -222,11 +225,18 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     }
   };
 
+  const goToSummaryReport = () => {
+    summaryScrollPositionRef.current = window.scrollY;
+    window.scrollTo(0, 0);
+    setPhase('summary-report');
+  };
+
   // 히스토리 목록에서 항목을 클릭했을 때 - 새로 계산하지 않고 저장된 result_json을 그대로
   // 요약 화면에 넘긴다(계산 API를 다시 호출하지 않음). input_json은 "수정하기"를 누를 때만
   // 쓰도록 따로 들고 있는다.
   const openPastResult = (row) => {
     setResult(row.result_json);
+    setResultInput(row.input_json || null);
     setHistoryInput(row.input_json || null);
     setResultSource('history');
     setPhase('summary');
@@ -256,7 +266,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   useEffect(() => {
     const prevPhase = prevPhaseRef.current;
     prevPhaseRef.current = phase;
-    if (phase !== 'summary' || (prevPhase !== 'report' && prevPhase !== 'fhs-report')) return;
+    if (phase !== 'summary' || (prevPhase !== 'summary-report' && prevPhase !== 'report' && prevPhase !== 'fhs-report')) return;
     const savedY = summaryScrollPositionRef.current;
     summaryScrollPositionRef.current = null;
     if (savedY == null) return;
@@ -270,7 +280,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
 
   return (
     <div className={`app-shell${isDiagnosisPhase ? ' app-shell--diagnosis' : ''}`}>
-      {phase !== 'report' && phase !== 'fhs-report' && phase !== 'summary' && phase !== 'home' && (
+      {phase !== 'summary-report' && phase !== 'report' && phase !== 'fhs-report' && phase !== 'summary' && phase !== 'home' && (
         <header className={`app-header${useDiagnosisHeader ? ' app-header--diagnosis' : ''}`}>
           <div className="app-header-account">
             {phase === 'wizard' && (
@@ -290,7 +300,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         </header>
       )}
 
-      <main className={`app-main${phase === 'report' || phase === 'fhs-report' ? ' report-print-mode' : ''}${phase === 'home' ? ' app-main--home' : ''}`}>
+      <main className={`app-main${phase === 'summary-report' || phase === 'report' || phase === 'fhs-report' ? ' report-print-mode' : ''}${phase === 'home' ? ' app-main--home' : ''}`}>
         {phase === 'home' && (
           <HomeScreen
             userName={user?.user_metadata?.name}
@@ -348,8 +358,21 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
               onBack={handleSummaryBack}
               onEdit={resultSource === 'history' && historyInput ? editHistoryResult : undefined}
               onHome={goHome}
+              onSummaryReport={goToSummaryReport}
               onDownload={goToReport}
               onShare={goToReport}
+            />
+          </Suspense>
+        )}
+
+        {phase === 'summary-report' && result && (
+          <Suspense fallback={<LazyScreenFallback />}>
+            <SummaryReport
+              result={result}
+              input={resultInput}
+              onBack={() => setPhase('summary')}
+              onHome={goHome}
+              clientName={user?.user_metadata?.name}
             />
           </Suspense>
         )}
@@ -378,7 +401,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
           </Suspense>
         )}
       </main>
-      {phase !== 'report' && phase !== 'fhs-report' && phase !== 'home' && <AppCopyright />}
+      {phase !== 'summary-report' && phase !== 'report' && phase !== 'fhs-report' && phase !== 'home' && <AppCopyright />}
     </div>
   );
 }

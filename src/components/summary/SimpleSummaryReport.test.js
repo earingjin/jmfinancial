@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getSeveranceLumpSumDisplayItems } from './summaryPresentation';
 
 // getFinancialHealthStatus는 새 재무점수·임계값을 만들지 않고, 서버가 이미 계산한
 // ratioClass(good/caution/risk)만 세어 화면 문구를 고르는 순수 표시 헬퍼다.
@@ -119,5 +119,34 @@ describe('formatRetirementLivingCostBasis', () => {
       retirementLivingCostAtRetirement: 431.3,
       inflationRate: 3,
     })).toBe('현재 입력한 월 필요생활비 200만원을 기준으로, 은퇴까지 연 3% 물가상승률을 반영하면 은퇴 시점에는 월 431.3만원이 필요하다고 계산했습니다.');
+  });
+});
+
+describe('getSeveranceLumpSumDisplayItems', () => {
+  it('퇴직 전·은퇴 시점 일시금은 예상 준비자산 반영 항목으로만 표시한다', () => {
+    const input = {
+      basic: { hasSpouse: true },
+      income: { severance: { type: 'lumpsum', lumpsum: 7000, lumpsumAge: 64 } },
+      spouse: { severance: { type: 'lumpsum', lumpsum: 3000, lumpsumAge: 65 } },
+    };
+    expect(getSeveranceLumpSumDisplayItems(input, 65)).toEqual([
+      { label: '본인', amount: 7000, age: 64, includedAtRetirement: true },
+      { label: '배우자', amount: 3000, age: 65, includedAtRetirement: true },
+    ]);
+  });
+
+  it('은퇴 후 일시금은 미래 자산 전망 반영 항목으로 표시하며 금액을 합산하지 않는다', () => {
+    const input = {
+      basic: { hasSpouse: false },
+      income: { severance: { type: 'lumpsum', lumpsum: 7000, lumpsumAge: 70 } },
+    };
+    expect(getSeveranceLumpSumDisplayItems(input, 65)).toEqual([
+      { label: '본인', amount: 7000, age: 70, includedAtRetirement: false },
+    ]);
+  });
+
+  it('일시금이 없거나 과거 저장 결과에 원본 입력이 없어도 빈 목록을 반환한다', () => {
+    expect(getSeveranceLumpSumDisplayItems(undefined, 65)).toEqual([]);
+    expect(getSeveranceLumpSumDisplayItems({ income: { severance: { type: 'none', lumpsum: 7000, lumpsumAge: 65 } } }, 65)).toEqual([]);
   });
 });

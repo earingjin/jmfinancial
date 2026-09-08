@@ -31,7 +31,7 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
             <td className="num" colSpan={2}>{formatWon(agg.salaryMonthly)} (가구 합산)</td>
           </tr>
           <tr>
-            <td>2. 퇴직금(일시금)</td>
+            <td>2. 퇴직 시 예상 퇴직급여 일시금</td>
             <td className="num">{formatWon(byPerson.self.severanceLumpsum)}</td>
             <td className="num">{formatWon(byPerson.spouse.severanceLumpsum)}</td>
           </tr>
@@ -65,7 +65,7 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
         </tbody>
       </table>
       <div className="fine-print" style={{ margin: '8px 0 16px' }}>
-        국민연금 · 퇴직금(일시금) · 개인연금은 본인 · 배우자별로 입력된 값을 그대로 보여드립니다. 급여 · 현금성자산 ·
+        국민연금 · 퇴직 시 예상 퇴직급여 일시금 · 개인연금은 본인 · 배우자별로 입력된 값을 그대로 보여드립니다. 급여 · 현금성자산 ·
         기타수입 · 순자산은 가구 합산으로만 입력받아 본인 · 배우자로 나눠 표시하지 않습니다.
       </div>
 

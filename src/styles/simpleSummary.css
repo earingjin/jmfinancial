@@ -908,6 +908,16 @@
 
 /* ---------- 4. 은퇴 준비 현황 ---------- */
 .retirement-card-grid { margin-bottom: 22px; }
+.retirement-lump-sum-note {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid #e7d8bf;
+  border-radius: 10px;
+  background: #fffaf1;
+}
+.retirement-lump-sum-note > span { color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.retirement-lump-sum-note p { display: flex; justify-content: space-between; gap: 12px; margin: 5px 0 0; color: var(--navy-800); font-size: 12px; }
+.retirement-lump-sum-note small { flex: 0 0 auto; color: var(--ink-soft); font-size: 10.5px; }
 .need-breakdown-list {
   margin-top: 8px;
   padding: 8px 14px 10px;
@@ -1054,6 +1064,7 @@
 
 /* ---------- 5. 다운로드 ---------- */
 .ss-download-section { text-align: center; }
+.ss-download-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .ss-download-btn {
   width: 100%;
   padding: 16px;

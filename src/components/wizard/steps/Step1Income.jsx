@@ -660,7 +660,15 @@ export default function Step1Income({ subStepIndex, screenId }) {
             </div>
           </label>
         </div>
-        <TotalAmountBox label="가구 급여총액" amount={householdSalaryLifetimeTotal} />
+        <TotalAmountBox
+          label="가구 급여총액"
+          amount={householdSalaryLifetimeTotal}
+          valueLabel="가구 급여 총액은"
+          breakdownItems={hasSpouse ? [
+            { label: '본인 금액은', amount: selfSalaryLifetimeTotal },
+            { label: '배우자 금액은', amount: spouseSalaryLifetimeTotal },
+          ] : []}
+        />
         <span className="field-helper">본인·배우자 각자의 은퇴까지 남은 기간을 반영한 급여 누적 총액의 합입니다</span>
       </section>
       </Activity>
@@ -672,7 +680,8 @@ export default function Step1Income({ subStepIndex, screenId }) {
         <PensionPortalNotice />
         <p className="field-helper" style={{ marginBottom: 12 }}>
           퇴직연금은 현재 적립되어 있는 금액은 자산으로, 앞으로 일시금으로 받는 금액은 수령 시점의 자산으로, 매월 받는 금액은 연금소득으로 계산합니다.
-          이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요. 앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.
+          퇴직 시 일시금으로 받을 것으로 예상되는 퇴직급여 총액을 입력해 주세요. 현재 퇴직연금 적립금을 포함한 예상 수령액입니다.
+          이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요.
         </p>
         </Activity>
         <Activity mode={showPart('severance-self') ? 'visible' : 'hidden'}>
@@ -683,7 +692,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
           helper="이미 퇴직하여 퇴직금을 수령하신 경우 '없음'을 선택해 주세요"
           onChange={(value) => handleSeveranceType(setField, 'income.severance', value)}
           options={[
-            { value: 'lumpsum', label: '퇴직금(일시금)' },
+            { value: 'lumpsum', label: '퇴직 시 예상 퇴직급여 일시금' },
             { value: 'pension', label: '퇴직연금(월지급)' },
             { value: 'none', label: '없음' },
           ]}
@@ -691,7 +700,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
         {severanceType === 'lumpsum' && (
           <>
             <div className="field-grid">
-              <NumberField path="income.severance.lumpsum" label="퇴직금 총 수령 금액 *" unit="만원" required />
+              <NumberField path="income.severance.lumpsum" label="퇴직 시 예상 퇴직급여 일시금 *" unit="만원" required />
               <NumberField path="income.severance.lumpsumAge" label="수령 나이 *" unit="세" max={120} required />
             </div>
             <SeveranceCalculatorButton
@@ -748,7 +757,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
               helper="이미 퇴직하여 퇴직금을 수령하신 경우 '없음'을 선택해 주세요"
               onChange={(value) => handleSeveranceType(setField, 'spouse.severance', value)}
               options={[
-                { value: 'lumpsum', label: '퇴직금(일시금)' },
+                { value: 'lumpsum', label: '퇴직 시 예상 퇴직급여 일시금' },
                 { value: 'pension', label: '퇴직연금(월지급)' },
                 { value: 'none', label: '없음' },
               ]}
@@ -756,7 +765,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
             {spouseSeveranceType === 'lumpsum' && (
               <>
                 <div className="field-grid">
-                  <NumberField path="spouse.severance.lumpsum" label="퇴직금 총 수령 금액 *" unit="만원" required />
+                  <NumberField path="spouse.severance.lumpsum" label="퇴직 시 예상 퇴직급여 일시금 *" unit="만원" required />
                   <NumberField path="spouse.severance.lumpsumAge" label="수령 나이 *" unit="세" max={120} required />
                 </div>
                 <SeveranceCalculatorButton
@@ -803,7 +812,15 @@ export default function Step1Income({ subStepIndex, screenId }) {
         )}
 
         <Activity mode={showPart('severance-total') ? 'visible' : 'hidden'}>
-        <TotalAmountBox label="퇴직금·퇴직연금 총액" amount={combinedSeveranceTotal} valueLabel="총액은" />
+        <TotalAmountBox
+          label="퇴직금·퇴직연금 총액"
+          amount={combinedSeveranceTotal}
+          valueLabel="총액은"
+          breakdownItems={hasSpouse ? [
+            { label: '본인 금액은', amount: selfSeveranceTotal },
+            { label: '배우자 금액은', amount: spouseSeveranceTotal },
+          ] : []}
+        />
         </Activity>
       </section></Activity>
 
@@ -994,7 +1011,15 @@ export default function Step1Income({ subStepIndex, screenId }) {
         )}
 
         <Activity mode={showPart('national-total') ? 'visible' : 'hidden'}>
-        <TotalAmountBox label="국민연금 수령 총액(본인+배우자)" amount={combinedNationalPensionTotal} valueLabel="총액은" />
+        <TotalAmountBox
+          label="국민연금 수령 총액(본인+배우자)"
+          amount={combinedNationalPensionTotal}
+          valueLabel="총액은"
+          breakdownItems={hasSpouse ? [
+            { label: '본인 금액은', amount: selfNationalPensionTotal },
+            { label: '배우자 금액은', amount: spouseNationalPensionTotal },
+          ] : []}
+        />
         </Activity>
       </section></Activity>
 
@@ -1072,7 +1097,15 @@ export default function Step1Income({ subStepIndex, screenId }) {
         )}
 
         <Activity mode={showPart('personal-total') ? 'visible' : 'hidden'}>
-        <TotalAmountBox label="개인연금 수령 총액(본인+배우자)" amount={combinedPersonalPensionTotal} valueLabel="총액은" />
+        <TotalAmountBox
+          label="개인연금 수령 총액(본인+배우자)"
+          amount={combinedPersonalPensionTotal}
+          valueLabel="총액은"
+          breakdownItems={hasSpouse ? [
+            { label: '본인 금액은', amount: selfPersonalPensionTotal },
+            { label: '배우자 금액은', amount: spousePersonalPensionTotal },
+          ] : []}
+        />
         </Activity>
       </section></Activity>
 

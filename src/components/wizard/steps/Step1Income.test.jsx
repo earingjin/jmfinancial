@@ -118,13 +118,23 @@ describe('Step1Income - retirement-pension asset linkage', () => {
     formData.spouse.severance.type = 'pension';
     const html = renderStep(formData);
     expect(html).toContain('퇴직연금은 현재 적립되어 있는 금액은 자산으로');
-    expect(html).toContain('앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.');
+    expect(html).toContain('퇴직 시 일시금으로 받을 것으로 예상되는 퇴직급여 총액을 입력해 주세요. 현재 퇴직연금 적립금을 포함한 예상 수령액입니다.');
     expect(html).toContain('현재 본인 퇴직연금 적립금');
     expect(html).toContain('현재 배우자 퇴직연금 적립금');
     expect(html).toContain('Step 4 연금자산의 본인 퇴직연금 적립금과 연동됩니다.');
     const selfPensionAssetIndex = html.indexOf('현재 본인 퇴직연금 적립금');
     expect(html.indexOf('수령 시작 나이 *')).toBeLessThan(selfPensionAssetIndex);
     expect(selfPensionAssetIndex).toBeLessThan(html.indexOf('수령 기간', selfPensionAssetIndex));
+  });
+
+  it('퇴직금 일시금의 의미를 본인과 배우자 모두 향후 추가 수령액으로 표시한다', () => {
+    const formData = structuredClone(initialFormData);
+    formData.basic.hasSpouse = true;
+    formData.income.severance.type = 'lumpsum';
+    formData.spouse.severance.type = 'lumpsum';
+    const html = renderStep(formData);
+    expect((html.match(/퇴직 시 예상 퇴직급여 일시금/g) || [])).toHaveLength(4);
+    expect(html).toContain('이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요.');
   });
 
   it('updates the simple pension-asset total by the changed balance delta', () => {
@@ -152,6 +162,26 @@ describe('Step1Income - retirement-pension asset linkage', () => {
   });
 });
 
+describe('Step1Income - 배우자 포함 합계', () => {
+  it('가구 및 연금 합계 박스에 본인과 배우자 금액을 함께 표시한다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.basic, { hasSpouse: true, birthYear: 1986, retirementAge: 65, lifeExpectancy: 85 });
+    Object.assign(formData.spouse, { birthYear: 1986, retirementAge: 65, lifeExpectancy: 85 });
+    Object.assign(formData.income.salary, { monthly: 100, annualBonus: 0 });
+    Object.assign(formData.spouse.salary, { monthly: 200, annualBonus: 0 });
+    Object.assign(formData.income.severance, { type: 'lumpsum', lumpsum: 111, lumpsumAge: 65 });
+    Object.assign(formData.spouse.severance, { type: 'lumpsum', lumpsum: 222, lumpsumAge: 65 });
+    Object.assign(formData.income.personalPension, { type: 'lumpsum', lumpsum: 333, lumpsumAge: 65 });
+    Object.assign(formData.spouse.personalPension, { type: 'lumpsum', lumpsum: 444, lumpsumAge: 65 });
+    Object.assign(formData.income.nationalPension, { monthly: 10, paymentMonths: 120, months: 240 });
+    Object.assign(formData.spouse.nationalPension, { monthly: 20, paymentMonths: 120, months: 240 });
+
+    const html = renderStep(formData);
+    expect((html.match(/본인 금액은/g) || [])).toHaveLength(4);
+    expect((html.match(/배우자 금액은/g) || [])).toHaveLength(4);
+  });
+});
+
 // RadioField의 onClick은 renderToStaticMarkup(서버 렌더링)에서는 실행되지 않아 실제 클릭을 재현할
 // 수 없다 - handleSeveranceType을 직접 호출해 실제로 화면에서 쓰이는 것과 동일한 함수를 검증한다.
 describe('handleSeveranceType - 퇴직금·퇴직연금 잔존값 초기화', () => {
@@ -163,6 +193,7 @@ describe('handleSeveranceType - 퇴직금·퇴직연금 잔존값 초기화', ()
     RESET_FIELDS.forEach((field) => {
       expect(setField).toHaveBeenCalledWith(`income.severance.${field}`, '');
     });
+    expect(setField).not.toHaveBeenCalledWith('assets.pensionAssetsBreakdown.selfRetirementPension', '');
   });
 
   it('본인: 퇴직연금(월지급) 입력 후 없음으로 전환하면 pensionMonthly 등 관련 값을 초기화한다', () => {
