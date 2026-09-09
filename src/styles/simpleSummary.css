@@ -567,10 +567,10 @@
   font-size: 13.5px;
   font-weight: 800;
   cursor: pointer;
+  border-bottom: 1px solid var(--line);
 }
 .retirement-calculation-body {
   padding: 2px 18px 15px;
-  border-top: 1px solid var(--line);
 }
 .retirement-calculation-body p {
   display: flex;
@@ -594,6 +594,23 @@
   color: var(--ink-soft);
   line-height: 1.55;
 }
+.retirement-detail-card { border: 0; border-radius: 0; }
+.retirement-calculation > .detail-card { border: 0; border-radius: 0; }
+.retirement-detail-card .detail-row { align-items: flex-start; gap: 12px; }
+.retirement-detail-card .detail-row-label { min-width: 0; }
+.retirement-detail-card .detail-row-value { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.retirement-detail-card .retirement-monthly-result { padding-top: 6px; }
+.retirement-funding-breakdown { margin: 0 0 4px; border: 0; }
+.retirement-funding-breakdown > summary { display: inline-flex; margin: 0 0 4px; padding: 2px 0; border: 0; background: transparent; color: var(--ink-soft); font: inherit; font-size: 12px; cursor: pointer; }
+.retirement-funding-breakdown > summary { list-style: none; }
+.retirement-funding-breakdown > summary::-webkit-details-marker { display: none; }
+.retirement-funding-breakdown > div { padding: 0 2px 5px; }
+.retirement-funding-breakdown .detail-row { font-size: 11.5px; }
+.retirement-detail-card.has-shortfall .detail-row--highlight { background: var(--red-soft); }
+.retirement-detail-card.has-shortfall .detail-row--highlight .detail-row-value { color: var(--red); }
+.retirement-detail-lumpsums { margin: 6px 0 8px; padding: 8px 10px; background: var(--paper); }
+.retirement-detail-lumpsums > span { display: block; margin-bottom: 3px; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.retirement-detail-lumpsums small { display: block; color: var(--ink); font-size: 11.5px; line-height: 1.5; }
 
 @media (max-width: 640px) {
   .retirement-calculation-body p { flex-direction: column; gap: 4px; }

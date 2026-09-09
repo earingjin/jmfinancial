@@ -22,13 +22,13 @@ function displayPercent(value) {
 
 function StatementGroup({ label, value, details = [] }) {
   return (
-    <div className="one-summary-statement-group">
+    <div className="one-summary-statement-group" aria-label={`${label} 구성내역`}>
       <div className="one-summary-statement-total">
         <span>{label}</span>
         <strong>{displayWon(value)}</strong>
       </div>
       {details.length > 0 && (
-        <div className="one-summary-breakdown" aria-label={`${label} 구성내역`}>
+        <div className="one-summary-breakdown">
           {details.map((item) => (
             <div key={item.key || item.label}>
               <span>{item.label}</span>
@@ -95,22 +95,31 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
     && Number.isFinite(retirementIncome?.value)
     && item.target.coverageRate === retirementIncome.value
   ));
+  const retirementRequiredAmount = retirement.requiredAtRetirement;
+  const retirementReadyAmount = retirement.readyAssetsAtRetirement;
+  const retirementShortfallAmount = retirement.shortfall;
+  const hasRetirementDiagram = [retirementRequiredAmount, retirementReadyAmount, retirementShortfallAmount]
+    .every((value) => Number.isFinite(value) && value >= 0)
+    && retirementRequiredAmount > 0;
+  const retirementReadyRatio = hasRetirementDiagram
+    ? Math.min(1, retirementReadyAmount / retirementRequiredAmount)
+    : 0;
+  const retirementShortfallRatio = hasRetirementDiagram
+    ? Math.min(1 - retirementReadyRatio, retirementShortfallAmount / retirementRequiredAmount)
+    : 0;
+  const showRetirementShortfallOutside = retirementShortfallRatio < 0.12;
 
   return (
-    <PageFrame eyebrow="One-page Summary" pageNumber={1} totalPages={1} contentClassName="one-page-summary-pad">
+    <PageFrame eyebrow="One-page Summary" title="재무진단 요약 리포트" pageNumber={1} totalPages={1} contentClassName="one-page-summary-pad">
       <header className="one-summary-header">
-        <div>
-          <h1>재무진단 요약 리포트</h1>
-          <p>현재 상태부터 은퇴 후 생활비 전망까지, 핵심 결과만 한 장에 정리했습니다.</p>
-        </div>
+        <p className="intro-text report-compact-intro">현재 상태부터 은퇴 후 생활비 전망까지, 핵심 결과만 한 장에 정리했습니다.</p>
         <div className="one-summary-meta">
           <span title={clientName || '고객'}>{clientName || '고객'}</span>
           <time dateTime={result?.generatedAt || undefined}>진단일 {formatDate(result?.generatedAt)}</time>
         </div>
       </header>
 
-      <section className="one-summary-judgment" aria-labelledby="one-summary-judgment-title">
-        <h2 id="one-summary-judgment-title">종합 결과</h2>
+      <section className="one-summary-judgment" aria-label="종합 결과">
         <div className="one-summary-judgment-grid">
           <article>
             <span>현재 재무상태</span>
@@ -127,8 +136,11 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
 
       <section className="one-summary-section" aria-labelledby="one-summary-current-title">
         <div className="one-summary-section-heading">
-          <h2 id="one-summary-current-title">현재 재무상태</h2>
-          <p>가구 기준 현재 자산과 부채</p>
+          <div>
+            <h2 className="subsection-head" id="one-summary-current-title">현재 재무상태</h2>
+            <p className="intro-text one-summary-section-description">보유 자산과 부채를 기준으로 현재 상태를 보여드립니다.</p>
+          </div>
+          <p className="one-summary-section-meta">가구 기준 현재 자산과 부채</p>
         </div>
         <div className="one-summary-balance-sheet">
           <StatementGroup label="총자산" value={aggregates.totalAssets} details={assetDetails} />
@@ -143,18 +155,50 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
 
       <section className="one-summary-section one-summary-retirement" aria-labelledby="one-summary-retirement-title">
         <div className="one-summary-section-heading">
-          <h2 id="one-summary-retirement-title">은퇴 준비</h2>
-          <p>{Number.isFinite(retirement.retirementAge) ? `${formatNumber(retirement.retirementAge)}세 은퇴 기준` : '은퇴 기준 확인 필요'}</p>
+          <div>
+            <h2 className="subsection-head" id="one-summary-retirement-title">은퇴 준비</h2>
+            <p className="intro-text one-summary-section-description">필요자금과 예상 준비자산의 차이를 보여드립니다.</p>
+          </div>
+          <p className="one-summary-section-meta">{Number.isFinite(retirement.retirementAge) ? `${formatNumber(retirement.retirementAge)}세 은퇴 기준` : '은퇴 기준 확인 필요'}</p>
         </div>
         {retirement.notCalculable ? (
           <p className="one-summary-empty">{retirement.reason || '은퇴 준비 결과를 표시할 수 없습니다.'}</p>
         ) : (
           <>
-            <div className="one-summary-retirement-flow">
-              <div className="is-shortfall"><span>예상 부족자금</span><strong>{displayWon(retirement.shortfall)}</strong></div>
-              <div><span>은퇴 시점 필요자금</span><strong>{displayWon(retirement.requiredAtRetirement)}</strong></div>
-              <div><span>예상 준비자산</span><strong>{displayWon(retirement.readyAssetsAtRetirement)}</strong></div>
-            </div>
+            {hasRetirementDiagram ? (
+              <div className="one-summary-retirement-diagram" aria-label="필요자금, 예상 준비자산, 부족자금 관계">
+                <div className="one-summary-retirement-required">
+                  <span>은퇴 시점 필요자금</span>
+                  <strong>{displayWon(retirementRequiredAmount)}</strong>
+                </div>
+                <div className="one-summary-retirement-composition">
+                  <div
+                    className="one-summary-retirement-ready"
+                    style={{ flexGrow: retirementReadyRatio, flexBasis: 0 }}
+                  >
+                    <span>예상 준비자산</span>
+                    <strong>{displayWon(retirementReadyAmount)}</strong>
+                  </div>
+                  <div
+                    className={`one-summary-retirement-shortfall${showRetirementShortfallOutside ? ' is-compact' : ''}`}
+                    style={{ flexGrow: retirementShortfallRatio, flexBasis: 0 }}
+                  >
+                    {!showRetirementShortfallOutside && <><span>예상 부족자금</span><strong>{displayWon(retirementShortfallAmount)}</strong></>}
+                  </div>
+                </div>
+                {showRetirementShortfallOutside && (
+                  <p className="one-summary-retirement-shortfall-note">
+                    <span>예상 부족자금</span><strong>{displayWon(retirementShortfallAmount)}</strong>
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="one-summary-retirement-flow">
+                <div className="is-shortfall"><span>예상 부족자금</span><strong>{displayWon(retirement.shortfall)}</strong></div>
+                <div><span>은퇴 시점 필요자금</span><strong>{displayWon(retirement.requiredAtRetirement)}</strong></div>
+                <div><span>예상 준비자산</span><strong>{displayWon(retirement.readyAssetsAtRetirement)}</strong></div>
+              </div>
+            )}
             {severanceLumpSums.length > 0 && (
               <div className="one-summary-lumpsums">
                 <span>예정 퇴직급여 일시금</span>
@@ -168,8 +212,11 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
 
       <section className="one-summary-section one-summary-peer" aria-labelledby="one-summary-peer-title">
         <div className="one-summary-section-heading">
-          <h2 id="one-summary-peer-title">또래 비교</h2>
-          <p>{peerComparison.userBracketLabel || peerComparison.benchmarkMeta?.ageBasis || '동일 연령대 기준'}</p>
+          <div>
+            <h2 className="subsection-head" id="one-summary-peer-title">또래 비교</h2>
+            <p className="intro-text one-summary-section-description">동일 연령대 가구와 현재 재무 수준을 비교합니다.</p>
+          </div>
+          <p className="one-summary-section-meta">{peerComparison.userBracketLabel || peerComparison.benchmarkMeta?.ageBasis || '동일 연령대 기준'}</p>
         </div>
         <table className="one-summary-peer-table">
           <thead><tr><th>항목</th><th>나</th><th>또래 기준</th><th>비교</th></tr></thead>
@@ -188,8 +235,11 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
 
       <section className="one-summary-section one-summary-future" aria-labelledby="one-summary-future-title">
         <div className="one-summary-section-heading">
-          <h2 id="one-summary-future-title">은퇴 후 생활비 충당 전망</h2>
-          <p>은퇴 시점 기준 · 연령별 전망과 별도</p>
+          <div>
+            <h2 className="subsection-head" id="one-summary-future-title">은퇴 후 생활비 충당 전망</h2>
+            <p className="intro-text one-summary-section-description">연금소득으로 생활비를 얼마나 충당하는지 보여드립니다.</p>
+          </div>
+          <p className="one-summary-section-meta">은퇴 시점 기준 · 연령별 전망과 별도</p>
         </div>
         {!hasDuplicateRetirementCoverage && (
           <div className="one-summary-coverage">

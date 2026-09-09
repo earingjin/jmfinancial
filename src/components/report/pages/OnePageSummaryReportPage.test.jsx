@@ -98,6 +98,7 @@ describe('OnePageSummaryReportPage', () => {
 
   it('필요자금·준비자산·부족자금과 존재하는 예정 일시금만 표시한다', () => {
     const html = render();
+    expect(html).toContain('one-summary-retirement-diagram');
     expect(html).toContain('은퇴 시점 필요자금');
     expect(html).toContain('예상 준비자산');
     expect(html).toContain('예상 부족자금');
@@ -155,5 +156,14 @@ describe('OnePageSummaryReportPage', () => {
     const html = render(result);
     expect((html.match(/42\.4%/g) || [])).toHaveLength(1);
     expect(html).toContain('생활비의 42.4% 충당');
+  });
+
+  it('상세리포트의 제목·설명·표 디자인 문법을 재사용한다', () => {
+    const html = render();
+    expect(html).toContain('<h2 class="section-title">재무진단 요약 리포트</h2>');
+    expect((html.match(/class="subsection-head"/g) || [])).toHaveLength(4);
+    expect((html.match(/one-summary-section-description/g) || [])).toHaveLength(4);
+    expect(html).toContain('class="one-summary-statement-group"');
+    expect(html).toContain('class="one-summary-peer-table"');
   });
 });
