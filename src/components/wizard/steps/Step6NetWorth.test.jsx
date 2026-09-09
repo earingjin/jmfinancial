@@ -30,13 +30,13 @@ function renderAmounts(formData) {
     </FormContext.Provider>
   );
   const amountFor = (label) => {
-    const match = html.match(new RegExp(`<td>${label}</td><td[^>]*>([^<]+)</td>`));
+    const match = html.match(new RegExp(`<span>${label}</span><strong>([^<]+)</strong>`));
     return match?.[1];
   };
   return {
-    totalAssets: amountFor('총자산'),
-    totalDebt: amountFor('총부채'),
-    netWorth: amountFor('현재 순자산'),
+    totalAssets: amountFor('총 자산'),
+    totalDebt: amountFor('총 부채'),
+    netWorth: amountFor('순자산'),
   };
 }
 
@@ -57,8 +57,7 @@ describe('Step6NetWorth asset coverage', () => {
       </FormContext.Provider>
     );
     expect(html).not.toContain('입력이 완료되었습니다. 아래 금액을 확인한 뒤 진단 결과를 확인해 주세요.');
-    expect(html).toContain('grade-table compact finance-summary-desktop');
-    expect(html).toContain('net-worth-mobile-summary');
+    expect(html).toContain('net-worth-summary');
   });
 
   it.each([

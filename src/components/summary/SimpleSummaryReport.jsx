@@ -680,6 +680,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
   const [retirementDetailKey, setRetirementDetailKey] = useState(null);
   const [showFiveYearTable, setShowFiveYearTable] = useState(false);
   const assetProjection = future?.retirementAssetProjection;
+  const showOptionalMobileSections = false;
   const severanceLumpSums = getSeveranceLumpSumDisplayItems(input, rr.retirementAge);
   const retirementIncludedLumpSums = severanceLumpSums.filter((item) => item.includedAtRetirement);
 
@@ -716,7 +717,6 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
           섹션으로 바로 이동할 수 있는 상단 고정 내비게이션을 추가한다. */}
       <nav className="ss-section-nav" aria-label="섹션 바로가기">
         <a href="#ss-h-hero">종합 결과</a>
-        <a href="#ss-h-composition">나의 재무 구성</a>
         <a href="#ss-h-peer">또래 비교</a>
         <a href="#ss-h-retirement">은퇴 준비 현황</a>
         <a href="#ss-h-future">미래 재무 전망</a>
@@ -798,6 +798,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
       </section>
 
       {/* 1. 나의 재무 구성 */}
+      {showOptionalMobileSections && <>
       <section aria-labelledby="ss-h-composition">
         <h2 id="ss-h-composition" className="simple-summary-title">나의 재무 구성</h2>
         <p className="simple-summary-subtitle">수입이 어디에 사용되고 자산과 부채가 어떻게 구성되어 있는지 확인해 보세요.</p>
@@ -839,6 +840,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
       </section>
 
       {/* 2. 또래와 비교한 나의 위치 */}
+      </>}
       <section aria-labelledby="ss-h-peer">
         <h2 id="ss-h-peer" className="simple-summary-title">또래와 비교한 나의 위치</h2>
         <p className="simple-summary-subtitle">같은 연령대와 비교해 현재 재무 수준을 확인해 보세요.</p>
@@ -918,7 +920,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                 <div className="overview-card-value">{formatWon(rr.shortfall)}</div>
                 <span className="overview-card-hint">내역 보기</span>
               </button>
-              <div className="overview-card overview-card--wide">
+              {showOptionalMobileSections && <div className="overview-card overview-card--wide">
                 <div className="overview-card-label">현재 노후소득보장률</div>
                 <div className="overview-card-value">
                   {rr.retirementIncomeIndicator?.notCalculable
@@ -939,7 +941,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                     {rr.retirementIncomeZeroReason || '월 수령 방식으로 입력된 노후 연금액이 없어 0%입니다.'}
                   </p>
                 )}
-              </div>
+              </div>}
             </div>
 
             {retirementDetailKey && (
@@ -1013,6 +1015,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
               </div>
             )}
 
+            {showOptionalMobileSections && <>
             <h3 className="ss-section-title">은퇴 시점 월소득 비교</h3>
             <p className="ss-guidance">{formatNumber(rr.retirementAge)}세 은퇴 직후를 기준으로 받을 수 있는 연금과 필요한 생활비를 비교합니다.</p>
             <div className="ss-card-list">
@@ -1043,6 +1046,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                 </div>
               </div>
             </div>
+            </>}
             <h3 className="ss-section-title">은퇴시점 필요자금 · 소득공백기간</h3>
             <p className="ss-retirement-income-note">
               {formatRetirementLivingCostBasis({
@@ -1097,6 +1101,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
         {/* 은퇴 후 생활비·목돈지출을 준비자산에서 인출하면서 잔액이 몇 살까지 유지되는지의 전망.
             webSummary.futureFinance.retirementAssetProjection이 없는 과거 저장 결과에서는 안내
             문구만 보여주고, 화면이 깨지거나 재계산을 시도하지 않는다. */}
+        {showOptionalMobileSections && <>
         <h3 className="ss-section-title">예상 자산 유지 기간</h3>
         {!assetProjection ? (
           <p className="ss-guidance">이전 진단 결과에서는 자산잔액 전망을 제공하지 않습니다. 다시 진단하면 확인할 수 있습니다.</p>
@@ -1165,6 +1170,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
             </details>
           </>
         )}
+        </>}
       </section>
 
       {/* 4. 미래 재무 전망 */}

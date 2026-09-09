@@ -323,9 +323,77 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
   font-size: 12.5px;
 }
 .wizard-substep-progress-head span { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.wizard-substep-category,
-.wizard-substep-chevron,
-.wizard-substep-menu { display: none; }
+.wizard-substep-toggle:not(:disabled) { min-height: 28px; cursor: pointer; }
+.wizard-substep-toggle:not(:disabled):focus-visible {
+  outline: 2px solid #e89a4a;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.wizard-substep-progress-head { align-items: flex-start; }
+.wizard-substep-progress-head strong {
+  min-width: 0;
+  padding-right: 8px;
+  overflow-wrap: anywhere;
+}
+.wizard-substep-category { display: inline; color: var(--navy-900); }
+.wizard-substep-position {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.wizard-substep-chevron {
+  display: inline;
+  color: #b55a08;
+  font-size: 9px;
+}
+.wizard-substep-menu {
+  display: block;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.wizard-substep-menu-title {
+  display: block;
+  margin: 0 4px 5px;
+  color: var(--navy-900);
+  font-size: 12.5px;
+}
+.wizard-substep-menu-list { display: grid; gap: 0; }
+.wizard-substep-menu-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  min-height: 44px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.wizard-substep-menu-item:not(.is-current) {
+  min-height: 30px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  color: #8f8578;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.wizard-substep-menu-item span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.wizard-substep-menu-item:hover { background: #fffaf2; color: var(--navy-900); }
+.wizard-substep-menu-item.is-current {
+  background: #f8ecd7;
+  color: #a94f08;
+  font-weight: 800;
+}
+.wizard-substep-menu-check { color: #c76108; font-weight: 900; }
 .wizard-substep-progress-track {
   height: 4px;
   margin-top: 8px;
@@ -1033,6 +1101,68 @@ table.grade-table.compact td { padding: 4px 8px; font-size: 10.5px; line-height:
 
 .income-summary-mobile,
 .finance-summary-mobile { display: none; }
+.net-worth-summary {
+  display: grid;
+  gap: 8px;
+  max-width: 620px;
+}
+.net-worth-summary-item {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 14px;
+}
+.net-worth-summary-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.net-worth-summary-main span { font-weight: 700; }
+.net-worth-summary-main strong {
+  color: var(--navy-900);
+  font-size: 15px;
+  text-align: right;
+  white-space: nowrap;
+}
+.net-worth-summary-item--result {
+  border-color: #e4c28f;
+  background: #f8ecd7;
+}
+.net-worth-summary-item--result .net-worth-summary-main span,
+.net-worth-summary-item--result .net-worth-summary-main strong { font-weight: 800; }
+.net-worth-summary-operator {
+  color: var(--ink-soft);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+.net-worth-breakdown-toggle {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.net-worth-breakdown-list {
+  margin-top: 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+.net-worth-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+.net-worth-breakdown-row strong { color: var(--ink); white-space: nowrap; }
 /* 자산·부채 현황 페이지의 두 표(지출 현황·자산·부채 현황)는 항목 수가 적은 대신 잘 안 보인다는
    피드백이 있어, 다른 compact 표보다 행 높이와 글자 크기를 키운다. */
 /* 5페이지는 하단 피드백 박스가 표와 겹치지 않도록 행 높이를 조금 압축한다. */
@@ -1294,76 +1424,6 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 
   .wizard-body { padding: 18px 16px; }
   .wizard-substep-progress { padding: 9px 12px; }
-  .wizard-substep-toggle:not(:disabled) { min-height: 28px; cursor: pointer; }
-  .wizard-substep-toggle:not(:disabled):focus-visible {
-    outline: 2px solid #e89a4a;
-    outline-offset: 4px;
-    border-radius: 4px;
-  }
-  .wizard-substep-progress-head { align-items: flex-start; }
-  .wizard-substep-progress-head strong {
-    min-width: 0;
-    padding-right: 8px;
-    overflow-wrap: anywhere;
-  }
-  .wizard-substep-category { display: inline; color: var(--navy-900); }
-  .wizard-substep-position {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 7px;
-    white-space: nowrap;
-  }
-  .wizard-substep-chevron {
-    display: inline;
-    color: #b55a08;
-    font-size: 9px;
-  }
-  .wizard-substep-menu {
-    display: block;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
-  }
-  .wizard-substep-menu-title {
-    display: block;
-    margin: 0 4px 5px;
-    color: var(--navy-900);
-    font-size: 12.5px;
-  }
-  .wizard-substep-menu-list { display: grid; gap: 2px; }
-  .wizard-substep-menu-item {
-    display: grid;
-    grid-template-columns: 20px minmax(0, 1fr);
-    align-items: center;
-    min-height: 44px;
-    width: 100%;
-    padding: 9px 10px;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--ink-soft);
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.4;
-    text-align: left;
-    cursor: pointer;
-  }
-  .wizard-substep-menu-item:not(.is-current) {
-    min-height: 38px;
-    padding-top: 6px;
-    padding-bottom: 6px;
-    color: #8f8578;
-    font-size: 12.5px;
-  }
-  .wizard-substep-menu-item span:last-child { min-width: 0; overflow-wrap: anywhere; }
-  .wizard-substep-menu-item:hover { background: #fffaf2; color: var(--navy-900); }
-  .wizard-substep-menu-item.is-current {
-    background: #f8ecd7;
-    color: #a94f08;
-    font-weight: 800;
-  }
-  .wizard-substep-menu-check { color: #c76108; font-weight: 900; }
   .wizard-nav { gap: 10px; }
   .wizard-nav button { flex: 1; }
 
@@ -1502,41 +1562,6 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
     cursor: pointer;
   }
   .income-summary-details p { margin: 7px 0 0; line-height: 1.5; }
-
-  .net-worth-mobile-summary {
-    display: grid;
-    gap: 8px;
-  }
-  .net-worth-mobile-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    font-size: 14px;
-  }
-  .net-worth-mobile-item span { font-weight: 700; }
-  .net-worth-mobile-item strong {
-    color: var(--navy-900);
-    font-size: 15px;
-    text-align: right;
-    white-space: nowrap;
-  }
-  .net-worth-mobile-item--result {
-    border-color: #e4c28f;
-    background: #f8ecd7;
-  }
-  .net-worth-mobile-item--result span,
-  .net-worth-mobile-item--result strong { font-weight: 800; }
-  .net-worth-mobile-operator {
-    color: var(--ink-soft);
-    font-size: 18px;
-    font-weight: 800;
-    line-height: 1;
-    text-align: center;
-  }
 
   .fhs-overall-conclusion-hero { font-size: 15px; }
   .fhs-overall-status-card p { overflow-wrap: anywhere; }
