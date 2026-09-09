@@ -77,10 +77,13 @@ function DetailRow({ label, value, missing, bold, subtotal, highlight, valueColo
 
 // "종합 결과"의 현재 재무상태 세부 내역 드롭다운에서 보여주는 수입·지출·자산 내역(od는 server가
 // 이미 계산한 값을 표시만 한다).
-function FinancialOverviewCard({ od, aggregates }) {
+function FinancialOverviewCard({ od, aggregates, assetItems = [], debtItems = [] }) {
   const incomeMinusExpenseMissing = !Number.isFinite(od.expense.incomeMinusExpense);
-  const realEstate = Number.isFinite(od.balance.realEstate) ? od.balance.realEstate : aggregates.realEstateTotal;
   const totalDebt = Number.isFinite(od.balance.totalDebt) ? od.balance.totalDebt : aggregates.totalDebt;
+  const [assetDetailsOpen, setAssetDetailsOpen] = useState(false);
+  const [debtDetailsOpen, setDebtDetailsOpen] = useState(false);
+  const assetDetailItems = assetItems.filter((item) => Number(item.value) > 0);
+  const debtDetailItems = debtItems.filter((item) => Number(item.value) > 0);
 
   return (
     <div className="detail-card">
@@ -131,19 +134,57 @@ function FinancialOverviewCard({ od, aggregates }) {
 
       <div className="detail-group">
         <div className="detail-group-head">자산·부채</div>
-        <DetailRow label="현금성자산" value={formatWon(od.balance.liquid)} missing={od.balance.liquidMissing} />
-        <DetailRow label="금융·연금자산" value={formatWon(od.balance.financialAndPension)} missing={od.balance.financialAndPensionMissing} />
-        <DetailRow
-          label="부동산자산"
-          value={formatWon(realEstate)}
-          missing={od.balance.realEstateMissing}
-        />
+        <DetailRow label="총 자산" value={formatWon(aggregates.totalAssets)} />
+        {assetDetailItems.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="summary-breakdown-toggle"
+              aria-expanded={assetDetailsOpen}
+              onClick={() => setAssetDetailsOpen((open) => !open)}
+            >
+              {assetDetailsOpen ? '내역 접기 ∧' : '내역 보기 ▾'}
+            </button>
+            {assetDetailsOpen && (
+              <div className="summary-breakdown-list">
+                {assetDetailItems.map((item) => (
+                  <div className="summary-breakdown-row" key={item.key || item.label}>
+                    <span>{item.label}</span>
+                    <strong>{formatWon(item.value)}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
         <DetailRow
           label="총부채"
           value={formatWon(totalDebt)}
           missing={od.balance.totalDebtMissing}
           valueColor={totalDebt > 0 ? 'var(--red)' : undefined}
         />
+        {debtDetailItems.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="summary-breakdown-toggle"
+              aria-expanded={debtDetailsOpen}
+              onClick={() => setDebtDetailsOpen((open) => !open)}
+            >
+              {debtDetailsOpen ? '내역 접기 ∧' : '내역 보기 ▾'}
+            </button>
+            {debtDetailsOpen && (
+              <div className="summary-breakdown-list">
+                {debtDetailItems.map((item) => (
+                  <div className="summary-breakdown-row" key={item.key || item.label}>
+                    <span>{item.label}</span>
+                    <strong>{formatWon(item.value)}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
         <DetailRow
           label="순자산" bold highlight
           value={formatWon(od.balance.netWorth)}
@@ -700,7 +741,12 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
 
           <details className="retirement-calculation summary-grid-area--details1">
             <summary>현재 재무상태 세부 내역</summary>
-            <FinancialOverviewCard od={od} aggregates={aggregates} />
+            <FinancialOverviewCard
+              od={od}
+              aggregates={aggregates}
+              assetItems={donuts.assets?.items}
+              debtItems={donuts.debt?.items}
+            />
           </details>
 
           <div className="summary-grid-area--card2">

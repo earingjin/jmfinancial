@@ -1349,6 +1349,13 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
     text-align: left;
     cursor: pointer;
   }
+  .wizard-substep-menu-item:not(.is-current) {
+    min-height: 38px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    color: #8f8578;
+    font-size: 12.5px;
+  }
   .wizard-substep-menu-item span:last-child { min-width: 0; overflow-wrap: anywhere; }
   .wizard-substep-menu-item:hover { background: #fffaf2; color: var(--navy-900); }
   .wizard-substep-menu-item.is-current {

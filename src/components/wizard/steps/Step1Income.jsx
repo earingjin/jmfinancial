@@ -503,6 +503,11 @@ export default function Step1Income({ subStepIndex, screenId }) {
               <strong>(2024년 대한민국 예상 평균수명: 남성 81.6세, 여성 87.6세)</strong>
             </>}
           />
+        </div>
+
+        </Activity>
+        <Activity mode={showPart('basic-work') ? 'visible' : 'hidden'}>
+        <div className="field-grid">
           <NumberField
             path="basic.serviceYears"
             label="근속년수 *"
@@ -511,7 +516,6 @@ export default function Step1Income({ subStepIndex, screenId }) {
             helper="현재 직장의 입사일부터 퇴직(예정)일까지의 전체 재직기간입니다. 퇴직금 모의계산에 사용됩니다."
           />
         </div>
-
         <div className="field" style={{ marginTop: 16 }}>
           <span className="field-label">예상 노후 생활</span>
           <div className="field-computed-box">
@@ -523,7 +527,6 @@ export default function Step1Income({ subStepIndex, screenId }) {
               : '은퇴(예정) 연령과 기대수명을 입력하면 예상 노후 생활 기간이 자동으로 계산됩니다.'}
           </span>
         </div>
-
         </Activity>
         <Activity mode={showPart('basic-spouse') ? 'visible' : 'hidden'}>
         <div className="field" style={{ marginTop: 16 }}>

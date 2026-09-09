@@ -521,6 +521,36 @@
   border-radius: 0 0 12px 12px;
 }
 .detail-row--highlight .detail-row-value { color: #0E6C5E; font-size: 16px; }
+.summary-breakdown-toggle {
+  display: inline-flex;
+  margin: 0 0 4px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.summary-breakdown-toggle:hover { color: var(--navy-800); }
+.summary-breakdown-list {
+  margin: 0 0 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+.summary-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+.summary-breakdown-row strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 /* 은퇴 필요자금의 핵심 산식만 필요할 때 펼쳐 보는 간단한 설명 */
 .retirement-calculation {

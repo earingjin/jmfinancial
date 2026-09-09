@@ -29,7 +29,11 @@ function check(condition, message) { if (!condition) throw new Error(message); }
 function equal(actual, expected, message) { check(JSON.stringify(actual) === JSON.stringify(expected), `${message}: ${JSON.stringify(actual)}`); }
 const visible = (node) => node && node.getClientRects().length > 0;
 const allVisible = (selector) => [...document.querySelectorAll(selector)].filter(visible);
-const title = () => document.querySelector('.wizard-substep-progress strong')?.textContent;
+const title = () => {
+  const heading = document.querySelector('.wizard-substep-progress-head > strong');
+  const category = heading?.querySelector('.wizard-substep-category')?.textContent;
+  return category ? heading.textContent.replace(category, '') : heading?.textContent;
+};
 const button = (text) => allVisible('button').find((node) => node.textContent.trim() === text);
 const click = async (node) => { check(visible(node), '클릭 대상이 표시되어야 함'); await flush(() => node.click()); };
 const next = () => click(button('다음'));
@@ -96,12 +100,15 @@ async function run() {
   for (const hasSpouse of [false, true]) {
     await mount(seed(hasSpouse));
     const keys = ['income', 'expense', 'savings', 'assets', 'debt', 'netWorth'];
-    const labels = keys.flatMap((key) => getWizardScreens(key, hasSpouse).map((item) => item.label));
+    const screens = keys.flatMap((key) => getWizardScreens(key, hasSpouse));
+    const labels = screens.map((item) => item.label);
     check(button('이전').disabled, '첫 화면 이전 비활성화');
     const baseline = await calculate(context.formData);
     for (let i = 0; i < labels.length; i++) {
       equal(title(), labels[i], '전체 다음 이동 순서');
       check(allVisible('.step').length === 1, '활성 영역이 하나여야 함');
+      if (screens[i].id === 'basic-self') check(!visible(document.getElementById('basic.serviceYears')), '본인 기본 정보에는 근속년수가 숨겨져야 함');
+      if (screens[i].id === 'basic-work') check(visible(document.getElementById('basic.serviceYears')), '근속년수 화면에는 근속년수가 표시되어야 함');
       if (i < labels.length - 1) await next();
     }
     check(visible(button('진단 결과 보기')), '최종 제출 버튼');

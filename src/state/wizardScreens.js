@@ -3,7 +3,8 @@ const screen = (id, label, prefixes = [], spouseOnly = false) => ({ id, label, p
 
 export const WIZARD_SCREENS = {
   income: [
-    screen('basic-self', '본인 기본 정보', ['basic.']),
+    screen('basic-self', '본인 기본 정보', ['basic.birthYear', 'basic.retirementAge', 'basic.lifeExpectancy']),
+    screen('basic-work', '근속년수', ['basic.serviceYears']),
     screen('basic-spouse', '배우자 선택 · 기본 정보', ['spouse.birthYear', 'spouse.retirementAge', 'spouse.lifeExpectancy']),
     screen('salary-self', '본인 급여', ['income.salary.']),
     screen('salary-spouse', '배우자 급여', ['spouse.salary.'], true),

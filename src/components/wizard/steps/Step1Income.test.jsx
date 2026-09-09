@@ -8,22 +8,19 @@ import Step1Income, { handleSeveranceType, remainingRetirementYearsToMonths } fr
 
 globalThis.React = React;
 
-function renderStep(formData) {
+function renderStep(formData, props = {}) {
   return renderToStaticMarkup(
     <FormContext.Provider value={{ formData, setField: vi.fn() }}>
-      <Step1Income />
+      <Step1Income {...props} />
     </FormContext.Provider>
   );
 }
 
-describe('Step1Income basic information order', () => {
-  it('renders birth year, retirement age, life expectancy, then service years', () => {
-    const html = renderStep(structuredClone(initialFormData));
-    const labels = ['본인 출생년도 *', '은퇴(예정) 연령 *', '기대수명 * (직접 수정 가능)', '근속년수 *'];
-
-    for (let index = 1; index < labels.length; index += 1) {
-      expect(html.indexOf(labels[index - 1])).toBeLessThan(html.indexOf(labels[index]));
-    }
+describe('Step1Income basic information screens', () => {
+  it('keeps service years in the basic-work screen', () => {
+    const html = renderStep(structuredClone(initialFormData), { screenId: 'basic-work' });
+    expect(html).toContain('근속년수 *');
+    expect(html).toContain('현재 직장의 입사일부터 퇴직(예정)일까지의 전체 재직기간입니다. 퇴직금 모의계산에 사용됩니다.');
   });
 });
 

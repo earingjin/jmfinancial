@@ -37,9 +37,10 @@ describe('Wizard sub-step navigation', () => {
 
   it('숨겨진 필수 필드가 있는 sub-step을 찾아 기존 포커스 검증을 이어간다', () => {
     expect(getRequiredFieldSubStep('income', 'basic.birthYear')).toBe(0);
-    expect(getRequiredFieldSubStep('income', 'income.severance.pensionStartAge')).toBe(4);
-    expect(getRequiredFieldSubStep('income', 'spouse.nationalPension.expectedAdditionalContributionMonths', true)).toBe(9);
-    expect(getRequiredFieldSubStep('income', 'income.personalPension.startAge')).toBe(8);
+    expect(getRequiredFieldSubStep('income', 'basic.serviceYears')).toBe(1);
+    expect(getRequiredFieldSubStep('income', 'income.severance.pensionStartAge')).toBe(5);
+    expect(getRequiredFieldSubStep('income', 'spouse.nationalPension.expectedAdditionalContributionMonths', true)).toBe(10);
+    expect(getRequiredFieldSubStep('income', 'income.personalPension.startAge')).toBe(9);
     expect(getRequiredFieldSubStep('expense', 'expense.retirementLivingCost')).toBe(1);
     expect(getRequiredFieldSubStep('expense', 'expense.retirementLumpSumExpenses.0.name')).toBe(2);
   });
@@ -52,12 +53,12 @@ describe.each([false, true])('소화면 전체 경로 (배우자: %s)', (hasSpou
 
   it('본인/배우자/합계 순서와 항상 접근 가능한 배우자 선택 화면을 유지한다', () => {
     expect(screens[0].map(({ id }) => id)).toEqual([
-      'basic-self', 'basic-spouse', 'salary-self', ...(hasSpouse ? ['salary-spouse'] : []), 'salary-total',
+      'basic-self', 'basic-work', 'basic-spouse', 'salary-self', ...(hasSpouse ? ['salary-spouse'] : []), 'salary-total',
       'severance-self', ...(hasSpouse ? ['severance-spouse'] : []), 'severance-total',
       'national-self', ...(hasSpouse ? ['national-spouse'] : []), 'national-total',
       'personal-self', ...(hasSpouse ? ['personal-spouse'] : []), 'personal-total', 'regular', 'income-total',
     ]);
-    expect(counts).toEqual([hasSpouse ? 16 : 12, 6, 2, 6, 1, 1]);
+    expect(counts).toEqual([hasSpouse ? 17 : 13, 6, 2, 6, 1, 1]);
   });
 
   it('모든 다음/이전 이동은 정확히 반대이며 영역 경계에서 누락이 없다', () => {
@@ -71,7 +72,7 @@ describe.each([false, true])('소화면 전체 경로 (배우자: %s)', (hasSpou
 
   it('연금 필수항목과 적립금 오류는 각 소유자의 입력 화면으로 이동한다', () => {
     for (const [path, id] of [
-      ['basic.serviceYears', 'basic-self'], ['spouse.birthYear', 'basic-spouse'],
+      ['basic.serviceYears', 'basic-work'], ['spouse.birthYear', 'basic-spouse'],
       ['income.severance.lumpsumAge', 'severance-self'],
       ['assets.pensionAssetsBreakdown.selfRetirementPension', 'severance-self'],
       ['income.personalPension.startAge', 'personal-self'],
