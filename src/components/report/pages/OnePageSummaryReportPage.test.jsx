@@ -6,44 +6,42 @@ import OnePageSummaryReportPage from './OnePageSummaryReportPage';
 
 globalThis.React = React;
 
-const INDICATOR_KEYS = [
-  'household', 'emergency', 'dsr', 'debtBurden', 'insurance', 'savingsRate',
-  'retirementSavings', 'financialAssetRatio',
-];
-
 function buildResult() {
   return {
     generatedAt: '2026-09-08T00:00:00.000Z',
     aggregates: {
-      monthlyIncome: 500,
-      totalExpenseMonthlyExSavings: 300,
-      monthlySavings: 100,
       totalAssets: 50000,
       totalDebt: 10000,
       netWorth: 40000,
+      retirementIncomeByPerson: {
+        self: { severanceLumpsum: 5000 },
+        spouse: { severanceLumpsum: 0 },
+      },
     },
-    indicators: INDICATOR_KEYS.map((key, index) => ({
-      key,
-      label: `테스트 지표 ${index + 1}`,
-      value: Number(((index + 1) * 11.1).toFixed(1)),
-      status: `서버 상태 ${index + 1}`,
-      ratioClass: index % 3 === 0 ? 'good' : index % 3 === 1 ? 'caution' : 'risk',
-      notCalculable: false,
-      notApplicable: false,
-    })),
+    indicators: [
+      { key: 'household', ratioClass: 'good', notCalculable: false },
+      { key: 'emergency', ratioClass: 'good', notCalculable: false },
+      { key: 'dsr', ratioClass: 'good', notCalculable: false },
+    ],
     financialHealthInterpretation: { conclusion: '서버가 계산한 재무건강 종합결론' },
+    aiFeedback: { executiveSummary: { retirement: { cashFlow: '서버가 계산한 은퇴 준비 종합결론' } } },
     webSummary: {
       donuts: {
-        income: { total: 500 },
-        expense: { total: 300 },
-        assets: { total: 50000 },
-        debt: { total: 10000 },
-        savings: { total: 100 },
+        assets: { items: [
+          { key: 'liquid', label: '현금성자산', value: 12000 },
+          { key: 'financial', label: '금융자산', value: 18000 },
+          { key: 'pension', label: '연금자산', value: 5000 },
+          { key: 'realEstate', label: '부동산자산', value: 15000 },
+          { key: 'otherAssets', label: '기타 자산', value: 0 },
+        ] },
+        debt: { items: [
+          { key: 'mortgage', label: '주택담보대출', value: 8000 },
+          { key: 'carLoan', label: '차량대출', value: 2000 },
+          { key: 'otherLoan', label: '기타 대출', value: 0 },
+        ] },
       },
       retirementReadiness: {
         retirementAge: 65,
-        yearsToRetirement: 15,
-        retirementYears: 25,
         requiredAtRetirement: 90000,
         readyAssetsAtRetirement: 70000,
         shortfall: 20000,
@@ -51,12 +49,19 @@ function buildResult() {
       },
       futureFinance: {
         targets: [
-          { age: 70, livingExpense: 420, pensionIncome: 350, coverageRate: 91.2, balance: -70, calculationReason: null },
-          { age: 80, livingExpense: 560, pensionIncome: 480, coverageRate: 85.7, balance: -80, calculationReason: null },
+          { age: 70, pensionIncome: 350, coverageRate: 76.1 },
+          { age: 80, pensionIncome: 480, coverageRate: 78.7 },
+        ],
+        fiveYearOutlook: [
+          { age: 65, livingExpense: 400, totalIncome: 330, coverageRate: 82.5, balance: -70 },
+          { age: 70, livingExpense: 460, totalIncome: 350, coverageRate: 76.1, balance: -110 },
+          { age: 75, livingExpense: 530, totalIncome: 430, coverageRate: 81.1, balance: -100 },
+          { age: 80, livingExpense: 610, totalIncome: 480, coverageRate: 78.7, balance: -130 },
         ],
       },
     },
     peerComparison: {
+      userBracketLabel: '50대',
       netWorth: { value: 40000, average: 35000, percentileLabel: '또래 평균 이상' },
       householdIncome: { value: 6000, average: 5500, percentileLabel: '또래 평균 이상' },
       financialAssets: { value: 12000, average: 15000, percentileLabel: '또래 평균 미만' },
@@ -72,73 +77,83 @@ describe('OnePageSummaryReportPage', () => {
   it('계산 모듈을 import하지 않고 기존 PageFrame 한 페이지만 사용한다', async () => {
     const source = await readFile(new URL('./OnePageSummaryReportPage.jsx', import.meta.url), 'utf8');
     expect(source).not.toMatch(/from\s+['"][^'"]*(api\/_lib|calculate|futureFinance|indicators|grading|summaryOverview)[^'"]*['"]/);
-
     const html = render();
     expect((html.match(/class="page"/g) || [])).toHaveLength(1);
     expect(html).toContain('01 / 1');
   });
 
-  it('모바일 종합 결과의 대표 3개 지표만 indicator.value와 서버 상태로 표시한다', () => {
+  it('기존 재무상태 판정과 기존 부족자금으로 결론형 종합 결과를 표시한다', () => {
     const html = render();
-    INDICATOR_KEYS.slice(0, 3).forEach((key, index) => {
-      const value = Number(((index + 1) * 11.1).toFixed(1));
-      expect(html).toContain(['매달 소득 중 지출 비율', '비상자금으로 버틸 수 있는 기간', '매달 소득 중 빚 갚는 비율'][index]);
-      expect(html).toContain(`서버 상태 ${index + 1}`);
-      expect(html).toContain(key === 'emergency' ? `${value}개월` : `${value}%`);
-    });
-    INDICATOR_KEYS.slice(3).forEach((key, index) => {
-      expect(html).not.toContain(`테스트 지표 ${index + 4}`);
-    });
-    expect(html).not.toContain('재무건강 8개 지표');
+    expect(html).toContain('>양호</strong>');
+    expect(html).toContain('>보완 필요</strong>');
+    expect(html).toContain('예상 준비자산이 필요자금보다 2억원 부족합니다.');
+    expect(html).toContain('총자산');
+    expect(html).toContain('총부채');
+    expect(html).toContain('순자산');
+    expect(html).toContain('현금성자산');
+    expect(html).toContain('주택담보대출');
+    expect(html).not.toContain('기타 자산');
+    expect(html).not.toContain('기타 대출');
   });
 
-  it('나의 재무 구성은 webSummary.donuts의 기존 합계만 표시한다', () => {
+  it('필요자금·준비자산·부족자금과 존재하는 예정 일시금만 표시한다', () => {
     const html = render();
-    expect(html).toContain('나의 재무 구성');
-    expect(html).toContain('월 소득 배분');
-    expect(html).toContain('저축·투자 구성');
+    expect(html).toContain('은퇴 시점 필요자금');
+    expect(html).toContain('예상 준비자산');
+    expect(html).toContain('예상 부족자금');
+    expect(html).toContain('본인 5,000만원');
+    expect(html).not.toContain('배우자 0만원');
   });
 
-  it('서버 targets에 있는 연령만 표시하고 누락된 60세를 만들지 않는다', () => {
+  it('또래 비교는 기존 비교 상태를 핵심 3개 항목에만 표시한다', () => {
     const html = render();
-    expect(html).toContain('70세');
-    expect(html).toContain('80세');
-    expect(html).not.toContain('60세');
+    expect(html).toContain('또래 비교');
+    expect(html).toContain('<th>나</th><th>또래 기준</th><th>비교</th>');
+    expect(html).toContain('또래 평균 이상');
+    expect(html).toContain('또래 평균 미만');
   });
 
-  it('현재 노후소득보장률과 연령별 미래 충당률을 서로 다른 기존 값으로 표시한다', () => {
+  it('기존 연금소득 충당률과 5년 전망 중 서버 핵심연령만 표시한다', () => {
     const html = render();
     expect(html).toContain('42.4%');
-    expect(html).toContain('91.2%');
-    expect(html).toContain('85.7%');
+    expect(html).toContain('70세');
+    expect(html).toContain('80세');
+    expect(html).toContain('연금소득');
+    expect(html).toContain('350만원');
+    expect(html).toContain('76.1%');
+    expect(html).not.toContain('65세</b>');
+    expect(html).not.toContain('75세</b>');
   });
 
-  it('calculationReason이 있으면 산출 불가 상태와 서버 사유를 표시한다', () => {
-    const result = buildResult();
-    result.webSummary.futureFinance.targets = [{
-      age: 80,
-      livingExpense: 560,
-      pensionIncome: null,
-      coverageRate: null,
-      balance: null,
-      calculationReason: '국민연금 향후 가입기간을 확정할 수 없음',
-    }];
-    const html = render(result);
-    expect(html).toContain('산출 불가 사유: 국민연금 향후 가입기간을 확정할 수 없음');
-    expect((html.match(/산출 불가/g) || []).length).toBeGreaterThanOrEqual(4);
+  it('제외 대상으로 지정된 섹션을 표시하지 않는다', () => {
+    const html = render();
+    expect(html).not.toContain('나의 재무 구성');
+    expect(html).not.toContain('현재 노후소득보장률');
+    expect(html).not.toContain('은퇴 시점 월소득 비교');
+    expect(html).not.toContain('예상 자산 유지기간');
+  });
+
+  it('과거 저장 결과의 선택 필드가 없어도 안전하게 안내한다', () => {
+    const html = render({ generatedAt: null, aggregates: {}, webSummary: {}, peerComparison: {} });
+    expect(html).toContain('산출 불가');
+    expect(html).toContain('기존 저장 결과에서는 5년 단위 전망을 표시할 수 없습니다.');
   });
 
   it('0원과 0%를 산출 불가로 바꾸지 않는다', () => {
     const result = buildResult();
-    result.aggregates.monthlyIncome = 0;
-    result.indicators[0].value = 0;
+    result.aggregates.totalDebt = 0;
     result.webSummary.retirementReadiness.retirementIncomeIndicator.value = 0;
-    result.webSummary.futureFinance.targets = [{
-      age: 70, livingExpense: 0, pensionIncome: 0, coverageRate: 0, balance: 0, calculationReason: null,
-    }];
     const html = render(result);
     expect(html).toContain('0만원');
     expect(html).toContain('0%');
-    expect(html).toContain('0만원 여유');
+  });
+
+  it('은퇴 시점 충당률과 같은 연령·값의 전망은 중복 표시하지 않는다', () => {
+    const result = buildResult();
+    result.webSummary.futureFinance.targets = [{ age: 65, pensionIncome: 170, coverageRate: 42.4 }];
+    result.webSummary.futureFinance.fiveYearOutlook = [{ age: 65, livingExpense: 400, totalIncome: 170, coverageRate: 42.4, balance: -230 }];
+    const html = render(result);
+    expect((html.match(/42\.4%/g) || [])).toHaveLength(1);
+    expect(html).toContain('생활비의 42.4% 충당');
   });
 });
