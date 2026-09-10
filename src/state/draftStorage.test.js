@@ -3,6 +3,53 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('../lib/supabaseClient', () => ({ supabase: {} }));
 
 import { clearDraftSessionCache, createLatestDraftSaver, deleteDraft, DRAFT_SCHEMA_VERSION, fetchDraft, fetchDraftOnce, mergeDraft, migrateLegacyDraft, readLegacyLocalDraft, resolveRetirementSavingsInputVersion, upsertDraft, validateDraft } from './draftStorage.js';
+import { initialFormData } from './initialFormData.js';
+
+describe('mergeDraft - savingsPlan.selectedCategories legacy restoration', () => {
+  it('레거시 저장 데이터(selectedCategories 필드 없음)는 월 저축액이 양수인 항목만 선택된 것으로 복원한다', () => {
+    const saved = {
+      assets: {
+        savingsPlan: {
+          breakdown: {
+            installment: { monthly: 30, remainingMonths: '', interestRate: '' },
+            isa: { monthly: 0, remainingMonths: '', interestRate: '' },
+            irp: { monthly: '', remainingMonths: '', interestRate: '' },
+          },
+        },
+      },
+    };
+
+    const restored = mergeDraft(initialFormData, JSON.parse(JSON.stringify(saved)));
+
+    expect(restored.assets.savingsPlan.selectedCategories).toEqual(['installment']);
+    // 병합된 breakdown 값 자체는 그대로 보존된다.
+    expect(restored.assets.savingsPlan.breakdown.installment.monthly).toBe(30);
+  });
+
+  it('selectedCategories 필드가 명시적으로 저장돼 있으면(빈 배열 포함) 그대로 우선 사용한다', () => {
+    const saved = {
+      assets: {
+        savingsPlan: {
+          selectedCategories: ['installment'],
+          breakdown: {
+            installment: { monthly: '', remainingMonths: '', interestRate: '' },
+            isa: { monthly: 30, remainingMonths: '', interestRate: '' },
+          },
+        },
+      },
+    };
+
+    const restored = mergeDraft(initialFormData, JSON.parse(JSON.stringify(saved)));
+
+    // isa가 양수여도 selectedCategories에 명시적으로 없으므로 추가되지 않는다.
+    expect(restored.assets.savingsPlan.selectedCategories).toEqual(['installment']);
+  });
+
+  it('저장된 초안이 아예 없으면(신규 진단) 기본값인 빈 배열을 그대로 쓴다', () => {
+    const restored = mergeDraft(initialFormData, undefined);
+    expect(restored.assets.savingsPlan.selectedCategories).toEqual([]);
+  });
+});
 
 const compatibleFormData = () => ({ basic: {}, income: {}, spouse: {}, expense: {}, assets: {} });
 

@@ -716,6 +716,113 @@ describe('computeWizardRequiredFields - 현재 재무상태 조건부 필수값'
     expect(computeWizardRequiredFields(formData).missingSavingsFields).toHaveLength(0);
   });
 
+  describe('저축 카테고리 선택 상태(assets.savingsPlan.selectedCategories)', () => {
+    const detailedForm = () => {
+      const formData = baseForm();
+      formData.assets.savingsPlan.hasSavings = true;
+      formData.assets.savingsPlan.inputMode = 'detailed';
+      return formData;
+    };
+
+    it('A) 적금만 선택하고 월액이 공란이면 걸린다', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.selectedCategories = ['installment'];
+      const paths = computeWizardRequiredFields(formData).missingSavingsFields.map(([path]) => path);
+      expect(paths).toContain('assets.savingsPlan.breakdown.installment.monthly');
+    });
+
+    it('B) ISA는 정상 입력, 적금도 선택했지만 공란이면 전체 합계가 양수여도 걸린다', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.selectedCategories = ['isa', 'installment'];
+      formData.assets.savingsPlan.breakdown.isa.monthly = 30;
+      const result = computeWizardRequiredFields(formData);
+      const paths = result.missingSavingsFields.map(([path]) => path);
+      expect(paths).toContain('assets.savingsPlan.breakdown.installment.monthly');
+      expect(paths).not.toContain('assets.savingsPlan.breakdown.isa.monthly');
+    });
+
+    it('C) 적금 선택 + 월액 양수면 통과한다', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.selectedCategories = ['installment'];
+      formData.assets.savingsPlan.breakdown.installment.monthly = 30;
+      expect(computeWizardRequiredFields(formData).missingSavingsFields).toHaveLength(0);
+    });
+
+    it('명시적 0은 "선택된 저축 항목"의 월 저축액으로 유효하지 않다', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.selectedCategories = ['installment'];
+      formData.assets.savingsPlan.breakdown.installment.monthly = 0;
+      expect(computeWizardRequiredFields(formData).missingSavingsFields.map(([path]) => path))
+        .toContain('assets.savingsPlan.breakdown.installment.monthly');
+    });
+
+    it('D) 선택 해제(삭제 후 빈 배열)하면 더 이상 요구하지 않는다', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.selectedCategories = [];
+      formData.assets.savingsPlan.breakdown.installment.monthly = '';
+      // 삭제 후에도 저축 자체는 계속하므로, 전체 합계 검증(기존 로직)이 통과하도록 다른 항목을 채운다.
+      formData.assets.savingsPlan.breakdown.isa.monthly = 30;
+      const paths = computeWizardRequiredFields(formData).missingSavingsFields.map(([path]) => path);
+      expect(paths).not.toContain('assets.savingsPlan.breakdown.installment.monthly');
+    });
+
+    it('F) 레거시 데이터(selectedCategories 없음) + monthly 양수 → 선택 복원되어 기존처럼 통과한다', () => {
+      const formData = detailedForm();
+      delete formData.assets.savingsPlan.selectedCategories;
+      formData.assets.savingsPlan.breakdown.installment.monthly = 30;
+      expect(computeWizardRequiredFields(formData).missingSavingsFields).toHaveLength(0);
+    });
+
+    it('G) 레거시 데이터(selectedCategories 없음) + monthly 공란 → 자동 선택하지 않아 요구하지 않는다', () => {
+      const formData = detailedForm();
+      delete formData.assets.savingsPlan.selectedCategories;
+      formData.assets.savingsPlan.breakdown.installment.monthly = '';
+      // installment는 monthly가 공란이라 legacy fallback으로도 선택되지 않아야 한다. 전체 합계
+      // 검증(기존 로직)은 다른 항목으로 통과시켜, installment 자동선택 여부만 독립적으로 확인한다.
+      formData.assets.savingsPlan.breakdown.isa.monthly = 30;
+      const paths = computeWizardRequiredFields(formData).missingSavingsFields.map(([path]) => path);
+      expect(paths).not.toContain('assets.savingsPlan.breakdown.installment.monthly');
+    });
+
+    it('IRP도 동일한 규칙을 따른다(선택+공란이면 다른 항목이 정상이어도 걸린다)', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.selectedCategories = ['isa', 'irp'];
+      formData.assets.savingsPlan.breakdown.isa.monthly = 30;
+      const paths = computeWizardRequiredFields(formData).missingSavingsFields.map(([path]) => path);
+      expect(paths).toContain('assets.savingsPlan.breakdown.irp.monthly');
+    });
+
+    it('H) custom item을 추가했지만 완전히 공란이면 걸린다(항상 활성)', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.customItems = [{ name: '', monthly: '', remainingMonths: '', interestRate: '' }];
+      const paths = computeWizardRequiredFields(formData).missingSavingsFields.map(([path]) => path)
+        .filter((path) => path.startsWith('assets.savingsPlan.customItems.'));
+      expect(paths).toEqual(['assets.savingsPlan.customItems.0.name', 'assets.savingsPlan.customItems.0.monthly']);
+    });
+
+    it('I) custom item 이름만 입력해도 걸린다', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.customItems = [{ name: '여행저축', monthly: '', remainingMonths: '', interestRate: '' }];
+      const paths = computeWizardRequiredFields(formData).missingSavingsFields.map(([path]) => path)
+        .filter((path) => path.startsWith('assets.savingsPlan.customItems.'));
+      expect(paths).toEqual(['assets.savingsPlan.customItems.0.monthly']);
+    });
+
+    it('J) custom item 월액만 입력해도 걸린다', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.customItems = [{ name: '', monthly: 10, remainingMonths: '', interestRate: '' }];
+      const paths = computeWizardRequiredFields(formData).missingSavingsFields.map(([path]) => path)
+        .filter((path) => path.startsWith('assets.savingsPlan.customItems.'));
+      expect(paths).toEqual(['assets.savingsPlan.customItems.0.name']);
+    });
+
+    it('K) custom item 이름+월액 양수면 통과한다', () => {
+      const formData = detailedForm();
+      formData.assets.savingsPlan.customItems = [{ name: '여행저축', monthly: 10, remainingMonths: '', interestRate: '' }];
+      expect(computeWizardRequiredFields(formData).missingSavingsFields).toHaveLength(0);
+    });
+  });
+
   it.each([
     ['liquidAssets', 'assets.liquidAssets.total', (data, value) => { data.assets.liquidAssets.breakdown.deposit = value; }],
     ['financialAssets', 'assets.financialAssets.total', (data, value) => { data.assets.financialAssets.stocks = value; }],

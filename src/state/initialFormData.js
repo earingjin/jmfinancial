@@ -226,6 +226,12 @@ export const initialFormData = {
       },
       customItems: [],       // [{ name, monthly, remainingMonths, interestRate }] 기본 항목 외 사용자가 추가한 저축. "현재까지
                              // 누적된 금액"은 여기 저장하지 않고 name과 같은 이름의 assets.liquidAssets.customItems 항목과 연동된다.
+      // 저축 종류 버튼(적금·ISA 등) 선택 상태 - "선택했다"는 사실 자체를 formData에 명시적으로
+      // 저장한다(SavingsBreakdownField의 openKeys는 패널을 접고 펼치는 화면 전용 로컬 상태일 뿐,
+      // 이 필드가 실제 선택 여부를 나타낸다). 서버(api/_lib/validate.js)도 이 값을 그대로 읽어
+      // "선택했지만 월 저축액이 공란인" 항목을 잡아낸다. 이 필드 자체가 없는 과거 저장 데이터는
+      // breakdown[key].monthly가 양수인 항목만 선택된 것으로 복원한다(mergeDraft·각 검증 로직 참고).
+      selectedCategories: [],
       // v1(레거시) 전용 필드 - 노후준비 저축액을 하나의 합계로 직접 입력받던 방식. v2에서는 계산에
       // 쓰이지 않지만, 과거 저장 결과를 그대로 해석하기 위해 필드 자체는 삭제하지 않는다.
       retirementMonthly: '', retirementAnnual: '',

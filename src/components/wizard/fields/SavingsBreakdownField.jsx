@@ -22,6 +22,21 @@ const PENSION_BREAKDOWN_NUMERIC_KEYS = [
 // 외 추가한 커스텀 저축 항목도 같은 방식(liquidCustomItem)으로, 사용자가 입력한 이름 그대로 현금성 자산의
 // "기본 항목 외 추가" 목록과 연동된다. 현금성 자산 쪽(CategoryBreakdownField)도 항목별 입력만 지원하므로
 // (총액 한번에 입력 모드 없음) 모든 연동 대상이 항상 편집 가능하다.
+// 저축 카테고리 버튼(적금·ISA 등)의 "선택" 상태 - openKeys(로컬 React 상태, 패널을 접고 펼치는
+// 화면 전용 상태)와 완전히 분리해 formData(selectedCategories)에 저장한다. selectedCategories가
+// 명시적으로 배열이면(빈 배열 포함) 그것만 신뢰하고, 배열이 아니면(이 필드 자체가 없던 과거 저장
+// 데이터) 기존처럼 월 저축액이 양수인 항목만 선택된 것으로 복원한다 - 과거 사용자의 저축 항목이
+// 갑자기 화면에서 사라지지 않게 하기 위함이다. api/_lib/validate.js·wizardRequiredFields.js도
+// 동일한 규칙을 각자 독립적으로 구현해 서버가 이 판정을 프론트(openKeys)에 의존하지 않게 한다.
+export function isCategorySelected(selectedCategories, breakdown, key) {
+  if (Array.isArray(selectedCategories)) return selectedCategories.includes(key);
+  return Number(breakdown?.[key]?.monthly) > 0;
+}
+
+export function selectedKeysFrom(selectedCategories, breakdown, categoryKeys) {
+  return categoryKeys.filter((key) => isCategorySelected(selectedCategories, breakdown, key));
+}
+
 function resolveAssetLink(formData, assetLink) {
   if (!assetLink) return null;
 
@@ -113,21 +128,26 @@ function SavingsItemFields({ item, onChange, accumulated }) {
  * 누적액)를 받을 수 없어 제거됨). 결과값은 totalPath(월 저축액 합계)에 저장되므로 기존 계산 로직
  * (assets.savingsPlan.monthly 기준)이 그대로 동작한다.
  */
-export default function SavingsBreakdownField({ basePath, customPath, totalPath, annualPath, categories }) {
+export default function SavingsBreakdownField({ basePath, customPath, totalPath, annualPath, selectedPath, categories }) {
   const { formData, setField } = useFormData();
   const breakdown = getIn(formData, basePath) || {};
   const customItems = getIn(formData, customPath) || [];
+  const categoryKeys = categories.map((c) => c.key);
+  // formData에 저장된 실제 선택 상태(재진입해도 유지됨). pill 재클릭은 아래 openKeys(패널
+  // 접기/펼치기)만 바꾸고, 이 값은 "이 항목 삭제"를 눌러야만 바뀐다.
+  const selectedKeys = selectedKeysFrom(getIn(formData, selectedPath), breakdown, categoryKeys);
 
-  const [openKeys, setOpenKeys] = useState(() => {
-    const initial = new Set();
-    categories.forEach((c) => {
-      const item = breakdown[c.key] || {};
-      if (Number(item.monthly) > 0) initial.add(c.key);
-    });
-    return initial;
-  });
+  const [openKeys, setOpenKeys] = useState(() => new Set(selectedKeys));
 
+  // 아직 선택하지 않은 항목을 처음 누르면 selectedCategories에 추가하고(월 저축액은 자동으로
+  // 채우지 않는다 - 선택 상태와 실제 금액은 분리한다) 패널을 연다. 이미 선택된 항목을 다시
+  // 누르면 선택 상태는 그대로 두고 패널만 접거나 편다("이 항목 삭제"만이 선택을 해제한다).
   const toggle = (key) => {
+    if (!selectedKeys.includes(key)) {
+      setField(selectedPath, Array.from(new Set([...selectedKeys, key])));
+      setOpenKeys((prev) => new Set(prev).add(key));
+      return;
+    }
     setOpenKeys((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -160,6 +180,7 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
     setField(`${basePath}.${key}`, emptyItem);
     recomputeTotal(nextBreakdown, customItems);
     if (assetLink) updateAccumulated(assetLink, '');
+    setField(selectedPath, selectedKeys.filter((k) => k !== key));
     setOpenKeys((prev) => {
       const next = new Set(prev);
       next.delete(key);
@@ -247,7 +268,10 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
 
   const total = getIn(formData, totalPath);
   const annualTotal = annualPath ? getIn(formData, annualPath) : null;
-  const openCategories = categories.filter((c) => openKeys.has(c.key));
+  // selectedCategoryList: 선택된 항목 전체(패널이 접혀 있어도 합계·요약표에는 계속 표시된다).
+  // openCategories: 그중 지금 패널이 펼쳐져 입력창이 보이는 항목만.
+  const selectedCategoryList = categories.filter((c) => selectedKeys.includes(c.key));
+  const openCategories = selectedCategoryList.filter((c) => openKeys.has(c.key));
 
   return (
     <div className="field">
@@ -257,7 +281,7 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
           <button
             type="button"
             key={c.key}
-            className={`checkbox-pill ${openKeys.has(c.key) ? 'is-active' : ''}`}
+            className={`checkbox-pill ${selectedKeys.includes(c.key) ? 'is-active' : ''}`}
             onClick={() => toggle(c.key)}
           >
             {c.label}
@@ -344,7 +368,7 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
           </tr>
         </thead>
         <tbody>
-          {openCategories.map((c) => {
+          {selectedCategoryList.map((c) => {
             const item = breakdown[c.key] || {};
             return (
               <tr key={c.key}>
@@ -368,7 +392,7 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
       <div className="finance-summary-mobile finance-summary-mobile--spaced">
         <div className="income-summary-group">
           <h4>저축 항목</h4>
-          {openCategories.map((c) => {
+          {selectedCategoryList.map((c) => {
             const item = breakdown[c.key] || {};
             return (
               <div className="income-summary-item income-summary-item--child" key={c.key}>

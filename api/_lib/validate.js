@@ -309,6 +309,40 @@ function detailedSavingsTotal(input) {
   ]);
 }
 
+// 저축 카테고리 버튼(적금·ISA 등) 선택 상태 - selectedCategories가 명시적으로 배열이면(빈 배열
+// 포함) 그것만 신뢰하고, 배열이 아니면(이 필드 자체가 없던 과거 저장 데이터) 월 저축액이 양수인
+// 항목만 선택된 것으로 복원한다. src/state/wizardRequiredFields.js·SavingsBreakdownField.jsx도
+// 동일한 판정을 각자 독립적으로 구현한다 - 서버는 프론트 로컬 상태(openKeys)에 의존하지 않는다.
+function isSavingsCategorySelected(savings, key) {
+  const explicit = savings?.selectedCategories;
+  if (Array.isArray(explicit)) return explicit.includes(key);
+  return isPositiveNumber(savings?.breakdown?.[key]?.monthly);
+}
+
+// 선택된 저축 항목은 전체 합계(detailedSavingsTotal)가 양수라는 이유로 마스킹되면 안 된다.
+// remainingMonths·interestRate·누적금액은 계산에 쓰이지 않는 참고값이라 필수화하지 않는다.
+// customItems는 "+ 저축 항목 추가"로 만들어진 행이라 존재 자체가 사용자의 명시적 선택이다.
+function validateSelectedSavingsCategories(input, errors) {
+  const savings = input.assets?.savingsPlan;
+  if (savings?.hasSavings !== true || savings?.inputMode !== 'detailed') return;
+
+  SAVINGS_BREAKDOWN_CATEGORIES.forEach((key) => {
+    if (!isSavingsCategorySelected(savings, key)) return;
+    if (!isPositiveNumber(savings.breakdown?.[key]?.monthly)) {
+      errors.push(`assets.savingsPlan.breakdown.${key}.monthly 값은 선택한 저축 항목에서 0보다 커야 합니다.`);
+    }
+  });
+
+  const customItems = Array.isArray(savings.customItems) ? savings.customItems : [];
+  if (customItems.length > MAX_ARRAY_LENGTH) return;
+  customItems.forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    const path = `assets.savingsPlan.customItems.${index}`;
+    if (isBlank(item.name)) errors.push(`${path}.name 값은 필수 입력 항목입니다.`);
+    if (!isPositiveNumber(item.monthly)) errors.push(`${path}.monthly 값은 0보다 커야 합니다.`);
+  });
+}
+
 function detailedAssetTotal(input, type) {
   if (type === 'liquid') {
     const asset = input.assets?.liquidAssets || {};
@@ -607,6 +641,7 @@ export function validateInput(input) {
   validateCompleteOtherIncomeRows(input, errors);
   validateCompleteOtherExpenseRows(input, errors);
   validateCompleteHealthInsuranceRows(input, errors);
+  validateSelectedSavingsCategories(input, errors);
   validateCompleteDebtRows(input, errors);
 
   // 체크박스 그룹은 객체 목록이 아니라 승인된 문자열 키 목록이다.

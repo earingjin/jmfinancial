@@ -66,6 +66,83 @@ describe('validateInput - current financial conditional requirements', () => {
     expect(validateInput(makeInput({ assets: { savingsPlan: { hasSavings: false, monthly: '' } } })).ok).toBe(true);
   });
 
+  describe('저축 카테고리 선택 상태(assets.savingsPlan.selectedCategories)', () => {
+    const detailed = (overrides) => ({
+      assets: { savingsPlan: { hasSavings: true, inputMode: 'detailed', ...overrides } },
+    });
+
+    it('A) 적금만 선택하고 월액이 공란이면 실패한다', () => {
+      const result = validateInput(makeInput(detailed({ selectedCategories: ['installment'] })));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toContain('assets.savingsPlan.breakdown.installment.monthly');
+    });
+
+    it('B) ISA는 정상 입력, 적금도 선택했지만 공란이면 전체 합계가 양수여도 실패한다', () => {
+      const result = validateInput(makeInput(detailed({
+        selectedCategories: ['isa', 'installment'],
+        breakdown: { isa: { monthly: 30 } },
+      })));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toContain('assets.savingsPlan.breakdown.installment.monthly');
+    });
+
+    it('C) 적금 선택 + 월액 양수면 통과한다', () => {
+      const result = validateInput(makeInput(detailed({
+        selectedCategories: ['installment'],
+        breakdown: { installment: { monthly: 30 } },
+      })));
+      expect(result.ok).toBe(true);
+    });
+
+    it('명시적 0은 선택된 저축 항목의 월 저축액으로 유효하지 않다', () => {
+      const result = validateInput(makeInput(detailed({
+        selectedCategories: ['installment'],
+        breakdown: { installment: { monthly: 0 } },
+      })));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toContain('assets.savingsPlan.breakdown.installment.monthly');
+    });
+
+    it('D) 선택 해제(빈 배열)하면 더 이상 요구하지 않는다', () => {
+      const result = validateInput(makeInput(detailed({
+        selectedCategories: [],
+        breakdown: { installment: { monthly: '' }, isa: { monthly: 30 } },
+      })));
+      expect(result.ok).toBe(true);
+    });
+
+    it('F) 레거시 데이터(selectedCategories 없음) + monthly 양수 → 선택 복원되어 기존처럼 통과한다', () => {
+      const result = validateInput(makeInput(detailed({ breakdown: { installment: { monthly: 30 } } })));
+      expect(result.ok).toBe(true);
+    });
+
+    it('G) 레거시 데이터(selectedCategories 없음) + monthly 공란 → 자동 선택하지 않아 요구하지 않는다', () => {
+      const result = validateInput(makeInput(detailed({
+        breakdown: { installment: { monthly: '' }, isa: { monthly: 30 } },
+      })));
+      expect(result.ok).toBe(true);
+    });
+
+    it('IRP도 동일한 규칙을 따른다', () => {
+      const result = validateInput(makeInput(detailed({
+        selectedCategories: ['isa', 'irp'],
+        breakdown: { isa: { monthly: 30 } },
+      })));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toContain('assets.savingsPlan.breakdown.irp.monthly');
+    });
+
+    it.each([
+      [{ name: '', monthly: '' }, false],
+      [{ name: '여행저축', monthly: '' }, false],
+      [{ name: '', monthly: 10 }, false],
+      [{ name: '여행저축', monthly: 10 }, true],
+    ])('H~K) custom item 완결성 %j', (item, expectedOk) => {
+      const result = validateInput(makeInput(detailed({ customItems: [item] })));
+      expect(result.ok).toBe(expectedOk);
+    });
+  });
+
   it.each([
     [{ liquidAssets: { hasAssets: true, inputMode: 'simple', total: 0 } }, { liquidAssets: { hasAssets: true, inputMode: 'detailed', breakdown: { deposit: 1 } } }],
     [{ financialAssets: { hasAssets: true, inputMode: 'simple', total: 0 } }, { financialAssets: { hasAssets: true, inputMode: 'detailed', stocks: 1 } }],

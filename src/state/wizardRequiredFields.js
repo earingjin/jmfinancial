@@ -24,6 +24,47 @@ const detailedSavingsTotal = (formData) => {
   return sum([...SAVINGS_KEYS.map((key) => breakdown[key]?.monthly), ...itemAmounts(getIn(formData, 'assets.savingsPlan.customItems'), 'monthly')]);
 };
 
+const SAVINGS_CATEGORY_LABELS = {
+  installment: '적금', isa: 'ISA', variableAnnuity: '변액연금', pensionSavings: '연금저축',
+  irp: 'IRP', subscription: '청약', stocks: '주식', parkingAccount: '파킹통장',
+};
+
+// 저축 카테고리 버튼(적금·ISA 등) 선택 상태 - assets.savingsPlan.selectedCategories(formData)에
+// 명시적으로 배열이 있으면(빈 배열 포함) 그것만 신뢰하고, 배열이 아니면(이 필드 자체가 없던 과거
+// 저장 데이터) 월 저축액이 양수인 항목만 선택된 것으로 복원한다. api/_lib/validate.js와
+// SavingsBreakdownField.jsx도 동일한 판정을 각자 독립적으로 구현한다(서버가 프론트 로컬 상태인
+// openKeys에 의존하지 않게 하기 위함).
+const isSavingsCategorySelected = (formData, key) => {
+  const explicit = getIn(formData, 'assets.savingsPlan.selectedCategories');
+  if (Array.isArray(explicit)) return explicit.includes(key);
+  return isPositiveNumber(getIn(formData, `assets.savingsPlan.breakdown.${key}.monthly`));
+};
+
+// 선택된 저축 항목은 전체 합계(detailedSavingsTotal)가 양수라는 이유로 마스킹되면 안 된다 -
+// 항목마다 독립적으로 월 저축액을 요구한다. remainingMonths·interestRate·누적금액은 계산에
+// 쓰이지 않는 참고값이라 여기서 필수화하지 않는다.
+const buildSavingsCategoryRowFields = (formData) => {
+  if (getIn(formData, 'assets.savingsPlan.hasSavings') !== true
+    || getIn(formData, 'assets.savingsPlan.inputMode') !== 'detailed') return [];
+  return SAVINGS_KEYS.filter((key) => isSavingsCategorySelected(formData, key)).map((key) => (
+    [`assets.savingsPlan.breakdown.${key}.monthly`, `${SAVINGS_CATEGORY_LABELS[key]} 월 저축액`, true, isPositiveNumber]
+  ));
+};
+
+// "+ 저축 항목 추가"로 만든 행은 기본값으로 자동 생성되는 법이 없어(항상 사용자의 명시적 클릭)
+// 존재 자체가 곧 활성 상태다 - 다른 반복행(부채·기타수입 등)과 달리 "값이 하나라도 채워졌을 때만
+// 활성"으로 보지 않는다. remainingMonths·interestRate는 여기서도 필수화하지 않는다.
+const buildSavingsCustomItemFields = (formData) => {
+  if (getIn(formData, 'assets.savingsPlan.hasSavings') !== true
+    || getIn(formData, 'assets.savingsPlan.inputMode') !== 'detailed') return [];
+  const items = getIn(formData, 'assets.savingsPlan.customItems');
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((_item, index) => ([
+    [`assets.savingsPlan.customItems.${index}.name`, `기본 항목 외 추가 저축 ${index + 1} 이름`, true],
+    [`assets.savingsPlan.customItems.${index}.monthly`, `기본 항목 외 추가 저축 ${index + 1} 월 저축액`, true, isPositiveNumber],
+  ]));
+};
+
 const detailedAssetTotal = (formData, type) => {
   if (type === 'liquid') {
     const breakdown = getIn(formData, 'assets.liquidAssets.breakdown') || {};
@@ -207,10 +248,14 @@ export function getWizardRequiredFieldDefinitions(formData) {
   ];
 
   const savingsDetailed = getIn(formData, 'assets.savingsPlan.inputMode') === 'detailed';
-  const savingsRequiredFields = [[
-    'assets.savingsPlan.monthly', '현재 월 저축액', getIn(formData, 'assets.savingsPlan.hasSavings') === true,
-    savingsDetailed ? (_value, data) => detailedSavingsTotal(data) > 0 : isPositiveNumber,
-  ]];
+  const savingsRequiredFields = [
+    [
+      'assets.savingsPlan.monthly', '현재 월 저축액', getIn(formData, 'assets.savingsPlan.hasSavings') === true,
+      savingsDetailed ? (_value, data) => detailedSavingsTotal(data) > 0 : isPositiveNumber,
+    ],
+    ...buildSavingsCategoryRowFields(formData),
+    ...buildSavingsCustomItemFields(formData),
+  ];
 
   const assetDefinitions = [
     ['assets.liquidAssets', '현금성 자산 총액', 'liquid', 'inputMode', 'total', 'hasAssets'],

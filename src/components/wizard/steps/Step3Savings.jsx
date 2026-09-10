@@ -39,6 +39,7 @@ export function updateSavingsPresence(formData, setField, value) {
     interestRate: '',
   }));
   setField('assets.savingsPlan.customItems', customItems);
+  setField('assets.savingsPlan.selectedCategories', []);
   setField('assets.savingsPlan.monthly', '');
   setField('assets.savingsPlan.annual', '');
   setField('assets.savingsPlan.retirementMonthly', '');
@@ -110,6 +111,7 @@ export default function Step3Savings({ subStepIndex }) {
           customPath="assets.savingsPlan.customItems"
           totalPath="assets.savingsPlan.monthly"
           annualPath="assets.savingsPlan.annual"
+          selectedPath="assets.savingsPlan.selectedCategories"
           categories={SAVINGS_CATEGORIES}
         />
         </TotalInputModeField> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}

@@ -29,7 +29,10 @@ export const WIZARD_SCREENS = {
     screen('other-expense', '기타 지출', ['expense.otherExpenses.']),
     screen('expense-total', '지출 합계'),
   ],
-  savings: [screen('current', '현재 저축', ['assets.savingsPlan.monthly']), screen('retirement', '노후준비 저축 · 합계 확인')],
+  savings: [
+    screen('current', '현재 저축', ['assets.savingsPlan.monthly', 'assets.savingsPlan.breakdown.', 'assets.savingsPlan.customItems.']),
+    screen('retirement', '노후준비 저축 · 합계 확인'),
+  ],
   assets: [
     screen('liquid', '현금성 자산', ['assets.liquidAssets.']), screen('financial', '금융자산', ['assets.financialAssets.']),
     screen('pension', '연금자산', ['assets.pensionAssets']), screen('real-estate', '부동산', ['assets.realEstateAssets.']),
