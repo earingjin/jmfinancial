@@ -50,6 +50,14 @@ function round1(value) {
 
 const present = (value) => value !== '' && value !== null && value !== undefined;
 
+// docs/future-finance-spec.md:49,76 - "월 수령액 불명"(빈 문자열/공백/null/undefined)은 0으로
+// 정규화하지 않고 산출 불가로 처리해야 한다. n()의 `Number(value) || 0` 변환은 빈 값과 명시적 0을
+// 구분하지 못하므로, monthly를 숫자로 바꾸기 전에 원본 값으로 먼저 빈 값 여부를 판정한다.
+function isBlankAmount(value) {
+  return value === '' || value === null || value === undefined
+    || (typeof value === 'string' && value.trim() === '');
+}
+
 function pensionComponents(input, currentYear) {
   const people = [
     { key: 'self', person: input.income || {}, birthYear: input.basic?.birthYear },
@@ -62,20 +70,30 @@ function pensionComponents(input, currentYear) {
     const personal = person.personalPension || {};
     const nationalStart = present(birthYear) ? getNationalPensionStartAge(n(birthYear)) : null;
     const nationalEligibility = assessNationalPensionEligibility({ pension: national });
+    const nationalActive = nationalPensionMonthlyEligible(nationalEligibility);
+    const severanceActive = severance.type === 'pension';
+    const personalActive = personal.type === 'installment';
     return [
       {
-        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalPensionMonthlyEligible(nationalEligibility) ? n(national.monthly) : 0,
+        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalActive ? n(national.monthly) : 0,
+        // legacyFallback(futureContributionPlan 키 자체가 없는 과거 데이터)은 "가입기간 자격판정"만의
+        // 하위호환이다 - 가입기간을 모르는 채로도 기존에 저장된 monthly를 신뢰해 자격을 eligible로
+        // 인정하는 것이지, monthly 자체가 비어 있는지와는 별개 문제다. legacyFallback이어도 monthly가
+        // 비어 있으면(빈 문자열/공백/null/undefined) 다른 연금과 동일하게 unknown으로 처리한다.
+        monthlyUnknown: nationalActive && isBlankAmount(national.monthly),
         startAge: nationalStart, months: national.months, currentAge,
         eligibilityStatus: nationalEligibility.status,
         growthRate: FUTURE_FINANCE_ASSUMPTIONS.nationalPensionGrowthRate,
       },
       {
-        key: `${key}.retirementPension`, category: 'retirementPension', monthly: severance.type === 'pension' ? n(severance.pensionMonthly) : 0,
+        key: `${key}.retirementPension`, category: 'retirementPension', monthly: severanceActive ? n(severance.pensionMonthly) : 0,
+        monthlyUnknown: severanceActive && isBlankAmount(severance.pensionMonthly),
         startAge: severance.pensionStartAge, months: severance.pensionMonths, currentAge,
         growthRate: FUTURE_FINANCE_ASSUMPTIONS.retirementPensionGrowthRate,
       },
       {
-        key: `${key}.personalPension`, category: 'personalPension', monthly: personal.type === 'installment' ? n(personal.monthly) : 0,
+        key: `${key}.personalPension`, category: 'personalPension', monthly: personalActive ? n(personal.monthly) : 0,
+        monthlyUnknown: personalActive && isBlankAmount(personal.monthly),
         startAge: personal.startAge, months: personal.months, currentAge,
         growthRate: FUTURE_FINANCE_ASSUMPTIONS.privatePensionGrowthRate,
       },
@@ -131,6 +149,14 @@ export function calculatePensionIncomeAtTarget({ input, currentYear, years, trea
         amount: null,
         inclusionStatus: 'unknown',
         unknownReason: '국민연금 향후 가입기간을 확정할 수 없음',
+      };
+    }
+    if (component.monthlyUnknown) {
+      return {
+        ...component,
+        amount: null,
+        inclusionStatus: 'unknown',
+        unknownReason: `월 연금액을 확인할 수 없음: ${component.key}`,
       };
     }
     if (component.monthly <= 0) return { ...component, amount: 0, inclusionStatus: 'zero' };

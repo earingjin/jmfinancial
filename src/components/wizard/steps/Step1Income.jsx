@@ -207,19 +207,18 @@ export default function Step1Income({ subStepIndex, screenId }) {
   const householdSalaryLifetimeTotal = selfSalaryLifetimeTotal + spouseSalaryLifetimeTotal;
 
   // 퇴직연금 "수령 기간(년)"을 입력하면 "수령 개월 수"가 자동으로 계산된다(직접 입력하지 않음).
+  // pensionYears를 다시 비우면 pensionMonths도 함께 비워야 한다 - 그렇지 않으면 화면에는 수령
+  // 기간이 빈칸으로 보이는데 이전에 계산된 개월 수가 그대로 남아 validation을 통과하고 계산에도
+  // 계속 반영되는 문제가 생긴다(remainingRetirementYearsToMonths가 빈 값이면 ''을 반환한다).
   const selfPensionYears = getIn(formData, 'income.severance.pensionYears');
   const spousePensionYears = getIn(formData, 'spouse.severance.pensionYears');
 
   useEffect(() => {
-    if (selfPensionYears !== '' && selfPensionYears != null) {
-      setField('income.severance.pensionMonths', Math.round(Number(selfPensionYears) * 12));
-    }
+    setField('income.severance.pensionMonths', remainingRetirementYearsToMonths(selfPensionYears));
   }, [selfPensionYears, setField]);
 
   useEffect(() => {
-    if (spousePensionYears !== '' && spousePensionYears != null) {
-      setField('spouse.severance.pensionMonths', Math.round(Number(spousePensionYears) * 12));
-    }
+    setField('spouse.severance.pensionMonths', remainingRetirementYearsToMonths(spousePensionYears));
   }, [spousePensionYears, setField]);
 
   // 퇴직연금(월지급) 선택 시 "퇴직금 총액" = 월 수령 금액 × 수령 개월 수.
@@ -718,8 +717,8 @@ export default function Step1Income({ subStepIndex, screenId }) {
           <>
             <div className="field-grid">
               <NumberField path="income.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" max={120} required />
-              <NumberField path="income.severance.pensionYears" label="수령 기간" unit="년" />
-              <NumberField path="income.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" helper="퇴직 후 매월 받을 것으로 예상되는 금액을 입력해 주세요." />
+              <NumberField path="income.severance.pensionYears" label="수령 기간 *" unit="년" required />
+              <NumberField path="income.severance.pensionMonthly" label="퇴직연금 월 수령 금액 *" unit="만원" helper="퇴직 후 매월 받을 것으로 예상되는 금액을 입력해 주세요." required />
               <label className="field">
                 <span className="field-label">수령 개월 수</span>
                 <div className="field-input-row">
@@ -780,8 +779,8 @@ export default function Step1Income({ subStepIndex, screenId }) {
               <>
                 <div className="field-grid">
                   <NumberField path="spouse.severance.pensionStartAge" label="수령 시작 나이 *" unit="세" max={120} required />
-                  <NumberField path="spouse.severance.pensionYears" label="수령 기간" unit="년" />
-                  <NumberField path="spouse.severance.pensionMonthly" label="퇴직연금 월 수령 금액" unit="만원" helper="퇴직 후 매월 받을 것으로 예상되는 금액을 입력해 주세요." />
+                  <NumberField path="spouse.severance.pensionYears" label="수령 기간 *" unit="년" required />
+                  <NumberField path="spouse.severance.pensionMonthly" label="퇴직연금 월 수령 금액 *" unit="만원" helper="퇴직 후 매월 받을 것으로 예상되는 금액을 입력해 주세요." required />
                   <label className="field">
                     <span className="field-label">수령 개월 수</span>
                     <div className="field-input-row">
@@ -849,12 +848,13 @@ export default function Step1Income({ subStepIndex, screenId }) {
           <p className="field-helper">본인 국민연금 없음으로 선택했습니다.</p>
         ) : nationalPensionInputMode === 'simulate' ? (
           <>
-            <NumberField path="income.nationalPension.simulate.averageMonthlyIncome" label="가입기간 중 월평균급여" unit="만원" />
+            <NumberField path="income.nationalPension.simulate.averageMonthlyIncome" label="가입기간 중 월평균급여 *" unit="만원" required />
             <div className="field-grid" style={{ marginTop: 14 }}>
               <NumberField
                 path="income.nationalPension.simulate.contributionMonths"
-                label="실제 보험료 납부 개월 수"
+                label="실제 보험료 납부 개월 수 *"
                 unit="개월"
+                required
                 helper={isFilledValue(selfNpContributionMonths)
                   ? (selfNpEligible
                     ? `${formatNumber(selfNpContributionYears)}년으로 환산됩니다.`
@@ -887,9 +887,10 @@ export default function Step1Income({ subStepIndex, screenId }) {
           <>
             <NumberField
               path="income.nationalPension.monthly"
-              label="국민연금 월 수령(예상) 금액"
+              label="국민연금 월 수령(예상) 금액 *"
               unit="만원"
               helper="국민연금공단 예상연금 조회를 참고하셔도 됩니다"
+              required
             />
             <div className="field-grid" style={{ marginTop: 14 }}>
               <label className="field">
@@ -942,12 +943,13 @@ export default function Step1Income({ subStepIndex, screenId }) {
               <p className="field-helper">배우자 국민연금 없음으로 선택했습니다.</p>
             ) : spouseNationalPensionInputMode === 'simulate' ? (
               <>
-                <NumberField path="spouse.nationalPension.simulate.averageMonthlyIncome" label="가입기간 중 월평균급여" unit="만원" />
+                <NumberField path="spouse.nationalPension.simulate.averageMonthlyIncome" label="가입기간 중 월평균급여 *" unit="만원" required />
                 <div className="field-grid" style={{ marginTop: 14 }}>
                   <NumberField
                     path="spouse.nationalPension.simulate.contributionMonths"
-                    label="실제 보험료 납부 개월 수"
+                    label="실제 보험료 납부 개월 수 *"
                     unit="개월"
+                    required
                     helper={isFilledValue(spouseNpContributionMonths)
                       ? (spouseNpEligible
                         ? `${formatNumber(spouseNpContributionYears)}년으로 환산됩니다.`
@@ -978,7 +980,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
               </>
             ) : (
               <>
-                <NumberField path="spouse.nationalPension.monthly" label="국민연금 월 수령(예상) 금액" unit="만원" />
+                <NumberField path="spouse.nationalPension.monthly" label="국민연금 월 수령(예상) 금액 *" unit="만원" required />
                 <div className="field-grid" style={{ marginTop: 14 }}>
                   <label className="field">
                     <span className="field-label">수령 개월 수</span>
@@ -1055,8 +1057,8 @@ export default function Step1Income({ subStepIndex, screenId }) {
           <>
             <NumberField path="income.personalPension.startAge" label="수령 시작 나이 *" unit="세" max={120} required />
             <div className="field-grid" style={{ marginTop: 14 }}>
-              <NumberField path="income.personalPension.monthly" label="개인연금 월 수령액" unit="만원" />
-              <NumberField path="income.personalPension.months" label="수령 개월 수" unit="개월" />
+              <NumberField path="income.personalPension.monthly" label="개인연금 월 수령액 *" unit="만원" required />
+              <NumberField path="income.personalPension.months" label="수령 개월 수 *" unit="개월" required />
             </div>
           </>
         )}
@@ -1089,8 +1091,8 @@ export default function Step1Income({ subStepIndex, screenId }) {
               <>
                 <NumberField path="spouse.personalPension.startAge" label="수령 시작 나이 *" unit="세" max={120} required />
                 <div className="field-grid" style={{ marginTop: 14 }}>
-                  <NumberField path="spouse.personalPension.monthly" label="개인연금 월 수령액" unit="만원" />
-                  <NumberField path="spouse.personalPension.months" label="수령 개월 수" unit="개월" />
+                  <NumberField path="spouse.personalPension.monthly" label="개인연금 월 수령액 *" unit="만원" required />
+                  <NumberField path="spouse.personalPension.months" label="수령 개월 수 *" unit="개월" required />
                 </div>
               </>
             )}

@@ -492,10 +492,11 @@ export default function Step4Assets({ subStepIndex }) {
           />
           <NumberField
             path="assets.realEstateAssets.mainProperty"
-            label="주요 부동산 시세"
+            label={getIn(formData, 'assets.realEstateAssets.mainPropertyType') ? '주요 부동산 시세 *' : '주요 부동산 시세'}
             unit="만원"
             helper={getIn(formData, 'assets.realEstateAssets.mainPropertyType') ? '선택한 주요 보유 부동산 1건의 현재 시세' : '매물 종류를 먼저 선택해 주세요'}
             disabled={!getIn(formData, 'assets.realEstateAssets.mainPropertyType')}
+            required={!!getIn(formData, 'assets.realEstateAssets.mainPropertyType')}
           />
           <NumberField
             path="assets.realEstateAssets.reverseMortgageHouse"

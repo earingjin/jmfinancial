@@ -114,6 +114,36 @@ const buildLumpSumExpenseRowFields = (formData) => {
   });
 };
 
+// income.regularIncomes(기타 정기수입)의 완결성 판정과 동일한 원칙: 완전히 빈 행은 무시하고,
+// 하나라도 채워진 행만 전체 필드를 요구한다. 전체 합계가 양수라는 이유로 이 행이 마스킹되지 않는다.
+const buildOtherExpenseRowFields = (formData) => {
+  const items = getIn(formData, 'expense.otherExpenses');
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((item, index) => {
+    const active = isFilled(item?.name) || isFilled(item?.annual) || isFilled(item?.years);
+    if (!active) return [];
+    return [
+      [`expense.otherExpenses.${index}.name`, `기타 지출 ${index + 1} 항목 이름`, true],
+      [`expense.otherExpenses.${index}.annual`, `기타 지출 ${index + 1} 연간 금액`, true, isPositiveNumber],
+      [`expense.otherExpenses.${index}.years`, `기타 지출 ${index + 1} 유지기간`, true, isPositiveInteger],
+    ];
+  });
+};
+
+// 월 보험료는 assets.insurance.monthlyPremium과 동일하게 명시적 0을 허용한다(isNonNegativeNumber).
+const buildHealthInsuranceRowFields = (formData) => {
+  const items = getIn(formData, 'expense.healthInsurance.items');
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((item, index) => {
+    const active = isFilled(item?.name) || isFilled(item?.monthly);
+    if (!active) return [];
+    return [
+      [`expense.healthInsurance.items.${index}.name`, `기타 보험료 ${index + 1} 항목 이름`, true],
+      [`expense.healthInsurance.items.${index}.monthly`, `기타 보험료 ${index + 1} 월 보험료`, true, isNonNegativeNumber],
+    ];
+  });
+};
+
 const fieldIsValid = (formData, [path, , active, validate]) => (
   !active || (validate ? validate(getIn(formData, path), formData) : isFilled(getIn(formData, path)))
 );
@@ -122,6 +152,11 @@ const fieldIsValid = (formData, [path, , active, validate]) => (
 // (양수 또는 상세입력 합계)을 검사할 때만 사용한다.
 export function getWizardRequiredFieldDefinitions(formData) {
   const hasSpouse = !!getIn(formData, 'basic.hasSpouse');
+  // 국민연금 입력 방식 - "direct"/"simulate"가 아닌 값(대표적으로 "none")은 비교에 실패해 아래
+  // 조건들이 모두 비활성화된다. api/_lib/validate.js와 동일하게 기본값으로 되돌리지 않는다 -
+  // 실제 신규 입력은 initialFormData가 항상 'direct'를 명시하므로 결과가 같다.
+  const npMode = getIn(formData, 'income.nationalPension.inputMode');
+  const spouseNpMode = getIn(formData, 'spouse.nationalPension.inputMode');
   const incomeRequiredFields = [
     ['basic.birthYear', '출생년도', true],
     ['basic.retirementAge', '은퇴(예정) 연령', true],
@@ -135,12 +170,26 @@ export function getWizardRequiredFieldDefinitions(formData) {
     ['income.severance.lumpsum', '퇴직 시 예상 퇴직급여 일시금', getIn(formData, 'income.severance.type') === 'lumpsum'],
     ['income.severance.lumpsumAge', '퇴직 시 예상 퇴직급여 일시금 수령 나이', getIn(formData, 'income.severance.type') === 'lumpsum'],
     ['income.severance.pensionStartAge', '퇴직연금 수령 시작 나이', getIn(formData, 'income.severance.type') === 'pension'],
+    ['income.severance.pensionMonthly', '퇴직연금 월 수령 금액', getIn(formData, 'income.severance.type') === 'pension'],
+    ['income.severance.pensionMonths', '퇴직연금 수령 기간', getIn(formData, 'income.severance.type') === 'pension'],
     ['income.personalPension.startAge', '개인연금 수령 시작 나이', getIn(formData, 'income.personalPension.type') === 'installment'],
+    ['income.personalPension.monthly', '개인연금 월 수령액', getIn(formData, 'income.personalPension.type') === 'installment'],
+    ['income.personalPension.months', '개인연금 수령 개월 수', getIn(formData, 'income.personalPension.type') === 'installment'],
     ['spouse.severance.lumpsum', '배우자 퇴직 시 예상 퇴직급여 일시금', hasSpouse && getIn(formData, 'spouse.severance.type') === 'lumpsum'],
     ['spouse.severance.lumpsumAge', '배우자 퇴직 시 예상 퇴직급여 일시금 수령 나이', hasSpouse && getIn(formData, 'spouse.severance.type') === 'lumpsum'],
     ['spouse.severance.pensionStartAge', '배우자 퇴직연금 수령 시작 나이', hasSpouse && getIn(formData, 'spouse.severance.type') === 'pension'],
+    ['spouse.severance.pensionMonthly', '배우자 퇴직연금 월 수령 금액', hasSpouse && getIn(formData, 'spouse.severance.type') === 'pension'],
+    ['spouse.severance.pensionMonths', '배우자 퇴직연금 수령 기간', hasSpouse && getIn(formData, 'spouse.severance.type') === 'pension'],
     ['spouse.personalPension.startAge', '배우자 개인연금 수령 시작 나이', hasSpouse && getIn(formData, 'spouse.personalPension.type') === 'installment'],
+    ['spouse.personalPension.monthly', '배우자 개인연금 월 수령액', hasSpouse && getIn(formData, 'spouse.personalPension.type') === 'installment'],
+    ['spouse.personalPension.months', '배우자 개인연금 수령 개월 수', hasSpouse && getIn(formData, 'spouse.personalPension.type') === 'installment'],
+    ['income.nationalPension.monthly', '국민연금 월 수령(예상) 금액', npMode === 'direct'],
+    ['income.nationalPension.simulate.averageMonthlyIncome', '국민연금 모의계산 가입기간 중 월평균급여', npMode === 'simulate'],
+    ['income.nationalPension.simulate.contributionMonths', '국민연금 모의계산 실제 보험료 납부 개월 수', npMode === 'simulate'],
     ['income.nationalPension.expectedAdditionalContributionMonths', '국민연금 추가 납부 예정 개월 수', getIn(formData, 'income.nationalPension.futureContributionPlan') === 'continue'],
+    ['spouse.nationalPension.monthly', '배우자 국민연금 월 수령(예상) 금액', hasSpouse && spouseNpMode === 'direct'],
+    ['spouse.nationalPension.simulate.averageMonthlyIncome', '배우자 국민연금 모의계산 가입기간 중 월평균급여', hasSpouse && spouseNpMode === 'simulate'],
+    ['spouse.nationalPension.simulate.contributionMonths', '배우자 국민연금 모의계산 실제 보험료 납부 개월 수', hasSpouse && spouseNpMode === 'simulate'],
     ['spouse.nationalPension.expectedAdditionalContributionMonths', '배우자 국민연금 추가 납부 예정 개월 수', hasSpouse && getIn(formData, 'spouse.nationalPension.futureContributionPlan') === 'continue'],
     ['assets.pensionAssetsBreakdown.selfRetirementPension', '본인 퇴직연금 적립금', getIn(formData, 'income.severance.type') === 'pension'],
     ['assets.pensionAssetsBreakdown.spouseRetirementPension', '배우자 퇴직연금 적립금', hasSpouse && getIn(formData, 'spouse.severance.type') === 'pension'],
@@ -153,6 +202,8 @@ export function getWizardRequiredFieldDefinitions(formData) {
     ['assets.insurance.monthlyPremium', '월 보장성 보험료', getIn(formData, 'assets.insurance.hasInsurance') === true, isNonNegativeNumber],
     ['expense.retirementLivingCost', '노후 월 평균 생활비', true],
     ...buildLumpSumExpenseRowFields(formData),
+    ...buildOtherExpenseRowFields(formData),
+    ...buildHealthInsuranceRowFields(formData),
   ];
 
   const savingsDetailed = getIn(formData, 'assets.savingsPlan.inputMode') === 'detailed';
@@ -175,6 +226,15 @@ export function getWizardRequiredFieldDefinitions(formData) {
     const detailed = getIn(formData, modePath) === 'detailed';
     return [totalPath, label, getIn(formData, presencePath) === true, detailed ? (_value, data) => detailedAssetTotal(data, type) > 0 : isPositiveNumber];
   });
+
+  // 부동산 종류(mainPropertyType)를 선택했다면 그 종류의 시세(mainProperty)는 다른 부동산 항목
+  // (otherItems) 합계가 양수라는 이유로 마스킹되어서는 안 된다. 명시적 0은 "보유 부동산 가격"으로
+  // 유효하지 않으므로 isPositiveNumber로 판정한다(assets.pensionAssetsBreakdown.selfRetirementPension
+  // 처럼 0을 허용하는 필드와는 의미가 다르다).
+  assetRequiredFields.push([
+    'assets.realEstateAssets.mainProperty', '주요 부동산 시세',
+    isFilled(getIn(formData, 'assets.realEstateAssets.mainPropertyType')), isPositiveNumber,
+  ]);
 
   const debtDetailed = getIn(formData, 'assets.debtStatus.inputMode') === 'detailed';
   const hasDebt = getIn(formData, 'assets.debtStatus.hasDebt') === true;

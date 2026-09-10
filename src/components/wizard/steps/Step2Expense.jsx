@@ -249,11 +249,15 @@ export default function Step2Expense({ subStepIndex }) {
           label="기타 보험료(국민건강보험료 등)"
           addLabel="기타 추가"
           emptyItem={{ name: '', monthly: '' }}
-          renderItem={(item, _i, update) => (
+          renderItem={(item, _i, update) => {
+            // 서버 검증(validate.js)과 동일한 기준: 이름·월 보험료 중 하나라도 입력된 항목은 이름이 필수다.
+            const isBlank = (v) => v === '' || v === null || v === undefined;
+            const nameRequired = !isBlank(item.name) || !isBlank(item.monthly);
+            return (
             <div className="field-grid three-col">
               <label className="field">
-                <span className="field-label">항목 이름</span>
-                <input type="text" placeholder="예: 국민건강보험료" value={item.name} onChange={(e) => update('name', e.target.value)} />
+                <span className="field-label">항목 이름{nameRequired ? ' *' : ''}</span>
+                <input type="text" placeholder="예: 국민건강보험료" value={item.name} onChange={(e) => update('name', e.target.value)} required={nameRequired} />
               </label>
               <label className="field">
                 <span className="field-label">월 보험료</span>
@@ -263,7 +267,8 @@ export default function Step2Expense({ subStepIndex }) {
                 </div>
               </label>
             </div>
-          )}
+            );
+          }}
         />
       </section></Activity>
 
@@ -274,11 +279,15 @@ export default function Step2Expense({ subStepIndex }) {
           label="경조사비 등 추가로 예상되는 지출"
           addLabel="지출 항목 추가"
           emptyItem={{ name: '', annual: '', years: '' }}
-          renderItem={(item, _i, update) => (
+          renderItem={(item, _i, update) => {
+            // 서버 검증(validate.js)과 동일한 기준: 이름·연간 금액·기간 중 하나라도 입력된 항목은 이름이 필수다.
+            const isBlank = (v) => v === '' || v === null || v === undefined;
+            const nameRequired = !isBlank(item.name) || !isBlank(item.annual) || !isBlank(item.years);
+            return (
             <div className="field-grid three-col">
               <label className="field">
-                <span className="field-label">지출 항목 이름</span>
-                <input type="text" placeholder="예: 경조사비" value={item.name} onChange={(e) => update('name', e.target.value)} />
+                <span className="field-label">지출 항목 이름{nameRequired ? ' *' : ''}</span>
+                <input type="text" placeholder="예: 경조사비" value={item.name} onChange={(e) => update('name', e.target.value)} required={nameRequired} />
               </label>
               <label className="field">
                 <span className="field-label">연간 지출 금액</span>
@@ -295,7 +304,8 @@ export default function Step2Expense({ subStepIndex }) {
                 </div>
               </label>
             </div>
-          )}
+            );
+          }}
         />
       </section></Activity>
 

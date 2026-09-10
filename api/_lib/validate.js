@@ -378,6 +378,14 @@ function validateCurrentFinancialPresence(input, errors) {
     if (!valid) errors.push(`${path} 값은 자산 있음 상태에서 0보다 커야 합니다.`);
   });
 
+  // 부동산 종류(mainPropertyType)를 선택했다면 그 시세(mainProperty)는 다른 부동산 항목(otherItems)
+  // 합계가 양수라는 이유로 마스킹되어서는 안 된다. 명시적 0은 "보유 부동산 가격"으로 유효하지
+  // 않으므로 양수를 요구한다(잔액 개념이 없어 0을 허용하는 selfRetirementPension과는 의미가 다르다).
+  if (!isBlank(input.assets?.realEstateAssets?.mainPropertyType)
+    && !isPositiveNumber(input.assets?.realEstateAssets?.mainProperty)) {
+    errors.push('assets.realEstateAssets.mainProperty 값은 부동산 종류를 선택한 경우 0보다 커야 합니다.');
+  }
+
   const debt = input.assets?.debtStatus || {};
   if (debt.hasDebt === true) {
     if (debt.inputMode === 'detailed') {
@@ -406,6 +414,36 @@ function validateCompleteOtherIncomeRows(input, errors) {
     if (isBlank(item.name)) errors.push(`${path}.name 값은 필수 입력 항목입니다.`);
     if (!isPositiveNumber(item.annual)) errors.push(`${path}.annual 값은 0보다 커야 합니다.`);
     if (!isPositiveNumber(item.years)) errors.push(`${path}.years 값은 0보다 커야 합니다.`);
+  });
+}
+
+// income.regularIncomes(기타 정기수입)와 동일한 완결성 규칙 - 전체 합계가 양수라는 이유로
+// 불완전한 행이 마스킹되지 않도록 행 단위로 독립 검사한다.
+function validateCompleteOtherExpenseRows(input, errors) {
+  const items = input.expense?.otherExpenses;
+  if (!Array.isArray(items) || items.length > MAX_ARRAY_LENGTH) return;
+  items.forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    const active = !isBlank(item.name) || !isBlank(item.annual) || !isBlank(item.years);
+    if (!active) return;
+    const path = `expense.otherExpenses.${index}`;
+    if (isBlank(item.name)) errors.push(`${path}.name 값은 필수 입력 항목입니다.`);
+    if (!isPositiveNumber(item.annual)) errors.push(`${path}.annual 값은 0보다 커야 합니다.`);
+    if (!isPositiveNumber(item.years)) errors.push(`${path}.years 값은 0보다 커야 합니다.`);
+  });
+}
+
+// 월 보험료는 assets.insurance.monthlyPremium과 동일하게 명시적 0을 허용한다(isNonNegativeNumber).
+function validateCompleteHealthInsuranceRows(input, errors) {
+  const items = input.expense?.healthInsurance?.items;
+  if (!Array.isArray(items) || items.length > MAX_ARRAY_LENGTH) return;
+  items.forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    const active = !isBlank(item.name) || !isBlank(item.monthly);
+    if (!active) return;
+    const path = `expense.healthInsurance.items.${index}`;
+    if (isBlank(item.name)) errors.push(`${path}.name 값은 필수 입력 항목입니다.`);
+    if (!isNonNegativeNumber(item.monthly)) errors.push(`${path}.monthly 값은 필수 입력 항목입니다.`);
   });
 }
 
@@ -463,16 +501,46 @@ export function validateInput(input) {
     ['income.severance', input.income?.severance?.type === 'lumpsum', 'lumpsum'],
     ['income.severance', input.income?.severance?.type === 'lumpsum', 'lumpsumAge'],
     ['income.severance', input.income?.severance?.type === 'pension', 'pensionStartAge'],
+    ['income.severance', input.income?.severance?.type === 'pension', 'pensionMonthly'],
+    ['income.severance', input.income?.severance?.type === 'pension', 'pensionMonths'],
     ['income.personalPension', input.income?.personalPension?.type === 'installment', 'startAge'],
+    ['income.personalPension', input.income?.personalPension?.type === 'installment', 'monthly'],
+    ['income.personalPension', input.income?.personalPension?.type === 'installment', 'months'],
     ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'lumpsum', 'lumpsum'],
     ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'lumpsum', 'lumpsumAge'],
     ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'pension', 'pensionStartAge'],
+    ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'pension', 'pensionMonthly'],
+    ['spouse.severance', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'pension', 'pensionMonths'],
     ['spouse.personalPension', input.basic?.hasSpouse === true && input.spouse?.personalPension?.type === 'installment', 'startAge'],
+    ['spouse.personalPension', input.basic?.hasSpouse === true && input.spouse?.personalPension?.type === 'installment', 'monthly'],
+    ['spouse.personalPension', input.basic?.hasSpouse === true && input.spouse?.personalPension?.type === 'installment', 'months'],
     ['assets.pensionAssetsBreakdown', input.income?.severance?.type === 'pension', 'selfRetirementPension'],
     ['assets.pensionAssetsBreakdown', input.basic?.hasSpouse === true && input.spouse?.severance?.type === 'pension', 'spouseRetirementPension'],
   ].forEach(([path, required, field]) => {
     if (required && isBlank(getPath(input, `${path}.${field}`))) {
       errors.push(`${path}.${field} 값은 선택한 퇴직급여·연금 수령 방식에서 필수입니다.`);
+    }
+  });
+
+  // 국민연금은 severance/personalPension의 type과 달리 입력 방식(inputMode)에 따라 서로 다른
+  // 필드 조합이 필요하다 - direct는 월액, simulate는 계산에 실제로 쓰이는 두 입력값을 요구한다.
+  // 여기서도 "none"이거나 inputMode 자체가 없는(레거시) 데이터에는 아무것도 요구하지 않는다.
+  [
+    ['income.nationalPension', true],
+    ['spouse.nationalPension', input.basic?.hasSpouse === true],
+  ].forEach(([basePath, active]) => {
+    if (!active) return;
+    const mode = getPath(input, `${basePath}.inputMode`);
+    if (mode === 'direct' && isBlank(getPath(input, `${basePath}.monthly`))) {
+      errors.push(`${basePath}.monthly 값은 국민연금 직접 입력 방식에서 필수입니다.`);
+    }
+    if (mode === 'simulate') {
+      if (isBlank(getPath(input, `${basePath}.simulate.averageMonthlyIncome`))) {
+        errors.push(`${basePath}.simulate.averageMonthlyIncome 값은 국민연금 모의계산 방식에서 필수입니다.`);
+      }
+      if (isBlank(getPath(input, `${basePath}.simulate.contributionMonths`))) {
+        errors.push(`${basePath}.simulate.contributionMonths 값은 국민연금 모의계산 방식에서 필수입니다.`);
+      }
     }
   });
 
@@ -537,6 +605,8 @@ export function validateInput(input) {
   });
 
   validateCompleteOtherIncomeRows(input, errors);
+  validateCompleteOtherExpenseRows(input, errors);
+  validateCompleteHealthInsuranceRows(input, errors);
   validateCompleteDebtRows(input, errors);
 
   // 체크박스 그룹은 객체 목록이 아니라 승인된 문자열 키 목록이다.

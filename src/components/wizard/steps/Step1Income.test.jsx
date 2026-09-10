@@ -3,6 +3,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { FormContext } from '../../../state/formState';
 import { initialFormData } from '../../../state/initialFormData';
+import { computeWizardRequiredFields } from '../../../state/wizardRequiredFields';
+import { validateInput } from '../../../../api/_lib/validate.js';
+import { calculatePensionIncomeAtTarget } from '../../../../api/_lib/futureFinance.js';
 import { syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
 import Step1Income, { handleSeveranceType, remainingRetirementYearsToMonths } from './Step1Income';
 
@@ -29,6 +32,8 @@ describe('남은 퇴직기간 입력', () => {
     expect(remainingRetirementYearsToMonths(10)).toBe(120);
     expect(remainingRetirementYearsToMonths(10.5)).toBe(126);
     expect(remainingRetirementYearsToMonths('')).toBe('');
+    expect(remainingRetirementYearsToMonths(null)).toBe('');
+    expect(remainingRetirementYearsToMonths(undefined)).toBe('');
   });
 
   it('본인과 배우자 모두 남은 퇴직기간을 수정 가능한 입력칸으로 표시한다', () => {
@@ -272,5 +277,141 @@ describe('handleSeveranceType - 퇴직금·퇴직연금 잔존값 초기화', ()
     handleSeveranceType(setField, 'income.severance', 'lumpsum');
     handleSeveranceType(setField, 'income.severance', 'pension');
     expect(setField).not.toHaveBeenCalled();
+  });
+});
+
+// 퇴직연금(월지급)의 "수령 기간"(pensionYears, 사용자가 직접 입력) → "수령 개월 수"(pensionMonths,
+// 계산에 실제로 쓰이는 자동계산 필드) 동기화는 useEffect(() => setField(pensionMonthsPath,
+// remainingRetirementYearsToMonths(pensionYears)), [pensionYears])로 이루어진다(본인·배우자 각각
+// 별도 useEffect이지만 동일한 remainingRetirementYearsToMonths를 재사용한다 - "남은 퇴직기간"
+// 필드가 이미 본인/배우자에 이 함수를 공용으로 쓰던 것과 같은 패턴). 이 프로젝트에는 실제 useEffect를
+// 구동할 jsdom 환경이 없으므로, 그 본문과 정확히 같은 계산(remainingRetirementYearsToMonths)이
+// pensionYears가 비워졌을 때도 pensionMonths를 함께 비운다는 것을 직접 검증한다.
+describe('퇴직연금 수령기간(pensionYears) 삭제 시 수령 개월 수(pensionMonths) 동기화', () => {
+  it('10년을 입력하면 120개월로 계산되고, 이후 완전히 삭제하면 개월 수도 함께 비워진다', () => {
+    expect(remainingRetirementYearsToMonths(10)).toBe(120);
+    expect(remainingRetirementYearsToMonths('')).toBe('');
+  });
+
+  const fillBaseFormData = () => {
+    const formData = structuredClone(initialFormData);
+    formData.basic.birthYear = 1970;
+    formData.basic.retirementAge = 65;
+    formData.basic.lifeExpectancy = 90;
+    formData.basic.serviceYears = 10;
+    formData.income.personalPension.type = 'none';
+    formData.income.nationalPension.inputMode = 'none';
+    formData.income.salary.hasSalary = false;
+    formData.assets.currentLivingCost.monthly = 0;
+    formData.assets.insurance.hasInsurance = false;
+    formData.assets.savingsPlan.hasSavings = false;
+    formData.assets.liquidAssets.hasAssets = false;
+    formData.assets.financialAssets.hasAssets = false;
+    formData.assets.hasPensionAssets = false;
+    formData.assets.realEstateAssets.hasAssets = false;
+    formData.assets.otherAssets.hasAssets = false;
+    formData.assets.debtStatus.hasDebt = false;
+    formData.expense.retirementLivingCost = 200;
+    formData.income.severance.type = 'pension';
+    formData.income.severance.pensionStartAge = 65;
+    formData.income.severance.pensionMonthly = 100;
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 0;
+    return formData;
+  };
+
+  // 실제 useEffect 본문: setField(pensionMonthsPath, remainingRetirementYearsToMonths(nextPensionYears)).
+  const syncPensionMonthsFromYears = (severance, nextPensionYears) => {
+    severance.pensionYears = nextPensionYears;
+    severance.pensionMonths = remainingRetirementYearsToMonths(nextPensionYears);
+  };
+
+  it('본인: 수령기간을 지우면 pensionYears·pensionMonths가 모두 비워지고, 프론트/서버 validation이 모두 실패하며, 과거 120개월이 계산에 남지 않는다', () => {
+    const formData = fillBaseFormData();
+
+    syncPensionMonthsFromYears(formData.income.severance, 10);
+    expect(formData.income.severance.pensionMonths).toBe(120);
+
+    syncPensionMonthsFromYears(formData.income.severance, '');
+    expect(formData.income.severance.pensionYears).toBe('');
+    expect(formData.income.severance.pensionMonths).toBe('');
+
+    const required = computeWizardRequiredFields(formData);
+    expect(required.missingIncomeFields.map(([path]) => path)).toContain('income.severance.pensionMonths');
+    expect(required.basicInfoMissing).toBe(true);
+
+    const serverInput = {
+      basic: formData.basic, income: formData.income, spouse: formData.spouse,
+      expense: formData.expense, assets: formData.assets, scenarios: formData.scenarios,
+    };
+    const serverResult = validateInput(serverInput);
+    expect(serverResult.ok).toBe(false);
+    expect(serverResult.errors.join(' ')).toContain('income.severance.pensionMonths');
+
+    const pensionResult = calculatePensionIncomeAtTarget({
+      input: { basic: formData.basic, income: formData.income },
+      currentYear: 2026,
+      years: 30,
+    });
+    const component = pensionResult.components.find((c) => c.key === 'self.retirementPension');
+    expect(component.inclusionStatus).toBe('unknown');
+    expect(component.amount).toBeNull();
+  });
+
+  it('배우자: 동일한 수령기간 삭제 흐름이 spouse.severance에도 동일하게 적용된다', () => {
+    const formData = fillBaseFormData();
+    formData.income.severance.type = 'none';
+    formData.basic.hasSpouse = true;
+    formData.spouse.birthYear = 1972;
+    formData.spouse.retirementAge = 65;
+    formData.spouse.lifeExpectancy = 88;
+    formData.spouse.personalPension.type = 'none';
+    formData.spouse.nationalPension.inputMode = 'none';
+    formData.spouse.severance.type = 'pension';
+    formData.spouse.severance.pensionStartAge = 65;
+    formData.spouse.severance.pensionMonthly = 100;
+    formData.assets.pensionAssetsBreakdown.spouseRetirementPension = 0;
+
+    syncPensionMonthsFromYears(formData.spouse.severance, 10);
+    expect(formData.spouse.severance.pensionMonths).toBe(120);
+
+    syncPensionMonthsFromYears(formData.spouse.severance, '');
+    expect(formData.spouse.severance.pensionYears).toBe('');
+    expect(formData.spouse.severance.pensionMonths).toBe('');
+
+    const required = computeWizardRequiredFields(formData);
+    expect(required.missingIncomeFields.map(([path]) => path)).toContain('spouse.severance.pensionMonths');
+
+    const serverInput = {
+      basic: formData.basic, income: formData.income, spouse: formData.spouse,
+      expense: formData.expense, assets: formData.assets, scenarios: formData.scenarios,
+    };
+    const serverResult = validateInput(serverInput);
+    expect(serverResult.ok).toBe(false);
+    expect(serverResult.errors.join(' ')).toContain('spouse.severance.pensionMonths');
+  });
+
+  it('정상적으로 수령기간을 채운 경우의 기존 계산 결과는 그대로 유지된다', () => {
+    const formData = fillBaseFormData();
+    syncPensionMonthsFromYears(formData.income.severance, 10);
+
+    const required = computeWizardRequiredFields(formData);
+    expect(required.basicInfoMissing).toBe(false);
+
+    const serverInput = {
+      basic: formData.basic, income: formData.income, spouse: formData.spouse,
+      expense: formData.expense, assets: formData.assets, scenarios: formData.scenarios,
+    };
+    expect(validateInput(serverInput).ok).toBe(true);
+
+    // birthYear 1970 기준 currentAge(2026)=56, pensionStartAge=65·pensionMonths=120(10년)이므로
+    // 65<=나이<75 구간(years 9~19)에서 활성화된다.
+    const pensionResult = calculatePensionIncomeAtTarget({
+      input: { basic: formData.basic, income: formData.income },
+      currentYear: 2026,
+      years: 10,
+    });
+    const component = pensionResult.components.find((c) => c.key === 'self.retirementPension');
+    expect(component.inclusionStatus).toBe('included');
+    expect(component.amount).toBeGreaterThan(0);
   });
 });

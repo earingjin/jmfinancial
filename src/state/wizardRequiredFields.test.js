@@ -27,10 +27,18 @@ const fillBasicRequired = (formData) => {
   formData.assets.realEstateAssets.hasAssets = false;
   formData.assets.otherAssets.hasAssets = false;
   formData.assets.debtStatus.hasDebt = false;
+  // 개인연금(기본값 분할 수령)·국민연금(기본값 direct)의 월액 필수화 이후, 이 값들 자체를 검증하지
+  // 않는 다른 테스트가 startAge만 채우고 통과를 기대하던 관행이 깨지지 않도록 기본으로 채워 둔다.
+  formData.income.personalPension.monthly = 50;
+  formData.income.personalPension.months = 120;
+  formData.income.nationalPension.monthly = 50;
+  formData.spouse.personalPension.monthly = 50;
+  formData.spouse.personalPension.months = 120;
+  formData.spouse.nationalPension.monthly = 50;
 };
 
 describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
-  it('완전히 빈 초기 폼 데이터는 기본 정보 4개와 본인 개인연금 수령 시작 나이(기본값이 분할 수령)를 모두 필수 누락으로 잡는다', () => {
+  it('완전히 빈 초기 폼 데이터는 기본 정보 4개, 본인 개인연금(기본값 분할 수령) 필수값, 국민연금(기본값 direct) 월액을 모두 필수 누락으로 잡는다', () => {
     const formData = structuredClone(initialFormData);
 
     const result = computeWizardRequiredFields(formData);
@@ -45,6 +53,9 @@ describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
       'income.severance.lumpsum',
       'income.severance.lumpsumAge',
       'income.personalPension.startAge',
+      'income.personalPension.monthly',
+      'income.personalPension.months',
+      'income.nationalPension.monthly',
     ]);
     expect(result.requiredErrorMessage).toContain('"1. 수입"');
     expect(result.requiredErrorMessage).toContain('출생년도');
@@ -77,9 +88,12 @@ describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
     fillBasicRequired(formData);
     formData.income.personalPension.startAge = 60;
     formData.income.severance.type = 'pension';
-    // 퇴직연금 적립금(assets.pensionAssetsBreakdown.selfRetirementPension)도 동시에 필수가 되지만,
-    // 이 테스트는 수령 시작 나이만 검증하므로 별도로 채워 다른 항목만 남긴다.
+    // 퇴직연금 적립금(assets.pensionAssetsBreakdown.selfRetirementPension)과 월 수령 금액·수령
+    // 기간(pensionMonthly·pensionMonths)도 동시에 필수가 되지만, 이 테스트는 수령 시작 나이만
+    // 검증하므로 별도로 채워 다른 항목만 남긴다.
     formData.assets.pensionAssetsBreakdown.selfRetirementPension = 0;
+    formData.income.severance.pensionMonthly = 100;
+    formData.income.severance.pensionMonths = 180;
 
     const result = computeWizardRequiredFields(formData);
 
@@ -260,6 +274,8 @@ describe('computeWizardRequiredFields - 퇴직연금 월지급 시 적립금 필
     formData.income.personalPension.startAge = 60;
     formData.income.severance.type = 'pension';
     formData.income.severance.pensionStartAge = 65;
+    formData.income.severance.pensionMonthly = 50;
+    formData.income.severance.pensionMonths = 120;
     formData.assets.pensionAssetsBreakdown.selfRetirementPension = 0;
 
     const result = computeWizardRequiredFields(formData);
@@ -284,6 +300,222 @@ describe('computeWizardRequiredFields - 퇴직연금 월지급 시 적립금 필
     expect(result.basicInfoMissing).toBe(true);
     expect(result.missingIncomeFields.map(([path]) => path)).toContain('assets.pensionAssetsBreakdown.spouseRetirementPension');
     expect(result.requiredErrorMessage).toContain('"1. 수입"');
+  });
+});
+
+// 확정된 제품 정책: 사용자가 연금이 있다고 선택했다면(direct/simulate 입력 방식, 월지급 수령방식,
+// 분할 수령방식) 계산에 필요한 핵심값을 비워둔 채 제출로 넘어갈 수 없다.
+describe('computeWizardRequiredFields - 국민연금 direct/simulate 필수값', () => {
+  it('direct 방식 + 가입기간은 입력했지만 월액이 빈칸이면 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.nationalPension.monthly = '';
+    formData.income.nationalPension.paymentMonths = 240;
+
+    const result = computeWizardRequiredFields(formData);
+
+    expect(result.missingIncomeFields.map(([path]) => path)).toContain('income.nationalPension.monthly');
+  });
+
+  it('direct 방식 + 월액을 채우면 통과한다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.nationalPension.monthly = 80;
+    formData.income.nationalPension.paymentMonths = 240;
+
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+
+  it('simulate 방식은 월평균급여·납부개월 중 하나만 채우면 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.nationalPension.inputMode = 'simulate';
+    formData.income.nationalPension.simulate.averageMonthlyIncome = 300;
+
+    const result = computeWizardRequiredFields(formData);
+
+    expect(result.missingIncomeFields.map(([path]) => path)).toContain('income.nationalPension.simulate.contributionMonths');
+    expect(result.missingIncomeFields.map(([path]) => path)).not.toContain('income.nationalPension.monthly');
+  });
+
+  it('simulate 방식은 두 값을 모두 채우면 통과한다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.nationalPension.inputMode = 'simulate';
+    formData.income.nationalPension.simulate.averageMonthlyIncome = 300;
+    formData.income.nationalPension.simulate.contributionMonths = 240;
+
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+
+  it('없음(inputMode=none)을 선택하면 월액도 모의계산 입력값도 요구하지 않는다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.nationalPension.inputMode = 'none';
+    formData.income.nationalPension.monthly = '';
+
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+
+  it('배우자도 동일한 조건으로 독립 판정된다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.basic.hasSpouse = true;
+    formData.spouse.birthYear = 1972;
+    formData.spouse.retirementAge = 65;
+    formData.spouse.lifeExpectancy = 88;
+    formData.spouse.personalPension.startAge = 60;
+    formData.spouse.nationalPension.monthly = '';
+
+    const result = computeWizardRequiredFields(formData);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual(['spouse.nationalPension.monthly']);
+
+    formData.spouse.nationalPension.monthly = 40;
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+});
+
+describe('computeWizardRequiredFields - 퇴직연금 월지급 필수값', () => {
+  it('수령 시작 나이만 입력하면 월 수령 금액과 수령 기간이 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.severance.type = 'pension';
+    formData.income.severance.pensionStartAge = 65;
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 0;
+
+    const result = computeWizardRequiredFields(formData);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual([
+      'income.severance.pensionMonthly',
+      'income.severance.pensionMonths',
+    ]);
+  });
+
+  it('월 수령 금액·수령 시작 나이만 입력하고 수령 기간이 없으면 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.severance.type = 'pension';
+    formData.income.severance.pensionStartAge = 65;
+    formData.income.severance.pensionMonthly = 100;
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 0;
+
+    const result = computeWizardRequiredFields(formData);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual(['income.severance.pensionMonths']);
+  });
+
+  it('셋 다 채우면(적립금 0 포함) 통과한다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.severance.type = 'pension';
+    formData.income.severance.pensionStartAge = 65;
+    formData.income.severance.pensionMonthly = 100;
+    formData.income.severance.pensionMonths = 180;
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 0;
+
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+
+  it('배우자도 동일하게 적용된다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.basic.hasSpouse = true;
+    formData.spouse.birthYear = 1972;
+    formData.spouse.retirementAge = 65;
+    formData.spouse.lifeExpectancy = 88;
+    formData.spouse.personalPension.startAge = 60;
+    formData.spouse.severance.type = 'pension';
+    formData.spouse.severance.pensionStartAge = 65;
+    formData.assets.pensionAssetsBreakdown.spouseRetirementPension = 0;
+
+    const result = computeWizardRequiredFields(formData);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual([
+      'spouse.severance.pensionMonthly',
+      'spouse.severance.pensionMonths',
+    ]);
+  });
+
+  it('수령방식을 없음으로 두면 요구하지 않는다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.severance.type = 'none';
+
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+});
+
+describe('computeWizardRequiredFields - 개인연금 분할수령 필수값', () => {
+  it('수령 시작 나이만 입력하면 월 수령액과 수령 개월 수가 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.personalPension.monthly = '';
+    formData.income.personalPension.months = '';
+
+    const result = computeWizardRequiredFields(formData);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual([
+      'income.personalPension.monthly',
+      'income.personalPension.months',
+    ]);
+  });
+
+  it('월 수령액과 시작 나이만 입력하고 수령 개월이 없으면 걸린다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.personalPension.monthly = 50;
+    formData.income.personalPension.months = '';
+
+    const result = computeWizardRequiredFields(formData);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual(['income.personalPension.months']);
+  });
+
+  it('세 값을 모두 채우면 통과한다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.income.personalPension.monthly = 50;
+    formData.income.personalPension.months = 120;
+
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
+  });
+
+  it('배우자도 동일하게 적용된다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.startAge = 60;
+    formData.basic.hasSpouse = true;
+    formData.spouse.birthYear = 1972;
+    formData.spouse.retirementAge = 65;
+    formData.spouse.lifeExpectancy = 88;
+    formData.spouse.personalPension.startAge = 60;
+    formData.spouse.personalPension.monthly = '';
+    formData.spouse.personalPension.months = '';
+
+    const result = computeWizardRequiredFields(formData);
+    expect(result.missingIncomeFields.map(([path]) => path)).toEqual([
+      'spouse.personalPension.monthly',
+      'spouse.personalPension.months',
+    ]);
+  });
+
+  it('개인연금을 없음으로 두면 요구하지 않는다', () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.type = 'none';
+    formData.income.personalPension.monthly = '';
+    formData.income.personalPension.months = '';
+
+    expect(computeWizardRequiredFields(formData).basicInfoMissing).toBe(false);
   });
 });
 
@@ -512,6 +744,48 @@ describe('computeWizardRequiredFields - 현재 재무상태 조건부 필수값'
     expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath)).not.toContain(path);
   });
 
+  it('부동산 종류를 선택하지 않았으면 주요 부동산 시세를 요구하지 않는다(다른 항목으로 합계가 양수여도 그대로)', () => {
+    const formData = baseForm();
+    formData.assets.realEstateAssets.hasAssets = true;
+    formData.assets.realEstateAssets.inputMode = 'detailed';
+    formData.assets.realEstateAssets.otherItems = [{ type: '상가', amount: 3000 }];
+
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath))
+      .not.toContain('assets.realEstateAssets.mainProperty');
+  });
+
+  it('부동산 종류를 선택했는데 시세가 공란/0이면 다른 항목 합계가 양수여도 걸린다', () => {
+    const formData = baseForm();
+    formData.assets.realEstateAssets.hasAssets = true;
+    formData.assets.realEstateAssets.inputMode = 'detailed';
+    formData.assets.realEstateAssets.mainPropertyType = '아파트';
+    formData.assets.realEstateAssets.otherItems = [{ type: '상가', amount: 3000 }];
+
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath))
+      .toContain('assets.realEstateAssets.mainProperty');
+
+    formData.assets.realEstateAssets.mainProperty = 0;
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath))
+      .toContain('assets.realEstateAssets.mainProperty');
+  });
+
+  it('부동산 종류를 선택하고 시세를 양수로 채우면 통과한다', () => {
+    const formData = baseForm();
+    formData.assets.realEstateAssets.hasAssets = true;
+    formData.assets.realEstateAssets.inputMode = 'detailed';
+    formData.assets.realEstateAssets.mainPropertyType = '아파트';
+    formData.assets.realEstateAssets.mainProperty = 50000;
+
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath))
+      .not.toContain('assets.realEstateAssets.mainProperty');
+  });
+
+  it('부동산 종류·시세를 둘 다 비운 기존 흐름(자산 없음)은 그대로 통과한다', () => {
+    const formData = baseForm();
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath))
+      .not.toContain('assets.realEstateAssets.mainProperty');
+  });
+
   it('부채 있음은 양수 잔액과 입력된 월 부담을 요구하며 월 부담 0은 허용한다', () => {
     const formData = baseForm();
     formData.assets.debtStatus.hasDebt = true;
@@ -601,5 +875,54 @@ describe('computeWizardRequiredFields - 반복·상세 행 완결성', () => {
     const paths = computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path);
     expect(paths.filter((path) => path.startsWith('expense.retirementLumpSumExpenses.0.')))
       .toEqual(missingKeys.map((key) => `expense.retirementLumpSumExpenses.0.${key}`));
+  });
+
+  it.each([
+    [{ name: '', annual: '', years: '' }, []],
+    [{ name: '경조사비', annual: '', years: '' }, ['annual', 'years']],
+    [{ name: '', annual: 500, years: '' }, ['name', 'years']],
+    [{ name: '', annual: '', years: 5 }, ['name', 'annual']],
+    [{ name: '경조사비', annual: 500, years: '' }, ['years']],
+    [{ name: '경조사비', annual: 500, years: 5 }, []],
+  ])('기타 지출 행 %j의 완결성을 검사한다', (item, missingKeys) => {
+    const formData = baseForm();
+    formData.expense.otherExpenses = [item];
+    const paths = computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path);
+    expect(paths.filter((path) => path.startsWith('expense.otherExpenses.0.')))
+      .toEqual(missingKeys.map((key) => `expense.otherExpenses.0.${key}`));
+  });
+
+  it('다른 정상 지출행이 있어도 불완전한 기타 지출행은 그대로 걸린다', () => {
+    const formData = baseForm();
+    formData.expense.otherExpenses = [
+      { name: '경조사비', annual: 500, years: 5 },
+      { name: '', annual: 300, years: '' },
+    ];
+    const paths = computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path);
+    expect(paths).toEqual(['expense.otherExpenses.1.name', 'expense.otherExpenses.1.years']);
+  });
+
+  it.each([
+    [{ name: '', monthly: '' }, []],
+    [{ name: '국민건강보험료', monthly: '' }, ['monthly']],
+    [{ name: '', monthly: 15 }, ['name']],
+    [{ name: '국민건강보험료', monthly: 0 }, []],
+    [{ name: '국민건강보험료', monthly: 15 }, []],
+  ])('기타 보험료 행 %j의 완결성을 검사한다', (item, missingKeys) => {
+    const formData = baseForm();
+    formData.expense.healthInsurance.items = [item];
+    const paths = computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path);
+    expect(paths.filter((path) => path.startsWith('expense.healthInsurance.items.0.')))
+      .toEqual(missingKeys.map((key) => `expense.healthInsurance.items.0.${key}`));
+  });
+
+  it('다른 정상 보험항목이 있어도 불완전한 기타 보험료행은 그대로 걸린다', () => {
+    const formData = baseForm();
+    formData.expense.healthInsurance.items = [
+      { name: '국민건강보험료', monthly: 15 },
+      { name: '', monthly: 5 },
+    ];
+    const paths = computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path);
+    expect(paths).toEqual(['expense.healthInsurance.items.1.name']);
   });
 });

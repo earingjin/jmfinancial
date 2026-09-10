@@ -8,6 +8,20 @@ import { changeDebtInputMode, debtDetailedTotals } from './inputModeTransitions'
 const monthlyBurdenOf = (item) =>
   (!item || item.repaymentType !== 'equalPrincipal' ? Number(item?.monthlyInterest) : Number(item?.monthlyRepayment)) || 0;
 
+// 상환방식(repaymentType)이 바뀌면 이전 방식에서만 쓰던 부담액 필드는 더 이상 화면에 보이지 않지만
+// formData에는 그대로 남아, 나중에 방식을 되돌리면 사용자가 재확인하지 않은 과거 값이 그대로
+// 부활해 계산에 다시 반영되는 문제가 있었다. principal·months·name처럼 상환방식과 무관한 공통
+// 필드는 건드리지 않고, 새 방식에서 쓰지 않게 된 부담액 필드만 비운다.
+export function applyLoanFieldChange(item, field, value) {
+  const current = item || { repaymentType: 'interestOnly' };
+  const next = { ...current, [field]: value };
+  const clearedField = field === 'repaymentType'
+    ? (value === 'equalPrincipal' ? 'monthlyInterest' : 'monthlyRepayment')
+    : null;
+  if (clearedField) next[clearedField] = '';
+  return { next, clearedField };
+}
+
 function LoanFields({ item, onChange, fieldPath }) {
   const repaymentType = item.repaymentType || 'interestOnly';
   return (
@@ -142,9 +156,10 @@ export default function DebtBreakdownField({
   };
 
   const update = (key, field, value) => {
-    const nextItem = { ...(breakdown[key] || { repaymentType: 'interestOnly' }), [field]: value };
+    const { next: nextItem, clearedField } = applyLoanFieldChange(breakdown[key], field, value);
     const nextBreakdown = { ...breakdown, [key]: nextItem };
     setField(`${basePath}.${key}.${field}`, value);
+    if (clearedField) setField(`${basePath}.${key}.${clearedField}`, '');
     recomputeTotals(nextBreakdown, customItems);
   };
 
@@ -175,7 +190,7 @@ export default function DebtBreakdownField({
   };
 
   const updateCustomItem = (index, key, value) => {
-    const next = customItems.map((item, i) => (i === index ? { ...item, [key]: value } : item));
+    const next = customItems.map((item, i) => (i === index ? applyLoanFieldChange(item, key, value).next : item));
     setField(customPath, next);
     recomputeTotals(breakdown, next);
   };

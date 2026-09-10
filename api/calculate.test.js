@@ -23,8 +23,12 @@ function buildMinimalValidInput() {
   // severance.type 기본값(lumpsum)은 미래 수령액과 수령 나이가 모두 필수다.
   input.income.severance.lumpsum = '0';
   input.income.severance.lumpsumAge = '65';
-  // personalPension.type 기본값(installment)은 startAge가 필수라 채워준다(validate.js 참고).
+  // personalPension.type 기본값(installment)은 startAge·monthly·months가 모두 필수다(validate.js 참고).
   input.income.personalPension.startAge = '65';
+  input.income.personalPension.monthly = '50';
+  input.income.personalPension.months = '120';
+  // nationalPension.inputMode 기본값(direct)은 monthly가 필수다(validate.js 참고).
+  input.income.nationalPension.monthly = '50';
   // 조건부 재무 항목은 이 최소 fixture에서 비활성화하고, 각 테스트가 사용하는 항목만 켠다.
   input.income.salary.hasSalary = false;
   input.assets.currentLivingCost.monthly = '0';

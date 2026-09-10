@@ -77,6 +77,21 @@ describe('validateInput - current financial conditional requirements', () => {
     expect(validateInput(makeInput({ assets: validDetailedAsset })).ok).toBe(true);
   });
 
+  it('requires a positive mainProperty price once mainPropertyType is selected, even when other real-estate items are positive', () => {
+    expect(validateInput(makeInput({
+      assets: { realEstateAssets: { hasAssets: true, inputMode: 'detailed', mainPropertyType: '아파트', mainProperty: '', otherItems: [{ type: '상가', amount: 3000 }] } },
+    })).ok).toBe(false);
+    expect(validateInput(makeInput({
+      assets: { realEstateAssets: { hasAssets: true, inputMode: 'detailed', mainPropertyType: '아파트', mainProperty: 0, otherItems: [{ type: '상가', amount: 3000 }] } },
+    })).ok).toBe(false);
+    expect(validateInput(makeInput({
+      assets: { realEstateAssets: { hasAssets: true, inputMode: 'detailed', mainPropertyType: '아파트', mainProperty: 50000 } },
+    })).ok).toBe(true);
+    expect(validateInput(makeInput({
+      assets: { realEstateAssets: { hasAssets: true, inputMode: 'detailed', mainPropertyType: '', otherItems: [{ type: '상가', amount: 3000 }] } },
+    })).ok).toBe(true);
+  });
+
   it('requires positive debt balance and an entered burden while allowing explicit zero burden', () => {
     expect(validateInput(makeInput({ assets: { debtStatus: { hasDebt: true, inputMode: 'simple', totalBalance: '', monthlyRepayment: '' } } })).ok).toBe(false);
     expect(validateInput(makeInput({ assets: { debtStatus: { hasDebt: true, inputMode: 'simple', totalBalance: 0, monthlyRepayment: 0 } } })).ok).toBe(false);
@@ -135,6 +150,46 @@ describe('validateInput - repeated row completeness', () => {
   ])('validates retirement lump-sum expense row completeness: %j', (item, expectedOk) => {
     const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item] } }));
     expect(result.ok).toBe(expectedOk);
+  });
+
+  it.each([
+    [{ name: '', annual: '', years: '' }, true],
+    [{ name: '경조사비', annual: '', years: '' }, false],
+    [{ name: '', annual: 500, years: '' }, false],
+    [{ name: '', annual: '', years: 5 }, false],
+    [{ name: '경조사비', annual: 500, years: '' }, false],
+    [{ name: '경조사비', annual: 500, years: 5 }, true],
+  ])('validates other-expense row completeness: %j', (item, expectedOk) => {
+    const result = validateInput(makeInput({ expense: { otherExpenses: [item] } }));
+    expect(result.ok).toBe(expectedOk);
+  });
+
+  it('does not mask an incomplete other-expense row behind another fully valid row', () => {
+    const result = validateInput(makeInput({
+      expense: { otherExpenses: [{ name: '경조사비', annual: 500, years: 5 }, { name: '', annual: 300, years: '' }] },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('expense.otherExpenses.1.name');
+    expect(result.errors.join(' ')).toContain('expense.otherExpenses.1.years');
+  });
+
+  it.each([
+    [{ name: '', monthly: '' }, true],
+    [{ name: '국민건강보험료', monthly: '' }, false],
+    [{ name: '', monthly: 15 }, false],
+    [{ name: '국민건강보험료', monthly: 0 }, true],
+    [{ name: '국민건강보험료', monthly: 15 }, true],
+  ])('validates health-insurance item row completeness: %j', (item, expectedOk) => {
+    const result = validateInput(makeInput({ expense: { healthInsurance: { items: [item] } } }));
+    expect(result.ok).toBe(expectedOk);
+  });
+
+  it('does not mask an incomplete health-insurance row behind another fully valid row', () => {
+    const result = validateInput(makeInput({
+      expense: { healthInsurance: { items: [{ name: '국민건강보험료', monthly: 15 }, { name: '', monthly: 5 }] } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('expense.healthInsurance.items.1.name');
   });
 });
 
@@ -218,7 +273,7 @@ describe('retirement severance input requirements', () => {
 
   it('accepts an explicit 0 for selfRetirementPension when income.severance.type is pension', () => {
     const result = validateInput(makeInput({
-      income: { severance: { type: 'pension', pensionStartAge: 65 } },
+      income: { severance: { type: 'pension', pensionStartAge: 65, pensionMonthly: 100, pensionMonths: 180 } },
       assets: { pensionAssetsBreakdown: { selfRetirementPension: 0 } },
     }));
     expect(result.ok).toBe(true);
@@ -236,8 +291,146 @@ describe('retirement severance input requirements', () => {
   it('accepts an explicit 0 for spouseRetirementPension when spouse.severance.type is pension', () => {
     const result = validateInput(makeInput({
       basic: { hasSpouse: true },
-      spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90, severance: { type: 'pension', pensionStartAge: 65 } },
+      spouse: {
+        birthYear: 1988, retirementAge: 65, lifeExpectancy: 90,
+        severance: { type: 'pension', pensionStartAge: 65, pensionMonthly: 100, pensionMonths: 180 },
+      },
       assets: { pensionAssetsBreakdown: { spouseRetirementPension: 0 } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+});
+
+// 확정된 제품 정책: 사용자가 연금이 있다고 선택했다면(direct/simulate 입력 방식, 월지급 수령방식,
+// 분할 수령방식) 계산에 필요한 핵심값을 비워둔 채 서버 검증을 통과할 수 없다. wizardRequiredFields.js
+// (프론트)와 동일한 의미로 검증한다.
+describe('national pension monthly amount requirements', () => {
+  it('rejects a blank monthly amount in direct mode even with a qualifying contribution period', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { inputMode: 'direct', monthly: '', paymentMonths: 240 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.nationalPension.monthly');
+  });
+
+  it('accepts direct mode once the monthly amount is filled', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { inputMode: 'direct', monthly: 80, paymentMonths: 240 } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects simulate mode when only one of the two calculation inputs is filled', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { inputMode: 'simulate', simulate: { averageMonthlyIncome: 300 } } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.nationalPension.simulate.contributionMonths');
+    expect(result.errors.join(' ')).not.toContain('income.nationalPension.monthly 값은');
+  });
+
+  it('accepts simulate mode once both calculation inputs are filled', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { inputMode: 'simulate', simulate: { averageMonthlyIncome: 300, contributionMonths: 240 } } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('does not require anything when inputMode is none', () => {
+    const result = validateInput(makeInput({
+      income: { nationalPension: { inputMode: 'none' } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('applies the same rule independently to the spouse', () => {
+    const missing = validateInput(makeInput({
+      basic: { hasSpouse: true },
+      spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90, nationalPension: { inputMode: 'direct', monthly: '' } },
+    }));
+    expect(missing.ok).toBe(false);
+    expect(missing.errors.join(' ')).toContain('spouse.nationalPension.monthly');
+
+    const filled = validateInput(makeInput({
+      basic: { hasSpouse: true },
+      spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90, nationalPension: { inputMode: 'direct', monthly: 40 } },
+    }));
+    expect(filled.ok).toBe(true);
+  });
+});
+
+describe('monthly severance/personal pension amount and duration requirements', () => {
+  it('rejects a blank pensionMonthly and pensionMonths when severance.type is pension', () => {
+    const result = validateInput(makeInput({
+      income: { severance: { type: 'pension', pensionStartAge: 65 } },
+      assets: { pensionAssetsBreakdown: { selfRetirementPension: 0 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.severance.pensionMonthly');
+    expect(result.errors.join(' ')).toContain('income.severance.pensionMonths');
+  });
+
+  it('rejects a blank pensionMonths when only pensionMonthly and pensionStartAge are filled', () => {
+    const result = validateInput(makeInput({
+      income: { severance: { type: 'pension', pensionStartAge: 65, pensionMonthly: 100 } },
+      assets: { pensionAssetsBreakdown: { selfRetirementPension: 0 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.severance.pensionMonths');
+  });
+
+  it('accepts a fully filled monthly severance pension', () => {
+    const result = validateInput(makeInput({
+      income: { severance: { type: 'pension', pensionStartAge: 65, pensionMonthly: 100, pensionMonths: 180 } },
+      assets: { pensionAssetsBreakdown: { selfRetirementPension: 0 } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects a blank monthly and months when personalPension.type is installment', () => {
+    const result = validateInput(makeInput({
+      income: { personalPension: { type: 'installment', startAge: 65 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.personalPension.monthly');
+    expect(result.errors.join(' ')).toContain('income.personalPension.months');
+  });
+
+  it('rejects a blank months when only monthly and startAge are filled', () => {
+    const result = validateInput(makeInput({
+      income: { personalPension: { type: 'installment', startAge: 65, monthly: 50 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('income.personalPension.months');
+  });
+
+  it('accepts a fully filled installment personal pension', () => {
+    const result = validateInput(makeInput({
+      income: { personalPension: { type: 'installment', startAge: 65, monthly: 50, months: 120 } },
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('applies the same rules independently to the spouse', () => {
+    const result = validateInput(makeInput({
+      basic: { hasSpouse: true },
+      spouse: {
+        birthYear: 1988, retirementAge: 65, lifeExpectancy: 90,
+        severance: { type: 'pension', pensionStartAge: 65 },
+        personalPension: { type: 'installment', startAge: 65 },
+      },
+      assets: { pensionAssetsBreakdown: { spouseRetirementPension: 0 } },
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('spouse.severance.pensionMonthly');
+    expect(result.errors.join(' ')).toContain('spouse.severance.pensionMonths');
+    expect(result.errors.join(' ')).toContain('spouse.personalPension.monthly');
+    expect(result.errors.join(' ')).toContain('spouse.personalPension.months');
+  });
+
+  it('does not require the monthly pension fields when severance/personalPension are not active', () => {
+    const result = validateInput(makeInput({
+      income: { severance: { type: 'lumpsum', lumpsum: 3000, lumpsumAge: 65 }, personalPension: { type: 'none' } },
     }));
     expect(result.ok).toBe(true);
   });
@@ -564,7 +757,7 @@ describe('national pension future contribution plan validation', () => {
   });
   it('allows an actual contribution period below 120 months with a supported plan', () => {
     const result = validateInput(makeInput({
-      income: { nationalPension: { inputMode: 'direct', paymentMonths: 60, futureContributionPlan: 'stop' } },
+      income: { nationalPension: { inputMode: 'direct', monthly: 50, paymentMonths: 60, futureContributionPlan: 'stop' } },
     }));
     expect(result.ok).toBe(true);
   });
@@ -923,8 +1116,8 @@ describe('monthly pension start age requirements', () => {
   it('accepts explicit start ages for monthly pensions', () => {
     const result = validateInput(makeInput({
       income: {
-        severance: { type: 'pension', pensionStartAge: 60 },
-        personalPension: { type: 'installment', startAge: 65 },
+        severance: { type: 'pension', pensionStartAge: 60, pensionMonthly: 100, pensionMonths: 180 },
+        personalPension: { type: 'installment', startAge: 65, monthly: 50, months: 120 },
       },
       assets: { pensionAssetsBreakdown: { selfRetirementPension: 0 } },
     }));
