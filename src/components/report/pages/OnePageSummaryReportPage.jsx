@@ -235,7 +235,7 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
         <div className="one-summary-section-heading">
           <div>
             <h2 className="subsection-head" id="one-summary-future-title">은퇴 후 생활비 충당 전망</h2>
-            <p className="intro-text one-summary-section-description">연금소득으로 생활비를 얼마나 충당하는지 보여드립니다.</p>
+            <p className="intro-text one-summary-section-description">현재 생활수준 기준 예상 생활비를 연금소득으로 얼마나 충당하는지 보여드립니다.</p>
           </div>
           <p className="one-summary-section-meta">은퇴 시점 기준 · 연령별 전망과 별도</p>
         </div>
@@ -252,7 +252,7 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
               <div key={item.age}>
                 <b><i aria-hidden="true" />{formatNumber(item.age)}세</b>
                 <em>생활비의 {displayPercent(item.target.coverageRate)} 충당</em>
-                <span>생활비 <strong>{displayWon(item.livingExpense)}</strong></span>
+                <span>현재 생활수준 기준 생활비 <strong>{displayWon(item.livingExpense)}</strong></span>
                 <span>연금소득 <strong>{displayWon(item.target.pensionIncome)}</strong></span>
               </div>
             ))}

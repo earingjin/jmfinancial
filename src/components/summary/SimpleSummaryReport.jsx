@@ -250,7 +250,7 @@ function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, living
             <strong>{round1(rr.retirementYears)}년</strong>
           </div>
           <div>
-            <span>은퇴 시점 예상 월 생활비</span>
+            <span>은퇴 목표생활비(물가 반영)</span>
             <strong>{formatWon(livingCostAtRetirement)}</strong>
           </div>
           <div>
@@ -340,7 +340,7 @@ function RetirementCashFlowChart({ outlook, pensionStartAge }) {
 
   return (
     <div className="retirement-cashflow-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="은퇴 시점부터 예상 월 생활비와 예상 월 총소득의 차이">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="현재 생활수준 기준 은퇴 후 예상 월 생활비와 예상 월 총소득의 차이">
         {ticks.map((ratio) => {
           const tickY = plot.top + plotHeight - ratio * plotHeight;
           return (
@@ -389,7 +389,7 @@ function RetirementCashFlowChart({ outlook, pensionStartAge }) {
         })}
       </svg>
       <div className="retirement-chart-legend">
-        <span><i className="is-expense" />예상 월 생활비</span>
+        <span><i className="is-expense" />현재 생활수준 기준 예상 월 생활비</span>
         <span><i className="is-income" />예상 월 총소득</span>
         <span><i className="is-gap" />생활비와 소득의 간극</span>
       </div>
@@ -405,7 +405,7 @@ function FiveYearOutlookTable({ outlook }) {
         <thead>
           <tr>
             <th scope="col">나이</th>
-            <th scope="col">예상 월 생활비</th>
+            <th scope="col">현재 생활수준 기준 예상 월 생활비</th>
             <th scope="col">예상 월 총소득<br /><small>월급·연금 등</small></th>
             <th scope="col">월 차이</th>
           </tr>
@@ -414,7 +414,7 @@ function FiveYearOutlookTable({ outlook }) {
           {outlook.map((item) => (
             <tr key={item.age}>
               <th scope="row">{formatNumber(item.age)}세</th>
-              <td data-label="예상 월 생활비"><span className="future-cell-value">{item.livingExpense == null ? '산출 불가' : formatWon(item.livingExpense)}</span></td>
+              <td data-label="현재 생활수준 기준 예상 월 생활비"><span className="future-cell-value">{item.livingExpense == null ? '산출 불가' : formatWon(item.livingExpense)}</span></td>
               <td data-label="예상 월 총소득">
                 <span className="future-cell-value">
                   {item.totalIncome == null ? '산출 불가' : formatWon(item.totalIncome)}
@@ -772,7 +772,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                     <div className="detail-group-head">은퇴 후 필요한 생활비 <span className="detail-group-tag">월평균</span></div>
                     <DetailRow label="현재 예상 은퇴 생활비" value={formatWon(livingCostNow)} />
                     <DetailRow label="적용 물가상승률" value={rr.inflationRate != null ? formatPercent(rr.inflationRate) : '확인 필요'} />
-                    <DetailRow label="은퇴 시 예상 생활비(물가 반영)" value={formatWon(livingCostAtRetirement)} />
+                    <DetailRow label="은퇴 목표생활비(물가 반영)" value={formatWon(livingCostAtRetirement)} />
                     <DetailRow label="은퇴 후 필요 생활비" value={formatAnnualAmount(livingCostAtRetirement)} bold subtotal />
                   </div>
 
@@ -1239,7 +1239,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                 <article className={`future-card future-card--${item.status}`} key={item.age}>
                   <div className="future-card-age">{formatNumber(item.age)}세</div>
                   <dl>
-                    <div><dt>예상 생활비</dt><dd>{item.livingExpense == null ? '데이터 부족' : formatWon(item.livingExpense)}</dd></div>
+                    <div><dt>현재 생활수준 기준 예상 생활비</dt><dd>{item.livingExpense == null ? '데이터 부족' : formatWon(item.livingExpense)}</dd></div>
                     <div><dt>예상 연금소득</dt><dd>{item.pensionIncome == null ? '산출 불가' : formatWon(item.pensionIncome)}</dd></div>
                   </dl>
                   {item.balance != null && <p className="future-card-balance">{item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}</p>}
@@ -1261,12 +1261,12 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                     연령별 상세 표 {showFiveYearTable ? '숨기기' : '보기'}
                   </button>
                 </div>
-                <p className="simple-summary-subtitle">현재 입력한 소득의 유지 기간과 연금 수령 시점을 반영해, 은퇴 후 예상 생활비와 총소득의 차이를 5년 단위로 보여드립니다. 생활비는 연 3%씩 상승한다고 가정합니다.</p>
+                <p className="simple-summary-subtitle">현재 생활수준이 유지된다고 가정해, 물가를 반영한 참고 생활비와 총소득의 차이를 5년 단위로 보여드립니다.</p>
                 <RetirementCashFlowChart
                   outlook={future.retirementCashFlowOutlook}
                   pensionStartAge={future.nationalPensionStartAge}
                 />
-                <p className="future-chart-help">주황색은 예상 월 생활비, 초록색은 예상 월 총소득입니다. 두 선 사이가 넓을수록 매월 예상되는 부족액 또는 여유금액이 큽니다.</p>
+                <p className="future-chart-help">주황색은 현재 생활수준 기준 예상 월 생활비, 초록색은 예상 월 총소득입니다. 두 선 사이가 넓을수록 매월 예상되는 부족액 또는 여유금액이 큽니다.</p>
                 {showFiveYearTable && (
                   <>
                     <FiveYearOutlookTable outlook={future.fiveYearOutlook} />

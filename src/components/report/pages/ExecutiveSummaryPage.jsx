@@ -137,7 +137,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
         {retirementReadiness && !retirementReadiness.notCalculable && (
         <div className="executive-calculation-summary">
           <div className="executive-calculation-heading"><strong>은퇴자금 계산 근거</strong><small>입력값과 기존 은퇴 시뮬레이션 결과를 단계별로 정리했습니다.</small></div>
-          <div className="executive-calculation-step"><i>1</i><span>은퇴 시점 월 생활비</span><b>{formatWon(retirementReadiness.retirementLivingCostAtRetirement)}</b></div>
+          <div className="executive-calculation-step"><i>1</i><span>은퇴 목표생활비(물가 반영)</span><b>{formatWon(retirementReadiness.retirementLivingCostAtRetirement)}</b></div>
           <div className="executive-calculation-arrow" aria-hidden="true">→</div>
           <div className="executive-calculation-step"><i>2</i><span>은퇴생활비 기준 필요자금 − 예상 준비자산</span><b>{formatWon(retirementReadiness.requiredAtRetirement)} − {formatWon(retirementReadiness.readyAssetsAtRetirement)}</b></div>
           <div className="executive-calculation-arrow" aria-hidden="true">→</div>

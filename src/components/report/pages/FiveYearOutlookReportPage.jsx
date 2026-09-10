@@ -31,7 +31,7 @@ function CashFlowLineChart({ outlook, pensionStartAge }) {
 
   return (
     <div className="report-cashflow-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="은퇴 후 예상 월 생활비와 예상 월 총소득 비교">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="현재 생활수준 기준 은퇴 후 예상 월 생활비와 예상 월 총소득 비교">
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const tickY = plot.top + plotHeight - ratio * plotHeight;
           return <line key={ratio} x1={plot.left} x2={width - plot.right} y1={tickY} y2={tickY} />;
@@ -76,7 +76,7 @@ function CashFlowLineChart({ outlook, pensionStartAge }) {
           </g>
         ))}
       </svg>
-      <div className="report-chart-legend"><span className="expense">예상 월 생활비</span><span className="income">예상 월 총소득</span><span className="gap">두 금액의 간극</span></div>
+      <div className="report-chart-legend"><span className="expense">현재 생활수준 기준 예상 월 생활비</span><span className="income">예상 월 총소득</span><span className="gap">두 금액의 간극</span></div>
     </div>
   );
 }
@@ -89,16 +89,16 @@ export default function FiveYearOutlookReportPage({ futureFinance, pageNumber, t
     <PageFrame eyebrow="Five-year Outlook" pageNumber={pageNumber} totalPages={totalPages}>
       <SectionBadge number="7" label="5년 단위 생활비·소득 전망" />
       <p className="intro-text report-compact-intro">
-        현재 입력한 소득의 유지 기간과 연금 수령 시점을 반영해, 은퇴 후 예상 생활비와 총소득의 차이를 5년 단위로
+        현재 생활수준이 유지된다고 가정해, 물가를 반영한 참고 생활비와 총소득의 차이를 5년 단위로
         보여드립니다. 생활비는 연 3%씩 상승한다고 가정합니다.
       </p>
 
       {outlook.length > 0 ? (
         <>
           {chartOutlook.length > 0 && <CashFlowLineChart outlook={chartOutlook} pensionStartAge={futureFinance?.nationalPensionStartAge} />}
-          <p className="fine-print report-chart-help">주황색은 예상 월 생활비, 초록색은 예상 월 총소득입니다. 두 선 사이가 넓을수록 매월 예상되는 부족액 또는 여유금액이 큽니다.</p>
+          <p className="fine-print report-chart-help">주황색은 현재 생활수준 기준 예상 월 생활비, 초록색은 예상 월 총소득입니다. 두 선 사이가 넓을수록 매월 예상되는 부족액 또는 여유금액이 큽니다.</p>
           <table className="grade-table compact report-outlook-table">
-            <thead><tr><th>나이</th><th>예상 월 생활비</th><th>예상 월 총소득</th><th>충당률</th><th>월 차이</th></tr></thead>
+            <thead><tr><th>나이</th><th>현재 생활수준 기준 예상 월 생활비</th><th>예상 월 총소득</th><th>충당률</th><th>월 차이</th></tr></thead>
             <tbody>
               {outlook.map((item) => (
                 <tr key={item.age}>
