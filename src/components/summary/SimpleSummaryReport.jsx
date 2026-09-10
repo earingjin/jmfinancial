@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
-import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_FINAL_OUTLOOK_BASIS, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -227,6 +227,10 @@ function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, living
     <div className="summary-status-card">
       <div className="fhs-hero">
         <div className="summary-card-kicker">Part 2. 은퇴</div>
+        <div className="retirement-final-heading">
+          <strong>최종 은퇴 전망</strong>
+          <span>{RETIREMENT_FINAL_OUTLOOK_BASIS}</span>
+        </div>
         <div className="fhs-hero-row">
           <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
           <div className="fhs-hero-text ss-status-copy">

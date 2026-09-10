@@ -457,7 +457,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
   );
 
   const totalMonthlyIncome =
-    currentSalaryMonthly + businessMonthly + nationalPensionTotal + severanceTotal + personalPensionTotal + otherIncomesMonthly;
+    currentSalaryMonthly + businessMonthly + otherIncomesMonthly;
 
   // "수입 기간(년)" 열 표시 형식 - null(해당 없음)이면 "-", 배우자 정보를 입력한 경우 본인·배우자를
   // 각자 따로 표기한다(사용자 승인). 소수점은 첫째 자리까지만(개월 단위 나눗셈으로 생기는 소수 방지).
@@ -1145,7 +1145,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
       </section></Activity>
 
       <Activity mode={showSubStep(6) ? 'visible' : 'hidden'}><section className="step-section">
-        <h3><span className="step-icon">🧮</span> 총 수입 합계</h3>
+        <h3><span className="step-icon">🧮</span> 현재 소득 합계</h3>
         <table className="grade-table compact income-summary-desktop">
           <thead>
             <tr>
@@ -1157,13 +1157,13 @@ export default function Step1Income({ subStepIndex, screenId }) {
           </thead>
           <tbody>
             <tr className="total-row">
-              <td>총 월 수입 합계</td>
+              <td>현재 월 소득</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(totalMonthlyIncome))}</td>
               <td className="num" style={{ textAlign: 'right' }}>-</td>
               <td className="num" style={{ textAlign: 'right' }}>-</td>
             </tr>
             <tr className="total-row">
-              <td>총 연 수입 합계</td>
+              <td>현재 연 소득</td>
               <td className="num" style={{ textAlign: 'right' }}>{formatWon(Math.round(totalMonthlyIncome) * 12)}</td>
               <td className="num" style={{ textAlign: 'right' }}>-</td>
               <td className="num" style={{ textAlign: 'right' }}>-</td>
@@ -1207,17 +1207,16 @@ export default function Step1Income({ subStepIndex, screenId }) {
           </tbody>
         </table>
         <span className="field-helper income-summary-desktop">
-          연금 금액은 실제로 받고 있는 돈이 아니라, 입력하신 수령 시작 나이부터 적용되는 예상 수령액입니다.
-          수령 개월 수(또는 기간)가 입력된 연금·수입만 합산됩니다.
+          현재 월 소득에는 지금 받고 있는 급여·사업소득·기타 정기수입만 포함되며, 향후 연금은 별도로 입력됩니다.
         </span>
         <div className="income-summary-mobile">
           <div className="income-summary-totals">
             <div className="income-summary-total-card">
-              <span>총 월 수입</span>
+              <span>현재 월 소득</span>
               <strong>{formatWon(Math.round(totalMonthlyIncome))}</strong>
             </div>
             <div className="income-summary-total-card">
-              <span>총 연 수입</span>
+              <span>현재 연 소득</span>
               <strong>{formatWon(Math.round(totalMonthlyIncome) * 12)}</strong>
             </div>
           </div>
@@ -1258,10 +1257,10 @@ export default function Step1Income({ subStepIndex, screenId }) {
             <p>수입 기간 · {otherIncomes.length > 0 ? '항목별 상이' : '-'}</p>
           </div>
 
-          <p className="income-summary-mobile-note">연금 금액은 수령 시작 나이부터 적용되는 예상 금액입니다.</p>
+          <p className="income-summary-mobile-note">현재 월 소득에는 지금 받고 있는 소득만 포함되며, 향후 연금은 별도로 입력됩니다.</p>
           <details className="income-summary-details">
             <summary>계산 기준 보기</summary>
-            <p>수령 개월 수(또는 기간)가 입력된 연금·수입만 합산됩니다.</p>
+            <p>급여·사업소득·기타 정기수입을 현재 월 기준으로 합산합니다.</p>
           </details>
         </div>
       </section></Activity>

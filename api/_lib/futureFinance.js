@@ -89,9 +89,10 @@ function evaluateNationalPension(component, years) {
   }
   const ageAtTarget = component.currentAge + years;
   const active = ageAtTarget >= n(component.startAge);
+  const yearsSinceStart = Math.max(0, ageAtTarget - n(component.startAge));
   return {
     ...component,
-    amount: active ? calculateFutureValue(component.monthly, component.growthRate, years) : 0,
+    amount: active ? calculateFutureValue(component.monthly, component.growthRate, yearsSinceStart) : 0,
     inclusionStatus: active ? 'included' : 'beforeStart',
     // 국민연금 노령연금은 수급개시연령 이후 종신 지급한다. 레거시 months와 가입·납부기간은
     // 지급 종료연령이 아니므로 endAge 계산에 사용하지 않는다.

@@ -16,13 +16,14 @@ const FAKE_SIMULATION = {
   },
 };
 
-function renderPage(formData) {
+function renderPage(formData, retirementReadiness = { notCalculable: true }) {
   const aggregates = buildAggregates(buildCanonicalInput(formData));
   return renderToStaticMarkup(
     <ShortfallFillPage
       simulation={FAKE_SIMULATION}
       aggregates={aggregates}
-      retirementReadiness={{ notCalculable: true }}
+      retirementReadiness={retirementReadiness}
+      familyAges={{ spouse: formData.basic.hasSpouse ? { retirementAge: Number(formData.spouse.retirementAge) } : null }}
       pageNumber={1}
       totalPages={1}
     />
@@ -60,5 +61,75 @@ describe('ShortfallFillPage - 퇴직금(일시금) 잔존값 노출 여부', () 
     Object.assign(formData.spouse.severance, { type: 'none', lumpsum: 3000 });
     const html = renderPage(formData);
     expect(html).not.toContain('3,000만원');
+  });
+});
+
+describe('ShortfallFillPage - 국민연금 개시 전 표시', () => {
+  const readiness = (schedules) => ({
+    notCalculable: true,
+    retirementAge: 60,
+    monthlyIncomeCompare: { pensionDisplaySchedules: { nationalPension: schedules } },
+  });
+
+  it('은퇴 시점에는 0원이더라도 국민연금 개시 나이와 입력 월액을 함께 보여준다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.basic, { birthYear: 1975, retirementAge: 60 });
+    Object.assign(formData.income.nationalPension, {
+      inputMode: 'direct', monthly: 130, months: 240, paymentMonths: 120,
+    });
+
+    const html = renderPage(formData, readiness([{ startAge: 65, monthly: 130 }]));
+
+    expect(html).toContain('60세 기준 0만원');
+    expect(html).toContain('65세부터 월 130만원');
+  });
+
+  it('배우자의 은퇴 나이와 개시 예정 금액을 본인과 독립적으로 표시한다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.basic, { hasSpouse: true, birthYear: 1975, retirementAge: 60 });
+    Object.assign(formData.income.nationalPension, {
+      inputMode: 'direct', monthly: 130, months: 240, paymentMonths: 120,
+    });
+    Object.assign(formData.spouse, { birthYear: 1967, retirementAge: 62 });
+    Object.assign(formData.spouse.nationalPension, {
+      inputMode: 'direct', monthly: 60, months: 240, paymentMonths: 120,
+    });
+
+    const html = renderPage(formData, readiness([
+      { startAge: 65, monthly: 130 },
+      { startAge: 64, monthly: 60 },
+    ]));
+
+    expect(html).toContain('60세 기준 0만원');
+    expect(html).toContain('65세부터 월 130만원');
+    expect(html).toContain('62세 기준 0만원');
+    expect(html).toContain('64세부터 월 60만원');
+  });
+
+  it('은퇴 시점에 이미 개시된 국민연금은 기존 월 금액을 표시한다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.basic, { birthYear: 1975, retirementAge: 65 });
+    Object.assign(formData.income.nationalPension, {
+      inputMode: 'direct', monthly: 130, months: 240, paymentMonths: 120,
+    });
+
+    const html = renderPage(formData, { ...readiness([]), retirementAge: 65 });
+
+    expect(html).toContain('130만원');
+    expect(html).not.toContain('65세 기준 0만원');
+  });
+
+  it('수급 여부가 미확정이면 기존처럼 확인 필요로 표시한다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.basic, { birthYear: 1975, retirementAge: 60 });
+    Object.assign(formData.income.nationalPension, {
+      inputMode: 'direct', monthly: 130, months: 240, paymentMonths: 60,
+      futureContributionPlan: 'continue', expectedAdditionalContributionMonths: '',
+    });
+
+    const html = renderPage(formData, readiness([]));
+
+    expect(html).toContain('확인 필요');
+    expect(html).not.toContain('65세부터 월 130만원');
   });
 });

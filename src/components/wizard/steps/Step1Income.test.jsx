@@ -186,11 +186,53 @@ describe('Step1Income - 총 수입 합계 반응형 표시', () => {
 
     expect(html).toContain('grade-table compact income-summary-desktop');
     expect(html).toContain('income-summary-mobile');
-    expect(html).toContain('총 월 수입');
-    expect(html).toContain('총 연 수입');
+    expect(html).toContain('현재 월 소득');
+    expect(html).toContain('현재 연 소득');
     expect(html).toContain('계산 기준 보기');
     expect(html).toContain('수령 시작 나이');
     expect(html).toContain('수입 기간');
+  });
+
+  it('현재 월 소득에는 급여와 상여만 포함하고 미래 연금은 포함하지 않는다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.basic, { hasSpouse: true, birthYear: 1975, retirementAge: 60, lifeExpectancy: 85 });
+    Object.assign(formData.spouse, { birthYear: 1978, retirementAge: 60, lifeExpectancy: 85 });
+    Object.assign(formData.income.salary, { monthly: 450, annualBonus: 600 });
+    Object.assign(formData.spouse.salary, { monthly: 250, annualBonus: 0 });
+    Object.assign(formData.income.nationalPension, { inputMode: 'direct', monthly: 130, paymentMonths: 120, months: 240 });
+    Object.assign(formData.spouse.nationalPension, { inputMode: 'direct', monthly: 60, paymentMonths: 120, months: 240 });
+    Object.assign(formData.income.personalPension, { type: 'installment', monthly: 50, startAge: 65, months: 120 });
+
+    const html = renderStep(formData);
+
+    expect(html).toMatch(/현재 월 소득<\/td><td[^>]*>750만원<\/td>/);
+    expect(html).not.toContain('990만원');
+    expect(html).toContain('국민연금');
+    expect(html).toContain('개인연금');
+  });
+
+  it('현재 월 소득에 사업소득과 기타 정기수입을 각각 한 번씩 월환산해 포함한다', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.income.salary, { monthly: 450, annualBonus: 600 });
+    Object.assign(formData.spouse.salary, { monthly: 250, annualBonus: 0 });
+    formData.income.business.monthly = 30;
+    formData.income.otherIncomes = [{ name: '임대수입', annual: 1200, years: 10 }];
+
+    const html = renderStep(formData);
+
+    expect(html).toMatch(/현재 월 소득<\/td><td[^>]*>880만원<\/td>/);
+  });
+
+  it('국민연금·퇴직연금·개인연금 금액을 변경해도 현재 월 소득은 변하지 않는다', () => {
+    const base = structuredClone(initialFormData);
+    Object.assign(base.income.salary, { monthly: 300, annualBonus: 0 });
+    const withPensions = structuredClone(base);
+    Object.assign(withPensions.income.nationalPension, { inputMode: 'direct', monthly: 300, paymentMonths: 120, months: 240 });
+    Object.assign(withPensions.income.severance, { type: 'pension', pensionMonthly: 200, pensionStartAge: 60, pensionMonths: 120 });
+    Object.assign(withPensions.income.personalPension, { type: 'installment', monthly: 100, startAge: 65, months: 120 });
+
+    expect(renderStep(base)).toMatch(/현재 월 소득<\/td><td[^>]*>300만원<\/td>/);
+    expect(renderStep(withPensions)).toMatch(/현재 월 소득<\/td><td[^>]*>300만원<\/td>/);
   });
 });
 

@@ -61,7 +61,7 @@ describe('future finance projection', () => {
     expect(result.targets.map((item) => item.age)).toEqual([60, 70, 80]);
     expect(result.targets[0].livingExpense).toBe(403);
     expect(result.targets[0].pensionBreakdown.nationalPension).toBe(0);
-    expect(result.targets[1].pensionIncome).toBe(327);
+    expect(result.targets[1].pensionIncome).toBe(266);
     expect(result.targets[2].pensionBreakdown.nationalPension).toBeGreaterThan(0);
     expect(result.purchasingPower.map((item) => item.requiredAmount)).toEqual([50000, 67196, 90306]);
   });
@@ -223,6 +223,42 @@ describe('future finance projection', () => {
     expect(result.retirementCashFlowOutlook.at(-1).pensionBreakdown.nationalPension).toBeGreaterThan(0);
   });
 
+  it('applies national pension growth only after each person reaches the statutory start age', () => {
+    const input = makeInput({
+      basic: { birthYear: 1975, retirementAge: 60, lifeExpectancy: 85, hasSpouse: true },
+      income: {
+        nationalPension: { monthly: 130, months: 240 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+      spouse: {
+        birthYear: 1978,
+        nationalPension: { monthly: 60, months: 240 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+    });
+    const selfAtAge = (age) => calculatePensionIncomeAtTarget({ input: { ...input, basic: { ...input.basic, hasSpouse: false } }, currentYear: 2026, years: age - 51 });
+    const spouseOnlyInput = {
+      ...input,
+      basic: { ...input.basic, birthYear: 1978, hasSpouse: false },
+      income: input.spouse,
+    };
+    const spouseAtAge = (age) => calculatePensionIncomeAtTarget({ input: spouseOnlyInput, currentYear: 2026, years: age - 48 });
+
+    expect(selfAtAge(60).nationalPension).toBe(0);
+    expect(selfAtAge(65).nationalPension).toBe(130);
+    expect(selfAtAge(70).nationalPension).toBeCloseTo(130 * (1.021 ** 5), 10);
+    expect(spouseAtAge(60).nationalPension).toBe(0);
+    expect(spouseAtAge(65).nationalPension).toBe(60);
+    expect(spouseAtAge(70).nationalPension).toBeCloseTo(60 * (1.021 ** 5), 10);
+
+    const householdAtSelf70 = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 19 });
+    const spouseComponent = householdAtSelf70.components.find((item) => item.key === 'spouse.nationalPension');
+    expect(spouseComponent.currentAge + 19).toBe(67);
+    expect(spouseComponent.amount).toBeCloseTo(60 * (1.021 ** 2), 10);
+  });
+
   it.each([
     ['direct paymentMonths', { inputMode: 'direct', monthly: 100, months: 12, paymentMonths: 240 }],
     ['simulated contributionMonths', { inputMode: 'simulate', monthly: 100, months: 12, simulate: { contributionMonths: 240 } }],
@@ -328,7 +364,7 @@ describe('buildRetirementAssetProjection', () => {
     const result = project({
       basic: { birthYear: 1986, retirementAge: 60, lifeExpectancy: 90, assumedReturnRate: 0, hasSpouse: false },
       assets: { liquidAssets: { total: 500 } },
-      income: { nationalPension: { monthly: 300, months: 300 } },
+      income: { nationalPension: { monthly: 500, months: 300 } },
     });
     expect(result.depletionAge).not.toBeNull();
     expect(result.depletionAge).toBeLessThan(65);
@@ -668,7 +704,7 @@ describe('buildRetirementAssetProjection', () => {
       const result = project({
         basic: { birthYear: 1986, retirementAge: 60, lifeExpectancy: 90, assumedReturnRate: 0, hasSpouse: false },
         assets: { liquidAssets: { total: 1000 } },
-        income: { nationalPension: { monthly: 300, months: 300 } },
+        income: { nationalPension: { monthly: 500, months: 300 } },
         expense: { retirementLivingCost: 200, retirementLumpSumExpenses: [{ name: '목돈지출', expectedAge: 60, amount: 50000 }] },
       });
       expect(result.depletionAge).toBe(60);

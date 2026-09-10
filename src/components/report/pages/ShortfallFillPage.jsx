@@ -2,15 +2,28 @@ import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import { formatNumber, formatWon } from '../../../utils/format';
 
-export default function ShortfallFillPage({ simulation, aggregates: agg, retirementReadiness, pageNumber, totalPages }) {
+export default function ShortfallFillPage({ simulation, aggregates: agg, retirementReadiness, familyAges, pageNumber, totalPages }) {
   const byPerson = agg.retirementIncomeByPerson;
   const selfMonthlyIncome = byPerson.self.nationalPensionMonthly + byPerson.self.severancePensionMonthly + byPerson.self.personalPensionMonthly;
   const spouseMonthlyIncome = byPerson.spouse.nationalPensionMonthly + byPerson.spouse.severancePensionMonthly + byPerson.spouse.personalPensionMonthly;
   // 국민연금 가입기간 판정이 'unknown'(향후 납부 계속 여부 미확정)이면 해당 인물의 국민연금은
   // aggregate.js에서 0원으로 집계된다 - "확정된 0원"이 아니므로 여기서 확정 숫자로 보여주지 않는다.
-  const selfNationalPensionUnknown = byPerson.self.nationalPensionEligibilityStatus === 'unknown';
-  const spouseNationalPensionUnknown = byPerson.spouse.nationalPensionEligibilityStatus === 'unknown';
   const pensionCell = (amount, isUnknown) => (isUnknown ? '확인 필요' : formatWon(amount));
+  const pendingNationalPensionSchedules = retirementReadiness?.monthlyIncomeCompare?.pensionDisplaySchedules?.nationalPension || [];
+  let pendingScheduleIndex = 0;
+  const nationalPensionCell = ({ amount, eligibilityStatus, retirementAge }) => {
+    if (eligibilityStatus === 'unknown') return '확인 필요';
+    const schedule = amount === 0 && eligibilityStatus === 'eligible'
+      ? pendingNationalPensionSchedules[pendingScheduleIndex++]
+      : null;
+    if (!schedule) return formatWon(amount);
+    return (
+      <>
+        <span>{formatNumber(retirementAge)}세 기준 0만원</span><br />
+        <small>{formatNumber(schedule.startAge)}세부터 월 {formatWon(schedule.monthly)}</small>
+      </>
+    );
+  };
 
   const goals = simulation.lifeGoals;
   const goalGap = goals.preparedAmount - goals.totalGoalAmount;
@@ -22,7 +35,7 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
 
       <h4 className="num-section-title" style={{ fontSize: 14 }}><span className="num-badge">5-1</span>노후목표 생활비 대응을 위한 현금 유입 현황(가구)</h4>
 
-      <h3 className="card-title" style={{ marginBottom: 8 }}>현재 총수입금액</h3>
+      <h3 className="card-title" style={{ marginBottom: 8 }}>주요 재무·은퇴 준비 현황</h3>
       <table className="grade-table compact">
         <thead><tr><th>항목</th><th>본인</th><th>배우자</th></tr></thead>
         <tbody>
@@ -37,8 +50,16 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
           </tr>
           <tr>
             <td>3. 국민연금(월)</td>
-            <td className="num">{pensionCell(byPerson.self.nationalPensionMonthly, selfNationalPensionUnknown)}</td>
-            <td className="num">{pensionCell(byPerson.spouse.nationalPensionMonthly, spouseNationalPensionUnknown)}</td>
+            <td className="num">{nationalPensionCell({
+              amount: byPerson.self.nationalPensionMonthly,
+              eligibilityStatus: byPerson.self.nationalPensionEligibilityStatus,
+              retirementAge: retirementReadiness?.retirementAge,
+            })}</td>
+            <td className="num">{nationalPensionCell({
+              amount: byPerson.spouse.nationalPensionMonthly,
+              eligibilityStatus: byPerson.spouse.nationalPensionEligibilityStatus,
+              retirementAge: familyAges?.spouse?.retirementAge,
+            })}</td>
           </tr>
           <tr>
             <td>4. 퇴직연금(월)</td>
@@ -65,8 +86,8 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
         </tbody>
       </table>
       <div className="fine-print" style={{ margin: '8px 0 16px' }}>
-        국민연금 · 퇴직 시 예상 퇴직급여 일시금 · 개인연금은 본인 · 배우자별로 입력된 값을 그대로 보여드립니다. 급여 · 현금성자산 ·
-        기타수입 · 순자산은 가구 합산으로만 입력받아 본인 · 배우자로 나눠 표시하지 않습니다.
+        연금은 각자의 은퇴 예정 나이 시점에 수령 중인 월 금액을 보여드립니다. 아직 개시 전인 국민연금은 수령 시작 나이와 입력한 예상 월액을 함께 표시합니다.
+        급여 · 현금성자산 · 기타수입 · 순자산은 가구 합산으로만 입력받아 본인 · 배우자로 나눠 표시하지 않습니다.
       </div>
 
       {retirementReadiness && !retirementReadiness.notCalculable && (
