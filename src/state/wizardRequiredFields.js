@@ -37,7 +37,14 @@ const detailedAssetTotal = (formData, type) => {
   }
   if (type === 'pension') {
     const breakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
-    return sum([breakdown.variableAnnuity, breakdown.pensionSavingsAccount, breakdown.irp, ...itemAmounts(breakdown.otherItems, 'amount')]);
+    return sum([
+      breakdown.variableAnnuity,
+      breakdown.pensionSavingsAccount,
+      breakdown.irp,
+      breakdown.selfRetirementPension,
+      getIn(formData, 'basic.hasSpouse') === true ? breakdown.spouseRetirementPension : 0,
+      ...itemAmounts(breakdown.otherItems, 'amount'),
+    ]);
   }
   if (type === 'realEstate') {
     return sum([getIn(formData, 'assets.realEstateAssets.mainProperty'), ...itemAmounts(getIn(formData, 'assets.realEstateAssets.otherItems'), 'amount')]);

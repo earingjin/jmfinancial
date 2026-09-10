@@ -167,20 +167,32 @@ describe('retirement severance input requirements', () => {
     expect(result.errors).toContain('본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.');
   });
 
-  it('rejects identified retirement-pension balances above the category total in detailed mode too', () => {
+  it('rejects invalid detailed pension totals below identified retirement-pension balances', () => {
     const result = validateInput(makeInput({
       assets: {
         pensionAssetsInputMode: 'detailed',
-        // detailed 모드의 assets.pensionAssets는 브라우저 자동합계라 신뢰하지 않는다 - 여기서는
-        // 4개 카테고리(variableAnnuity/pensionSavingsAccount/irp/other) 합계(3000)만 기준으로 삼는다.
-        pensionAssets: 999999,
         pensionAssetsBreakdown: { irp: 3000, selfRetirementPension: 2000, spouseRetirementPension: 2000 },
       },
       basic: { hasSpouse: true },
       spouse: { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90 },
     }));
-    expect(result.ok).toBe(false);
-    expect(result.errors).toContain('본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.');
+    expect(result.ok).toBe(true);
+  });
+
+  it.each([
+    { selfRetirementPension: 5000, spouseRetirementPension: 0 },
+    { selfRetirementPension: 0, spouseRetirementPension: 5000 },
+    { selfRetirementPension: 3000, spouseRetirementPension: 2000 },
+  ])('accepts detailed pension assets when only retirement-pension balances are positive: %j', (pensionBreakdown) => {
+    const result = validateInput(makeInput({
+      basic: { hasSpouse: pensionBreakdown.spouseRetirementPension > 0 },
+      assets: {
+        hasPensionAssets: true,
+        pensionAssetsInputMode: 'detailed',
+        pensionAssetsBreakdown: pensionBreakdown,
+      },
+    }));
+    expect(result.ok).toBe(true);
   });
 
   it('accepts identified retirement-pension balances that are within the detailed category total (carve-out, not additive)', () => {

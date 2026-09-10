@@ -135,6 +135,22 @@ describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
   });
 });
 
+describe('pension asset validation includes retirement pension balances', () => {
+  it.each([
+    ['selfRetirementPension', false],
+    ['spouseRetirementPension', true],
+  ])('accepts %s as the only positive detailed pension asset', (key, hasSpouse) => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.basic.hasSpouse = hasSpouse;
+    formData.assets.hasPensionAssets = true;
+    formData.assets.pensionAssetsInputMode = 'detailed';
+    formData.assets.pensionAssetsBreakdown[key] = 5000;
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath))
+      .not.toContain('assets.pensionAssets');
+  });
+});
+
 // 국민연금 "계속 납부 예정"(futureContributionPlan==='continue') 선택 시 서버(api/_lib/validate.js)는
 // expectedAdditionalContributionMonths를 필수로 요구해 400을 반환하지만, 위저드는 이 항목을 필수로
 // 취급하지 않아 사용자가 원인을 알 수 없이 제출에 반복 실패했다. 이 describe는 그 회귀를 방지한다.

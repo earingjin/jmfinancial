@@ -320,7 +320,14 @@ function detailedAssetTotal(input, type) {
   }
   if (type === 'pension') {
     const asset = input.assets?.pensionAssetsBreakdown || {};
-    return sumValues([asset.variableAnnuity, asset.pensionSavingsAccount, asset.irp, ...arrayValues(asset.otherItems, 'amount')]);
+    return sumValues([
+      asset.variableAnnuity,
+      asset.pensionSavingsAccount,
+      asset.irp,
+      asset.selfRetirementPension,
+      input.basic?.hasSpouse === true ? asset.spouseRetirementPension : 0,
+      ...arrayValues(asset.otherItems, 'amount'),
+    ]);
   }
   if (type === 'realEstate') {
     const asset = input.assets?.realEstateAssets || {};
@@ -496,8 +503,7 @@ export function validateInput(input) {
     // 대신 카테고리별 원본 입력(퇴직연금 항목 제외 4개)을 직접 합산해 비교한다.
     const pensionAssetsTotal = input.assets?.pensionAssetsInputMode === 'simple'
       ? Number(input.assets?.pensionAssets || 0)
-      : Number(pensionBreakdown?.variableAnnuity || 0) + Number(pensionBreakdown?.pensionSavingsAccount || 0)
-        + Number(pensionBreakdown?.irp || 0) + Number(pensionBreakdown?.other || 0);
+      : detailedAssetTotal(input, 'pension');
     if (identifiedRetirementPensionAssets > pensionAssetsTotal) {
       errors.push('본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.');
     }
