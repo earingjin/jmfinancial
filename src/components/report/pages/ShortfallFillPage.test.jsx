@@ -16,13 +16,63 @@ const FAKE_SIMULATION = {
   },
 };
 
-function renderPage(formData, retirementReadiness = { notCalculable: true }) {
+describe('ShortfallFillPage - retirement lump-sum expense display', () => {
+  const projection = (points = []) => ({ notCalculable: false, points });
+
+  it('hides the scheduled lump-sum section when no event exists', () => {
+    const html = renderPage(structuredClone(initialFormData), undefined, projection());
+    expect(html).not.toContain('은퇴 후 예정 목돈지출');
+  });
+
+  it('hides the legacy life-goals table when all legacy categories are zero', () => {
+    const html = renderPage(structuredClone(initialFormData));
+    expect(html).not.toContain('5-2');
+    expect(html).not.toContain('자녀결혼 지원');
+  });
+
+  it.each(['marriageSupport', 'education', 'other'])('shows the legacy table when %s has a positive value', (category) => {
+    const simulation = {
+      ...FAKE_SIMULATION,
+      lifeGoals: {
+        ...FAKE_SIMULATION.lifeGoals,
+        totalGoalAmount: 100,
+        byCategory: { ...FAKE_SIMULATION.lifeGoals.byCategory, [category]: 100 },
+      },
+    };
+    const html = renderPage(structuredClone(initialFormData), undefined, undefined, simulation);
+    expect(html).toContain('생애재무목표');
+  });
+
+  it('renders one scheduled lump-sum event and its total', () => {
+    const html = renderPage(structuredClone(initialFormData), undefined, projection([
+      { age: 65, lumpSumExpense: 5000, lumpSumEvents: [{ name: '자녀결혼 지원', amount: 5000 }] },
+    ]));
+    expect(html).toContain('은퇴 후 예정 목돈지출');
+    expect(html).toContain('자녀결혼 지원');
+    expect(html).toContain('65세');
+    expect(html).toContain('5,000만원');
+    expect(html).toContain('예정 목돈지출 합계');
+  });
+
+  it('renders each event once and totals multiple ages correctly', () => {
+    const html = renderPage(structuredClone(initialFormData), undefined, projection([
+      { age: 65, lumpSumExpense: 5000, lumpSumEvents: [{ name: '차량 교체', amount: 5000 }] },
+      { age: 70, lumpSumExpense: 3000, lumpSumEvents: [{ name: '주택 수리', amount: 3000 }] },
+    ]));
+    expect((html.match(/차량 교체/g) || [])).toHaveLength(1);
+    expect((html.match(/주택 수리/g) || [])).toHaveLength(1);
+    expect(html).toContain('8,000만원');
+  });
+});
+
+function renderPage(formData, retirementReadiness = { notCalculable: true }, retirementAssetProjection, simulation = FAKE_SIMULATION) {
   const aggregates = buildAggregates(buildCanonicalInput(formData));
   return renderToStaticMarkup(
     <ShortfallFillPage
-      simulation={FAKE_SIMULATION}
+      simulation={simulation}
       aggregates={aggregates}
       retirementReadiness={retirementReadiness}
+      retirementAssetProjection={retirementAssetProjection}
       familyAges={{ spouse: formData.basic.hasSpouse ? { retirementAge: Number(formData.spouse.retirementAge) } : null }}
       pageNumber={1}
       totalPages={1}

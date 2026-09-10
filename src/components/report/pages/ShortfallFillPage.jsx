@@ -2,7 +2,7 @@ import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import { formatNumber, formatWon } from '../../../utils/format';
 
-export default function ShortfallFillPage({ simulation, aggregates: agg, retirementReadiness, familyAges, pageNumber, totalPages }) {
+export default function ShortfallFillPage({ simulation, aggregates: agg, retirementReadiness, retirementAssetProjection, familyAges, pageNumber, totalPages }) {
   const byPerson = agg.retirementIncomeByPerson;
   const selfMonthlyIncome = byPerson.self.nationalPensionMonthly + byPerson.self.severancePensionMonthly + byPerson.self.personalPensionMonthly;
   const spouseMonthlyIncome = byPerson.spouse.nationalPensionMonthly + byPerson.spouse.severancePensionMonthly + byPerson.spouse.personalPensionMonthly;
@@ -27,6 +27,22 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
 
   const goals = simulation.lifeGoals;
   const goalGap = goals.preparedAmount - goals.totalGoalAmount;
+  const hasLegacyLifeGoals = [
+    goals.byCategory?.marriageSupport,
+    goals.byCategory?.education,
+    goals.byCategory?.other,
+  ].some((value) => Number(value) > 0);
+  const lumpSumPoints = retirementAssetProjection && !retirementAssetProjection.notCalculable
+    ? retirementAssetProjection.points || []
+    : [];
+  const lumpSumEvents = lumpSumPoints
+    .filter((point) => point.lumpSumEvents?.length > 0)
+    .flatMap((point) => point.lumpSumEvents.map((event, index) => ({
+      ...event,
+      age: point.age,
+      key: `${point.age}-${index}`,
+    })));
+  const lumpSumExpenseTotal = lumpSumPoints.reduce((total, point) => total + Number(point.lumpSumExpense || 0), 0);
 
   return (
     <PageFrame eyebrow="Retirement Cash Flow" pageNumber={pageNumber} totalPages={totalPages}>
@@ -114,6 +130,7 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
         </div>
       )}
 
+      {hasLegacyLifeGoals && <>
       <h4 className="num-section-title" style={{ fontSize: 14 }}><span className="num-badge">5-2</span>생애재무목표</h4>
       <div className="cost-table-grid" style={{ marginTop: 10 }}>
         <table className="grade-table compact">
@@ -143,6 +160,31 @@ export default function ShortfallFillPage({ simulation, aggregates: agg, retirem
         &apos;자녀결혼 지원 · 자녀교육비 · 기타&apos;는 자녀별로 입력하신 생애 목돈 지출 항목의 합계이며, &apos;계&apos;가 양수이면 준비된
         자금이 필요자금보다 여유가 있고, 음수이면 그만큼 부족하다는 뜻입니다.
       </div>
+      </>}
+      {lumpSumEvents.length > 0 && (
+        <section style={{ marginTop: 16 }}>
+          <h3 className="card-title report-subsection-title">은퇴 후 예정 목돈지출</h3>
+          <table className="grade-table compact report-lump-sum-table">
+            <thead><tr><th>용도</th><th>발생 나이</th><th>금액</th></tr></thead>
+            <tbody>
+              {lumpSumEvents.map((event) => (
+                <tr key={event.key}>
+                  <td>{event.name}</td>
+                  <td className="num">{formatNumber(event.age)}세</td>
+                  <td className="num">{formatWon(event.amount)}</td>
+                </tr>
+              ))}
+              <tr className="total-row">
+                <td colSpan={2}>예정 목돈지출 합계</td>
+                <td className="num">{formatWon(lumpSumExpenseTotal)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="fine-print" style={{ marginTop: 8 }}>
+            입력한 목돈지출은 최종 은퇴 자산 전망에서 해당 발생 시점의 지출로 반영됩니다.
+          </p>
+        </section>
+      )}
       </div>
     </PageFrame>
   );

@@ -186,6 +186,9 @@ describe('retirement severance input requirements', () => {
   ])('accepts detailed pension assets when only retirement-pension balances are positive: %j', (pensionBreakdown) => {
     const result = validateInput(makeInput({
       basic: { hasSpouse: pensionBreakdown.spouseRetirementPension > 0 },
+      spouse: pensionBreakdown.spouseRetirementPension > 0
+        ? { birthYear: 1988, retirementAge: 65, lifeExpectancy: 90 }
+        : {},
       assets: {
         hasPensionAssets: true,
         pensionAssetsInputMode: 'detailed',
