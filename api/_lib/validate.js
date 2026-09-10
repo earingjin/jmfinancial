@@ -280,6 +280,8 @@ const ARRAY_FIELDS = [
 
 const DEBT_BREAKDOWN_CATEGORIES = ['mortgage', 'depositLoan', 'businessLoan', 'buildingLoan', 'carLoan', 'studentLoan', 'otherLoan'];
 const SAVINGS_BREAKDOWN_CATEGORIES = ['installment', 'isa', 'variableAnnuity', 'pensionSavings', 'irp', 'subscription', 'stocks', 'parkingAccount'];
+const LIVING_COST_CATEGORIES = ['rent', 'maintenance', 'utilities', 'fuel', 'carInsurance', 'clothing', 'fourInsurances', 'food', 'communication', 'medical', 'subscription'];
+const LIQUID_ASSET_CATEGORIES = ['deposit', 'savings', 'cma', 'subscription', 'emergencyFund'];
 const NAMED_ARRAY_PATHS = [
   'income.regularIncomes', 'income.otherIncomes', 'expense.debts', 'expense.otherExpenses',
   'expense.healthInsurance.items', 'assets.liquidAssets.customItems', 'assets.currentLivingCost.breakdown.otherItems',
@@ -287,6 +289,137 @@ const NAMED_ARRAY_PATHS = [
   'assets.otherAssets.items', 'assets.savingsPlan.customItems', 'assets.debtStatus.customItems',
   'expense.retirementLumpSumExpenses',
 ];
+
+const isNonNegativeNumber = (value) => !isBlank(value) && Number.isFinite(Number(value)) && Number(value) >= 0;
+const isPositiveNumber = (value) => !isBlank(value) && Number.isFinite(Number(value)) && Number(value) > 0;
+const sumValues = (values) => values.reduce((total, value) => total + (Number(value) || 0), 0);
+const arrayValues = (items, key) => (Array.isArray(items) ? items : []).map((item) => item?.[key]);
+
+function detailedCurrentLivingCostHasValue(input) {
+  const breakdown = input.assets?.currentLivingCost?.breakdown || {};
+  return [...LIVING_COST_CATEGORIES.map((key) => breakdown[key]), ...arrayValues(breakdown.otherItems, 'amount')]
+    .some(isNonNegativeNumber);
+}
+
+function detailedSavingsTotal(input) {
+  const savings = input.assets?.savingsPlan || {};
+  return sumValues([
+    ...SAVINGS_BREAKDOWN_CATEGORIES.map((key) => savings.breakdown?.[key]?.monthly),
+    ...arrayValues(savings.customItems, 'monthly'),
+  ]);
+}
+
+function detailedAssetTotal(input, type) {
+  if (type === 'liquid') {
+    const asset = input.assets?.liquidAssets || {};
+    return sumValues([...LIQUID_ASSET_CATEGORIES.map((key) => asset.breakdown?.[key]), ...arrayValues(asset.customItems, 'amount')]);
+  }
+  if (type === 'financial') {
+    const asset = input.assets?.financialAssets || {};
+    return sumValues([asset.stocks, asset.funds, asset.bonds, ...arrayValues(asset.otherItems, 'amount')]);
+  }
+  if (type === 'pension') {
+    const asset = input.assets?.pensionAssetsBreakdown || {};
+    return sumValues([asset.variableAnnuity, asset.pensionSavingsAccount, asset.irp, ...arrayValues(asset.otherItems, 'amount')]);
+  }
+  if (type === 'realEstate') {
+    const asset = input.assets?.realEstateAssets || {};
+    return sumValues([asset.mainProperty, ...arrayValues(asset.otherItems, 'amount')]);
+  }
+  return sumValues(arrayValues(input.assets?.otherAssets?.items, 'amount'));
+}
+
+function detailedDebtItems(input) {
+  const debt = input.assets?.debtStatus || {};
+  return [...DEBT_BREAKDOWN_CATEGORIES.map((key) => debt.breakdown?.[key] || {}), ...(Array.isArray(debt.customItems) ? debt.customItems : [])];
+}
+
+function validateCurrentFinancialPresence(input, errors) {
+  if (input.income?.salary?.hasSalary === true && !isPositiveNumber(input.income.salary.monthly)) {
+    errors.push('income.salary.monthly 값은 급여 있음 상태에서 0보다 커야 합니다.');
+  }
+  if (input.basic?.hasSpouse === true && input.spouse?.salary?.hasSalary === true && !isPositiveNumber(input.spouse.salary.monthly)) {
+    errors.push('spouse.salary.monthly 값은 배우자 급여 있음 상태에서 0보다 커야 합니다.');
+  }
+
+  const living = input.assets?.currentLivingCost || {};
+  const livingValid = living.inputMode === 'detailed'
+    ? detailedCurrentLivingCostHasValue(input)
+    : isNonNegativeNumber(living.monthly);
+  if (!livingValid) errors.push('assets.currentLivingCost.monthly 값은 현재 생활비 입력에서 필수입니다.');
+
+  if (input.assets?.insurance?.hasInsurance === true && !isNonNegativeNumber(input.assets.insurance.monthlyPremium)) {
+    errors.push('assets.insurance.monthlyPremium 값은 보험 있음 상태에서 필수입니다.');
+  }
+
+  const savings = input.assets?.savingsPlan || {};
+  if (savings.hasSavings === true) {
+    const savingsValid = savings.inputMode === 'detailed' ? detailedSavingsTotal(input) > 0 : isPositiveNumber(savings.monthly);
+    if (!savingsValid) errors.push('assets.savingsPlan.monthly 값은 저축 있음 상태에서 0보다 커야 합니다.');
+  }
+
+  const assetRules = [
+    [input.assets?.liquidAssets, 'liquid', 'assets.liquidAssets.total'],
+    [input.assets?.financialAssets, 'financial', 'assets.financialAssets.total'],
+    [{ ...input.assets, inputMode: input.assets?.pensionAssetsInputMode, total: input.assets?.pensionAssets, hasAssets: input.assets?.hasPensionAssets }, 'pension', 'assets.pensionAssets'],
+    [input.assets?.realEstateAssets, 'realEstate', 'assets.realEstateAssets.total'],
+    [input.assets?.otherAssets, 'other', 'assets.otherAssets.total'],
+  ];
+  assetRules.forEach(([asset, type, path]) => {
+    if (asset?.hasAssets !== true) return;
+    const valid = asset.inputMode === 'detailed' ? detailedAssetTotal(input, type) > 0 : isPositiveNumber(asset.total);
+    if (!valid) errors.push(`${path} 값은 자산 있음 상태에서 0보다 커야 합니다.`);
+  });
+
+  const debt = input.assets?.debtStatus || {};
+  if (debt.hasDebt === true) {
+    if (debt.inputMode === 'detailed') {
+      const items = detailedDebtItems(input);
+      if (sumValues(items.map((item) => item.principal)) <= 0) {
+        errors.push('assets.debtStatus.totalBalance 값은 부채 있음 상태에서 0보다 커야 합니다.');
+      }
+      const hasBurden = items.some((item) => isPositiveNumber(item.principal)
+        && isNonNegativeNumber(item.repaymentType === 'equalPrincipal' ? item.monthlyRepayment : item.monthlyInterest));
+      if (!hasBurden) errors.push('assets.debtStatus.monthlyRepayment 값은 부채 있음 상태에서 필수입니다.');
+    } else {
+      if (!isPositiveNumber(debt.totalBalance)) errors.push('assets.debtStatus.totalBalance 값은 부채 있음 상태에서 0보다 커야 합니다.');
+      if (!isNonNegativeNumber(debt.monthlyRepayment)) errors.push('assets.debtStatus.monthlyRepayment 값은 부채 있음 상태에서 필수입니다.');
+    }
+  }
+}
+
+function validateCompleteOtherIncomeRows(input, errors) {
+  const items = input.income?.regularIncomes;
+  if (!Array.isArray(items) || items.length > MAX_ARRAY_LENGTH) return;
+  items.forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item) || item.type === 'business') return;
+    const active = !isBlank(item.name) || !isBlank(item.annual) || !isBlank(item.years);
+    if (!active) return;
+    const path = `income.regularIncomes.${index}`;
+    if (isBlank(item.name)) errors.push(`${path}.name 값은 필수 입력 항목입니다.`);
+    if (!isPositiveNumber(item.annual)) errors.push(`${path}.annual 값은 0보다 커야 합니다.`);
+    if (!isPositiveNumber(item.years)) errors.push(`${path}.years 값은 0보다 커야 합니다.`);
+  });
+}
+
+function validateCompleteDebtRows(input, errors) {
+  const debt = input.assets?.debtStatus;
+  if (debt?.hasDebt !== true || debt.inputMode !== 'detailed') return;
+  const customItems = Array.isArray(debt.customItems) ? debt.customItems : [];
+  const rows = [
+    ...DEBT_BREAKDOWN_CATEGORIES.map((key) => ({ path: `assets.debtStatus.breakdown.${key}`, item: debt.breakdown?.[key] || {}, custom: false })),
+    ...customItems.map((item, index) => ({ path: `assets.debtStatus.customItems.${index}`, item, custom: true })),
+  ];
+  rows.forEach(({ path, item, custom }) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    const burdenKey = item.repaymentType === 'equalPrincipal' ? 'monthlyRepayment' : 'monthlyInterest';
+    const active = !isBlank(item.principal) || !isBlank(item[burdenKey]) || (custom && !isBlank(item.name));
+    if (!active) return;
+    if (!isPositiveNumber(item.principal)) errors.push(`${path}.principal 값은 0보다 커야 합니다.`);
+    if (!isNonNegativeNumber(item[burdenKey])) errors.push(`${path}.${burdenKey} 값은 필수 입력 항목입니다.`);
+    if (custom && isBlank(item.name)) errors.push(`${path}.name 값은 필수 입력 항목입니다.`);
+  });
+}
 
 export function validateInput(input) {
   const errors = [];
@@ -342,6 +475,8 @@ export function validateInput(input) {
     errors.push('노후 월 평균 생활비는 필수 입력 항목입니다.');
   }
 
+  validateCurrentFinancialPresence(input, errors);
+
   checkBirthYearField(errors, input.basic?.birthYear, 'basic.birthYear');
   checkBirthYearField(errors, input.spouse?.birthYear, 'spouse.birthYear');
 
@@ -395,6 +530,9 @@ export function validateInput(input) {
     });
   });
 
+  validateCompleteOtherIncomeRows(input, errors);
+  validateCompleteDebtRows(input, errors);
+
   // 체크박스 그룹은 객체 목록이 아니라 승인된 문자열 키 목록이다.
   const expenseReductionTargets = getPath(input, 'scenarios.expenseReduction.targets');
   if (expenseReductionTargets !== undefined && expenseReductionTargets !== null) {
@@ -429,6 +567,12 @@ export function validateInput(input) {
       }
       if (isInUse && isBlank(item.name)) {
         errors.push(`${path}.name 값은 필수 입력 항목입니다.`);
+      }
+      if (isInUse && !isPositiveNumber(item.amount)) {
+        errors.push(`${path}.amount 값은 0보다 커야 합니다.`);
+      }
+      if (isInUse && isBlank(item.expectedAge)) {
+        errors.push(`${path}.expectedAge 값은 필수 입력 항목입니다.`);
       }
 
       if (!isBlank(item.expectedAge) && !isBlank(lumpSumRetirementAge) && Number(item.expectedAge) < Number(lumpSumRetirementAge)) {

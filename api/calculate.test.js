@@ -25,6 +25,17 @@ function buildMinimalValidInput() {
   input.income.severance.lumpsumAge = '65';
   // personalPension.type 기본값(installment)은 startAge가 필수라 채워준다(validate.js 참고).
   input.income.personalPension.startAge = '65';
+  // 조건부 재무 항목은 이 최소 fixture에서 비활성화하고, 각 테스트가 사용하는 항목만 켠다.
+  input.income.salary.hasSalary = false;
+  input.assets.currentLivingCost.monthly = '0';
+  input.assets.insurance.hasInsurance = false;
+  input.assets.savingsPlan.hasSavings = false;
+  input.assets.liquidAssets.hasAssets = false;
+  input.assets.financialAssets.hasAssets = false;
+  input.assets.hasPensionAssets = false;
+  input.assets.realEstateAssets.hasAssets = false;
+  input.assets.otherAssets.hasAssets = false;
+  input.assets.debtStatus.hasDebt = false;
   return input;
 }
 
@@ -90,6 +101,7 @@ describe('POST /api/calculate 응답에서 화면 미사용 필드 제외', () =
 describe('retirementSavingsInputVersion: 2 - 전체 API 흐름(validate → canonicalInput → aggregate → indicators)', () => {
   it('breakdown 총저축 100(연금저축 20 + IRP 30 포함) + 추가 노후저축 10 → 총저축 110 / 노후저축 60 / 지표 약 54.5%', async () => {
     const input = buildMinimalValidInput();
+    input.assets.savingsPlan.hasSavings = true;
     input.assets.savingsPlan.inputMode = 'detailed';
     input.assets.savingsPlan.breakdown.installment.monthly = '50';
     input.assets.savingsPlan.breakdown.pensionSavings.monthly = '20';
@@ -107,6 +119,7 @@ describe('retirementSavingsInputVersion: 2 - 전체 API 흐름(validate → cano
 describe('POST /api/calculate liquid asset subscription input', () => {
   it('does not classify detailed liquid assets as missing when only subscription is entered', async () => {
     const input = buildMinimalValidInput();
+    input.assets.liquidAssets.hasAssets = true;
     input.assets.liquidAssets.inputMode = 'detailed';
     input.assets.liquidAssets.breakdown.subscription = '1000';
 

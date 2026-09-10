@@ -8,7 +8,7 @@ import { changeDebtInputMode, debtDetailedTotals } from './inputModeTransitions'
 const monthlyBurdenOf = (item) =>
   (!item || item.repaymentType !== 'equalPrincipal' ? Number(item?.monthlyInterest) : Number(item?.monthlyRepayment)) || 0;
 
-function LoanFields({ item, onChange }) {
+function LoanFields({ item, onChange, fieldPath }) {
   const repaymentType = item.repaymentType || 'interestOnly';
   return (
     <>
@@ -33,6 +33,7 @@ function LoanFields({ item, onChange }) {
           <span className="field-label">대출 원금</span>
           <div className="field-input-row">
             <FormattedNumberInput
+              id={`${fieldPath}.principal`}
               type="number"
               min={0}
               inputMode="numeric"
@@ -47,6 +48,7 @@ function LoanFields({ item, onChange }) {
             <span className="field-label">월 이자 금액</span>
             <div className="field-input-row">
               <FormattedNumberInput
+                id={`${fieldPath}.monthlyInterest`}
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -61,6 +63,7 @@ function LoanFields({ item, onChange }) {
             <span className="field-label">월 상환 금액</span>
             <div className="field-input-row">
               <FormattedNumberInput
+                id={`${fieldPath}.monthlyRepayment`}
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -75,6 +78,7 @@ function LoanFields({ item, onChange }) {
           <span className="field-label">상환 기간</span>
           <div className="field-input-row">
             <FormattedNumberInput
+              id={`${fieldPath}.months`}
               type="number"
               min={0}
               inputMode="numeric"
@@ -276,7 +280,7 @@ export default function DebtBreakdownField({
             return (
               <Fragment key={c.key}>
                 <p className="field-label" style={{ marginTop: 14, marginBottom: 8 }}>{c.label}</p>
-                <LoanFields item={item} onChange={(field, value) => update(c.key, field, value)} />
+                <LoanFields item={item} fieldPath={`${basePath}.${c.key}`} onChange={(field, value) => update(c.key, field, value)} />
                 <button type="button" className="repeatable-remove" onClick={() => removePresetItem(c.key)}>
                   이 항목 삭제
                 </button>
@@ -293,13 +297,14 @@ export default function DebtBreakdownField({
                 <label className="field" style={{ marginBottom: 10 }}>
                   <span className="field-label">대출 이름</span>
                   <input
+                    id={`${customPath}.${index}.name`}
                     type="text"
                     placeholder="예: 신용대출"
                     value={item.name}
                     onChange={(e) => updateCustomItem(index, 'name', e.target.value)}
                   />
                 </label>
-                <LoanFields item={item} onChange={(field, value) => updateCustomItem(index, field, value)} />
+                <LoanFields item={item} fieldPath={`${customPath}.${index}`} onChange={(field, value) => updateCustomItem(index, field, value)} />
                 <button type="button" className="repeatable-remove" onClick={() => removeCustomItem(index)}>
                   이 항목 삭제
                 </button>

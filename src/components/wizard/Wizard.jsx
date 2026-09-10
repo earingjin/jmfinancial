@@ -180,7 +180,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   // path·label을 함께 들고 있어야 안내 문구에 항목명을 나열하고, 그 중 첫 번째 항목으로 화면을
   // 스크롤·포커스할 수 있다(NumberField가 path를 그대로 input id로 쓴다). 판정 조건 자체는
   // wizardRequiredFields.js 참고(api/_lib/validate.js와 동일 기준).
-  const { missingIncomeFields, missingExpenseFields, basicInfoMissing, retirementLivingCostMissing, requiredErrorMessage } =
+  const { missingIncomeFields, missingExpenseFields, basicInfoMissing, retirementLivingCostMissing, firstMissingGroup, requiredErrorMessage } =
     computeWizardRequiredFields(formData);
 
   // 안내 문구가 가리키는 첫 번째 미입력 항목으로 화면을 이동한다. moveToStep이 다른 스텝으로
@@ -228,16 +228,14 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   };
 
   const submit = async () => {
-    if (basicInfoMissing) {
+    if (firstMissingGroup) {
+      const firstMissingPath = firstMissingGroup.missingFields[0][0];
       setShowRequiredError(true);
-      moveToStep(STEPS.findIndex((s) => s.key === 'income'), getRequiredFieldSubStep('income', missingIncomeFields[0][0], hasSpouse));
-      scrollToField(missingIncomeFields[0][0]);
-      return;
-    }
-    if (retirementLivingCostMissing) {
-      setShowRequiredError(true);
-      moveToStep(STEPS.findIndex((s) => s.key === 'expense'), getRequiredFieldSubStep('expense', missingExpenseFields[0][0]));
-      scrollToField(missingExpenseFields[0][0]);
+      moveToStep(
+        STEPS.findIndex((s) => s.key === firstMissingGroup.stepKey),
+        getRequiredFieldSubStep(firstMissingGroup.stepKey, firstMissingPath, hasSpouse),
+      );
+      scrollToField(firstMissingPath);
       return;
     }
     setShowRequiredError(false);

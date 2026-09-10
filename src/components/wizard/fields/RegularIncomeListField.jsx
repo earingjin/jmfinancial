@@ -32,6 +32,7 @@ export default function RegularIncomeListField({ path, otherIncomesPath }) {
             <label className="field">
               <span className="field-label">수입 항목 이름</span>
               <input
+                id={`income.regularIncomes.${index}.name`}
                 type="text"
                 placeholder="예: 임대수입, 배당수입 등"
                 value={item.name}
@@ -314,6 +315,7 @@ A4 전용 계산 로직을 추가하지 않는다.
               <span className="field-label">연간 수입 금액</span>
               <div className="field-input-row">
                 <FormattedNumberInput
+                  id={`income.regularIncomes.${index}.annual`}
                   type="number"
                   min={0}
                   value={item.annual}
@@ -326,6 +328,7 @@ A4 전용 계산 로직을 추가하지 않는다.
               <span className="field-label">월수입 흐름 향후 유지예상 기간</span>
               <div className="field-input-row">
                 <FormattedNumberInput
+                  id={`income.regularIncomes.${index}.years`}
                   type="number"
                   value={item.years}
                   onChange={(e) => updateItem(index, 'years', e.target.value === '' ? '' : Number(e.target.value))}

@@ -16,6 +16,17 @@ const fillBasicRequired = (formData) => {
   formData.income.severance.lumpsumAge = 65;
   formData.spouse.severance.lumpsum = 3000;
   formData.spouse.severance.lumpsumAge = 65;
+  formData.income.salary.hasSalary = false;
+  formData.spouse.salary.hasSalary = false;
+  formData.assets.currentLivingCost.monthly = 0;
+  formData.assets.insurance.hasInsurance = false;
+  formData.assets.savingsPlan.hasSavings = false;
+  formData.assets.liquidAssets.hasAssets = false;
+  formData.assets.financialAssets.hasAssets = false;
+  formData.assets.hasPensionAssets = false;
+  formData.assets.realEstateAssets.hasAssets = false;
+  formData.assets.otherAssets.hasAssets = false;
+  formData.assets.debtStatus.hasDebt = false;
 };
 
 describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
@@ -30,6 +41,7 @@ describe('computeWizardRequiredFields - 기본 정보(1. 수입)', () => {
       'basic.retirementAge',
       'basic.lifeExpectancy',
       'basic.serviceYears',
+      'income.salary.monthly',
       'income.severance.lumpsum',
       'income.severance.lumpsumAge',
       'income.personalPension.startAge',
@@ -304,13 +316,15 @@ describe('computeWizardRequiredFields - 지출(2. 지출)', () => {
     expect(result.retirementLivingCostMissing).toBe(true);
     expect(result.missingExpenseFields.map(([path]) => path)).toEqual([
       'expense.retirementLumpSumExpenses.0.name',
+      'expense.retirementLumpSumExpenses.0.expectedAge',
     ]);
     expect(getWizardRequiredFieldDefinitions(formData).expenseRequiredFields).toContainEqual([
       'expense.retirementLumpSumExpenses.0.name',
       '목돈지출 계획 1번째 항목의 지출 용도',
       true,
     ]);
-    expect(result.requiredErrorMessage).toBe('"2. 지출"에서 다음 항목을 입력해 주세요: 목돈지출 계획 1번째 항목의 지출 용도');
+    expect(result.requiredErrorMessage).toContain('목돈지출 계획 1번째 항목의 지출 용도');
+    expect(result.requiredErrorMessage).toContain('목돈지출 계획 1번째 항목의 발생 나이');
   });
 
   it('완전히 비어 있는 목돈지출 항목(추가만 하고 아무것도 안 채움)은 필수로 취급하지 않는다', () => {
@@ -383,5 +397,193 @@ describe('필수 입력 필드 → wizardScreens 오류 이동 연결', () => {
         }
       }
     }
+  });
+});
+
+describe('computeWizardRequiredFields - 현재 재무상태 조건부 필수값', () => {
+  const baseForm = () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.type = 'none';
+    formData.expense.retirementLivingCost = 200;
+    return formData;
+  };
+
+  it('급여 있음은 양수 월급을 요구하고, 배우자는 배우자 정보가 활성화된 때만 검사한다', () => {
+    const formData = baseForm();
+    formData.income.salary.hasSalary = true;
+    expect(computeWizardRequiredFields(formData).missingIncomeFields.map(([path]) => path)).toContain('income.salary.monthly');
+    formData.income.salary.monthly = 0;
+    expect(computeWizardRequiredFields(formData).missingIncomeFields.map(([path]) => path)).toContain('income.salary.monthly');
+    formData.income.salary.monthly = 450;
+    expect(computeWizardRequiredFields(formData).missingIncomeFields.map(([path]) => path)).not.toContain('income.salary.monthly');
+
+    formData.spouse.salary.hasSalary = true;
+    expect(computeWizardRequiredFields(formData).missingIncomeFields.map(([path]) => path)).not.toContain('spouse.salary.monthly');
+    formData.basic.hasSpouse = true;
+    formData.spouse.birthYear = 1972;
+    formData.spouse.retirementAge = 65;
+    formData.spouse.lifeExpectancy = 90;
+    formData.spouse.personalPension.type = 'none';
+    expect(computeWizardRequiredFields(formData).missingIncomeFields.map(([path]) => path)).toContain('spouse.salary.monthly');
+    formData.spouse.salary.monthly = 250;
+    expect(computeWizardRequiredFields(formData).missingIncomeFields.map(([path]) => path)).not.toContain('spouse.salary.monthly');
+  });
+
+  it('현재 생활비는 공란을 거부하고 명시적 0을 허용하며, 상세입력은 저장된 금액 하나 이상을 요구한다', () => {
+    const formData = baseForm();
+    formData.assets.currentLivingCost.monthly = '';
+    expect(computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path)).toContain('assets.currentLivingCost.monthly');
+    formData.assets.currentLivingCost.monthly = 0;
+    expect(computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path)).not.toContain('assets.currentLivingCost.monthly');
+    formData.assets.currentLivingCost.inputMode = 'detailed';
+    expect(computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path)).toContain('assets.currentLivingCost.monthly');
+    formData.assets.currentLivingCost.breakdown.food = 0;
+    expect(computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path)).not.toContain('assets.currentLivingCost.monthly');
+  });
+
+  it('보험 있음은 보험료 입력을 요구하되 명시적 0을 허용한다', () => {
+    const formData = baseForm();
+    formData.assets.insurance.hasInsurance = true;
+    expect(computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path)).toContain('assets.insurance.monthlyPremium');
+    formData.assets.insurance.monthlyPremium = 0;
+    expect(computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path)).not.toContain('assets.insurance.monthlyPremium');
+    formData.assets.insurance.hasInsurance = false;
+    formData.assets.insurance.monthlyPremium = '';
+    expect(computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path)).not.toContain('assets.insurance.monthlyPremium');
+  });
+
+  it('저축 있음은 simple과 detailed 모두 실제 합계가 양수여야 한다', () => {
+    const formData = baseForm();
+    formData.assets.savingsPlan.hasSavings = true;
+    for (const value of ['', 0]) {
+      formData.assets.savingsPlan.monthly = value;
+      expect(computeWizardRequiredFields(formData).missingSavingsFields).toHaveLength(1);
+    }
+    formData.assets.savingsPlan.monthly = 10;
+    expect(computeWizardRequiredFields(formData).missingSavingsFields).toHaveLength(0);
+    formData.assets.savingsPlan.inputMode = 'detailed';
+    expect(computeWizardRequiredFields(formData).missingSavingsFields).toHaveLength(1);
+    formData.assets.savingsPlan.breakdown.installment.monthly = 10;
+    expect(computeWizardRequiredFields(formData).missingSavingsFields).toHaveLength(0);
+  });
+
+  it.each([
+    ['liquidAssets', 'assets.liquidAssets.total', (data, value) => { data.assets.liquidAssets.breakdown.deposit = value; }],
+    ['financialAssets', 'assets.financialAssets.total', (data, value) => { data.assets.financialAssets.stocks = value; }],
+    ['pensionAssets', 'assets.pensionAssets', (data, value) => { data.assets.pensionAssetsBreakdown.irp = value; }],
+    ['realEstateAssets', 'assets.realEstateAssets.total', (data, value) => { data.assets.realEstateAssets.mainProperty = value; }],
+    ['otherAssets', 'assets.otherAssets.total', (data, value) => { data.assets.otherAssets.items = [{ name: '기타', amount: value }]; }],
+  ])('%s 있음은 simple과 detailed 모두 양수 합계를 요구한다', (type, path, setDetail) => {
+    const formData = baseForm();
+    if (type === 'pensionAssets') {
+      formData.assets.hasPensionAssets = true;
+      formData.assets.pensionAssets = 0;
+    } else {
+      formData.assets[type].hasAssets = true;
+      formData.assets[type].total = 0;
+    }
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath)).toContain(path);
+    if (type === 'pensionAssets') {
+      formData.assets.pensionAssets = 1;
+      formData.assets.pensionAssetsInputMode = 'detailed';
+    } else {
+      formData.assets[type].total = 1;
+      formData.assets[type].inputMode = 'detailed';
+    }
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath)).toContain(path);
+    setDetail(formData, 1);
+    expect(computeWizardRequiredFields(formData).missingAssetFields.map(([fieldPath]) => fieldPath)).not.toContain(path);
+  });
+
+  it('부채 있음은 양수 잔액과 입력된 월 부담을 요구하며 월 부담 0은 허용한다', () => {
+    const formData = baseForm();
+    formData.assets.debtStatus.hasDebt = true;
+    expect(computeWizardRequiredFields(formData).missingDebtFields).toHaveLength(2);
+    formData.assets.debtStatus.totalBalance = 100;
+    expect(computeWizardRequiredFields(formData).missingDebtFields).toHaveLength(1);
+    formData.assets.debtStatus.monthlyRepayment = 0;
+    expect(computeWizardRequiredFields(formData).missingDebtFields).toHaveLength(0);
+
+    formData.assets.debtStatus.inputMode = 'detailed';
+    expect(computeWizardRequiredFields(formData).missingDebtFields).toHaveLength(2);
+    formData.assets.debtStatus.breakdown.mortgage.principal = 100;
+    formData.assets.debtStatus.breakdown.mortgage.monthlyInterest = 0;
+    expect(computeWizardRequiredFields(formData).missingDebtFields).toHaveLength(0);
+  });
+});
+
+describe('computeWizardRequiredFields - 반복·상세 행 완결성', () => {
+  const baseForm = () => {
+    const formData = structuredClone(initialFormData);
+    fillBasicRequired(formData);
+    formData.income.personalPension.type = 'none';
+    formData.expense.retirementLivingCost = 200;
+    return formData;
+  };
+
+  it.each([
+    ['interestOnly', 'monthlyInterest'],
+    ['equalPrincipal', 'monthlyRepayment'],
+  ])('상세 대출(%s)은 원금과 선택 방식의 월 부담을 행 단위로 요구한다', (repaymentType, burdenKey) => {
+    const formData = baseForm();
+    formData.assets.debtStatus.hasDebt = true;
+    formData.assets.debtStatus.inputMode = 'detailed';
+    const mortgage = formData.assets.debtStatus.breakdown.mortgage;
+    mortgage.repaymentType = repaymentType;
+
+    expect(computeWizardRequiredFields(formData).missingDebtFields.map(([path]) => path))
+      .not.toContain('assets.debtStatus.breakdown.mortgage.principal');
+    mortgage.principal = 100;
+    expect(computeWizardRequiredFields(formData).missingDebtFields.map(([path]) => path))
+      .toContain(`assets.debtStatus.breakdown.mortgage.${burdenKey}`);
+    mortgage[burdenKey] = 0;
+    expect(computeWizardRequiredFields(formData).missingDebtFields).toHaveLength(0);
+    mortgage[burdenKey] = 10;
+    expect(computeWizardRequiredFields(formData).missingDebtFields).toHaveLength(0);
+  });
+
+  it('월 부담만 입력한 대출과 이름 없는 추가 대출을 거부한다', () => {
+    const formData = baseForm();
+    formData.assets.debtStatus.hasDebt = true;
+    formData.assets.debtStatus.inputMode = 'detailed';
+    formData.assets.debtStatus.breakdown.mortgage.monthlyInterest = 10;
+    expect(computeWizardRequiredFields(formData).missingDebtFields.map(([path]) => path))
+      .toContain('assets.debtStatus.breakdown.mortgage.principal');
+
+    formData.assets.debtStatus.breakdown.mortgage = { repaymentType: 'interestOnly', principal: 100, monthlyInterest: 0 };
+    formData.assets.debtStatus.customItems = [{ name: '', repaymentType: 'equalPrincipal', principal: 50, monthlyRepayment: 0, months: '' }];
+    expect(computeWizardRequiredFields(formData).missingDebtFields.map(([path]) => path))
+      .toContain('assets.debtStatus.customItems.0.name');
+  });
+
+  it.each([
+    [{ name: '', annual: '', years: '' }, []],
+    [{ name: '임대수입', annual: '', years: '' }, ['annual', 'years']],
+    [{ name: '', annual: 1200, years: '' }, ['name', 'years']],
+    [{ name: '', annual: '', years: 5 }, ['name', 'annual']],
+    [{ name: '임대수입', annual: 1200, years: '' }, ['years']],
+    [{ name: '임대수입', annual: 1200, years: 5 }, []],
+  ])('기타 정기수입 행 %j의 완결성을 검사한다', (item, missingKeys) => {
+    const formData = baseForm();
+    formData.income.regularIncomes = [{ type: 'other', ...item }];
+    const paths = computeWizardRequiredFields(formData).missingIncomeFields.map(([path]) => path);
+    expect(paths.filter((path) => path.startsWith('income.regularIncomes.0.')))
+      .toEqual(missingKeys.map((key) => `income.regularIncomes.0.${key}`));
+  });
+
+  it.each([
+    [{ name: '', amount: '', expectedAge: '' }, []],
+    [{ name: '차량 교체', amount: '', expectedAge: '' }, ['amount', 'expectedAge']],
+    [{ name: '', amount: 1000, expectedAge: '' }, ['name', 'expectedAge']],
+    [{ name: '', amount: '', expectedAge: 70 }, ['name', 'amount']],
+    [{ name: '차량 교체', amount: 1000, expectedAge: '' }, ['expectedAge']],
+    [{ name: '차량 교체', amount: 1000, expectedAge: 70 }, []],
+  ])('목돈지출 행 %j의 완결성을 검사한다', (item, missingKeys) => {
+    const formData = baseForm();
+    formData.expense.retirementLumpSumExpenses = [item];
+    const paths = computeWizardRequiredFields(formData).missingExpenseFields.map(([path]) => path);
+    expect(paths.filter((path) => path.startsWith('expense.retirementLumpSumExpenses.0.')))
+      .toEqual(missingKeys.map((key) => `expense.retirementLumpSumExpenses.0.${key}`));
   });
 });

@@ -36,6 +36,108 @@ describe('validateInput - baseline', () => {
   });
 });
 
+describe('validateInput - current financial conditional requirements', () => {
+  it('requires positive self and active-spouse salary amounts', () => {
+    expect(validateInput(makeInput({ income: { salary: { hasSalary: true, monthly: '' } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ income: { salary: { hasSalary: true, monthly: 0 } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ income: { salary: { hasSalary: true, monthly: 450 } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ basic: { hasSpouse: false }, spouse: { salary: { hasSalary: true, monthly: '' } } })).ok).toBe(true);
+    const spouse = { basic: { hasSpouse: true }, spouse: { birthYear: 1987, retirementAge: 65, lifeExpectancy: 90, salary: { hasSalary: true } } };
+    expect(validateInput(makeInput({ ...spouse, spouse: { ...spouse.spouse, salary: { hasSalary: true, monthly: '' } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ ...spouse, spouse: { ...spouse.spouse, salary: { hasSalary: true, monthly: 250 } } })).ok).toBe(true);
+  });
+
+  it('distinguishes blank from explicit zero for living cost and insurance', () => {
+    expect(validateInput(makeInput({ assets: { currentLivingCost: { monthly: '' } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { currentLivingCost: { monthly: 0 } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ assets: { currentLivingCost: { inputMode: 'detailed', monthly: 0, breakdown: {} } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { currentLivingCost: { inputMode: 'detailed', monthly: 0, breakdown: { food: 0 } } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ assets: { insurance: { hasInsurance: true, monthlyPremium: '' } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { insurance: { hasInsurance: true, monthlyPremium: 0 } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ assets: { insurance: { hasInsurance: false, monthlyPremium: '' } } })).ok).toBe(true);
+  });
+
+  it('requires a positive simple or detailed savings amount only when savings is active', () => {
+    expect(validateInput(makeInput({ assets: { savingsPlan: { hasSavings: true, inputMode: 'simple', monthly: '' } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { savingsPlan: { hasSavings: true, inputMode: 'simple', monthly: 0 } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { savingsPlan: { hasSavings: true, inputMode: 'simple', monthly: 200 } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ assets: { savingsPlan: { hasSavings: true, inputMode: 'detailed', breakdown: {} } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { savingsPlan: { hasSavings: true, inputMode: 'detailed', breakdown: { installment: { monthly: 10 } } } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ assets: { savingsPlan: { hasSavings: false, monthly: '' } } })).ok).toBe(true);
+  });
+
+  it.each([
+    [{ liquidAssets: { hasAssets: true, inputMode: 'simple', total: 0 } }, { liquidAssets: { hasAssets: true, inputMode: 'detailed', breakdown: { deposit: 1 } } }],
+    [{ financialAssets: { hasAssets: true, inputMode: 'simple', total: 0 } }, { financialAssets: { hasAssets: true, inputMode: 'detailed', stocks: 1 } }],
+    [{ hasPensionAssets: true, pensionAssetsInputMode: 'simple', pensionAssets: 0 }, { hasPensionAssets: true, pensionAssetsInputMode: 'detailed', pensionAssetsBreakdown: { irp: 1 } }],
+    [{ realEstateAssets: { hasAssets: true, inputMode: 'simple', total: 0 } }, { realEstateAssets: { hasAssets: true, inputMode: 'detailed', mainProperty: 1 } }],
+    [{ otherAssets: { hasAssets: true, inputMode: 'simple', total: 0 } }, { otherAssets: { hasAssets: true, inputMode: 'detailed', items: [{ name: '기타', amount: 1 }] } }],
+  ])('requires positive active asset totals in simple and detailed modes', (invalidAsset, validDetailedAsset) => {
+    expect(validateInput(makeInput({ assets: invalidAsset })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: validDetailedAsset })).ok).toBe(true);
+  });
+
+  it('requires positive debt balance and an entered burden while allowing explicit zero burden', () => {
+    expect(validateInput(makeInput({ assets: { debtStatus: { hasDebt: true, inputMode: 'simple', totalBalance: '', monthlyRepayment: '' } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { debtStatus: { hasDebt: true, inputMode: 'simple', totalBalance: 0, monthlyRepayment: 0 } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { debtStatus: { hasDebt: true, inputMode: 'simple', totalBalance: 100, monthlyRepayment: '' } } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { debtStatus: { hasDebt: true, inputMode: 'simple', totalBalance: 100, monthlyRepayment: 0 } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ assets: { debtStatus: { hasDebt: false, totalBalance: '', monthlyRepayment: '' } } })).ok).toBe(true);
+    expect(validateInput(makeInput({ assets: { debtStatus: { hasDebt: true, inputMode: 'detailed', breakdown: { mortgage: { repaymentType: 'interestOnly', principal: 100, monthlyInterest: 0 } } } } })).ok).toBe(true);
+  });
+});
+
+describe('validateInput - repeated row completeness', () => {
+  it.each([
+    ['interestOnly', 'monthlyInterest'],
+    ['equalPrincipal', 'monthlyRepayment'],
+  ])('validates principal and the selected burden for %s detailed debt rows', (repaymentType, burdenKey) => {
+    const debt = (item) => ({
+      hasDebt: true,
+      inputMode: 'detailed',
+      breakdown: { mortgage: { repaymentType, ...item } },
+    });
+    expect(validateInput(makeInput({ assets: { debtStatus: debt({}) } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { debtStatus: debt({ principal: 100 }) } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { debtStatus: debt({ [burdenKey]: 10 }) } })).ok).toBe(false);
+    expect(validateInput(makeInput({ assets: { debtStatus: debt({ principal: 100, [burdenKey]: 0 }) } })).ok).toBe(true);
+    expect(validateInput(makeInput({ assets: { debtStatus: debt({ principal: 100, [burdenKey]: 10 }) } })).ok).toBe(true);
+  });
+
+  it('ignores a blank custom debt row but requires a name for an active custom debt row', () => {
+    const mortgage = { repaymentType: 'interestOnly', principal: 100, monthlyInterest: 0 };
+    const debt = (customItems) => ({ hasDebt: true, inputMode: 'detailed', breakdown: { mortgage }, customItems });
+    expect(validateInput(makeInput({ assets: { debtStatus: debt([{ name: '', repaymentType: 'interestOnly', principal: '', monthlyInterest: '', months: '' }]) } })).ok).toBe(true);
+    const result = validateInput(makeInput({ assets: { debtStatus: debt([{ name: '', repaymentType: 'interestOnly', principal: 50, monthlyInterest: 0 }]) } }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toContain('assets.debtStatus.customItems.0.name');
+  });
+
+  it.each([
+    [{ name: '', annual: '', years: '' }, true],
+    [{ name: '임대수입', annual: '', years: '' }, false],
+    [{ name: '', annual: 1200, years: '' }, false],
+    [{ name: '', annual: '', years: 5 }, false],
+    [{ name: '임대수입', annual: 1200, years: '' }, false],
+    [{ name: '임대수입', annual: 1200, years: 5 }, true],
+  ])('validates other recurring income row completeness: %j', (item, expectedOk) => {
+    const result = validateInput(makeInput({ income: { regularIncomes: [{ type: 'other', ...item }] } }));
+    expect(result.ok).toBe(expectedOk);
+  });
+
+  it.each([
+    [{ name: '', amount: '', expectedAge: '' }, true],
+    [{ name: '차량 교체', amount: '', expectedAge: '' }, false],
+    [{ name: '', amount: 1000, expectedAge: '' }, false],
+    [{ name: '', amount: '', expectedAge: 70 }, false],
+    [{ name: '차량 교체', amount: 1000, expectedAge: '' }, false],
+    [{ name: '차량 교체', amount: 1000, expectedAge: 70 }, true],
+  ])('validates retirement lump-sum expense row completeness: %j', (item, expectedOk) => {
+    const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item] } }));
+    expect(result.ok).toBe(expectedOk);
+  });
+});
+
 describe('retirement severance input requirements', () => {
   it('requires both amount and receipt age for a future lump-sum selection', () => {
     const result = validateInput(makeInput({ income: { severance: { type: 'lumpsum', lumpsum: '', lumpsumAge: '' } } }));
@@ -508,7 +610,7 @@ describe('age cap: basic.retirementAge (kind "age", max 120)', () => {
 });
 
 describe('array length cap: income.regularIncomes (MAX_ARRAY_LENGTH = 50)', () => {
-  const item = { annual: 100, years: 1 };
+  const item = { name: '임대수입', annual: 100, years: 1 };
 
   it('rejects 51 items (T+1 boundary)', () => {
     const result = validateInput(makeInput({ income: { regularIncomes: Array.from({ length: 51 }, () => ({ ...item })) } }));
@@ -666,8 +768,8 @@ describe('expense.retirementLumpSumExpenses[] - post-retirement lump-sum expense
     expect(result.ok).toBe(true);
   });
 
-  it('accepts an amount of exactly 0', () => {
-    expect(validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ amount: 0 })] } })).ok).toBe(true);
+  it('rejects an amount of exactly 0 for an active lump-sum expense row', () => {
+    expect(validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ amount: 0 })] } })).ok).toBe(false);
   });
 
   it('rejects a negative amount', () => {

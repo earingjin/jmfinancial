@@ -209,14 +209,24 @@ export default function Step2Expense({ subStepIndex }) {
               <label className="field">
                 <span className="field-label">예상 지출 나이</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput max={120} value={item.expectedAge} onChange={(e) => update('expectedAge', Number(e.target.value))} />
+                  <FormattedNumberInput
+                    id={`expense.retirementLumpSumExpenses.${i}.expectedAge`}
+                    max={120}
+                    value={item.expectedAge}
+                    onChange={(e) => update('expectedAge', e.target.value === '' ? '' : Number(e.target.value))}
+                  />
                   <span className="field-unit">세</span>
                 </div>
               </label>
               <label className="field">
                 <span className="field-label">예상 금액</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput min={0} value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                  <FormattedNumberInput
+                    id={`expense.retirementLumpSumExpenses.${i}.amount`}
+                    min={0}
+                    value={item.amount}
+                    onChange={(e) => update('amount', e.target.value === '' ? '' : Number(e.target.value))}
+                  />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
