@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
-import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getSeveranceLumpSumDisplayItems } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_FINAL_OUTLOOK_BASIS, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -29,44 +29,6 @@ function formatYearsMonths(months) {
   if (!Number.isFinite(months) || months < 0) return '확인 필요';
   const roundedMonths = Math.round(months);
   return `${Math.floor(roundedMonths / 12)}년 ${roundedMonths % 12}개월`;
-}
-
-function getRetirementStatus(readiness) {
-  if (readiness.notCalculable) {
-    return {
-      icon: '🤔',
-      titleLines: ['은퇴 준비 상태를 확인하려면 정보가 조금 더 필요합니다.'],
-      detailLines: [readiness.reason],
-    };
-  }
-
-  const years = round1(readiness.retirementYears);
-  if (readiness.shortfall <= 0) {
-    return {
-      icon: '😊',
-      titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 안정적인 상태입니다.'],
-      detailLines: ['예상 준비자금이 필요한 자금을 충족합니다.', '현재 계획을 꾸준히 유지하는 것이 중요합니다.'],
-    };
-  }
-  if (readiness.preparationRate >= 80) {
-    return {
-      icon: '🙂',
-      titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 일부 보완이 필요한 상태입니다.'],
-      detailLines: [`예상 준비자금이 필요자금보다 ${formatWon(readiness.shortfall)} 부족합니다.`, '지금부터 저축과 노후소득 계획을 조정하면 개선할 수 있습니다.'],
-    };
-  }
-  if (readiness.preparationRate >= 50) {
-    return {
-      icon: '😥',
-      titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 부족한 상태입니다.'],
-      detailLines: [`예상 준비자금이 필요자금보다 ${formatWon(readiness.shortfall)} 부족합니다.`, '지금부터 저축과 노후소득 계획을 함께 점검할 필요가 있습니다.'],
-    };
-  }
-  return {
-    icon: '😰',
-    titleLines: [`고객님의 자산은 은퇴 후 ${years}년 동안`, '사용하기에 많이 부족한 상태입니다.'],
-    detailLines: [`예상 준비자금이 필요자금보다 ${formatWon(readiness.shortfall)} 부족합니다.`, '우선순위를 정해 저축과 노후소득 계획을 조정할 필요가 있습니다.'],
-  };
 }
 
 // 상세내역 카드의 한 줄. 입력 누락(missing)이면 "입력 필요"를, 아니면 0이라도 그대로 보여준다.
@@ -262,6 +224,10 @@ function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, living
     <div className="summary-status-card">
       <div className="fhs-hero">
         <div className="summary-card-kicker">Part 2. 은퇴</div>
+        <div className="retirement-final-heading">
+          <strong>최종 은퇴 전망</strong>
+          <span>{RETIREMENT_FINAL_OUTLOOK_BASIS}</span>
+        </div>
         <div className="fhs-hero-row">
           <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
           <div className="fhs-hero-text ss-status-copy">
@@ -658,7 +624,6 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
   const peerBracketLabel = peerComparison.userBracketLabel
     || peerComparison.ageBrackets?.find((bracket) => bracket.isUserBracket)?.label
     || '확인 불가';
-  const retirementStatus = getRetirementStatus(rr);
   const allIndicators = indicators || [];
 
   const pensionMonthlyTotal = rr.monthlyIncomeCompare.nationalPensionMonthly + rr.monthlyIncomeCompare.severancePensionMonthly + rr.monthlyIncomeCompare.personalPensionMonthly;
@@ -709,6 +674,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
   const [retirementDetailKey, setRetirementDetailKey] = useState(null);
   const [showFiveYearTable, setShowFiveYearTable] = useState(false);
   const assetProjection = future?.retirementAssetProjection;
+  const retirementStatus = getRetirementSustainabilityStatus(assetProjection, rr.reason);
   const showOptionalMobileSections = false;
   const severanceLumpSums = getSeveranceLumpSumDisplayItems(input, rr.retirementAge);
   const retirementIncludedLumpSums = severanceLumpSums.filter((item) => item.includedAtRetirement);
@@ -789,7 +755,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
 
           <details className="retirement-calculation summary-grid-area--details2">
             <summary>은퇴 준비상태 세부 내역</summary>
-            <div className={`detail-card retirement-detail-card${rr.shortfall > 0 ? ' has-shortfall' : ''}`}>
+            <div className="detail-card retirement-detail-card">
               {rr.notCalculable ? (
                 <p className="ss-guidance">{rr.reason}</p>
               ) : (
@@ -883,12 +849,11 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                       </div>
                     )}
                     <DetailRow
-                      label={rr.shortfall > 0 ? '은퇴자금 부족액' : '은퇴자금 준비 가능'}
-                      value={rr.shortfall > 0 ? formatWon(rr.shortfall) : '필요자금 충당'}
+                      label="은퇴 시점 단순 비교 차이"
+                      value={formatWon(rr.shortfall)}
                       bold
-                      highlight
-                      valueColor={rr.shortfall > 0 ? 'var(--red)' : undefined}
                     />
+                    <p className="retirement-reference-note">{RETIREMENT_SIMPLE_COMPARISON_NOTE}</p>
                   </div>
 
                 </>
@@ -1021,12 +986,12 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
               </button>
               <button
                 type="button"
-                className="overview-card overview-card--risk overview-card--clickable"
+                className="overview-card overview-card--reference overview-card--clickable"
                 onClick={() => setRetirementDetailKey('shortfall')}
               >
-                <div className="overview-card-label">예상 부족자금</div>
+                <div className="overview-card-label">은퇴 시점 단순 비교 차이</div>
                 <div className="overview-card-value">{formatWon(rr.shortfall)}</div>
-                <span className="overview-card-hint">내역 보기</span>
+                <span className="overview-card-hint">참고값 · 내역 보기</span>
               </button>
             </div>
 
@@ -1037,7 +1002,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                     <h4>
                       {retirementDetailKey === 'required' && '은퇴 시점 필요자금 내역'}
                       {retirementDetailKey === 'ready' && '은퇴 시점 예상 준비자산 내역'}
-                      {retirementDetailKey === 'shortfall' && '예상 부족자금 내역'}
+                      {retirementDetailKey === 'shortfall' && '은퇴 시점 단순 비교 내역'}
                     </h4>
                     <button type="button" className="modal-close" onClick={() => setRetirementDetailKey(null)} aria-label="닫기">
                       ✕
@@ -1089,7 +1054,8 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                     <div className="need-breakdown-list">
                       <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} />
                       <DetailRow label="은퇴 시점 예상 준비자산" value={`−${formatWon(rr.readyAssetsAtRetirement)}`} />
-                      <DetailRow label="예상 부족자금" value={formatWon(rr.shortfall)} bold />
+                      <DetailRow label="은퇴 시점 단순 비교 차이" value={formatWon(rr.shortfall)} bold />
+                      <p className="retirement-reference-note">{RETIREMENT_SIMPLE_COMPARISON_NOTE}</p>
                     </div>
                   )}
                   <p className="need-compare-assumptions">
@@ -1201,13 +1167,8 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                 <div className="overview-card-value">{formatWon(assetProjection.startingAssets)}</div>
               </div>
               <div className="overview-card overview-card--highlight">
-                <div className="overview-card-label">{assetProjection.assetsRemainAtLifeExpectancy ? '예상 자산 유지' : '최초 자산 소진 예상'}</div>
-                <div className="overview-card-value">
-                  {assetProjection.assetsRemainAtLifeExpectancy ? '기대수명까지' : `${formatNumber(assetProjection.depletionAge)}세`}
-                </div>
-                {!assetProjection.assetsRemainAtLifeExpectancy && assetProjection.recoveredAfterDepletion && (
-                  <p className="overview-card-formula">이후 소득 증가로 다시 회복될 것으로 예상됩니다.</p>
-                )}
+                <div className="overview-card-label">최종 전망</div>
+                <div className="overview-card-value">{retirementStatus.displayValue}</div>
               </div>
               <div className="overview-card">
                 <div className="overview-card-label">기대수명</div>

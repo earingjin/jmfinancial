@@ -2,6 +2,10 @@
 // 사용자가 이해하기 쉬운 표시 문구를 적용한다. 점수와 ratioClass에는 관여하지 않는다.
 import { formatNumber, formatPercent, formatWon } from '../../utils/format';
 
+export const RETIREMENT_SIMPLE_COMPARISON_NOTE = '은퇴 시점 필요자금과 예상 준비자산만 비교한 참고값입니다. 은퇴 후 연금소득과 지출을 반영한 최종 자산 유지 전망과는 다를 수 있습니다.';
+
+export const RETIREMENT_FINAL_OUTLOOK_BASIS = '연금소득·생활비·목돈지출·운용수익을 반영한 결과';
+
 const FHS_STATUS_BADGE_LABELS = {
   '매우 우수': '안정적',
   '우수': '양호',
@@ -13,6 +17,63 @@ const FHS_STATUS_BADGE_LABELS = {
 
 export function formatIndicatorStatusBadge(indicator) {
   return FHS_STATUS_BADGE_LABELS[indicator.status] || indicator.status;
+}
+
+// 서버가 계산한 은퇴 후 자산 소진 결과를 최종 사용자 판정 문구로만 변환한다.
+// shortfall·preparationRate를 재해석하거나 새로운 계산값을 만들지 않는다.
+export function getRetirementSustainabilityStatus(projection, unavailableReason) {
+  if (!projection || projection.notCalculable) {
+    return {
+      key: 'unknown',
+      icon: '🤔',
+      label: '확인 필요',
+      displayValue: '산출 불가',
+      titleLines: ['은퇴 후 자산 유지 전망을 확인하려면', '정보가 조금 더 필요합니다.'],
+      detailLines: [projection?.reason || unavailableReason || '은퇴 시점과 기대수명, 은퇴 후 소득·지출 정보를 확인해 주세요.'],
+    };
+  }
+
+  if (projection.recoveredAfterDepletion && Number.isFinite(projection.depletionAge)) {
+    return {
+      key: 'recovered',
+      icon: '🙂',
+      label: '변동 확인',
+      displayValue: `${formatNumber(projection.depletionAge)}세 일시 소진 후 회복`,
+      titleLines: [`현재 계획에서는 약 ${formatNumber(projection.depletionAge)}세에 준비자산이`, '일시적으로 소진된 뒤 다시 회복될 것으로 예상됩니다.'],
+      detailLines: ['은퇴 후 소득이 늘어나는 시점에 자산이 다시 쌓이는 흐름을 함께 반영한 결과입니다.'],
+    };
+  }
+
+  if (projection.assetsRemainAtLifeExpectancy === true) {
+    return {
+      key: 'stable',
+      icon: '😊',
+      label: '유지 예상',
+      displayValue: '기대수명까지 유지',
+      titleLines: ['현재 계획을 유지하면 기대수명까지', '준비자산이 유지될 것으로 예상됩니다.'],
+      detailLines: ['은퇴 후 연금소득과 예정된 목돈지출을 함께 반영한 결과입니다.'],
+    };
+  }
+
+  if (Number.isFinite(projection.depletionAge)) {
+    return {
+      key: 'depleted',
+      icon: '😥',
+      label: '보완 필요',
+      displayValue: `${formatNumber(projection.depletionAge)}세 소진 예상`,
+      titleLines: [`현재 계획을 유지하면 약 ${formatNumber(projection.depletionAge)}세에`, '준비자산이 소진될 것으로 예상됩니다.'],
+      detailLines: ['은퇴 후 연금소득과 예정된 목돈지출을 함께 반영한 결과입니다.'],
+    };
+  }
+
+  return {
+    key: 'unknown',
+    icon: '🤔',
+    label: '확인 필요',
+    displayValue: '산출 불가',
+    titleLines: ['은퇴 후 자산 유지 전망을', '현재 결과에서 확인하기 어렵습니다.'],
+    detailLines: [unavailableReason || '은퇴 관련 입력 정보를 확인한 뒤 다시 점검해 주세요.'],
+  };
 }
 
 export function formatPensionIncomeAtRetirement(amount, status, schedules = []) {

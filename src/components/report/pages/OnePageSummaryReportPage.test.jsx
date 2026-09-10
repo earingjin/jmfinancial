@@ -48,6 +48,11 @@ function buildResult() {
         retirementIncomeIndicator: { value: 42.4, notCalculable: false },
       },
       futureFinance: {
+        retirementAssetProjection: {
+          assetsRemainAtLifeExpectancy: true,
+          recoveredAfterDepletion: false,
+          depletionAge: null,
+        },
         targets: [
           { age: 70, pensionIncome: 350, coverageRate: 76.1 },
           { age: 80, pensionIncome: 480, coverageRate: 78.7 },
@@ -82,11 +87,12 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).toContain('01 / 1');
   });
 
-  it('기존 재무상태 판정과 기존 부족자금으로 결론형 종합 결과를 표시한다', () => {
+  it('기존 재무상태 판정과 자산 지속가능성 결과로 종합 결과를 표시한다', () => {
     const html = render();
     expect(html).toContain('>양호</strong>');
-    expect(html).toContain('>보완 필요</strong>');
-    expect(html).toContain('예상 준비자산이 필요자금보다 2억원 부족합니다.');
+    expect(html).toContain('>유지 예상</strong>');
+    expect(html).toContain('기대수명까지 준비자산이 유지될 것으로 예상됩니다.');
+    expect(html).not.toContain('부족한 상태');
     expect(html).toContain('총자산');
     expect(html).toContain('총부채');
     expect(html).toContain('순자산');
@@ -101,7 +107,8 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).toContain('one-summary-retirement-diagram');
     expect(html).toContain('은퇴 시점 필요자금');
     expect(html).toContain('예상 준비자산');
-    expect(html).toContain('예상 부족자금');
+    expect(html).toContain('은퇴 시점 단순 비교 차이');
+    expect(html).toContain('최종 자산 유지 전망과는 다를 수 있습니다.');
     expect(html).toContain('본인 5,000만원');
     expect(html).not.toContain('배우자 0만원');
   });

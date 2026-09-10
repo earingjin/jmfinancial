@@ -8,7 +8,7 @@ beforeAll(() => { globalThis.React = React; });
 afterAll(() => { globalThis.React = previousReactGlobal; });
 
 describe('ExecutiveSummaryPage', () => {
-  it('renders the server-provided financial cash-flow feedback', () => {
+  it('renders server-provided cash-flow feedback and the shared asset sustainability judgment', () => {
     const html = renderToStaticMarkup(
       <ExecutiveSummaryPage
         simulation={{
@@ -28,7 +28,11 @@ describe('ExecutiveSummaryPage', () => {
         }}
         familyAges={{ self: { age: 40 }, spouse: null, children: [] }}
         retirementReadiness={null}
-        retirementAssetProjection={null}
+        retirementAssetProjection={{
+          assetsRemainAtLifeExpectancy: true,
+          recoveredAfterDepletion: false,
+          depletionAge: null,
+        }}
         feedback={{
           financialStatus: '현재 지출과 저축의 균형을 확인한 서버 피드백입니다.',
           financialPosition: '현재 자산과 부채의 관계를 확인한 서버 피드백입니다.',
@@ -52,7 +56,14 @@ describe('ExecutiveSummaryPage', () => {
     expect(html).toContain('월저축액</td><td class="num">100만원');
     expect(html).toContain('현재 지출과 저축의 균형을 확인한 서버 피드백입니다.');
     expect(html).toContain('현재 자산과 부채의 관계를 확인한 서버 피드백입니다.');
-    expect(html).toContain('서버에서 해석한 은퇴생활비 준비 상태입니다.');
-    expect(html).toContain('서버에서 해석한 은퇴자산 유지 전망입니다.');
+    expect(html).not.toContain('서버에서 해석한 은퇴생활비 준비 상태입니다.');
+    expect(html).toContain('은퇴 시점 단순 비교');
+    expect(html).toContain('참고 차이');
+    expect(html).toContain('최종 자산 유지 전망과는 다를 수 있습니다.');
+    expect(html).toContain('최종 은퇴 전망');
+    expect(html).toContain('기대수명까지 유지');
+    expect(html).toContain('기대수명까지 준비자산이 유지될 것으로 예상됩니다.');
+    expect(html).not.toContain('서버에서 해석한 은퇴자산 유지 전망입니다.');
+    expect(html).not.toContain('부족할 것으로 예상됩니다.');
   });
 });

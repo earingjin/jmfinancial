@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getSeveranceLumpSumDisplayItems } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems } from './summaryPresentation';
 
 // getFinancialHealthStatus는 새 재무점수·임계값을 만들지 않고, 서버가 이미 계산한
 // ratioClass(good/caution/risk)만 세어 화면 문구를 고르는 순수 표시 헬퍼다.
@@ -38,6 +38,43 @@ describe('getFinancialHealthStatus', () => {
   it('notCalculable 지표는 카운트에서 제외하고 나머지 known 지표만으로 판정한다', () => {
     // na 1개 + good 2개 → known은 good만 2개 → 안정 문구
     expect(getFinancialHealthStatus([na, good, good]).icon).toBe('😊');
+  });
+});
+
+describe('getRetirementSustainabilityStatus', () => {
+  it('A) 단순 부족자금이 있어도 기대수명까지 자산이 유지되면 부족 상태로 판정하지 않는다', () => {
+    const simulation = { shortfall: 2450, preparationRate: 74.6 };
+    const status = getRetirementSustainabilityStatus({ assetsRemainAtLifeExpectancy: true });
+
+    expect(status.key).toBe('stable');
+    expect(status.label).toBe('유지 예상');
+    expect(status.titleLines.join(' ')).not.toContain('부족한 상태');
+    expect(simulation).toEqual({ shortfall: 2450, preparationRate: 74.6 });
+  });
+
+  it('B) 기대수명 전에 자산이 소진되면 기존 소진 나이를 최종 문구에 표시한다', () => {
+    const status = getRetirementSustainabilityStatus({
+      assetsRemainAtLifeExpectancy: false,
+      depletionAge: 79,
+      recoveredAfterDepletion: false,
+    });
+
+    expect(status.key).toBe('depleted');
+    expect(status.displayValue).toBe('79세 소진 예상');
+    expect(status.titleLines.join(' ')).toContain('약 79세');
+  });
+
+  it('C) 소진 후 회복되는 경우 일시 소진과 이후 회복을 함께 표시한다', () => {
+    const status = getRetirementSustainabilityStatus({
+      assetsRemainAtLifeExpectancy: false,
+      depletionAge: 65,
+      recoveredAfterDepletion: true,
+    });
+
+    expect(status.key).toBe('recovered');
+    expect(status.displayValue).toBe('65세 일시 소진 후 회복');
+    expect(status.titleLines.join(' ')).toContain('다시 회복');
+    expect(status.titleLines.join(' ')).not.toContain('부족한 상태');
   });
 });
 

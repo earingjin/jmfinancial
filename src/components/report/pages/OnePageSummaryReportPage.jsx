@@ -1,6 +1,6 @@
 import PageFrame from './PageFrame';
 import { formatNumber, formatPercent, formatWon } from '../../../utils/format';
-import { getFinancialHealthStatus } from '../../summary/summaryPresentation';
+import { getFinancialHealthStatus, getRetirementSustainabilityStatus, RETIREMENT_SIMPLE_COMPARISON_NOTE } from '../../summary/summaryPresentation';
 
 function formatDate(generatedAt) {
   if (!generatedAt) return '-';
@@ -64,15 +64,12 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
     '😥': '보완 필요',
     '🤔': '확인 필요',
   }[financialHealth.icon];
-  const retirementNeedsSupplement = Number.isFinite(retirement.shortfall) && retirement.shortfall > 0;
-  const retirementLabel = retirement.notCalculable
-    ? '확인 필요'
-    : retirementNeedsSupplement ? '보완 필요' : '준비 가능';
-  const retirementSummary = retirement.notCalculable
-    ? retirement.reason || '은퇴 준비 결과를 확인하려면 정보가 더 필요합니다.'
-    : retirementNeedsSupplement
-      ? `예상 준비자산이 필요자금보다 ${formatWon(retirement.shortfall)} 부족합니다.`
-      : '예상 준비자산이 은퇴 시점 필요자금을 충당합니다.';
+  const retirementStatus = getRetirementSustainabilityStatus(
+    future.retirementAssetProjection,
+    retirement.reason,
+  );
+  const retirementLabel = retirementStatus.label;
+  const retirementSummary = [...retirementStatus.titleLines, ...retirementStatus.detailLines].join(' ');
   const retirementIncome = retirement.retirementIncomeIndicator;
   const assetDetails = (donuts.assets?.items || []).filter((item) => Number(item?.value) > 0);
   const debtDetails = (donuts.debt?.items || []).filter((item) => Number(item?.value) > 0 && item.key !== 'total');
@@ -127,7 +124,7 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
             <p>{financialHealth.detail}</p>
           </article>
           <article className="is-retirement">
-            <span>은퇴 준비상태</span>
+            <span>최종 은퇴 전망</span>
             <strong className="one-summary-judgment-label">{retirementLabel}</strong>
             <p>{retirementSummary}</p>
           </article>
@@ -183,22 +180,23 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
                     className={`one-summary-retirement-shortfall${showRetirementShortfallOutside ? ' is-compact' : ''}`}
                     style={{ flexGrow: retirementShortfallRatio, flexBasis: 0 }}
                   >
-                    {!showRetirementShortfallOutside && <><span>예상 부족자금</span><strong>{displayWon(retirementShortfallAmount)}</strong></>}
+                    {!showRetirementShortfallOutside && <><span>은퇴 시점 단순 비교 차이</span><strong>{displayWon(retirementShortfallAmount)}</strong></>}
                   </div>
                 </div>
                 {showRetirementShortfallOutside && (
                   <p className="one-summary-retirement-shortfall-note">
-                    <span>예상 부족자금</span><strong>{displayWon(retirementShortfallAmount)}</strong>
+                    <span>은퇴 시점 단순 비교 차이</span><strong>{displayWon(retirementShortfallAmount)}</strong>
                   </p>
                 )}
               </div>
             ) : (
               <div className="one-summary-retirement-flow">
-                <div className="is-shortfall"><span>예상 부족자금</span><strong>{displayWon(retirement.shortfall)}</strong></div>
+                <div className="is-shortfall"><span>은퇴 시점 단순 비교 차이</span><strong>{displayWon(retirement.shortfall)}</strong></div>
                 <div><span>은퇴 시점 필요자금</span><strong>{displayWon(retirement.requiredAtRetirement)}</strong></div>
                 <div><span>예상 준비자산</span><strong>{displayWon(retirement.readyAssetsAtRetirement)}</strong></div>
               </div>
             )}
+            <p className="one-summary-retirement-reference">{RETIREMENT_SIMPLE_COMPARISON_NOTE}</p>
             {severanceLumpSums.length > 0 && (
               <div className="one-summary-lumpsums">
                 <span>예정 퇴직급여 일시금</span>

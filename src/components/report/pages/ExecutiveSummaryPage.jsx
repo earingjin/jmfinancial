@@ -2,6 +2,7 @@ import PageFrame from './PageFrame';
 import AIFeedbackBox from './AIFeedbackBox';
 import FinanceBarChart from './FinanceBarChart';
 import { formatNumber, formatWon, formatPercent, round1 } from '../../../utils/format';
+import { getRetirementSustainabilityStatus, RETIREMENT_FINAL_OUTLOOK_BASIS, RETIREMENT_SIMPLE_COMPARISON_NOTE } from '../../summary/summaryPresentation';
 
 // 카드별 등급(우수/양호/보통/위험) 판정 기준은 아직 정의되어 있지 않아 자리표시자("-")로 남겨둔다.
 // 실제 판정 로직이 마련되면 이 자리에 값을 채워 넣는다.
@@ -56,24 +57,10 @@ function ExecutiveFinanceSummary({ agg, financialPositionFeedback, cashFlowFeedb
 export default function ExecutiveSummaryPage({ simulation, aggregates: agg, familyAges, retirementReadiness, retirementAssetProjection, feedback, pageNumber, totalPages }) {
   const retirementAge = simulation.currentAge + simulation.yearsToRetirement;
   const retirementEndAge = round1(retirementAge + simulation.retirementYears);
-  const retirementStatus = simulation.shortfall > 0 ? '부족' : '적정';
   const fb = feedback || {};
-  // 은퇴 후 자산잔액 시뮬레이션(retirementAssetProjection)이 있으면 실제 소진 여부를 보여주고,
-  // 이전 저장 결과처럼 데이터가 없을 때만 "산출 불가"로 표시한다(임의로 0세·소진으로 추정하지 않음).
-  const assetDepletionLabel = !retirementAssetProjection || retirementAssetProjection.notCalculable
-    ? '산출 불가'
-    : retirementAssetProjection.assetsRemainAtLifeExpectancy
-      ? '기대수명까지 유지'
-      : `${formatNumber(retirementAssetProjection.depletionAge)}세 소진 예상`;
-  const retirementFeedback = fb.retirement || {};
-  const retirementStatusInterpretation = retirementFeedback.cashFlow || (simulation.shortfall > 0
-    ? `현재 계획에서는 은퇴 시 필요한 자금보다 ${formatWon(simulation.shortfall)} 부족할 것으로 예상됩니다. 지금의 저축을 유지할 수 있는지 확인하고 추가 준비 계획을 살펴보세요.`
-    : '현재 계획대로라면 준비 가능한 자산으로 은퇴생활비를 충당할 수 있습니다. 실제 생활비 변화에 맞춰 정기적으로 다시 확인해보세요.');
-  const assetDepletionInterpretation = retirementFeedback.assetGoal || (!retirementAssetProjection || retirementAssetProjection.notCalculable
-    ? '현재 정보만으로는 은퇴 후 자산이 언제까지 유지되는지 판단하기 어렵습니다. 관련 정보를 확인한 뒤 다시 점검해보세요.'
-    : retirementAssetProjection.assetsRemainAtLifeExpectancy
-      ? '예상 소득과 생활비를 반영해도 기대수명까지 준비자산이 남을 전망입니다. 지금의 관리 흐름을 유지하며 정기적으로 점검하세요.'
-      : `현재 계획대로라면 준비자산이 ${formatNumber(retirementAssetProjection.depletionAge)}세 무렵 소진될 것으로 예상됩니다. 생활비와 목돈지출, 추가 저축 중 조정 가능한 항목을 살펴보세요.`);
+  const retirementStatus = getRetirementSustainabilityStatus(retirementAssetProjection);
+  const retirementStatusInterpretation = RETIREMENT_SIMPLE_COMPARISON_NOTE;
+  const assetDepletionInterpretation = [...retirementStatus.titleLines, ...retirementStatus.detailLines].join(' ');
 
   return (
     <PageFrame eyebrow="Executive Summary" title="핵심 이슈 & 종합 결과" pageNumber={pageNumber} totalPages={totalPages}>
@@ -125,20 +112,21 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
       <div className="summary-card-grid" style={{ marginBottom: 6 }}>
         <div className="summary-card">
           <div className="summary-card-title-row">
-            <span className="summary-card-title">은퇴생활비 현금흐름점검</span>
+            <span className="summary-card-title">은퇴 시점 단순 비교</span>
             <span className="summary-card-rating">{RATING_PLACEHOLDER}</span>
           </div>
           <div className="summary-card-row"><span>노후기간</span><span className="num">{round1(simulation.retirementYears)}년</span></div>
-          <div className="summary-card-row total"><span>적정상태</span><span className="num" style={{ color: simulation.shortfall > 0 ? 'var(--red)' : 'var(--teal)' }}>{retirementStatus}</span></div>
+          <div className="summary-card-row total"><span>참고 차이</span><span className="num">{formatWon(simulation.shortfall)}</span></div>
           <p className="summary-card-reason">{retirementStatusInterpretation}</p>
         </div>
         <div className="summary-card">
           <div className="summary-card-title-row">
-            <span className="summary-card-title">은퇴재무목표 마련점검</span>
+            <span className="summary-card-title">최종 은퇴 전망</span>
             <span className="summary-card-rating">{RATING_PLACEHOLDER}</span>
           </div>
           <div className="summary-card-row"><span>월평균 지출</span><span className="num">{formatWon(simulation.retirementLivingCostNow)}</span></div>
-          <div className="summary-card-row total"><span>자산소진</span><span className="num">{assetDepletionLabel}</span></div>
+          <div className="summary-card-row"><span>{RETIREMENT_FINAL_OUTLOOK_BASIS}</span></div>
+          <div className="summary-card-row total"><span>최종 전망</span><span className="num">{retirementStatus.displayValue}</span></div>
           <p className="summary-card-reason">{assetDepletionInterpretation}</p>
         </div>
       </div>
@@ -153,7 +141,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
           <div className="executive-calculation-arrow" aria-hidden="true">→</div>
           <div className="executive-calculation-step"><i>2</i><span>필요자금 − 예상 준비자산</span><b>{formatWon(retirementReadiness.requiredAtRetirement)} − {formatWon(retirementReadiness.readyAssetsAtRetirement)}</b></div>
           <div className="executive-calculation-arrow" aria-hidden="true">→</div>
-          <div className="executive-calculation-step is-result"><i>3</i><span>예상 부족자금</span><b>{formatWon(retirementReadiness.shortfall)}</b></div>
+          <div className="executive-calculation-step is-result"><i>3</i><span>은퇴 시점 단순 비교 차이</span><b>{formatWon(retirementReadiness.shortfall)}</b></div>
           <p>물가상승률 연 {formatPercent(retirementReadiness.inflationRate)} · 예상 운용수익률 연 {formatPercent(retirementReadiness.assumedReturnRate)}</p>
         </div>
         )}

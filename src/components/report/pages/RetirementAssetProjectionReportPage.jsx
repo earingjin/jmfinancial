@@ -1,7 +1,7 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import { formatNumber, formatWon, formatPercent } from '../../../utils/format';
-import { formatAssetProjectionOutlook, formatAssetProjectionReason } from '../../summary/summaryPresentation';
+import { formatAssetProjectionOutlook, formatAssetProjectionReason, getRetirementSustainabilityStatus, RETIREMENT_FINAL_OUTLOOK_BASIS } from '../../summary/summaryPresentation';
 
 // 웹 요약 화면의 RetirementAssetProjectionChart와 동일한 규칙을 그대로 옮긴다: x축 나이 N은
 // 항상 points[].age===N인 해의 "연말 잔액"이고(depletionAge 텍스트와 그래프의 0원 지점이
@@ -91,6 +91,7 @@ function AssetProjectionChart({ projection }) {
 export default function RetirementAssetProjectionReportPage({ retirementAssetProjection, pageNumber, totalPages }) {
   const projection = retirementAssetProjection;
   const calculable = projection && !projection.notCalculable && projection.points?.length > 0;
+  const retirementStatus = getRetirementSustainabilityStatus(projection);
   const lumpSumEvents = calculable
     ? projection.points
       .filter((p) => p.lumpSumEvents?.length > 0)
@@ -99,10 +100,9 @@ export default function RetirementAssetProjectionReportPage({ retirementAssetPro
 
   return (
     <PageFrame eyebrow="Retirement Asset Projection" pageNumber={pageNumber} totalPages={totalPages}>
-      <SectionBadge number="9" label="예상 자산 유지 기간" />
+      <SectionBadge number="9" label="최종 은퇴 전망" />
       <p className="intro-text report-compact-intro">
-        은퇴 후 예상 소득으로 부족한 생활비 · 목돈지출을 준비자산에서 충당한다고 가정했을 때, 자산이 몇 살까지
-        유지되는지를 연 단위로 전망합니다.
+        {RETIREMENT_FINAL_OUTLOOK_BASIS}입니다. 자산이 기대수명까지 유지되는지를 연 단위로 전망합니다.
       </p>
 
       {calculable ? (
@@ -113,8 +113,8 @@ export default function RetirementAssetProjectionReportPage({ retirementAssetPro
               <strong>{formatWon(projection.startingAssets)}</strong>
             </div>
             <div className="is-highlight">
-              <span>{projection.assetsRemainAtLifeExpectancy ? '예상 자산 유지' : '최초 자산 소진 예상'}</span>
-              <strong>{projection.assetsRemainAtLifeExpectancy ? '기대수명까지' : `${formatNumber(projection.depletionAge)}세`}</strong>
+              <span>최종 전망</span>
+              <strong>{retirementStatus.displayValue}</strong>
             </div>
             <div>
               <span>기대수명</span>
