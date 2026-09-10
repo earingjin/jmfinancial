@@ -125,6 +125,7 @@ describe('future finance projection', () => {
     const at60 = result.fiveYearOutlook.find((item) => item.age === 60);
 
     expect(calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge: 47, years: 0 })).toBe(470);
+    expect(aggregates.otherIncomeMonthly).toBe(10);
     expect(at47.totalIncome).toBe(470);
     expect(at47.incomeLabel).toBe('월급·연금 등');
     expect(at50.nonPensionIncome).toBe(370);

@@ -8,6 +8,7 @@ const indicator = (key, status, notCalculable = false) => ({
   rawValue: key === 'household' ? 50 : 30,
 });
 const aggregates = (overrides = {}) => ({
+  monthlyIncome: 500,
   householdMonthlyIncomeTotal: 500,
   totalExpenseMonthlyExSavings: 200,
   monthlySavings: 150,
@@ -54,7 +55,7 @@ describe('buildFinancialCashFlowFeedback', () => {
     const text = feedback({
       expenseStatus: '양호',
       savingsStatus: '매우 우수',
-      aggregateOverrides: { householdMonthlyIncomeTotal: 355, totalExpenseMonthlyExSavings: 228.3, monthlySavings: 170 },
+      aggregateOverrides: { monthlyIncome: 355, householdMonthlyIncomeTotal: 355, totalExpenseMonthlyExSavings: 228.3, monthlySavings: 170 },
     });
     expect(text).toContain('지출과 저축을 합하면 현재 월소득보다 많습니다');
     expect(text).toContain('전체 자산은 줄어들 수 있습니다');

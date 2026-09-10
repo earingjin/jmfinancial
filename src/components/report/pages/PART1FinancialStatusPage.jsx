@@ -26,7 +26,7 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
           )) : <tr><td>급여</td><td className="num">{formatWon(agg.salaryMonthly)}</td></tr>}
           <tr><td>사업소득</td><td className="num">{formatWon(agg.businessMonthly)}</td></tr>
           <tr>
-            <td>국민연금 · 퇴직연금 · 개인연금</td>
+            <td>예상 연금소득(참고)</td>
             <td className="num">
               {nationalPensionUnknown ? (
                 <>확인 필요<span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 향후 가입 여부 미확정)</span></>
@@ -40,14 +40,14 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
           </tr>
           <tr><td>기타(임대소득 · 배당금 등)</td><td className="num">{formatWon(agg.otherIncomeMonthly)}</td></tr>
           <tr className="total-row">
-            <td>가구 합계(월평균)</td>
+            <td>입력 소득 합계(예상 연금 포함·월평균)</td>
             <td className="num">
               {formatWon(agg.householdMonthlyIncomeTotal)}
               {nationalPensionUnknown && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 미확정분 제외)</span>}
             </td>
           </tr>
           <tr>
-            <td>가구 합계(연평균)</td>
+            <td>입력 소득 합계(예상 연금 포함·연평균)</td>
             <td className="num">
               {formatWon(agg.householdMonthlyIncomeTotal * 12)}
               {nationalPensionUnknown && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 미확정분 제외)</span>}

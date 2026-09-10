@@ -165,7 +165,7 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
             {hasRetirementDiagram ? (
               <div className="one-summary-retirement-diagram" aria-label="필요자금, 예상 준비자산, 부족자금 관계">
                 <div className="one-summary-retirement-required">
-                  <span>은퇴 시점 필요자금</span>
+                  <span>은퇴생활비 기준 필요자금</span>
                   <strong>{displayWon(retirementRequiredAmount)}</strong>
                 </div>
                 <div className="one-summary-retirement-composition">
@@ -192,7 +192,7 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
             ) : (
               <div className="one-summary-retirement-flow">
                 <div className="is-shortfall"><span>은퇴 시점 단순 비교 차이</span><strong>{displayWon(retirement.shortfall)}</strong></div>
-                <div><span>은퇴 시점 필요자금</span><strong>{displayWon(retirement.requiredAtRetirement)}</strong></div>
+                <div><span>은퇴생활비 기준 필요자금</span><strong>{displayWon(retirement.requiredAtRetirement)}</strong></div>
                 <div><span>예상 준비자산</span><strong>{displayWon(retirement.readyAssetsAtRetirement)}</strong></div>
               </div>
             )}

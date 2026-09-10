@@ -68,10 +68,8 @@ export function buildFinancialOverviewCards(input, aggregates) {
   ];
 
   return [
-    card('monthlyIncome', '월 총소득', aggregates.householdMonthlyIncomeTotal, [
-      'assets.currentIncome.monthly', 'income.business.monthly', 'income.nationalPension.monthly',
-      'income.severance.pensionMonthly', 'income.severance.lumpsum',
-      'income.personalPension.monthly', 'income.personalPension.lumpsum',
+    card('monthlyIncome', '월 총소득', aggregates.monthlyIncome, [
+      'assets.currentIncome.monthly', 'income.business.monthly', 'income.otherIncomes',
     ]),
     card('monthlyExpense', '월 총지출', aggregates.totalExpenseMonthlyExSavings, [
       'assets.currentLivingCost.monthly', 'expense.housingCost', 'assets.insurance.monthlyPremium',

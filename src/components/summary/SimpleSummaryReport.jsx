@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
-import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_FINAL_OUTLOOK_BASIS, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -62,6 +62,9 @@ function FinancialOverviewCard({ od, aggregates, assetItems = [], debtItems = []
 
       <div className="detail-group">
         <div className="detail-group-head">수입 <span className="detail-group-tag">월평균</span></div>
+        <p className="need-breakdown-note">
+          현재 받고 있는 소득을 기준으로 진단하며, 향후 연금은 은퇴 전망에 별도로 반영합니다.
+        </p>
         {od.income.salaryItems?.length ? (
           od.income.salaryItems.map((item) => (
             <DetailRow key={item.key} label={item.label} value={formatWon(item.value)} />
@@ -224,10 +227,6 @@ function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, living
     <div className="summary-status-card">
       <div className="fhs-hero">
         <div className="summary-card-kicker">Part 2. 은퇴</div>
-        <div className="retirement-final-heading">
-          <strong>최종 은퇴 전망</strong>
-          <span>{RETIREMENT_FINAL_OUTLOOK_BASIS}</span>
-        </div>
         <div className="fhs-hero-row">
           <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
           <div className="fhs-hero-text ss-status-copy">
@@ -960,7 +959,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                 className="overview-card overview-card--highlight overview-card--clickable"
                 onClick={() => setRetirementDetailKey('required')}
               >
-                <div className="overview-card-label">은퇴 시점 필요자금</div>
+                <div className="overview-card-label">은퇴생활비 기준 필요자금</div>
                 <div className="overview-card-value">{formatWon(rr.requiredAtRetirement)}</div>
                 <span className="overview-card-hint">내역 보기</span>
               </button>
@@ -1000,7 +999,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                 <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
                   <div className="modal-header">
                     <h4>
-                      {retirementDetailKey === 'required' && '은퇴 시점 필요자금 내역'}
+                      {retirementDetailKey === 'required' && '은퇴생활비 기준 필요자금 내역'}
                       {retirementDetailKey === 'ready' && '은퇴 시점 예상 준비자산 내역'}
                       {retirementDetailKey === 'shortfall' && '은퇴 시점 단순 비교 내역'}
                     </h4>
@@ -1018,7 +1017,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                         label={`은퇴까지 ${formatNumber(rr.yearsToRetirement)}년간 물가상승분${rr.inflationRate != null ? ` (연 ${formatPercent(rr.inflationRate)})` : ''}`}
                         value={`+${formatWon(inflationIncrease)}`}
                       />
-                      <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} bold />
+                      <DetailRow label="은퇴생활비 기준 필요자금" value={formatWon(rr.requiredAtRetirement)} bold />
                     </div>
                   )}
                   {retirementDetailKey === 'ready' && (
@@ -1052,7 +1051,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                   )}
                   {retirementDetailKey === 'shortfall' && (
                     <div className="need-breakdown-list">
-                      <DetailRow label="은퇴 시점 필요자금" value={formatWon(rr.requiredAtRetirement)} />
+                      <DetailRow label="은퇴생활비 기준 필요자금" value={formatWon(rr.requiredAtRetirement)} />
                       <DetailRow label="은퇴 시점 예상 준비자산" value={`−${formatWon(rr.readyAssetsAtRetirement)}`} />
                       <DetailRow label="은퇴 시점 단순 비교 차이" value={formatWon(rr.shortfall)} bold />
                       <p className="retirement-reference-note">{RETIREMENT_SIMPLE_COMPARISON_NOTE}</p>
@@ -1314,8 +1313,8 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
 
       {/* 5. 상세 리포트 다운로드 */}
       <section className="ss-download-section" aria-labelledby="ss-h-download">
-        <h2 id="ss-h-download" className="simple-summary-title">더 자세한 분석이 필요하신가요?</h2>
-        <p className="simple-summary-subtitle">리포트에서 더 심화된 재무 현황을 확인해 보세요.</p>
+        <h2 id="ss-h-download" className="simple-summary-title">이 진단은 방향을 처방하지 않습니다</h2>
+        <p className="simple-summary-subtitle">이 결과는 정답이나 솔루션 제공이 아닌, 현재의 재무상태와 은퇴 준비 정도를 이해하기 위한 진단입니다.</p>
         <div className="ss-download-actions">
           <button type="button" className="btn-primary ss-download-btn" onClick={onSummaryReport}>1페이지 요약 PDF</button>
           <button type="button" className="btn-secondary ss-download-btn" onClick={onDownload}>상세 리포트 PDF</button>

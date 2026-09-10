@@ -22,6 +22,7 @@ describe('ExecutiveSummaryPage', () => {
           totalAssets: 10000,
           totalDebt: 2000,
           netWorth: 8000,
+          monthlyIncome: 500,
           householdMonthlyIncomeTotal: 500,
           totalExpenseMonthlyExSavings: 250,
           monthlySavings: 100,

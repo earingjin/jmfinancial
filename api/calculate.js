@@ -107,7 +107,7 @@ export default async function handler(req, res) {
     const annualIncomeMissing = allBlankLeaf(input, [
       'income.salary.monthly', 'income.salary.annualBonus', 'income.business.monthly',
       'spouse.salary.monthly', 'spouse.salary.annualBonus',
-    ], ['income.regularIncomes']);
+    ], ['income.regularIncomes', 'income.otherIncomes']);
     const financialAssetsMissing = allBlankLeaf(
       input,
       [

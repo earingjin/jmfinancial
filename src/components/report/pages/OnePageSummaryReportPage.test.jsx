@@ -105,7 +105,7 @@ describe('OnePageSummaryReportPage', () => {
   it('필요자금·준비자산·부족자금과 존재하는 예정 일시금만 표시한다', () => {
     const html = render();
     expect(html).toContain('one-summary-retirement-diagram');
-    expect(html).toContain('은퇴 시점 필요자금');
+    expect(html).toContain('은퇴생활비 기준 필요자금');
     expect(html).toContain('예상 준비자산');
     expect(html).toContain('은퇴 시점 단순 비교 차이');
     expect(html).toContain('최종 자산 유지 전망과는 다를 수 있습니다.');

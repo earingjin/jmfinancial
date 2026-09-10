@@ -82,6 +82,41 @@ describe('simple savings and asset totals', () => {
   });
 });
 
+describe('current recurring income aggregation', () => {
+  it('includes current other recurring income exactly once in monthly, annual, and household totals', () => {
+    const result = buildAggregates(input({
+      income: {
+        business: { monthly: 50 },
+        otherIncomes: [{ name: '임대수입', annual: 1200 }],
+        nationalPension: { monthly: 0, months: 0 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+    }));
+
+    expect(result.otherIncomeMonthly).toBe(100);
+    expect(result.monthlyIncome).toBe(650);
+    expect(result.annualIncome).toBe(7800);
+    expect(result.householdMonthlyIncomeTotal).toBe(650);
+  });
+
+  it('keeps future pension income out of current income while retaining it in the expanded household total', () => {
+    const result = buildAggregates(input({
+      basic: { retirementAge: 65 },
+      income: {
+        otherIncomes: [{ name: '배당수입', annual: 600 }],
+        nationalPension: { monthly: 80, months: 240 },
+        severance: { type: 'pension', pensionMonthly: 40, pensionMonths: 120 },
+        personalPension: { type: 'installment', monthly: 20, months: 120 },
+      },
+    }));
+
+    expect(result.monthlyIncome).toBe(550);
+    expect(result.monthlyRetirementIncome).toBeGreaterThan(0);
+    expect(result.householdMonthlyIncomeTotal).toBe(result.monthlyIncome + result.monthlyRetirementIncome);
+  });
+});
+
 describe('identified retirement-pension assets', () => {
   it('keeps self and spouse balances in current total assets and net worth', () => {
     const result = buildAggregates(input({

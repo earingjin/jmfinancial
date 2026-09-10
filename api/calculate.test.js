@@ -119,3 +119,21 @@ describe('POST /api/calculate liquid asset subscription input', () => {
     expect(result.peerComparison.financialAssets.value).toBe(1000);
   });
 });
+
+describe('POST /api/calculate current other recurring income', () => {
+  it('treats an other-income-only user as having current annual income', async () => {
+    const input = buildMinimalValidInput();
+    input.income.salary.hasSalary = false;
+    input.income.salary.monthly = '';
+    input.income.salary.annualBonus = '';
+    input.income.regularIncomes = [
+      { type: 'other', name: '임대수입', annual: '1200', years: '10' },
+    ];
+
+    const result = await callHandler(input);
+
+    expect(result.aggregates.monthlyIncome).toBe(100);
+    expect(result.aggregates.annualIncome).toBe(1200);
+    expect(result.peerComparison.householdIncome.value).toBe(1200);
+  });
+});

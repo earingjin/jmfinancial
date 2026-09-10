@@ -60,7 +60,7 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, feedb
           <svg viewBox={donut.viewBox} width={donut.size} height={donut.size} role="img" aria-label={`은퇴 시점 단순 비교: 준비자금 ${formatPercent(readyPercent)}, 참고 차이 ${formatPercent(shortfallPercent)}`}>
             {donut.paths.map((p) => <path key={p.key} d={p.d} fill={p.color} />)}
             <circle cx={donut.size / 2} cy={donut.size / 2} r={donut.size * 0.36} fill="var(--card)" />
-            <text className="retirement-donut-center-label" x={donut.size / 2} y={(donut.size / 2) - 5}>준비율</text>
+            <text className="retirement-donut-center-label" x={donut.size / 2} y={(donut.size / 2) - 5}>자금비율</text>
             <text className="retirement-donut-center-value" x={donut.size / 2} y={(donut.size / 2) + 12}>{formatPercent(readyPercent)}</text>
           </svg>
           <ul className="retirement-donut-legend">
@@ -69,11 +69,11 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, feedb
           </ul>
         </div>
         <div className="retirement-achievement-copy">
-          <strong>은퇴자금 준비율 {formatPercent(readyPercent)}</strong>
+          <strong>은퇴 시점 자금비율 {formatPercent(readyPercent)}</strong>
           <span>{RETIREMENT_SIMPLE_COMPARISON_NOTE}</span>
           <div className="retirement-achievement-rows">
             <div className="retirement-achievement-row" style={{ color: 'var(--ink-soft)' }}>
-              <span>은퇴 시 필요한 총금액</span><b>{formatWon(retirementLumpSum)}</b>
+              <span>은퇴생활비 기준 필요자금</span><b>{formatWon(retirementLumpSum)}</b>
             </div>
             <div className="retirement-achievement-row is-strong">
               <span>은퇴 시까지 준비 가능한 금액</span><b>{formatWon(simulation.readyAssetsAtRetirement)}</b>
@@ -88,7 +88,7 @@ export default function CashFlowOutlookPage({ aggregates: agg, simulation, feedb
           <tr style={{ color: 'var(--ink-soft)' }}><td>현재 준비자산</td><td className="num">{formatWon(simulation.currentReadyAssets)}</td></tr>
           <tr><td>현재 자산의 은퇴 시점 예상금액</td><td className="num">{formatWon(simulation.currentAssetsAtRetirement)}</td></tr>
           <tr><td>은퇴 전까지 추가 저축 예상금액</td><td className="num">{formatWon(simulation.futureSavingsAtRetirement)}</td></tr>
-          <tr style={{ color: 'var(--ink-soft)' }}><td>은퇴 시 필요한 총금액</td><td className="num">{formatWon(retirementLumpSum)}</td></tr>
+          <tr style={{ color: 'var(--ink-soft)' }}><td>은퇴생활비 기준 필요자금</td><td className="num">{formatWon(retirementLumpSum)}</td></tr>
           <tr><td>은퇴 시까지 준비 가능한 금액</td><td className="num">{formatWon(simulation.readyAssetsAtRetirement)}</td></tr>
           <tr className="total-row"><td>은퇴 시점 단순 비교 차이</td><td className="num">{formatWon(simulation.shortfall)}</td></tr>
         </tbody>

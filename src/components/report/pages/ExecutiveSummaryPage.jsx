@@ -15,7 +15,7 @@ function ExecutiveFinanceSummary({ agg, financialPositionFeedback, cashFlowFeedb
     { label: '순자산', value: agg.netWorth, color: 'var(--teal)' },
   ];
   const cashFlowBars = [
-    { label: '수입', value: agg.householdMonthlyIncomeTotal, color: 'var(--navy-700)' },
+    { label: '수입', value: agg.monthlyIncome, color: 'var(--navy-700)' },
     { label: '지출', value: agg.totalExpenseMonthlyExSavings, color: 'var(--red)' },
     { label: '월저축액', value: agg.monthlySavings, color: 'var(--teal)' },
   ];
@@ -40,7 +40,7 @@ function ExecutiveFinanceSummary({ agg, financialPositionFeedback, cashFlowFeedb
         <table className="grade-table compact">
           <thead><tr><th colSpan={2}>현금흐름표</th></tr></thead>
           <tbody>
-            <tr><td>수입</td><td className="num">{formatWon(agg.householdMonthlyIncomeTotal)}</td></tr>
+            <tr><td>수입</td><td className="num">{formatWon(agg.monthlyIncome)}</td></tr>
             <tr><td>지출</td><td className="num">{formatWon(agg.totalExpenseMonthlyExSavings)}</td></tr>
             <tr className="total-row"><td>월저축액</td><td className="num">{formatWon(agg.monthlySavings)}</td></tr>
           </tbody>
@@ -139,7 +139,7 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
           <div className="executive-calculation-heading"><strong>은퇴자금 계산 근거</strong><small>입력값과 기존 은퇴 시뮬레이션 결과를 단계별로 정리했습니다.</small></div>
           <div className="executive-calculation-step"><i>1</i><span>은퇴 시점 월 생활비</span><b>{formatWon(retirementReadiness.retirementLivingCostAtRetirement)}</b></div>
           <div className="executive-calculation-arrow" aria-hidden="true">→</div>
-          <div className="executive-calculation-step"><i>2</i><span>필요자금 − 예상 준비자산</span><b>{formatWon(retirementReadiness.requiredAtRetirement)} − {formatWon(retirementReadiness.readyAssetsAtRetirement)}</b></div>
+          <div className="executive-calculation-step"><i>2</i><span>은퇴생활비 기준 필요자금 − 예상 준비자산</span><b>{formatWon(retirementReadiness.requiredAtRetirement)} − {formatWon(retirementReadiness.readyAssetsAtRetirement)}</b></div>
           <div className="executive-calculation-arrow" aria-hidden="true">→</div>
           <div className="executive-calculation-step is-result"><i>3</i><span>은퇴 시점 단순 비교 차이</span><b>{formatWon(retirementReadiness.shortfall)}</b></div>
           <p>물가상승률 연 {formatPercent(retirementReadiness.inflationRate)} · 예상 운용수익률 연 {formatPercent(retirementReadiness.assumedReturnRate)}</p>
