@@ -61,7 +61,7 @@ describe('ExecutiveSummaryPage', () => {
     expect(html).toContain('은퇴 시점 단순 비교');
     expect(html).toContain('참고 차이');
     expect(html).toContain('최종 자산 유지 전망과는 다를 수 있습니다.');
-    expect(html).toContain('최종 은퇴 전망');
+    expect(html).not.toContain('최종 은퇴 전망');
     expect(html).toContain('기대수명까지 유지');
     expect(html).toContain('기대수명까지 준비자산이 유지될 것으로 예상됩니다.');
     expect(html).not.toContain('서버에서 해석한 은퇴자산 유지 전망입니다.');

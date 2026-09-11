@@ -146,10 +146,11 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
           <form onSubmit={handleSubmit} className="auth-form">
             {mode === 'signup' && (
               <p className="auth-signup-reassurance">
-                아이디는 진단 중 중도 이탈할 경우 저장된 기록을 찾기 위해 사용합니다.<br />
-                본인 휴대폰 번호의 뒤 8자리만 아이디로 사용합니다.<br />
-                진단 결과는 진단 완료 후 7일 이내에 자동 삭제됩니다.<br />
-                휴대폰 번호 전체는 입력하거나 저장하지 않습니다.
+                개인정보 보호를 위해 개인정보는 최소한의 수준에서 입력합니다.<br /><br />
+                1. 아이디는 핸드폰 번호 8자리입니다.<br />
+                2. 비밀번호를 재발급하면 이전 기록은 삭제됩니다.<br />
+                3. 회원 가입 후 30일이 지나면 진단기록은 자동삭제됩니다.<br />
+                4. 중간에 이탈하는 경우 자동저장된 곳부터 시작합니다.
               </p>
             )}
             {mode === 'signup' && (

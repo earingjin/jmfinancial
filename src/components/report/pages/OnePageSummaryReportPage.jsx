@@ -124,7 +124,6 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
             <p>{financialHealth.detail}</p>
           </article>
           <article className="is-retirement">
-            <span>최종 은퇴 전망</span>
             <strong className="one-summary-judgment-label">{retirementLabel}</strong>
             <p>{retirementSummary}</p>
           </article>

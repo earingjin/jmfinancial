@@ -7,6 +7,7 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
   const displayName = userName?.trim() || '고객';
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [showDiagnosisGuide, setShowDiagnosisGuide] = useState(false);
 
   const handleDeleteAccount = async () => {
     if (!window.confirm('회원탈퇴하시겠습니까? 진단 결과를 포함한 모든 정보가 삭제되며 되돌릴 수 없습니다.')) return;
@@ -15,6 +16,11 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
     const { error } = await onDeleteAccount();
     setDeleting(false);
     if (error) setDeleteError(error.message || '회원탈퇴에 실패했습니다.');
+  };
+
+  const startAfterGuide = () => {
+    setShowDiagnosisGuide(false);
+    onStart();
   };
 
   return (
@@ -49,7 +55,7 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
           </div>
 
           <div className="welcome-actions">
-            <button type="button" className="welcome-login" onClick={onStart}>자산진단 시작하기</button>
+            <button type="button" className="welcome-login" onClick={() => setShowDiagnosisGuide(true)}>자산진단 시작하기</button>
             <button type="button" className="welcome-signup" onClick={onViewHistory}>이전 결과 보기</button>
           </div>
           <div className="home-account-actions">
@@ -62,6 +68,32 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
           {deleteError && <p className="home-delete-account-error">{deleteError}</p>}
           <AppCopyright className="welcome-copyright" />
         </div>
+
+        {showDiagnosisGuide && (
+          <div className="modal-overlay" role="presentation" onClick={() => setShowDiagnosisGuide(false)}>
+            <section className="modal-panel diagnosis-guide" role="dialog" aria-modal="true" aria-labelledby="diagnosis-guide-title" onClick={(event) => event.stopPropagation()}>
+              <div className="modal-header">
+                <h4 id="diagnosis-guide-title">진단 전 안내</h4>
+                <button type="button" className="modal-close" onClick={() => setShowDiagnosisGuide(false)} aria-label="닫기">×</button>
+              </div>
+              <p className="diagnosis-guide-intro">본 자산관리 진단으로 알 수 있는 것은 다음과 같습니다.</p>
+              <ol className="diagnosis-guide-list">
+                <li>현재의 자산관리 상태</li>
+                <li>노후 준비 상태</li>
+                <li>자산 관련 최소 문항을 통한 진단</li>
+              </ol>
+              <div className="diagnosis-guide-limit">
+                <strong>진단의 범위</strong>
+                <p>자산증식 방식, 재테크, 절세 방안과 관련한 솔루션은 민감한 개인별 사항이므로 제공하지 않습니다.</p>
+              </div>
+              <p className="diagnosis-guide-expert">자산관리에 대한 정확한 피드백은 전문가와 상담해 주세요.</p>
+              <div className="diagnosis-guide-actions">
+                <button type="button" className="welcome-signup" onClick={() => setShowDiagnosisGuide(false)}>다음에 하기</button>
+                <button type="button" className="welcome-login" onClick={startAfterGuide}>내용을 확인하고 시작하기</button>
+              </div>
+            </section>
+          </div>
+        )}
       </section>
     </div>
   );

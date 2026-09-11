@@ -2,7 +2,7 @@ import PageFrame from './PageFrame';
 import AIFeedbackBox from './AIFeedbackBox';
 import FinanceBarChart from './FinanceBarChart';
 import { formatNumber, formatWon, formatPercent, round1 } from '../../../utils/format';
-import { getRetirementSustainabilityStatus, RETIREMENT_FINAL_OUTLOOK_BASIS, RETIREMENT_SIMPLE_COMPARISON_NOTE } from '../../summary/summaryPresentation';
+import { getRetirementSustainabilityStatus, RETIREMENT_SIMPLE_COMPARISON_NOTE } from '../../summary/summaryPresentation';
 
 // 카드별 등급(우수/양호/보통/위험) 판정 기준은 아직 정의되어 있지 않아 자리표시자("-")로 남겨둔다.
 // 실제 판정 로직이 마련되면 이 자리에 값을 채워 넣는다.
@@ -121,11 +121,9 @@ export default function ExecutiveSummaryPage({ simulation, aggregates: agg, fami
         </div>
         <div className="summary-card">
           <div className="summary-card-title-row">
-            <span className="summary-card-title">최종 은퇴 전망</span>
             <span className="summary-card-rating">{RATING_PLACEHOLDER}</span>
           </div>
           <div className="summary-card-row"><span>월평균 지출</span><span className="num">{formatWon(simulation.retirementLivingCostNow)}</span></div>
-          <div className="summary-card-row"><span>{RETIREMENT_FINAL_OUTLOOK_BASIS}</span></div>
           <div className="summary-card-row total"><span>최종 전망</span><span className="num">{retirementStatus.displayValue}</span></div>
           <p className="summary-card-reason">{assetDepletionInterpretation}</p>
         </div>

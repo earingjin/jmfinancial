@@ -4,8 +4,6 @@ import { formatNumber, formatPercent, formatWon } from '../../utils/format';
 
 export const RETIREMENT_SIMPLE_COMPARISON_NOTE = '은퇴생활비 기준 필요자금과 예상 준비자산만 비교한 참고값입니다. 은퇴 후 연금소득과 지출을 반영한 최종 자산 유지 전망과는 다를 수 있습니다.';
 
-export const RETIREMENT_FINAL_OUTLOOK_BASIS = '연금소득·생활비·목돈지출·운용수익을 반영한 결과';
-
 const FHS_STATUS_BADGE_LABELS = {
   '매우 우수': '안정적',
   '우수': '양호',
