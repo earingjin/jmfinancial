@@ -1,5 +1,5 @@
 import PageFrame from './PageFrame';
-import { formatNumber, formatPercent, formatWon } from '../../../utils/format';
+import { formatNumber, formatWon } from '../../../utils/format';
 import { getFinancialHealthStatus, getRetirementSustainabilityStatus, RETIREMENT_SIMPLE_COMPARISON_NOTE } from '../../summary/summaryPresentation';
 
 function formatDate(generatedAt) {
@@ -14,10 +14,6 @@ function formatDate(generatedAt) {
 
 function displayWon(value) {
   return Number.isFinite(value) ? formatWon(value) : '산출 불가';
-}
-
-function displayPercent(value) {
-  return Number.isFinite(value) ? formatPercent(value) : '산출 불가';
 }
 
 function StatementGroup({ label, value, details = [] }) {
@@ -70,7 +66,6 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
   );
   const retirementLabel = retirementStatus.label;
   const retirementSummary = [...retirementStatus.titleLines, ...retirementStatus.detailLines].join(' ');
-  const retirementIncome = retirement.retirementIncomeIndicator;
   const assetDetails = (donuts.assets?.items || []).filter((item) => Number(item?.value) > 0);
   const debtDetails = (donuts.debt?.items || []).filter((item) => Number(item?.value) > 0 && item.key !== 'total');
   const byPerson = aggregates.retirementIncomeByPerson || {};
@@ -83,15 +78,6 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
     ['연소득', peerComparison.householdIncome],
     ['금융자산', peerComparison.financialAssets],
   ];
-  const targetsByAge = new Map((future.targets || []).map((item) => [item.age, item]));
-  const fiveYearHighlights = (future.fiveYearOutlook || [])
-    .filter((item) => targetsByAge.has(item.age))
-    .map((item) => ({ ...item, target: targetsByAge.get(item.age) }));
-  const hasDuplicateRetirementCoverage = fiveYearHighlights.some((item) => (
-    item.age === retirement.retirementAge
-    && Number.isFinite(retirementIncome?.value)
-    && item.target.coverageRate === retirementIncome.value
-  ));
   const retirementRequiredAmount = retirement.requiredAtRetirement;
   const retirementReadyAmount = retirement.readyAssetsAtRetirement;
   const retirementShortfallAmount = retirement.shortfall;
@@ -230,6 +216,7 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
         </table>
       </section>
 
+      {/* 은퇴 후 생활비 충당 전망은 1페이지 요약 리포트에서 제외합니다.
       <section className="one-summary-section one-summary-future" aria-labelledby="one-summary-future-title">
         <div className="one-summary-section-heading">
           <div>
@@ -259,6 +246,7 @@ export default function OnePageSummaryReportPage({ result, clientName }) {
         ) : <p className="one-summary-empty">기존 저장 결과에서는 5년 단위 전망을 표시할 수 없습니다.</p>}
       </section>
 
+      */}
       <p className="one-summary-note">본 요약은 기존 진단 결과를 간추린 자료입니다. 세부 계산 근거와 항목별 안내는 상세 리포트에서 확인해 주세요.</p>
     </PageFrame>
   );

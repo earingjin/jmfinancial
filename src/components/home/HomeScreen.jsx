@@ -50,7 +50,7 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
               <li>항목별 세부 입력은 필요할 때만 선택</li>
               <li>중간 입력 내용 임시저장 가능</li>
               <li>진단 완료 후 맞춤 리포트 제공</li>
-              <li>진단 결과 7일 후 자동 삭제</li>
+              <li>진단 결과 30일 후 자동 삭제</li>
             </ul>
           </div>
 

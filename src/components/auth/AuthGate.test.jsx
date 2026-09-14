@@ -23,6 +23,16 @@ function renderLogin() {
 }
 
 describe('AuthGate signup consent', () => {
+  it('shows the concise 30-day data policy above the login form', () => {
+    const html = renderLogin();
+
+    expect(html).toContain('안심하고 이용하세요');
+    expect(html).toContain('입력하신 정보는 제3자에게 제공되지 않습니다.');
+    expect(html).toContain('진단 결과는 진단 완료일로부터 30일 후 자동 삭제됩니다.');
+    expect(html).toContain('회원 탈퇴 시 저장된 진단 정보는 즉시 삭제됩니다.');
+    expect(html).not.toContain('진단결과 제공 7일 후 자동삭제됩니다.');
+  });
+
   it('puts the required consent checkbox directly above the signup button', () => {
     const html = renderSignup();
     const consentIndex = html.indexOf('개인정보 수집·이용에 동의합니다.');

@@ -43,7 +43,7 @@ function PrivacyConsentModal({ onClose }) {
           <p>기타 이용자가 입력하는 재무 관련 정보</p>
 
           <h5>보유 및 이용기간</h5>
-          <p>자산진단 결과는 진단 완료 후 7일간 보관되며, 이후 자동으로 파기됩니다.</p>
+          <p>자산진단 결과는 진단 완료 후 30일간 보관되며, 이후 자동으로 파기됩니다.</p>
 
           <h5>동의 거부 권리</h5>
           <p>이용자는 개인정보 수집·이용에 대한 동의를 거부할 권리가 있습니다. 다만 필수항목 수집에 동의하지 않을 경우 자산진단 서비스 이용이 제한될 수 있습니다.</p>
@@ -117,11 +117,14 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
         <p className="auth-page-title">제이엠 자산관리 플래너</p>
       </div>
       {mode === 'login' && title === '잭앤리치' && (
-        <ul className="auth-login-notice">
-          <li>제3자에게 제공되지 않습니다</li>
-          <li>진단결과 제공 7일 후 자동삭제됩니다.</li>
-          <li>회원탈퇴시 바로 삭제됩니다.</li>
-        </ul>
+        <section className="auth-login-notice" aria-labelledby="auth-login-notice-title">
+          <h2 id="auth-login-notice-title">안심하고 이용하세요</h2>
+          <ul>
+            <li>입력하신 정보는 제3자에게 제공되지 않습니다.</li>
+            <li>진단 결과는 진단 완료일로부터 30일 후 자동 삭제됩니다.</li>
+            <li>회원 탈퇴 시 저장된 진단 정보는 즉시 삭제됩니다.</li>
+          </ul>
+        </section>
       )}
       <div className="auth-card">
         <div className="auth-card-bg">
@@ -149,7 +152,7 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
                 개인정보 보호를 위해 개인정보는 최소한의 수준에서 입력합니다.<br /><br />
                 1. 아이디는 핸드폰 번호 8자리입니다.<br />
                 2. 비밀번호를 재발급하면 이전 기록은 삭제됩니다.<br />
-                3. 회원 가입 후 30일이 지나면 진단기록은 자동삭제됩니다.<br />
+                3. 진단 완료일로부터 30일이 지나면 진단기록은 자동삭제됩니다.<br />
                 4. 중간에 이탈하는 경우 자동저장된 곳부터 시작합니다.
               </p>
             )}
