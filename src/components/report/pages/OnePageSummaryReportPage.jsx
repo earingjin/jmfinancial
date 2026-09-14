@@ -1,6 +1,18 @@
 import PageFrame from './PageFrame';
-import { formatNumber, formatWon } from '../../../utils/format';
-import { getFinancialHealthStatus, getRetirementSustainabilityStatus, RETIREMENT_SIMPLE_COMPARISON_NOTE } from '../../summary/summaryPresentation';
+import { formatNumber, formatPercent, formatWon, round1 } from '../../../utils/format';
+import {
+  formatIndicatorStatusBadge,
+  getFinancialHealthStatus,
+  getRetirementSustainabilityStatus,
+  getSeveranceLumpSumDisplayItems,
+  RETIREMENT_SIMPLE_COMPARISON_NOTE,
+} from '../../summary/summaryPresentation';
+
+const FINANCIAL_INDICATORS = [
+  { key: 'household', label: '매달 소득 중 지출 비율' },
+  { key: 'emergency', label: '비상자금으로 버틸 수 있는 기간' },
+  { key: 'dsr', label: '매달 소득 중 빚 갚는 비율' },
+];
 
 function formatDate(generatedAt) {
   if (!generatedAt) return '-';
@@ -16,25 +28,16 @@ function displayWon(value) {
   return Number.isFinite(value) ? formatWon(value) : '산출 불가';
 }
 
-function StatementGroup({ label, value, details = [] }) {
-  return (
-    <div className="one-summary-statement-group" aria-label={`${label} 구성내역`}>
-      <div className="one-summary-statement-total">
-        <span>{label}</span>
-        <strong>{displayWon(value)}</strong>
-      </div>
-      {details.length > 0 && (
-        <div className="one-summary-breakdown">
-          {details.map((item) => (
-            <div key={item.key || item.label}>
-              <span>{item.label}</span>
-              <b>{displayWon(item.value)}</b>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+function displayYears(value, useRound = false) {
+  if (!Number.isFinite(value)) return '산출 불가';
+  return `${useRound ? round1(value) : formatNumber(value)}년`;
+}
+
+function displayIndicator(indicator) {
+  if (!indicator || indicator.notCalculable) return '산출 불가';
+  return indicator.key === 'emergency'
+    ? `${formatNumber(indicator.value)}개월`
+    : formatPercent(indicator.value);
 }
 
 function peerStatus(metric) {
@@ -42,212 +45,326 @@ function peerStatus(metric) {
   return metric.percentileLabel || metric.comparisonLabel || '비교 데이터 부족';
 }
 
-export default function OnePageSummaryReportPage({ result, clientName }) {
+function peerBarWidth(value, maximum) {
+  if (!Number.isFinite(value) || !Number.isFinite(maximum) || maximum <= 0) return '0%';
+  return `${Math.min(100, Math.max(0, (value / maximum) * 100))}%`;
+}
+
+function PeerComparisonBar({ label, metric }) {
+  const ownValue = Number(metric?.value);
+  const averageValue = Number(metric?.average);
+  const maximum = Math.max(
+    Number.isFinite(ownValue) ? Math.max(0, ownValue) : 0,
+    Number.isFinite(averageValue) ? Math.max(0, averageValue) : 0,
+  );
+
+  return (
+    <article className="one-summary-peer-row">
+      <h3>{label}</h3>
+      <div className="one-summary-peer-values">
+        <div><span>나</span><strong>{displayWon(metric?.value)}</strong></div>
+        <div><span>또래 평균</span><strong>{displayWon(metric?.average)}</strong></div>
+      </div>
+      <div className="one-summary-peer-visual">
+        <div className="one-summary-peer-bar" aria-label={`나 ${displayWon(metric?.value)}`}>
+          <span className="one-summary-peer-bar-fill one-summary-peer-bar-fill--mine" style={{ width: peerBarWidth(ownValue, maximum) }} />
+        </div>
+        <div className="one-summary-peer-bar" aria-label={`또래 평균 ${displayWon(metric?.average)}`}>
+          <span className="one-summary-peer-bar-fill one-summary-peer-bar-fill--average" style={{ width: peerBarWidth(averageValue, maximum) }} />
+        </div>
+        <p>{peerStatus(metric)}</p>
+      </div>
+    </article>
+  );
+}
+
+function RecordValue({ label, value }) {
+  return (
+    <div className="one-summary-record-value">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function financialStatusHeadline(title) {
+  return String(title || '')
+    .replace(/^현재 재무상태가\s*/, '')
+    .replace(/^현재 재무상태는\s*/, '')
+    .replace(/^현재 재무구조에서\s*/, '')
+    .replace(/^현재 재무상태를 확인하려면\s*/, '')
+    .replace(/입니다\.$/, '')
+    .replace(/이 있습니다\.$/, '')
+    .replace(/가 필요합니다\.$/, '가 필요');
+}
+
+function retirementStatusPresentation(status) {
+  const summary = (status?.titleLines || []).join(' ');
+  const ageMatch = summary.match(/약\s+\d+(?:\.\d+)?세/);
+  if (!ageMatch) return { headline: status?.displayValue || '산출 불가', summary };
+
+  return {
+    headline: ageMatch[0],
+    summary: summary.replace(/약\s+\d+(?:\.\d+)?세에?\s*/, ''),
+  };
+}
+
+function monthlyCoveragePresentation(monthlyIncomeCompare, livingCostAtRetirement) {
+  const comparison = monthlyIncomeCompare || {};
+  const incomeParts = [
+    comparison.nationalPensionMonthly,
+    comparison.severancePensionMonthly,
+    comparison.personalPensionMonthly,
+  ];
+  const calculable = comparison.calculable !== false
+    && comparison.nationalPensionUnknown !== true
+    && Number.isFinite(livingCostAtRetirement)
+    && incomeParts.every(Number.isFinite);
+
+  if (!calculable) {
+    return {
+      calculable: false,
+      result: '확인 필요',
+      reason: comparison.calculationReason || '월 생활비 충당 정보를 산출할 수 없습니다.',
+    };
+  }
+
+  const pensionMonthlyTotal = incomeParts.reduce((sum, amount) => sum + amount, 0);
+  if (livingCostAtRetirement > pensionMonthlyTotal) {
+    return {
+      calculable: true,
+      result: `월 ${formatWon(livingCostAtRetirement - pensionMonthlyTotal)} 부족`,
+      livingCost: livingCostAtRetirement,
+      pensionIncome: pensionMonthlyTotal,
+    };
+  }
+
+  if (pensionMonthlyTotal > livingCostAtRetirement) {
+    return {
+      calculable: true,
+      result: `월 ${formatWon(pensionMonthlyTotal - livingCostAtRetirement)} 여유`,
+      livingCost: livingCostAtRetirement,
+      pensionIncome: pensionMonthlyTotal,
+    };
+  }
+
+  return {
+    calculable: true,
+    result: '월 생활비 충당 가능',
+    livingCost: livingCostAtRetirement,
+    pensionIncome: pensionMonthlyTotal,
+  };
+}
+
+function RecordGroup({ title, values, finalLabel, finalValue, finalTone = 'primary', finalNote }) {
+  return (
+    <div className="one-summary-record-group">
+      <h3>{title}</h3>
+      <div className={`one-summary-record-values${values.length === 3 ? ' is-three' : ''}`}>
+        {values.map((item) => <RecordValue key={item.label} {...item} />)}
+      </div>
+      {finalLabel && (
+        <div className={`one-summary-record-final one-summary-record-final--${finalTone}`}>
+          <span>{finalLabel}</span>
+          <strong>{finalNote && <small>{finalNote}</small>}{finalValue}</strong>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function OnePageSummaryReportPage({ result, input, clientName }) {
   const aggregates = result?.aggregates || {};
   const indicators = result?.indicators || [];
-  const donuts = result?.webSummary?.donuts || {};
+  const overview = result?.webSummary?.overviewDetail || {};
   const retirement = result?.webSummary?.retirementReadiness || {};
-  const future = result?.webSummary?.futureFinance || {};
+  const retirementProjection = result?.webSummary?.futureFinance?.retirementAssetProjection;
   const peerComparison = result?.peerComparison || {};
-  const financialHealth = getFinancialHealthStatus([
-    indicators.find((item) => item.key === 'household'),
-    indicators.find((item) => item.key === 'emergency'),
-    indicators.find((item) => item.key === 'dsr'),
-  ]);
-  const financialHealthLabel = {
-    '😊': '양호',
-    '🙂': '점검 필요',
-    '😥': '보완 필요',
-    '🤔': '확인 필요',
-  }[financialHealth.icon];
-  const retirementStatus = getRetirementSustainabilityStatus(
-    future.retirementAssetProjection,
-    retirement.reason,
+  const representativeIndicators = FINANCIAL_INDICATORS.map(({ key, label }) => ({
+    key,
+    label,
+    indicator: indicators.find((item) => item.key === key),
+  }));
+  const financialHealth = getFinancialHealthStatus(representativeIndicators.map((item) => item.indicator));
+  const retirementStatus = getRetirementSustainabilityStatus(retirementProjection, retirement.reason);
+  const retirementPresentation = retirementStatusPresentation(retirementStatus);
+  const monthlyCoverage = monthlyCoveragePresentation(
+    retirement.monthlyIncomeCompare,
+    retirement.retirementLivingCostAtRetirement,
   );
-  const retirementLabel = retirementStatus.label;
-  const retirementSummary = [...retirementStatus.titleLines, ...retirementStatus.detailLines].join(' ');
-  const assetDetails = (donuts.assets?.items || []).filter((item) => Number(item?.value) > 0);
-  const debtDetails = (donuts.debt?.items || []).filter((item) => Number(item?.value) > 0 && item.key !== 'total');
-  const byPerson = aggregates.retirementIncomeByPerson || {};
-  const severanceLumpSums = [
-    ['본인', byPerson.self?.severanceLumpsum],
-    ['배우자', byPerson.spouse?.severanceLumpsum],
-  ].filter(([, amount]) => Number.isFinite(amount) && amount > 0);
+  const severanceLumpSums = getSeveranceLumpSumDisplayItems(input, retirement.retirementAge);
   const peerRows = [
     ['순자산', peerComparison.netWorth],
     ['연소득', peerComparison.householdIncome],
     ['금융자산', peerComparison.financialAssets],
   ];
-  const retirementRequiredAmount = retirement.requiredAtRetirement;
-  const retirementReadyAmount = retirement.readyAssetsAtRetirement;
-  const retirementShortfallAmount = retirement.shortfall;
-  const hasRetirementDiagram = [retirementRequiredAmount, retirementReadyAmount, retirementShortfallAmount]
-    .every((value) => Number.isFinite(value) && value >= 0)
-    && retirementRequiredAmount > 0;
-  const retirementReadyRatio = hasRetirementDiagram
-    ? Math.min(1, retirementReadyAmount / retirementRequiredAmount)
-    : 0;
-  const retirementShortfallRatio = hasRetirementDiagram
-    ? Math.min(1 - retirementReadyRatio, retirementShortfallAmount / retirementRequiredAmount)
-    : 0;
-  const showRetirementShortfallOutside = retirementShortfallRatio < 0.12;
+  const totalDebtDisplay = overview.balance?.totalDebtNone
+    ? '부채 없음'
+    : displayWon(overview.balance?.totalDebt ?? aggregates.totalDebt);
 
   return (
     <PageFrame eyebrow="One-page Summary" title="재무진단 요약 리포트" pageNumber={1} totalPages={1} contentClassName="one-page-summary-pad">
       <header className="one-summary-header">
-        <p className="intro-text report-compact-intro">현재 상태부터 은퇴 후 생활비 전망까지, 핵심 결과만 한 장에 정리했습니다.</p>
+        <p className="intro-text report-compact-intro">진단 당시의 재무상태와 은퇴 준비상태를 한 장에 담았습니다.</p>
         <div className="one-summary-meta">
           <span title={clientName || '고객'}>{clientName || '고객'}</span>
           <time dateTime={result?.generatedAt || undefined}>진단일 {formatDate(result?.generatedAt)}</time>
         </div>
       </header>
 
-      <section className="one-summary-judgment" aria-label="종합 결과">
-        <div className="one-summary-judgment-grid">
-          <article>
-            <span>현재 재무상태</span>
-            <strong className="one-summary-judgment-label">{financialHealthLabel}</strong>
+      <section className="one-summary-section one-summary-overall" aria-labelledby="one-summary-overall-title">
+        <div className="one-summary-section-heading">
+          <h2 className="subsection-head" id="one-summary-overall-title">01. 종합 결과</h2>
+        </div>
+        <div className="one-summary-overall-grid">
+          <article className="one-summary-result-card">
+            <div className="one-summary-part">Part 1. 재무</div>
+            <div className="one-summary-result-heading">
+              <span aria-hidden="true">{financialHealth.icon}</span>
+              <div>
+                <span>현재 재무상태</span>
+                <strong>{financialStatusHeadline(financialHealth.title)}</strong>
+              </div>
+            </div>
             <p>{financialHealth.detail}</p>
+            <div className="one-summary-indicator-list">
+              {representativeIndicators.map(({ key, label, indicator }) => (
+                <div key={key} className={`one-summary-indicator-row one-summary-indicator-row--${indicator?.ratioClass || 'unknown'}`}>
+                  <span>{label}</span>
+                  <strong>{displayIndicator(indicator)}</strong>
+                  <small>{indicator ? formatIndicatorStatusBadge(indicator) : '확인 필요'}</small>
+                </div>
+              ))}
+            </div>
           </article>
-          <article className="is-retirement">
-            <strong className="one-summary-judgment-label">{retirementLabel}</strong>
-            <p>{retirementSummary}</p>
+
+          <article className="one-summary-result-card one-summary-result-card--retirement">
+            <div className="one-summary-part">Part 2. 은퇴</div>
+            <div className="one-summary-result-heading">
+              <span aria-hidden="true">{retirementStatus.icon}</span>
+              <div>
+                <span>예상 자산 유지 기간</span>
+                <strong>{retirementPresentation.headline}</strong>
+              </div>
+            </div>
+            <div className="one-summary-monthly-coverage">
+              <span>월 생활비 충당 <i aria-hidden="true">·</i> 은퇴 시점 기준</span>
+              {monthlyCoverage.calculable ? (
+                <>
+                  <small><b>은퇴 목표생활비(물가 반영)</b>{displayWon(monthlyCoverage.livingCost)}</small>
+                  <small><b>은퇴 시점 예상 연금소득</b>{displayWon(monthlyCoverage.pensionIncome)}</small>
+                </>
+              ) : <small className="one-summary-monthly-coverage-reason">{monthlyCoverage.reason}</small>}
+              <strong>→ {monthlyCoverage.result}</strong>
+            </div>
+            {!retirement.notCalculable && (
+              <div className="one-summary-fact-list">
+                <div><span>향후 노후 생활 기간</span><strong>{displayYears(retirement.retirementYears, true)}</strong></div>
+                <div><span>은퇴 목표생활비(물가 반영)</span><strong>{displayWon(retirement.retirementLivingCostAtRetirement)}</strong></div>
+                <div><span>현재 월 생활비</span><strong>{displayWon(aggregates.monthlyLivingCost)}</strong></div>
+              </div>
+            )}
           </article>
         </div>
       </section>
 
-      <section className="one-summary-section" aria-labelledby="one-summary-current-title">
-        <div className="one-summary-section-heading">
-          <div>
-            <h2 className="subsection-head" id="one-summary-current-title">현재 재무상태</h2>
-            <p className="intro-text one-summary-section-description">보유 자산과 부채를 기준으로 현재 상태를 보여드립니다.</p>
+      <div className="one-summary-middle-grid">
+        <section className="one-summary-section" aria-labelledby="one-summary-current-title">
+          <div className="one-summary-section-heading">
+            <div>
+              <h2 className="subsection-head" id="one-summary-current-title">02. 현재 재무상태</h2>
+            </div>
           </div>
-          <p className="one-summary-section-meta">가구 기준 현재 자산과 부채</p>
-        </div>
-        <div className="one-summary-balance-sheet">
-          <StatementGroup label="총자산" value={aggregates.totalAssets} details={assetDetails} />
-          <StatementGroup label="총부채" value={aggregates.totalDebt} details={debtDetails} />
-          <div className="one-summary-net-result">
-            <span>총자산 − 총부채</span>
-            <b>순자산</b>
-            <strong>{displayWon(aggregates.netWorth)}</strong>
+          <div className="one-summary-record-panel">
+            <RecordGroup
+              title="월 현금흐름"
+              values={[
+                { label: '월 수입 합계', value: displayWon(overview.income?.monthlyTotal) },
+                { label: '월 고정지출 합계', value: displayWon(overview.expense?.fixedTotal) },
+              ]}
+              finalLabel="월 소득 합계 − 고정지출 합계"
+              finalValue={displayWon(overview.expense?.incomeMinusExpense)}
+              finalTone="secondary"
+            />
+            <RecordGroup
+              title="자산 현황"
+              values={[
+                { label: '총자산', value: displayWon(aggregates.totalAssets) },
+                { label: '총부채', value: totalDebtDisplay },
+              ]}
+              finalLabel="순자산"
+              finalValue={displayWon(aggregates.netWorth)}
+            />
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="one-summary-section one-summary-retirement" aria-labelledby="one-summary-retirement-title">
-        <div className="one-summary-section-heading">
-          <div>
-            <h2 className="subsection-head" id="one-summary-retirement-title">은퇴 준비</h2>
-            <p className="intro-text one-summary-section-description">필요자금과 예상 준비자산의 차이를 보여드립니다.</p>
+        <section className="one-summary-section" aria-labelledby="one-summary-retirement-title">
+          <div className="one-summary-section-heading">
+            <div>
+              <h2 className="subsection-head" id="one-summary-retirement-title">03. 은퇴 준비 현황</h2>
+            </div>
           </div>
-          <p className="one-summary-section-meta">{Number.isFinite(retirement.retirementAge) ? `${formatNumber(retirement.retirementAge)}세 은퇴 기준` : '은퇴 기준 확인 필요'}</p>
-        </div>
-        {retirement.notCalculable ? (
-          <p className="one-summary-empty">{retirement.reason || '은퇴 준비 결과를 표시할 수 없습니다.'}</p>
-        ) : (
-          <>
-            {hasRetirementDiagram ? (
-              <div className="one-summary-retirement-diagram" aria-label="필요자금, 예상 준비자산, 부족자금 관계">
-                <div className="one-summary-retirement-required">
-                  <span>은퇴생활비 기준 필요자금</span>
-                  <strong>{displayWon(retirementRequiredAmount)}</strong>
-                </div>
-                <div className="one-summary-retirement-composition">
-                  <div
-                    className="one-summary-retirement-ready"
-                    style={{ flexGrow: retirementReadyRatio, flexBasis: 0 }}
-                  >
-                    <span>예상 준비자산</span>
-                    <strong>{displayWon(retirementReadyAmount)}</strong>
+          {retirement.notCalculable ? (
+            <p className="one-summary-empty">{retirement.reason || '은퇴 준비 결과를 표시할 수 없습니다.'}</p>
+          ) : (
+            <>
+              <div className="one-summary-record-panel">
+                <RecordGroup
+                  title="은퇴 시점"
+                  values={[
+                    { label: '예상 은퇴 나이', value: Number.isFinite(retirement.retirementAge) ? `${formatNumber(retirement.retirementAge)}세` : '산출 불가' },
+                    { label: '은퇴까지 남은 기간', value: displayYears(retirement.yearsToRetirement) },
+                    { label: '은퇴 후 생활 기간', value: displayYears(retirement.retirementYears, true) },
+                  ]}
+                />
+                <RecordGroup
+                  title="은퇴자금 비교"
+                  values={[
+                    { label: '은퇴생활비 기준 필요자금', value: displayWon(retirement.requiredAtRetirement) },
+                    { label: '은퇴 시점 예상 준비자산', value: displayWon(retirement.readyAssetsAtRetirement) },
+                  ]}
+                  finalLabel="은퇴 시점 단순 비교 차이"
+                  finalValue={displayWon(retirement.shortfall)}
+                  finalNote="참고값"
+                />
+              </div>
+              <p className="one-summary-retirement-reference">{RETIREMENT_SIMPLE_COMPARISON_NOTE}</p>
+              {severanceLumpSums.length > 0 && (
+                <div className="one-summary-lumpsums">
+                  <span>향후 예정 목돈</span>
+                  <div className="one-summary-lumpsum-items">
+                    {severanceLumpSums.map((item) => (
+                      <b key={`${item.label}-${item.age}`}>
+                        {item.label} 퇴직급여 일시금 · {displayWon(item.amount)} · {formatNumber(item.age)}세 수령 예정
+                      </b>
+                    ))}
                   </div>
-                  <div
-                    className={`one-summary-retirement-shortfall${showRetirementShortfallOutside ? ' is-compact' : ''}`}
-                    style={{ flexGrow: retirementShortfallRatio, flexBasis: 0 }}
-                  >
-                    {!showRetirementShortfallOutside && <><span>은퇴 시점 단순 비교 차이</span><strong>{displayWon(retirementShortfallAmount)}</strong></>}
-                  </div>
                 </div>
-                {showRetirementShortfallOutside && (
-                  <p className="one-summary-retirement-shortfall-note">
-                    <span>은퇴 시점 단순 비교 차이</span><strong>{displayWon(retirementShortfallAmount)}</strong>
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="one-summary-retirement-flow">
-                <div className="is-shortfall"><span>은퇴 시점 단순 비교 차이</span><strong>{displayWon(retirement.shortfall)}</strong></div>
-                <div><span>은퇴생활비 기준 필요자금</span><strong>{displayWon(retirement.requiredAtRetirement)}</strong></div>
-                <div><span>예상 준비자산</span><strong>{displayWon(retirement.readyAssetsAtRetirement)}</strong></div>
-              </div>
-            )}
-            <p className="one-summary-retirement-reference">{RETIREMENT_SIMPLE_COMPARISON_NOTE}</p>
-            {severanceLumpSums.length > 0 && (
-              <div className="one-summary-lumpsums">
-                <span>예정 퇴직급여 일시금</span>
-                {severanceLumpSums.map(([owner, amount]) => <b key={owner}>{owner} {displayWon(amount)}</b>)}
-                <small>기존 입력 및 계산 결과 기준</small>
-              </div>
-            )}
-          </>
-        )}
-      </section>
+              )}
+            </>
+          )}
+        </section>
+      </div>
 
       <section className="one-summary-section one-summary-peer" aria-labelledby="one-summary-peer-title">
         <div className="one-summary-section-heading">
           <div>
-            <h2 className="subsection-head" id="one-summary-peer-title">또래 비교</h2>
-            <p className="intro-text one-summary-section-description">동일 연령대 가구와 현재 재무 수준을 비교합니다.</p>
+            <h2 className="subsection-head" id="one-summary-peer-title">04. 또래와 비교</h2>
+            <p className="intro-text one-summary-section-description">동일 연령대 가구와 진단 당시의 재무 수준을 비교합니다.</p>
           </div>
           <p className="one-summary-section-meta">{peerComparison.userBracketLabel || peerComparison.benchmarkMeta?.ageBasis || '동일 연령대 기준'}</p>
         </div>
-        <table className="one-summary-peer-table">
-          <thead><tr><th>항목</th><th>나</th><th>또래 기준</th><th>비교</th></tr></thead>
-          <tbody>
-            {peerRows.map(([label, metric]) => (
-              <tr key={label}>
-                <th>{label}</th>
-                <td>{displayWon(metric?.value)}</td>
-                <td>{displayWon(metric?.average)}</td>
-                <td>{peerStatus(metric)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      {/* 은퇴 후 생활비 충당 전망은 1페이지 요약 리포트에서 제외합니다.
-      <section className="one-summary-section one-summary-future" aria-labelledby="one-summary-future-title">
-        <div className="one-summary-section-heading">
-          <div>
-            <h2 className="subsection-head" id="one-summary-future-title">은퇴 후 생활비 충당 전망</h2>
-            <p className="intro-text one-summary-section-description">현재 생활수준 기준 예상 생활비를 연금소득으로 얼마나 충당하는지 보여드립니다.</p>
-          </div>
-          <p className="one-summary-section-meta">은퇴 시점 기준 · 연령별 전망과 별도</p>
+        <div className="one-summary-peer-comparison-list">
+          {peerRows.map(([label, metric]) => <PeerComparisonBar key={label} label={label} metric={metric} />)}
         </div>
-        {!hasDuplicateRetirementCoverage && (
-          <div className="one-summary-coverage">
-            <span>은퇴 시점 월 필요생활비 대비</span>
-            <strong>{retirementIncome?.notCalculable ? '산출 불가' : displayPercent(retirementIncome?.value)}</strong>
-            <small>전체 자산이 아닌 예상 연금소득 기준입니다.</small>
-          </div>
+        {peerComparison.benchmarkMeta && (
+          <p className="one-summary-peer-source">
+            {peerComparison.benchmarkMeta.source}({peerComparison.benchmarkMeta.agency}) · {peerComparison.benchmarkMeta.ageBasis} 평균 · 자산·부채 {peerComparison.benchmarkMeta.assetAndDebtAsOf} 기준 · 소득 {peerComparison.benchmarkMeta.incomeYear}년 기준
+          </p>
         )}
-        {fiveYearHighlights.length > 0 ? (
-          <div className="one-summary-outlook" aria-label="5년 단위 생활비와 연금소득의 핵심 시점">
-            {fiveYearHighlights.map((item) => (
-              <div key={item.age}>
-                <b><i aria-hidden="true" />{formatNumber(item.age)}세</b>
-                <em>생활비의 {displayPercent(item.target.coverageRate)} 충당</em>
-                <span>현재 생활수준 기준 생활비 <strong>{displayWon(item.livingExpense)}</strong></span>
-                <span>연금소득 <strong>{displayWon(item.target.pensionIncome)}</strong></span>
-              </div>
-            ))}
-          </div>
-        ) : <p className="one-summary-empty">기존 저장 결과에서는 5년 단위 전망을 표시할 수 없습니다.</p>}
       </section>
 
-      */}
-      <p className="one-summary-note">본 요약은 기존 진단 결과를 간추린 자료입니다. 세부 계산 근거와 항목별 안내는 상세 리포트에서 확인해 주세요.</p>
+      <p className="one-summary-note">이 진단은 방향을 처방하지 않습니다. 현재의 재무상태와 은퇴 준비 정도를 이해하기 위한 진단 결과입니다.</p>
     </PageFrame>
   );
 }

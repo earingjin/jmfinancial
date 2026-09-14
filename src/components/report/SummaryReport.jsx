@@ -1,6 +1,6 @@
 import OnePageSummaryReportPage from './pages/OnePageSummaryReportPage';
 
-export default function SummaryReport({ result, onBack, onHome, clientName }) {
+export default function SummaryReport({ result, input, onBack, onHome, clientName }) {
   const openPrintDialog = () => window.print();
 
   return (
@@ -12,7 +12,7 @@ export default function SummaryReport({ result, onBack, onHome, clientName }) {
         <p className="report-actions-hint">PDF로 저장하려면 인쇄 창의 프린터에서 ‘PDF로 저장’을 선택하세요.</p>
       </div>
 
-      <OnePageSummaryReportPage result={result} clientName={clientName} />
+      <OnePageSummaryReportPage result={result} input={input} clientName={clientName} />
     </div>
   );
 }
