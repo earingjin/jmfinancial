@@ -199,9 +199,9 @@ export default function Step4Assets({ subStepIndex }) {
     const value = pensionBreakdown[key];
     return value !== '' && value != null;
   }) || hasPensionOtherInput;
-  // 본인·배우자 퇴직연금 적립금은 위 4개 카테고리에 더해지는 별도 자산이 아니라, 그 중 이미 입력한
-  // 금액의 일부가 퇴직연금이라는 표시(carve-out)다. 따라서 총액에는 더하지 않는다.
-  const pensionAssetsTotal = PENSION_BREAKDOWN_NUMERIC_KEYS.reduce(
+  // 현재 보유 중인 본인·배우자 퇴직연금 적립금도 상세 연금자산 합계에 포함한다.
+  // 배우자 금액은 현재 배우자 정보가 활성화된 경우에만 포함한다.
+  const pensionAssetsTotal = [...PENSION_BREAKDOWN_NUMERIC_KEYS, ...activeRetirementPensionAssetKeys].reduce(
     (s, k) => s + (k === 'other' ? pensionOtherTotal : Number(pensionBreakdown[k]) || 0),
     0
   );

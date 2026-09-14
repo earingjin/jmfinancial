@@ -6,7 +6,7 @@ import { initialFormData } from '../../../state/initialFormData';
 import { computeWizardRequiredFields } from '../../../state/wizardRequiredFields';
 import { validateInput } from '../../../../api/_lib/validate.js';
 import { calculatePensionIncomeAtTarget } from '../../../../api/_lib/futureFinance.js';
-import { syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
+import { removeSpouseRetirementPensionAsset, syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
 import Step1Income, { handleSeveranceType, remainingRetirementYearsToMonths } from './Step1Income';
 
 globalThis.React = React;
@@ -162,6 +162,41 @@ describe('Step1Income - retirement-pension asset linkage', () => {
       formData, setField, 'assets.pensionAssetsBreakdown.selfRetirementPension', 3000
     );
     expect(setField).not.toHaveBeenCalled();
+  });
+
+  it('removes only the spouse retirement-pension balance from a simple total', () => {
+    const formData = structuredClone(initialFormData);
+    formData.basic.hasSpouse = true;
+    formData.assets.pensionAssetsInputMode = 'simple';
+    formData.assets.pensionAssets = 8000;
+    formData.assets.pensionAssetsSimpleTotal = 8000;
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 3000;
+    formData.assets.pensionAssetsBreakdown.spouseRetirementPension = 2000;
+    formData.assets.pensionAssetsBreakdown.irp = 3000;
+    const setField = vi.fn();
+
+    removeSpouseRetirementPensionAsset(formData, setField);
+
+    expect(setField).toHaveBeenCalledWith('assets.pensionAssets', 6000);
+    expect(setField).toHaveBeenCalledWith('assets.pensionAssetsSimpleTotal', 6000);
+    expect(setField).toHaveBeenCalledWith('assets.pensionAssetsBreakdown.spouseRetirementPension', '');
+    expect(setField).not.toHaveBeenCalledWith('assets.pensionAssetsBreakdown.selfRetirementPension', expect.anything());
+    expect(setField).not.toHaveBeenCalledWith('assets.pensionAssetsBreakdown.irp', expect.anything());
+  });
+
+  it('clears the spouse balance without rewriting a detailed total', () => {
+    const formData = structuredClone(initialFormData);
+    formData.basic.hasSpouse = true;
+    formData.assets.pensionAssetsInputMode = 'detailed';
+    formData.assets.pensionAssets = 8000;
+    formData.assets.pensionAssetsBreakdown.selfRetirementPension = 3000;
+    formData.assets.pensionAssetsBreakdown.spouseRetirementPension = 2000;
+    const setField = vi.fn();
+
+    removeSpouseRetirementPensionAsset(formData, setField);
+
+    expect(setField).toHaveBeenCalledWith('assets.pensionAssetsBreakdown.spouseRetirementPension', '');
+    expect(setField).not.toHaveBeenCalledWith('assets.pensionAssets', expect.anything());
   });
 });
 

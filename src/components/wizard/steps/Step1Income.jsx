@@ -1,6 +1,6 @@
 import { Activity, useEffect, useRef } from 'react';
 import NumberField from '../fields/NumberField';
-import { syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
+import { removeSpouseRetirementPensionAsset, syncRetirementPensionAssetTotal } from '../fields/inputModeTransitions';
 import RadioField from '../fields/RadioField';
 import MonthlyIncomeField from '../fields/MonthlyIncomeField';
 import SeveranceCalculatorButton from '../fields/SeveranceCalculatorButton';
@@ -114,7 +114,10 @@ export default function Step1Income({ subStepIndex, screenId }) {
   // spouse.* 전체를 초기값으로 리셋한다.
   const setHasSpouse = (value) => {
     setField('basic.hasSpouse', value);
-    if (!value) setField('spouse', initialFormData.spouse);
+    if (!value) {
+      removeSpouseRetirementPensionAsset(formData, setField);
+      setField('spouse', initialFormData.spouse);
+    }
   };
 
   const setHasSalary = (basePath, value) => {
