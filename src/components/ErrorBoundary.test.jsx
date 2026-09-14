@@ -23,28 +23,32 @@ describe('ErrorBoundary (A9)', () => {
   });
 
   it('getDerivedStateFromError는 오류 발생 시 hasError 상태로 전환한다(React가 실제로 호출하는 지점)', () => {
-    expect(ErrorBoundary.getDerivedStateFromError(new Error('아무 오류'))).toEqual({ hasError: true });
+    expect(ErrorBoundary.getDerivedStateFromError(new Error('아무 오류'))).toEqual({
+      hasError: true,
+      errorMessage: '아무 오류',
+    });
   });
 
   it('hasError 상태에서는 흰 화면 대신 AppFallbackScreen을 렌더링한다', () => {
     const instance = new ErrorBoundary({ children: <Fine /> });
-    instance.state = { hasError: true };
+    instance.state = { hasError: true, errorMessage: '저장 결과 형식이 올바르지 않습니다.' };
     const output = instance.render();
     expect(output.type).toBe(AppFallbackScreen);
     expect(output.props.message).toBe('예상하지 못한 오류가 발생했습니다. 새로고침 후 다시 시도해 주세요.');
+    expect(output.props.detail).toBe('저장 결과 형식이 올바르지 않습니다.');
   });
 
   it('오류가 없으면 children을 그대로 반환한다(래핑하지 않음)', () => {
     const instance = new ErrorBoundary({ children: <Fine /> });
-    instance.state = { hasError: false };
+    instance.state = { hasError: false, errorMessage: '' };
     expect(instance.render()).toEqual(<Fine />);
   });
 
-  it('fallback 메시지에는 오류 메시지·스택 등 개발 세부정보가 전혀 포함되지 않는다', () => {
+  it('fallback에는 오류 원인을 표시하되 스택은 표시하지 않는다', () => {
     const instance = new ErrorBoundary({ children: null });
-    instance.state = { hasError: true };
+    instance.state = { hasError: true, errorMessage: '과거 결과 데이터가 없습니다.' };
     const html = renderToStaticMarkup(instance.render());
-    expect(html).not.toContain('Error');
+    expect(html).toContain('오류 원인: 과거 결과 데이터가 없습니다.');
     expect(html).not.toContain('.jsx');
     expect(html).not.toContain('at ');
   });

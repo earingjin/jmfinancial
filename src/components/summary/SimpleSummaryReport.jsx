@@ -130,7 +130,7 @@ function FinancialOverviewCard({ od, aggregates, assetItems = [], debtItems = []
         )}
         <DetailRow
           label="총부채"
-          value={formatWon(totalDebt)}
+          value={od.balance.totalDebtNone ? '부채 없음' : formatWon(totalDebt)}
           missing={od.balance.totalDebtMissing}
           valueColor={totalDebt > 0 ? 'var(--red)' : undefined}
         />
@@ -663,6 +663,32 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
       schedules: pensionDisplaySchedules.personalPension,
     },
   ].filter((item) => Number(item.amount) > 0 || item.status === 'notCalculable' || item.status === 'beforeStart');
+  // 집계 서버가 이미 본인·배우자별로 계산한 월 연금 합계를 그대로 표시한다. 모바일에서는
+  // 항목을 나열하지 않고 사람별 한 줄로 보여 주며, 이전 저장 결과에 이 합계가 없으면 기존
+  // 항목별 표시를 유지한다.
+  const retirementIncomeByPerson = aggregates.retirementIncomeByPerson;
+  const personPensionRows = retirementIncomeByPerson
+    ? [
+        {
+          key: 'self',
+          label: '본인',
+          income: retirementIncomeByPerson.self,
+        },
+        ...(input?.basic?.hasSpouse ? [{
+          key: 'spouse',
+          label: '배우자',
+          income: retirementIncomeByPerson.spouse,
+        }] : []),
+      ].map((person) => ({
+        key: `${person.key}-total`,
+        label: `${person.label} 연금소득`,
+        amount: person.income?.monthlyTotal,
+        status: person.income?.nationalPensionEligibilityStatus === 'unknown' ? 'notCalculable' : 'amount',
+      })).filter((item) => Number(item.amount) > 0 || item.status === 'notCalculable')
+    : [];
+  const displayedRetirementPensionRows = personPensionRows.length > 0
+    ? personPensionRows
+    : retirementPensionRows;
   // 이전에 저장된 결과에도 계산 근거가 보이도록 기존 필드에서 안전하게 역산한다.
   const retirementMonths = rr.retirementYears * 12;
   const livingCostNow = rr.retirementLivingCostNow ?? rr.monthlyIncomeCompare.livingCostMonthly;
@@ -776,14 +802,14 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
 
                   <div className="detail-group">
                     <div className="detail-group-head">준비된 연금소득 <span className="detail-group-tag">월평균</span></div>
-                    {retirementPensionRows.map((item) => (
+                    {displayedRetirementPensionRows.map((item) => (
                       <DetailRow
                         key={item.key}
                         label={item.label}
                         value={pensionCell(item.amount, item.status, item.schedules)}
                       />
                     ))}
-                    {retirementPensionRows.length === 0 && <DetailRow label="월 수령 연금" value="없음" />}
+                    {displayedRetirementPensionRows.length === 0 && <DetailRow label="월 수령 연금" value="없음" />}
                     <DetailRow
                       label="합계"
                       value={rr.monthlyIncomeCompare.nationalPensionUnknown

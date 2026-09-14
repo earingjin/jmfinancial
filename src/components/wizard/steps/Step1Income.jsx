@@ -541,15 +541,6 @@ export default function Step1Income({ subStepIndex, screenId }) {
         </div>
         {hasSpouse && (
           <div className="field-grid" style={{ marginTop: 14 }}>
-            <NumberField path="spouse.retirementAge" label="배우자 은퇴(예정) 연령 *" unit="세" max={120} required />
-            <NumberField
-              path="spouse.lifeExpectancy"
-              label="배우자 기대여명 * (직접 수정 가능)"
-              unit="세"
-              required
-              onValueChange={() => { spouseLifeExpectancyEditedRef.current = true; }}
-              helper="배우자 출생년도를 입력하면 평균 기대수명 84.6세가 자동으로 제안됩니다."
-            />
             <NumberField
               path="spouse.birthYear"
               label="배우자 출생년도 *"
@@ -558,6 +549,15 @@ export default function Step1Income({ subStepIndex, screenId }) {
               required
               integerOnly
               useGrouping={false}
+            />
+            <NumberField path="spouse.retirementAge" label="배우자 은퇴(예정) 연령 *" unit="세" max={120} required />
+            <NumberField
+              path="spouse.lifeExpectancy"
+              label="배우자 기대여명 * (직접 수정 가능)"
+              unit="세"
+              required
+              onValueChange={() => { spouseLifeExpectancyEditedRef.current = true; }}
+              helper="배우자 출생년도를 입력하면 평균 기대수명 84.6세가 자동으로 제안됩니다."
             />
           </div>
         )}

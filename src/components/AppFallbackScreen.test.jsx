@@ -18,12 +18,17 @@ describe('AppFallbackScreen', () => {
     expect(html).not.toContain('supabase.co');
   });
 
+  it('오류 원인이 전달되면 안내 문구와 함께 표시한다', () => {
+    const html = renderToStaticMarkup(<AppFallbackScreen message="오류가 발생했습니다." detail="과거 결과 데이터가 없습니다." />);
+    expect(html).toContain('오류 원인: 과거 결과 데이터가 없습니다.');
+  });
+
   it('새로고침 버튼을 누르면 window.location.reload를 호출한다', () => {
     const reloadSpy = vi.fn();
     vi.stubGlobal('window', { location: { reload: reloadSpy } });
 
     const element = AppFallbackScreen({ message: 'msg' });
-    const button = element.props.children[1];
+    const button = element.props.children.find((child) => child?.type === 'button');
     button.props.onClick();
 
     expect(reloadSpy).toHaveBeenCalledTimes(1);

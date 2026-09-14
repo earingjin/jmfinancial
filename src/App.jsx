@@ -355,6 +355,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
           <Suspense fallback={<LazyScreenFallback />}>
             <SimpleSummaryReport
               result={result}
+              input={resultInput}
               onBack={handleSummaryBack}
               onEdit={resultSource === 'history' && historyInput ? editHistoryResult : undefined}
               onHome={goHome}

@@ -331,21 +331,34 @@ export function calcRetirementIncomeByPerson(input) {
     return n(s.lumpsum);
   };
 
+  const personIncome = ({ nationalPensionMonthly, nationalPensionEligibilityStatus, severancePensionMonthly: severanceMonthly, severanceLumpsum: lumpsum, personalPensionMonthly: personalMonthly }) => ({
+    nationalPensionMonthly,
+    nationalPensionEligibilityStatus,
+    severancePensionMonthly: severanceMonthly,
+    severanceLumpsum: lumpsum,
+    personalPensionMonthly: personalMonthly,
+    // 가입기간을 알 수 없는 국민연금은 0원이 확정된 것이 아니다. 이 경우 개인별 합계도
+    // 확정 금액으로 만들지 않아 화면이 일부 연금만 합산한 값으로 오해하지 않게 한다.
+    monthlyTotal: nationalPensionEligibilityStatus === 'unknown'
+      ? null
+      : nationalPensionMonthly + severanceMonthly + personalMonthly,
+  });
+
   return {
-    self: {
+    self: personIncome({
       nationalPensionMonthly: pickNationalPension(income.nationalPension, basic.birthYear, retirementAge),
       nationalPensionEligibilityStatus: nationalPensionStatus(income.nationalPension),
       severancePensionMonthly: severancePensionMonthly(income.severance, retirementAge),
       severanceLumpsum: severanceLumpsum(income.severance),
       personalPensionMonthly: personalPensionMonthly(income.personalPension, retirementAge),
-    },
-    spouse: {
+    }),
+    spouse: personIncome({
       nationalPensionMonthly: pickNationalPension(spouse.nationalPension, spouse.birthYear, spouseRetirementAge),
       nationalPensionEligibilityStatus: input.basic?.hasSpouse ? nationalPensionStatus(spouse.nationalPension) : 'none',
       severancePensionMonthly: severancePensionMonthly(spouse.severance, spouseRetirementAge),
       severanceLumpsum: severanceLumpsum(spouse.severance),
       personalPensionMonthly: personalPensionMonthly(spouse.personalPension, spouseRetirementAge),
-    },
+    }),
   };
 }
 

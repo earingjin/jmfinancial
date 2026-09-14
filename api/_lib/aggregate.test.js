@@ -163,6 +163,8 @@ describe('retirementIncomeByPerson', () => {
 
     expect(result.retirementIncomeByPerson.self.severancePensionMonthly).toBe(40);
     expect(result.retirementIncomeByPerson.spouse.severancePensionMonthly).toBe(30);
+    expect(result.retirementIncomeByPerson.self.monthlyTotal).toBe(40);
+    expect(result.retirementIncomeByPerson.spouse.monthlyTotal).toBe(30);
   });
 
   it('exposes each person\'s national-pension eligibility status alongside the monthly amount (self and spouse independently)', () => {
@@ -174,8 +176,10 @@ describe('retirementIncomeByPerson', () => {
 
     expect(result.retirementIncomeByPerson.self.nationalPensionEligibilityStatus).toBe('unknown');
     expect(result.retirementIncomeByPerson.self.nationalPensionMonthly).toBe(0);
+    expect(result.retirementIncomeByPerson.self.monthlyTotal).toBeNull();
     expect(result.retirementIncomeByPerson.spouse.nationalPensionEligibilityStatus).toBe('eligible');
     expect(result.retirementIncomeByPerson.spouse.nationalPensionMonthly).toBe(80);
+    expect(result.retirementIncomeByPerson.spouse.monthlyTotal).toBe(80);
   });
 
   it('marks spouse eligibility as "none" when there is no spouse, without throwing', () => {
