@@ -17,6 +17,74 @@ export function formatIndicatorStatusBadge(indicator) {
   return FHS_STATUS_BADGE_LABELS[indicator.status] || indicator.status;
 }
 
+const FHS_INDICATOR_INTERPRETATIONS = {
+  household: {
+    good: '지출 부담 낮음',
+    caution: '지출 부담 점검',
+    risk: '지출 부담 높음',
+  },
+  emergency: {
+    good: '비상자금 충분',
+    caution: '비상자금 점검',
+    risk: '비상자금 부족',
+  },
+  dsr: {
+    good: '상환 부담 낮음',
+    caution: '상환 부담 점검',
+    risk: '상환 부담 높음',
+  },
+};
+
+// 서버의 ratioClass 판정을 지표별 사용자 문구로만 바꾼다.
+// DSR 0은 good 판정 안에서 '없음/낮음' 표현만 구분하며 판정에는 사용하지 않는다.
+export function getFinancialIndicatorInterpretation(indicator) {
+  if (!indicator || indicator.notCalculable) return '산출 불가';
+  if (indicator.key === 'dsr' && indicator.ratioClass === 'good' && Number(indicator.value) === 0) {
+    return '상환 부담 없음';
+  }
+  return FHS_INDICATOR_INTERPRETATIONS[indicator.key]?.[indicator.ratioClass]
+    || formatIndicatorStatusBadge(indicator)
+    || '확인 필요';
+}
+
+const FHS_EXPLANATION_PHRASES = {
+  household: {
+    good: '지출 부담이 낮고',
+    caution: '지출 부담을 점검할 필요가 있고',
+    risk: '지출 부담이 높고',
+  },
+  emergency: {
+    good: '비상자금이 충분하며',
+    caution: '비상자금을 점검할 필요가 있으며',
+    risk: '비상자금이 부족하며',
+  },
+  dsr: {
+    good: '빚 상환 부담이 낮아',
+    caution: '빚 상환 부담을 점검할 필요가 있어',
+    risk: '빚 상환 부담이 높아',
+  },
+};
+
+// 종합판정을 다시 계산하지 않고, 계산 가능한 대표지표의 기존 판정이 뜻하는 근거만 설명한다.
+export function getFinancialHealthExplanation(reps, fallback) {
+  const known = (reps || []).filter((indicator) => indicator && !indicator.notCalculable);
+  const phrases = known
+    .map((indicator) => {
+      if (indicator.key === 'dsr' && indicator.ratioClass === 'good' && Number(indicator.value) === 0) {
+        return '빚 상환 부담이 없어';
+      }
+      return FHS_EXPLANATION_PHRASES[indicator.key]?.[indicator.ratioClass];
+    })
+    .filter(Boolean);
+
+  if (phrases.length === 0) return fallback;
+  const prefix = known.length < 3 ? '확인 가능한 항목에서는 ' : '';
+  const allGood = known.length === 3 && known.every((indicator) => indicator.ratioClass === 'good');
+  return allGood
+    ? `${phrases.join(', ')} 현재 재무구조가 안정적입니다.`
+    : `${prefix}${phrases.join(', ')} 현재 재무상태 판정에 반영되었습니다.`;
+}
+
 // 서버가 계산한 은퇴 후 자산 소진 결과를 최종 사용자 판정 문구로만 변환한다.
 // shortfall·preparationRate를 재해석하거나 새로운 계산값을 만들지 않는다.
 export function getRetirementSustainabilityStatus(projection, unavailableReason) {

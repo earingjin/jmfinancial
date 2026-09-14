@@ -327,6 +327,9 @@
   margin-top: 10px;
 }
 .mobile-retirement-summary-card .fhs-hero { flex: 0 0 auto; }
+/* 재무 카드도 그리드 행의 전체 높이를 채우지 않고, 은퇴 카드와 같은 콘텐츠 높이로 표시한다. */
+.summary-grid-area--card1 .fhs-hero { flex: 0 0 auto; }
+.summary-grid-area--card1 .summary-status-card { height: auto; }
 .mobile-retirement-coverage-set { display: grid; gap: 10px; margin-top: 10px; }
 .mobile-retirement-coverage-box { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 14px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: #f6ead7; }
 .mobile-retirement-coverage-title { grid-column: 1 / -1; margin-bottom: 2px; color: var(--navy-800); font-size: 12px; font-weight: 800; }
@@ -338,12 +341,8 @@
 .mobile-retirement-coverage-box > strong { grid-column: 1 / -1; margin-top: 4px; color: var(--orange-strong, #ff7a0a); font-size: 16px; font-weight: 850; line-height: 1.3; text-align: right; }
 @media (max-width: 768px) {
   .summary-cards-grid {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "card1"
-      "details1"
-      "card2"
-      "details2";
+    display: flex;
+    flex-direction: column;
     gap: 14px;
   }
 }
@@ -362,6 +361,26 @@
 .fhs-status-pill--risk { background: var(--red-soft); color: var(--red); }
 .fhs-status-pill--unknown,
 .fhs-status-pill--na { background: var(--paper); color: var(--ink-soft); }
+
+@media (max-width: 480px) {
+  .summary-grid-area--card1 .ss-status-facts > div {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px 0;
+  }
+  .summary-grid-area--card1 .ss-status-facts strong {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    white-space: normal;
+  }
+  .summary-grid-area--card1 .fhs-status-pill {
+    flex: 0 0 auto;
+    margin-left: 0;
+  }
+}
 
 /* ---------- 1. 재무 현황 카드 ---------- */
 .overview-card-grid {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
-import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSummaryPresentation, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthExplanation, getFinancialHealthStatus, getFinancialIndicatorInterpretation, getRetirementSummaryPresentation, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -184,6 +184,7 @@ function formatIndicatorValue(indicator) {
 function FinancialHealthSummaryCard({ indicators }) {
   const reps = FHS_REP_KEYS.map((key) => (indicators || []).find((ind) => ind.key === key)).filter(Boolean);
   const status = getFinancialHealthStatus(reps);
+  const explanation = getFinancialHealthExplanation(reps, status.detail);
 
   return (
     <div className="summary-status-card">
@@ -193,7 +194,7 @@ function FinancialHealthSummaryCard({ indicators }) {
           <div className="ss-status-icon" aria-hidden="true">{status.icon}</div>
           <div className="fhs-hero-text ss-status-copy">
             <div className="ss-status-title"><span>{status.title}</span></div>
-            <div className="ss-status-detail"><span>{status.detail}</span></div>
+            <div className="ss-status-detail"><span>{explanation}</span></div>
           </div>
         </div>
       </div>
@@ -208,7 +209,7 @@ function FinancialHealthSummaryCard({ indicators }) {
                 ) : (
                   <>
                     {formatIndicatorValue(ind)}
-                    <span className={`fhs-status-pill fhs-status-pill--${ind.ratioClass || 'unknown'}`}>{formatIndicatorStatusBadge(ind)}</span>
+                    <span className={`fhs-status-pill fhs-status-pill--${ind.ratioClass || 'unknown'}`}>{getFinancialIndicatorInterpretation(ind)}</span>
                   </>
                 )}
               </strong>

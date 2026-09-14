@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthExplanation, getFinancialHealthStatus, getFinancialIndicatorInterpretation, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems } from './summaryPresentation';
 
 // getFinancialHealthStatus는 새 재무점수·임계값을 만들지 않고, 서버가 이미 계산한
 // ratioClass(good/caution/risk)만 세어 화면 문구를 고르는 순수 표시 헬퍼다.
@@ -11,7 +11,9 @@ describe('getFinancialHealthStatus', () => {
   const na = { ratioClass: 'na', notCalculable: true };
 
   it('모든 대표지표가 good이면 안정 문구를 반환한다', () => {
-    expect(getFinancialHealthStatus([good, good, good]).icon).toBe('😊');
+    const status = getFinancialHealthStatus([good, good, good]);
+    expect(status.icon).toBe('😊');
+    expect(status.title).toBe('현재 재무상태가 전반적으로 안정적입니다.');
   });
 
   it('caution이 하나라도 있으면 일부 점검 문구를 반환한다', () => {
@@ -38,6 +40,47 @@ describe('getFinancialHealthStatus', () => {
   it('notCalculable 지표는 카운트에서 제외하고 나머지 known 지표만으로 판정한다', () => {
     // na 1개 + good 2개 → known은 good만 2개 → 안정 문구
     expect(getFinancialHealthStatus([na, good, good]).icon).toBe('😊');
+  });
+});
+
+describe('financial health presentation', () => {
+  it.each([
+    [{ key: 'household', ratioClass: 'good', value: 39.1 }, '지출 부담 낮음'],
+    [{ key: 'emergency', ratioClass: 'good', value: 92.2 }, '비상자금 충분'],
+    [{ key: 'dsr', ratioClass: 'good', value: 0 }, '상환 부담 없음'],
+    [{ key: 'dsr', ratioClass: 'good', value: 10 }, '상환 부담 낮음'],
+    [{ key: 'household', ratioClass: 'caution', value: 75 }, '지출 부담 점검'],
+    [{ key: 'household', ratioClass: 'risk', value: 90 }, '지출 부담 높음'],
+    [{ key: 'emergency', ratioClass: 'caution', value: 3 }, '비상자금 점검'],
+    [{ key: 'emergency', ratioClass: 'risk', value: 1 }, '비상자금 부족'],
+    [{ key: 'dsr', ratioClass: 'caution', value: 35 }, '상환 부담 점검'],
+    [{ key: 'dsr', ratioClass: 'risk', value: 50 }, '상환 부담 높음'],
+  ])('%o를 지표별 사용자 문구로 표시한다', (indicator, expected) => {
+    expect(getFinancialIndicatorInterpretation(indicator)).toBe(expected);
+  });
+
+  it('산출 불가 지표는 값이나 상태와 관계없이 산출 불가로 표시한다', () => {
+    expect(getFinancialIndicatorInterpretation({ key: 'dsr', ratioClass: 'good', value: 0, notCalculable: true })).toBe('산출 불가');
+  });
+
+  it('세 지표가 good이면 각 지표가 안정 판정의 근거임을 설명한다', () => {
+    const explanation = getFinancialHealthExplanation([
+      { key: 'household', ratioClass: 'good', value: 39.1 },
+      { key: 'emergency', ratioClass: 'good', value: 92.2 },
+      { key: 'dsr', ratioClass: 'good', value: 0 },
+    ]);
+    expect(explanation).toContain('지출 부담이 낮고');
+    expect(explanation).toContain('비상자금이 충분하며');
+    expect(explanation).toContain('빚 상환 부담이 없어');
+    expect(explanation).toContain('현재 재무구조가 안정적입니다.');
+  });
+
+  it('일부 지표만 계산 가능하면 전체를 단정하지 않는다', () => {
+    const explanation = getFinancialHealthExplanation([
+      { key: 'household', ratioClass: 'good', value: 39.1 },
+      { key: 'emergency', ratioClass: 'na', notCalculable: true },
+    ]);
+    expect(explanation).toContain('확인 가능한 항목에서는');
   });
 });
 
