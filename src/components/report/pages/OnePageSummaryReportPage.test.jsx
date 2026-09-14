@@ -122,6 +122,7 @@ describe('OnePageSummaryReportPage', () => {
     const financialHealth = getFinancialHealthStatus(indicators);
     expect(html).toContain('01. 종합 결과');
     expect(html).toContain('Part 1. 재무');
+    expect(html).toContain('one-summary-result-card one-summary-result-card--financial');
     expect(html).toContain('현재 재무상태</span><strong>전반적으로 안정적</strong>');
     expect(html).toContain(getFinancialHealthExplanation(indicators, financialHealth.detail));
     expect(html).toContain('매달 소득 중 지출 비율');
@@ -175,7 +176,11 @@ describe('OnePageSummaryReportPage', () => {
     household.ratioClass = ratioClass;
     household.status = status;
 
-    expect(render(result)).toContain(getFinancialIndicatorInterpretation(household));
+    const html = render(result);
+    expect(html).toContain(getFinancialIndicatorInterpretation(household));
+    if (ratioClass === 'caution') {
+      expect(html).toContain('현재 재무상태</span><strong>일부 점검 필요</strong>');
+    }
   });
 
   it('notCalculable 지표는 공통 fallback을 표시하고 다른 값과 기존 제목 구조를 유지한다', () => {

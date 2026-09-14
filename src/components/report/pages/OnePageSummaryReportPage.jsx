@@ -89,7 +89,12 @@ function RecordValue({ label, value }) {
 }
 
 function financialStatusHeadline(title) {
-  return String(title || '')
+  const statusTitle = String(title || '');
+  if (statusTitle.startsWith('현재 재무상태가 전반적으로 안정적')) return '전반적으로 안정적';
+  if (statusTitle.startsWith('현재 재무상태는 대체로 안정적')) return '일부 점검 필요';
+  if (statusTitle.startsWith('현재 재무구조에서 우선 점검')) return '우선 점검 필요';
+  if (statusTitle.startsWith('현재 재무상태를 확인하려면')) return '확인 필요';
+  return statusTitle
     .replace(/^현재 재무상태가\s*/, '')
     .replace(/^현재 재무상태는\s*/, '')
     .replace(/^현재 재무구조에서\s*/, '')
@@ -163,7 +168,7 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
           <h2 className="subsection-head" id="one-summary-overall-title">01. 종합 결과</h2>
         </div>
         <div className="one-summary-overall-grid">
-          <article className="one-summary-result-card">
+          <article className="one-summary-result-card one-summary-result-card--financial">
             <div className="one-summary-part">Part 1. 재무</div>
             <div className="one-summary-result-heading">
               <span aria-hidden="true">{financialHealth.icon}</span>
