@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import OnePageSummaryReportPage from './OnePageSummaryReportPage';
 import { RetirementSummaryCard } from '../../summary/SimpleSummaryReport';
+import { getFinancialHealthExplanation, getFinancialHealthStatus, getFinancialIndicatorInterpretation } from '../../summary/summaryPresentation';
 
 globalThis.React = React;
 
@@ -117,14 +118,20 @@ describe('OnePageSummaryReportPage', () => {
   it('모바일과 같은 재무·은퇴 상태 문구와 대표 재무지표 3개를 표시한다', () => {
     const html = render();
     const mobileHtml = renderMobileRetirement();
+    const indicators = buildResult().indicators;
+    const financialHealth = getFinancialHealthStatus(indicators);
     expect(html).toContain('01. 종합 결과');
     expect(html).toContain('Part 1. 재무');
     expect(html).toContain('현재 재무상태</span><strong>전반적으로 안정적</strong>');
+    expect(html).toContain(getFinancialHealthExplanation(indicators, financialHealth.detail));
     expect(html).toContain('매달 소득 중 지출 비율');
     expect(html).toContain('62.5%');
     expect(html).toContain('비상자금으로 버틸 수 있는 기간');
     expect(html).toContain('4.2개월');
     expect(html).toContain('매달 소득 중 빚 갚는 비율');
+    indicators.forEach((indicator) => {
+      expect(html).toContain(getFinancialIndicatorInterpretation(indicator));
+    });
     expect(html).not.toContain('>가계수지<');
     expect(html).not.toContain('>비상예비금<');
     expect(html).not.toContain('>DSR<');
@@ -143,6 +150,45 @@ describe('OnePageSummaryReportPage', () => {
     expect((html.match(/one-summary-monthly-coverage"/g) || [])).toHaveLength(2);
     expect(html).not.toContain('현재 월 생활비');
     expect(html).toContain('진단 당시의 재무상태와 은퇴 준비상태를 한 장에 담았습니다.');
+  });
+
+  it('good 지표의 사용자 해석과 기존 값을 함께 표시한다', () => {
+    const result = buildResult();
+    result.indicators.find((indicator) => indicator.key === 'dsr').value = 0;
+    const html = render(result);
+
+    result.indicators.forEach((indicator) => {
+      expect(html).toContain(getFinancialIndicatorInterpretation(indicator));
+    });
+    expect(html).toContain('62.5%');
+    expect(html).toContain('4.2개월');
+    expect(html).toContain('0%');
+    expect(html).toContain('현재 재무상태</span><strong>전반적으로 안정적</strong>');
+  });
+
+  it.each([
+    ['caution', '보통'],
+    ['risk', '위험'],
+  ])('%s 지표도 공통 helper와 같은 해석을 표시한다', (ratioClass, status) => {
+    const result = buildResult();
+    const household = result.indicators.find((indicator) => indicator.key === 'household');
+    household.ratioClass = ratioClass;
+    household.status = status;
+
+    expect(render(result)).toContain(getFinancialIndicatorInterpretation(household));
+  });
+
+  it('notCalculable 지표는 공통 fallback을 표시하고 다른 값과 기존 제목 구조를 유지한다', () => {
+    const result = buildResult();
+    const household = result.indicators.find((indicator) => indicator.key === 'household');
+    household.notCalculable = true;
+    household.value = null;
+    const html = render(result);
+
+    expect(html).toContain(getFinancialIndicatorInterpretation(household));
+    expect(html).toContain('4.2개월');
+    expect(html).toContain('18.4%');
+    expect(html).toContain('현재 재무상태</span><strong>전반적으로 안정적</strong>');
   });
 
   it('기존 은퇴 상태 문구의 동적 소진 예상 나이를 핵심 결과로 표시한다', () => {

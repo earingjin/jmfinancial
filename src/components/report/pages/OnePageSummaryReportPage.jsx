@@ -1,8 +1,9 @@
 import PageFrame from './PageFrame';
 import { formatNumber, formatPercent, formatWon, round1 } from '../../../utils/format';
 import {
-  formatIndicatorStatusBadge,
+  getFinancialHealthExplanation,
   getFinancialHealthStatus,
+  getFinancialIndicatorInterpretation,
   getRetirementSummaryPresentation,
   getSeveranceLumpSumDisplayItems,
   RETIREMENT_SIMPLE_COMPARISON_NOTE,
@@ -127,7 +128,9 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
     label,
     indicator: indicators.find((item) => item.key === key),
   }));
-  const financialHealth = getFinancialHealthStatus(representativeIndicators.map((item) => item.indicator));
+  const financialIndicators = representativeIndicators.map((item) => item.indicator);
+  const financialHealth = getFinancialHealthStatus(financialIndicators);
+  const financialExplanation = getFinancialHealthExplanation(financialIndicators, financialHealth.detail);
   const {
     retirementStatus,
     retirementStatusPresentation: retirementPresentation,
@@ -169,13 +172,13 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
                 <strong>{financialStatusHeadline(financialHealth.title)}</strong>
               </div>
             </div>
-            <p>{financialHealth.detail}</p>
+            <p>{financialExplanation}</p>
             <div className="one-summary-indicator-list">
               {representativeIndicators.map(({ key, label, indicator }) => (
                 <div key={key} className={`one-summary-indicator-row one-summary-indicator-row--${indicator?.ratioClass || 'unknown'}`}>
                   <span>{label}</span>
                   <strong>{displayIndicator(indicator)}</strong>
-                  <small>{indicator ? formatIndicatorStatusBadge(indicator) : '확인 필요'}</small>
+                  <small>{getFinancialIndicatorInterpretation(indicator)}</small>
                 </div>
               ))}
             </div>
