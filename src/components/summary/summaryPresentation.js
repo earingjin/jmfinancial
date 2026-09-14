@@ -74,6 +74,69 @@ export function getRetirementSustainabilityStatus(projection, unavailableReason)
   };
 }
 
+export function getRetirementStatusPresentation(status) {
+  const summary = (status?.titleLines || []).join(' ');
+  const ageMatch = summary.match(/약\s+\d+(?:\.\d+)?세/);
+  if (!ageMatch) return { headline: status?.displayValue || '산출 불가', summary };
+
+  return {
+    headline: ageMatch[0],
+    summary: summary.replace(/약\s+\d+(?:\.\d+)?세에?\s*/, ''),
+  };
+}
+
+export function getMonthlyCoveragePresentation(snapshot, livingCostAtRetirement) {
+  const pensionIncome = snapshot?.pensionIncomeMonthly ?? snapshot?.pensionIncome;
+  const calculable = snapshot?.calculable === true
+    && Number.isFinite(livingCostAtRetirement)
+    && Number.isFinite(pensionIncome);
+
+  if (!calculable) {
+    return {
+      calculable: false,
+      result: '확인 필요',
+      reason: snapshot?.reason || snapshot?.calculationReason || '월 생활비 충당 정보를 산출할 수 없습니다.',
+    };
+  }
+
+  if (livingCostAtRetirement > pensionIncome) {
+    return { calculable: true, result: `월 ${formatWon(livingCostAtRetirement - pensionIncome)} 부족`, livingCost: livingCostAtRetirement, pensionIncome };
+  }
+  if (pensionIncome > livingCostAtRetirement) {
+    return { calculable: true, result: `월 ${formatWon(pensionIncome - livingCostAtRetirement)} 여유`, livingCost: livingCostAtRetirement, pensionIncome };
+  }
+  return { calculable: true, result: '월 생활비 충당 가능', livingCost: livingCostAtRetirement, pensionIncome };
+}
+
+export function getNationalPensionCoverageFallback(snapshot) {
+  if (!snapshot) return '최신 기준으로 다시 진단하면 확인할 수 있습니다';
+  const reason = snapshot.reason || snapshot.calculationReason;
+  if (reason === '국민연금 향후 가입기간을 확정할 수 없음') return '국민연금 가입기간 확인 필요';
+  if (reason === '국민연금 수령 시점을 확인할 수 없습니다.') return '국민연금 수령 시점 확인 필요';
+  if (reason === '연금 정보를 확인할 수 없습니다.') return '연금정보 확인 필요';
+  if (reason?.startsWith('월 연금액을 확인할 수 없음:')) return '연금 수령액 확인 필요';
+  if (reason?.startsWith('연금 개시·종료 정보 부족:')) return '연금 수령 조건 확인 필요';
+  return '연금정보 확인 필요';
+}
+
+// 서버가 계산한 시점별 결과를 두 요약 화면에서 동일하게 읽기 위한 표시 전용 view-model.
+export function getRetirementSummaryPresentation(retirementReadiness = {}, futureFinance = {}) {
+  const retirementStatus = getRetirementSustainabilityStatus(futureFinance.retirementAssetProjection, retirementReadiness.reason);
+  const retirementPensionSnapshot = futureFinance.retirementCashFlowOutlook
+    ?.find((item) => item.age === retirementReadiness.retirementAge);
+  const livingCost = retirementReadiness.retirementLivingCostAtRetirement;
+  const nationalPensionStartSnapshot = futureFinance.nationalPensionStartSnapshot;
+
+  return {
+    retirementStatus,
+    retirementStatusPresentation: getRetirementStatusPresentation(retirementStatus),
+    retirementMonthlyCoverage: getMonthlyCoveragePresentation(retirementPensionSnapshot, livingCost),
+    nationalPensionMonthlyCoverage: getMonthlyCoveragePresentation(nationalPensionStartSnapshot, livingCost),
+    nationalPensionCoverageFallbackMessage: getNationalPensionCoverageFallback(nationalPensionStartSnapshot),
+    nationalPensionStartSnapshot,
+  };
+}
+
 export function formatPensionIncomeAtRetirement(amount, status, schedules = []) {
   if (status === 'notCalculable') return '산출 불가';
   if (status === 'beforeStart') {

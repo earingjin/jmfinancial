@@ -322,6 +322,51 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
     ], true)
     : [];
 
+  // 1페이지 요약 리포트의 "국민연금 수령 후" 표시에 쓰는 읽기 전용 스냅샷이다.
+  // 연금의 개시·종료·수령 방식은 별도로 판정하지 않고, 기존 목표 나이 계산 함수를
+  // 국민연금 개시 나이에 그대로 재사용한다.
+  const nationalPensionStartSnapshot = (() => {
+    if (!Number.isFinite(currentAge) || !Number.isFinite(nationalPensionStartAge)) {
+      return {
+        calculable: false,
+        reason: '국민연금 수령 시점을 확인할 수 없습니다.',
+        age: null,
+        pensionIncomeMonthly: null,
+        nationalPensionMonthly: null,
+        severancePensionMonthly: null,
+        personalPensionMonthly: null,
+      };
+    }
+
+    if (pensionDataMissing) {
+      return {
+        calculable: false,
+        reason: '연금 정보를 확인할 수 없습니다.',
+        age: nationalPensionStartAge,
+        pensionIncomeMonthly: null,
+        nationalPensionMonthly: null,
+        severancePensionMonthly: null,
+        personalPensionMonthly: null,
+      };
+    }
+
+    const pension = calculatePensionIncomeAtTarget({
+      input,
+      currentYear,
+      years: nationalPensionStartAge - currentAge,
+    });
+
+    return {
+      calculable: pension.calculable,
+      reason: pension.reason,
+      age: nationalPensionStartAge,
+      pensionIncomeMonthly: round(pension.total),
+      nationalPensionMonthly: round(pension.nationalPension),
+      severancePensionMonthly: round(pension.retirementPension),
+      personalPensionMonthly: round(pension.personalPension),
+    };
+  })();
+
   const purchasingPower = netWorthMissing ? null : [0, 10, 20].map((years) => ({
     years,
     requiredAmount: round(calculatePurchasingPowerEquivalent(aggregates.netWorth, years)),
@@ -341,6 +386,7 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
     assumptions: FUTURE_FINANCE_ASSUMPTIONS,
     currentAge,
     nationalPensionStartAge,
+    nationalPensionStartSnapshot,
     missing: { age: ageMissing, livingExpense: livingExpenseMissing, pension: pensionDataMissing, netWorth: netWorthMissing },
     targets,
     fiveYearOutlook,

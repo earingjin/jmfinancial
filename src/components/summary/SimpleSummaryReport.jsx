@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
-import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatIndicatorStatusBadge, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus, getRetirementSummaryPresentation, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -220,15 +220,44 @@ function FinancialHealthSummaryCard({ indicators }) {
   );
 }
 
-// "종합 결과"의 오른쪽 카드 - 기존 은퇴 준비 히어로(icon/title/detail + 핵심 사실 3가지)를
-// 그대로 컴포넌트로 분리한 것뿐, 계산 로직은 하나도 바꾸지 않았다.
-function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, livingCostAtRetirement }) {
+function MobileMonthlyCoverageBlock({ title, incomeLabel, coverage, fallbackMessage, startSnapshot }) {
   return (
-    <div className="summary-status-card">
+    <div className="mobile-retirement-coverage-box">
+      <div className="mobile-retirement-coverage-title">월 생활비 충당 <i aria-hidden="true">·</i> {title}</div>
+      {coverage.calculable ? (
+        <>
+          <div><span>은퇴 목표생활비(물가 반영)</span><b>{formatWon(coverage.livingCost)}</b></div>
+          <div><span>{incomeLabel}</span><b>{formatWon(coverage.pensionIncome)}</b></div>
+          {startSnapshot && <div><span>국민연금 수령 시점</span><b>{formatNumber(startSnapshot.age)}세</b></div>}
+        </>
+      ) : (
+        <>
+          <p>{fallbackMessage}</p>
+          {startSnapshot && (
+            <div><span>국민연금 수령 시점</span><b>{Number.isFinite(startSnapshot.age) ? `${formatNumber(startSnapshot.age)}세` : '확인 필요'}</b></div>
+          )}
+        </>
+      )}
+      <strong>→ {coverage.result}</strong>
+    </div>
+  );
+}
+
+// "종합 결과"의 오른쪽 카드. 기존 모바일의 자산 유지 상태 문장 표현은 유지하고,
+// 두 시점의 월 생활비 충당 결과만 아래에 추가한다.
+export function RetirementSummaryCard({ rr, futureFinance }) {
+  const {
+    retirementStatus,
+    retirementMonthlyCoverage,
+    nationalPensionMonthlyCoverage,
+    nationalPensionCoverageFallbackMessage,
+    nationalPensionStartSnapshot,
+  } = getRetirementSummaryPresentation(rr, futureFinance);
+
+  return (
+    <div className="summary-status-card mobile-retirement-summary-card">
       <div className="fhs-hero">
         <div className="summary-card-kicker">Part 2. 은퇴</div>
-        <div className="retirement-final-heading">
-        </div>
         <div className="fhs-hero-row">
           <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
           <div className="fhs-hero-text ss-status-copy">
@@ -241,22 +270,21 @@ function RetirementSummaryCard({ rr, retirementStatus, currentLivingCost, living
           </div>
         </div>
       </div>
-      {!rr.notCalculable && (
-        <div className="ss-status-facts">
-          <div>
-            <span>향후 노후 생활 기간</span>
-            <strong>{round1(rr.retirementYears)}년</strong>
-          </div>
-          <div>
-            <span>은퇴 목표생활비(물가 반영)</span>
-            <strong>{formatWon(livingCostAtRetirement)}</strong>
-          </div>
-          <div>
-            <span>현재 월 생활비</span>
-            <strong>{formatWon(currentLivingCost)}</strong>
-          </div>
-        </div>
-      )}
+      <div className="mobile-retirement-coverage-set">
+        <MobileMonthlyCoverageBlock
+          title="은퇴 시점 기준"
+          incomeLabel="은퇴 시점 예상 연금소득"
+          coverage={retirementMonthlyCoverage}
+          fallbackMessage={retirementMonthlyCoverage.reason}
+        />
+        <MobileMonthlyCoverageBlock
+          title="국민연금 수령 후 기준"
+          incomeLabel="예상 연금소득"
+          coverage={nationalPensionMonthlyCoverage}
+          fallbackMessage={nationalPensionCoverageFallbackMessage}
+          startSnapshot={nationalPensionStartSnapshot}
+        />
+      </div>
     </div>
   );
 }
@@ -774,9 +802,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
           <div className="summary-grid-area--card2">
             <RetirementSummaryCard
               rr={rr}
-              retirementStatus={retirementStatus}
-              currentLivingCost={aggregates.monthlyLivingCost}
-              livingCostAtRetirement={livingCostAtRetirement}
+              futureFinance={future}
             />
           </div>
 

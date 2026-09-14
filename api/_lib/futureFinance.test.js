@@ -66,6 +66,47 @@ describe('future finance projection', () => {
     expect(result.purchasingPower.map((item) => item.requiredAmount)).toEqual([50000, 67196, 90306]);
   });
 
+  it('adds a display-only pension snapshot at the existing national-pension start age', () => {
+    const input = makeInput();
+    const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });
+    const expected = calculatePensionIncomeAtTarget({
+      input,
+      currentYear: 2026,
+      years: result.nationalPensionStartAge - result.currentAge,
+    });
+
+    expect(result.nationalPensionStartSnapshot).toEqual({
+      calculable: expected.calculable,
+      reason: expected.reason,
+      age: result.nationalPensionStartAge,
+      pensionIncomeMonthly: Math.round(expected.total),
+      nationalPensionMonthly: Math.round(expected.nationalPension),
+      severancePensionMonthly: Math.round(expected.retirementPension),
+      personalPensionMonthly: Math.round(expected.personalPension),
+    });
+    expect(result.nationalPensionStartSnapshot.personalPensionMonthly).toBe(0);
+    expect(result.nationalPensionStartSnapshot.severancePensionMonthly).toBeGreaterThan(0);
+  });
+
+  it('keeps the existing national-pension uncertainty fallback in the start-age snapshot', () => {
+    const input = makeInput({
+      income: {
+        nationalPension: { inputMode: 'direct', monthly: 150, paymentMonths: 100, futureContributionPlan: 'continue' },
+        personalPension: { type: 'none' },
+        severance: { type: 'none' },
+      },
+    });
+    const snapshot = buildFutureFinanceProjection({
+      input,
+      aggregates: buildAggregates(input),
+      currentYear: 2026,
+    }).nationalPensionStartSnapshot;
+
+    expect(snapshot.calculable).toBe(false);
+    expect(snapshot.pensionIncomeMonthly).toBeNull();
+    expect(snapshot.reason).toContain('국민연금 향후 가입기간을 확정할 수 없음');
+  });
+
   it('adds a five-year outlook without changing the legacy targets', () => {
     const input = makeInput({ basic: { birthYear: 1979, retirementAge: 62, lifeExpectancy: 83, hasSpouse: false } });
     const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });

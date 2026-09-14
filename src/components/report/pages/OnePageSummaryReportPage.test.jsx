@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import OnePageSummaryReportPage from './OnePageSummaryReportPage';
+import { RetirementSummaryCard } from '../../summary/SimpleSummaryReport';
 
 globalThis.React = React;
 
@@ -45,6 +46,22 @@ function buildResult() {
         },
       },
       futureFinance: {
+        nationalPensionStartAge: 65,
+        nationalPensionStartSnapshot: {
+          calculable: true,
+          reason: null,
+          age: 65,
+          pensionIncomeMonthly: 350,
+          nationalPensionMonthly: 300,
+          severancePensionMonthly: 50,
+          personalPensionMonthly: 0,
+        },
+        retirementCashFlowOutlook: [{
+          age: 65,
+          pensionIncome: 350,
+          calculable: true,
+          calculationReason: null,
+        }],
         retirementAssetProjection: {
           assetsRemainAtLifeExpectancy: true,
           recoveredAfterDepletion: false,
@@ -79,6 +96,15 @@ function render(result = buildResult(), sourceInput = input) {
   );
 }
 
+function renderMobileRetirement(result = buildResult()) {
+  return renderToStaticMarkup(
+    <RetirementSummaryCard
+      rr={result.webSummary.retirementReadiness}
+      futureFinance={result.webSummary.futureFinance}
+    />,
+  );
+}
+
 describe('OnePageSummaryReportPage', () => {
   it('계산 모듈을 import하지 않고 기존 PageFrame 한 페이지만 사용한다', async () => {
     const source = await readFile(new URL('./OnePageSummaryReportPage.jsx', import.meta.url), 'utf8');
@@ -90,6 +116,7 @@ describe('OnePageSummaryReportPage', () => {
 
   it('모바일과 같은 재무·은퇴 상태 문구와 대표 재무지표 3개를 표시한다', () => {
     const html = render();
+    const mobileHtml = renderMobileRetirement();
     expect(html).toContain('01. 종합 결과');
     expect(html).toContain('Part 1. 재무');
     expect(html).toContain('현재 재무상태</span><strong>전반적으로 안정적</strong>');
@@ -108,6 +135,13 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).toContain('은퇴 목표생활비(물가 반영)</b>420만원');
     expect(html).toContain('은퇴 시점 예상 연금소득</b>350만원');
     expect(html).toContain('<strong>→ 월 70만원 부족</strong>');
+    expect(html).toContain('월 생활비 충당 <i aria-hidden="true">·</i> 국민연금 수령 후 기준');
+    expect(html).toContain('국민연금 수령 시점</b>65세');
+    ['현재 계획을 유지하면 기대수명까지', '은퇴 목표생활비(물가 반영)', '420만원', '350만원', '월 70만원 부족', '65세'].forEach((text) => {
+      expect(mobileHtml).toContain(text);
+    });
+    expect((html.match(/one-summary-monthly-coverage"/g) || [])).toHaveLength(2);
+    expect(html).not.toContain('현재 월 생활비');
     expect(html).toContain('진단 당시의 재무상태와 은퇴 준비상태를 한 장에 담았습니다.');
   });
 
@@ -119,7 +153,9 @@ describe('OnePageSummaryReportPage', () => {
       depletionAge: 76,
     };
     const html = render(result);
+    const mobileHtml = renderMobileRetirement(result);
     expect(html).toContain('예상 자산 유지 기간</span><strong>약 76세</strong>');
+    expect(mobileHtml).toContain('약 76세');
     expect(html).not.toContain('현재 계획을 유지하면 준비자산이 소진될 것으로 예상됩니다.');
     expect(html).toContain('<strong>→ 월 70만원 부족</strong>');
   });
@@ -127,49 +163,114 @@ describe('OnePageSummaryReportPage', () => {
   it('예상 연금소득이 목표 생활비보다 크면 기존 값의 표시용 차이를 여유로 보여준다', () => {
     const result = buildResult();
     result.webSummary.retirementReadiness.retirementLivingCostAtRetirement = 300;
-    result.webSummary.retirementReadiness.monthlyIncomeCompare = {
-      livingCostMonthly: 300,
-      nationalPensionMonthly: 300,
-      severancePensionMonthly: 50,
-      personalPensionMonthly: 0,
-      shortfallMonthly: 0,
+    result.webSummary.futureFinance.retirementCashFlowOutlook = [{
+      age: 65,
+      pensionIncome: 350,
       calculable: true,
-      nationalPensionUnknown: false,
-    };
+      calculationReason: null,
+    }];
     expect(render(result)).toContain('<strong>→ 월 50만원 여유</strong>');
+    expect(renderMobileRetirement(result)).toContain('→ 월 50만원 여유');
   });
 
   it('예상 연금소득과 목표 생활비가 같으면 충당 가능으로 표시한다', () => {
     const result = buildResult();
     result.webSummary.retirementReadiness.retirementLivingCostAtRetirement = 350;
-    result.webSummary.retirementReadiness.monthlyIncomeCompare = {
-      livingCostMonthly: 350,
-      nationalPensionMonthly: 300,
-      severancePensionMonthly: 50,
-      personalPensionMonthly: 0,
-      shortfallMonthly: 0,
+    result.webSummary.futureFinance.retirementCashFlowOutlook = [{
+      age: 65,
+      pensionIncome: 350,
       calculable: true,
-      nationalPensionUnknown: false,
-    };
+      calculationReason: null,
+    }];
     expect(render(result)).toContain('<strong>→ 월 생활비 충당 가능</strong>');
+    expect(renderMobileRetirement(result)).toContain('→ 월 생활비 충당 가능');
   });
 
-  it('국민연금 비교가 산출 불가이면 0원이나 부족으로 간주하지 않는다', () => {
+  it('국민연금 가입기간이 불확실하면 원인을 사용자용 문구로 표시하고 0원으로 간주하지 않는다', () => {
     const result = buildResult();
-    result.webSummary.retirementReadiness.monthlyIncomeCompare = {
-      livingCostMonthly: 430,
-      nationalPensionMonthly: null,
-      severancePensionMonthly: 50,
-      personalPensionMonthly: 0,
-      shortfallMonthly: null,
+    result.webSummary.futureFinance.retirementCashFlowOutlook = [{
+      age: 65,
+      pensionIncome: null,
       calculable: false,
-      nationalPensionUnknown: true,
       calculationReason: '국민연금 향후 가입기간을 확정할 수 없음',
+    }];
+    result.webSummary.futureFinance.nationalPensionStartSnapshot = {
+      calculable: false,
+      reason: '국민연금 향후 가입기간을 확정할 수 없음',
+      age: 65,
+      pensionIncomeMonthly: null,
     };
     const html = render(result);
+    const mobileHtml = renderMobileRetirement(result);
     expect(html).toContain('<strong>→ 확인 필요</strong>');
-    expect(html).toContain('국민연금 향후 가입기간을 확정할 수 없음');
+    expect(html).toContain('국민연금 가입기간 확인 필요');
+    expect((html.match(/국민연금 향후 가입기간을 확정할 수 없음/g) || [])).toHaveLength(1);
+    expect(html).toContain('국민연금 수령 시점</b>65세');
     expect(html).not.toContain('월 0만원 부족');
+    expect(mobileHtml).toContain('국민연금 가입기간 확인 필요');
+    expect(mobileHtml).toContain('국민연금 수령 시점</span><b>65세</b>');
+    expect(mobileHtml).toContain('→ 확인 필요');
+  });
+
+  it('확정된 연금소득 0원은 산출 불가가 아닌 정상 계산값으로 표시한다', () => {
+    const result = buildResult();
+    result.webSummary.futureFinance.nationalPensionStartSnapshot = {
+      calculable: true,
+      reason: null,
+      age: 65,
+      pensionIncomeMonthly: 0,
+      nationalPensionMonthly: 0,
+      severancePensionMonthly: 0,
+      personalPensionMonthly: 0,
+    };
+    const html = render(result);
+    const mobileHtml = renderMobileRetirement(result);
+    expect(html).toContain('예상 연금소득</b>0만원');
+    expect(html).toContain('<strong>→ 월 420만원 부족</strong>');
+    expect(html).not.toContain('연금정보 확인 필요');
+    expect(mobileHtml).toContain('예상 연금소득</span><b>0만원</b>');
+    expect(mobileHtml).toContain('→ 월 420만원 부족');
+  });
+
+  it('국민연금 수령 시점이 산출 불가이면 해당 원인을 사용자용 문구로 표시한다', () => {
+    const result = buildResult();
+    result.webSummary.futureFinance.nationalPensionStartSnapshot = {
+      calculable: false,
+      reason: '국민연금 수령 시점을 확인할 수 없습니다.',
+      age: null,
+      pensionIncomeMonthly: null,
+    };
+    const html = render(result);
+    const mobileHtml = renderMobileRetirement(result);
+    expect(html).toContain('국민연금 수령 시점 확인 필요');
+    expect(html).toContain('국민연금 수령 시점</b>확인 필요');
+    expect(mobileHtml).toContain('국민연금 수령 시점 확인 필요');
+    expect(mobileHtml).toContain('국민연금 수령 시점</span><b>확인 필요</b>');
+  });
+
+  it('새 스냅샷이 없는 과거 저장 결과는 최신 진단 안내를 표시한다', () => {
+    const result = buildResult();
+    delete result.webSummary.futureFinance.nationalPensionStartSnapshot;
+    const html = render(result);
+    const mobileHtml = renderMobileRetirement(result);
+    expect(html).toContain('최신 기준으로 다시 진단하면 확인할 수 있습니다');
+    expect(html).toContain('<strong>→ 확인 필요</strong>');
+    expect(html).not.toContain('국민연금 수령 시점</b>확인 필요');
+    expect(mobileHtml).toContain('최신 기준으로 다시 진단하면 확인할 수 있습니다');
+    expect(mobileHtml).not.toContain('국민연금 수령 시점</span>');
+  });
+
+  it('그 밖의 산출 불가 reason은 중립적인 연금정보 안내로 표시한다', () => {
+    const result = buildResult();
+    result.webSummary.futureFinance.nationalPensionStartSnapshot = {
+      calculable: false,
+      reason: '알 수 없는 내부 사유',
+      age: 65,
+      pensionIncomeMonthly: null,
+    };
+    const html = render(result);
+    expect(html).toContain('연금정보 확인 필요');
+    expect(html).not.toContain('알 수 없는 내부 사유');
   });
 
   it('현재 재무상태는 모바일 세부내역의 핵심 총계 6개만 표시한다', () => {

@@ -3,7 +3,7 @@ import { formatNumber, formatPercent, formatWon, round1 } from '../../../utils/f
 import {
   formatIndicatorStatusBadge,
   getFinancialHealthStatus,
-  getRetirementSustainabilityStatus,
+  getRetirementSummaryPresentation,
   getSeveranceLumpSumDisplayItems,
   RETIREMENT_SIMPLE_COMPARISON_NOTE,
 } from '../../summary/summaryPresentation';
@@ -98,64 +98,6 @@ function financialStatusHeadline(title) {
     .replace(/가 필요합니다\.$/, '가 필요');
 }
 
-function retirementStatusPresentation(status) {
-  const summary = (status?.titleLines || []).join(' ');
-  const ageMatch = summary.match(/약\s+\d+(?:\.\d+)?세/);
-  if (!ageMatch) return { headline: status?.displayValue || '산출 불가', summary };
-
-  return {
-    headline: ageMatch[0],
-    summary: summary.replace(/약\s+\d+(?:\.\d+)?세에?\s*/, ''),
-  };
-}
-
-function monthlyCoveragePresentation(monthlyIncomeCompare, livingCostAtRetirement) {
-  const comparison = monthlyIncomeCompare || {};
-  const incomeParts = [
-    comparison.nationalPensionMonthly,
-    comparison.severancePensionMonthly,
-    comparison.personalPensionMonthly,
-  ];
-  const calculable = comparison.calculable !== false
-    && comparison.nationalPensionUnknown !== true
-    && Number.isFinite(livingCostAtRetirement)
-    && incomeParts.every(Number.isFinite);
-
-  if (!calculable) {
-    return {
-      calculable: false,
-      result: '확인 필요',
-      reason: comparison.calculationReason || '월 생활비 충당 정보를 산출할 수 없습니다.',
-    };
-  }
-
-  const pensionMonthlyTotal = incomeParts.reduce((sum, amount) => sum + amount, 0);
-  if (livingCostAtRetirement > pensionMonthlyTotal) {
-    return {
-      calculable: true,
-      result: `월 ${formatWon(livingCostAtRetirement - pensionMonthlyTotal)} 부족`,
-      livingCost: livingCostAtRetirement,
-      pensionIncome: pensionMonthlyTotal,
-    };
-  }
-
-  if (pensionMonthlyTotal > livingCostAtRetirement) {
-    return {
-      calculable: true,
-      result: `월 ${formatWon(pensionMonthlyTotal - livingCostAtRetirement)} 여유`,
-      livingCost: livingCostAtRetirement,
-      pensionIncome: pensionMonthlyTotal,
-    };
-  }
-
-  return {
-    calculable: true,
-    result: '월 생활비 충당 가능',
-    livingCost: livingCostAtRetirement,
-    pensionIncome: pensionMonthlyTotal,
-  };
-}
-
 function RecordGroup({ title, values, finalLabel, finalValue, finalTone = 'primary', finalNote }) {
   return (
     <div className="one-summary-record-group">
@@ -178,7 +120,7 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
   const indicators = result?.indicators || [];
   const overview = result?.webSummary?.overviewDetail || {};
   const retirement = result?.webSummary?.retirementReadiness || {};
-  const retirementProjection = result?.webSummary?.futureFinance?.retirementAssetProjection;
+  const futureFinance = result?.webSummary?.futureFinance || {};
   const peerComparison = result?.peerComparison || {};
   const representativeIndicators = FINANCIAL_INDICATORS.map(({ key, label }) => ({
     key,
@@ -186,12 +128,13 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
     indicator: indicators.find((item) => item.key === key),
   }));
   const financialHealth = getFinancialHealthStatus(representativeIndicators.map((item) => item.indicator));
-  const retirementStatus = getRetirementSustainabilityStatus(retirementProjection, retirement.reason);
-  const retirementPresentation = retirementStatusPresentation(retirementStatus);
-  const monthlyCoverage = monthlyCoveragePresentation(
-    retirement.monthlyIncomeCompare,
-    retirement.retirementLivingCostAtRetirement,
-  );
+  const {
+    retirementStatus,
+    retirementStatusPresentation: retirementPresentation,
+    retirementMonthlyCoverage,
+    nationalPensionMonthlyCoverage,
+    nationalPensionCoverageFallbackMessage,
+  } = getRetirementSummaryPresentation(retirement, futureFinance);
   const severanceLumpSums = getSeveranceLumpSumDisplayItems(input, retirement.retirementAge);
   const peerRows = [
     ['순자산', peerComparison.netWorth],
@@ -247,23 +190,36 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
                 <strong>{retirementPresentation.headline}</strong>
               </div>
             </div>
-            <div className="one-summary-monthly-coverage">
-              <span>월 생활비 충당 <i aria-hidden="true">·</i> 은퇴 시점 기준</span>
-              {monthlyCoverage.calculable ? (
-                <>
-                  <small><b>은퇴 목표생활비(물가 반영)</b>{displayWon(monthlyCoverage.livingCost)}</small>
-                  <small><b>은퇴 시점 예상 연금소득</b>{displayWon(monthlyCoverage.pensionIncome)}</small>
-                </>
-              ) : <small className="one-summary-monthly-coverage-reason">{monthlyCoverage.reason}</small>}
-              <strong>→ {monthlyCoverage.result}</strong>
-            </div>
-            {!retirement.notCalculable && (
-              <div className="one-summary-fact-list">
-                <div><span>향후 노후 생활 기간</span><strong>{displayYears(retirement.retirementYears, true)}</strong></div>
-                <div><span>은퇴 목표생활비(물가 반영)</span><strong>{displayWon(retirement.retirementLivingCostAtRetirement)}</strong></div>
-                <div><span>현재 월 생활비</span><strong>{displayWon(aggregates.monthlyLivingCost)}</strong></div>
+            <div className="one-summary-monthly-coverage-set">
+              <div className="one-summary-monthly-coverage">
+                <span>월 생활비 충당 <i aria-hidden="true">·</i> 은퇴 시점 기준</span>
+                {retirementMonthlyCoverage.calculable ? (
+                  <>
+                    <small><b>은퇴 목표생활비(물가 반영)</b>{displayWon(retirementMonthlyCoverage.livingCost)}</small>
+                    <small><b>은퇴 시점 예상 연금소득</b>{displayWon(retirementMonthlyCoverage.pensionIncome)}</small>
+                  </>
+                ) : <small className="one-summary-monthly-coverage-reason">{retirementMonthlyCoverage.reason}</small>}
+                <strong>→ {retirementMonthlyCoverage.result}</strong>
               </div>
-            )}
+              <div className="one-summary-monthly-coverage">
+                <span>월 생활비 충당 <i aria-hidden="true">·</i> 국민연금 수령 후 기준</span>
+                {nationalPensionMonthlyCoverage.calculable ? (
+                  <>
+                    <small><b>은퇴 목표생활비(물가 반영)</b>{displayWon(nationalPensionMonthlyCoverage.livingCost)}</small>
+                    <small><b>예상 연금소득</b>{displayWon(nationalPensionMonthlyCoverage.pensionIncome)}</small>
+                    <small><b>국민연금 수령 시점</b>{formatNumber(futureFinance.nationalPensionStartSnapshot?.age)}세</small>
+                  </>
+                ) : (
+                  <>
+                    <small className="one-summary-monthly-coverage-reason">{nationalPensionCoverageFallbackMessage}</small>
+                    {futureFinance.nationalPensionStartSnapshot && (
+                      <small><b>국민연금 수령 시점</b>{Number.isFinite(futureFinance.nationalPensionStartSnapshot.age) ? `${formatNumber(futureFinance.nationalPensionStartSnapshot.age)}세` : '확인 필요'}</small>
+                    )}
+                  </>
+                )}
+                <strong>→ {nationalPensionMonthlyCoverage.result}</strong>
+              </div>
+            </div>
           </article>
         </div>
       </section>
