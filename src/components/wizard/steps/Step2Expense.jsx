@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Activity, useState, useEffect } from 'react';
 import NumberField from '../fields/NumberField';
 import RepeatableList from '../fields/RepeatableList';
 import ExpenseBreakdownField from '../fields/ExpenseBreakdownField';
@@ -77,7 +77,7 @@ const CURRENT_LIVING_COST_CATEGORIES = [
   { key: 'other', label: '기타지출' },
 ];
 
-export default function Step2Expense() {
+export default function Step2Expense({ subStepIndex }) {
   const [showCostGuide, setShowCostGuide] = useState(false);
   const { formData, setField } = useFormData();
   const monthlyLivingCost = Number(getIn(formData, 'assets.currentLivingCost.monthly')) || 0;
@@ -115,12 +115,14 @@ export default function Step2Expense() {
       : null;
   const retirementLivingCostTotal =
     retirementLivingMonths != null ? retirementLivingCost * retirementLivingMonths : null;
+  const retirementLumpSumExpenses = getIn(formData, 'expense.retirementLumpSumExpenses') || [];
+  const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
 
   return (
     <div className="step">
       <h2 className="step-title">2. 지출</h2>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧾</span> 현재 생활비 상세</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           대출 원리금상환액(차량대출 포함)은 여기가 아닌 "5. 부채" 단계에서 입력해 주세요. 두 곳에 중복으로 입력하면 총지출이 실제보다 크게 계산됩니다.
@@ -137,9 +139,9 @@ export default function Step2Expense() {
           totalLabel="현재 기준 월 생활비 합계"
           annualLabel="현재 기준 연 생활비 합계"
         />
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(1) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🏖️</span> 노후 생활비</h3>
         <p className="field-helper" style={{ marginBottom: 4 }}>
           국민연금연구원 조사 2024년 기준 적정 노후 생활비 자료입니다.
@@ -174,9 +176,9 @@ export default function Step2Expense() {
           </span>
         )}
         {showCostGuide && <RetirementCostGuideModal onClose={() => setShowCostGuide(false)} />}
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(2) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">💰</span> 은퇴 후 예상 목돈지출</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           은퇴 후 차량 교체, 주택 수리, 자녀 학자금·결혼지원·기타 지원처럼 예상되는 큰 지출이 있다면 추가해 주세요. 없다면 입력하지 않아도 됩니다.
@@ -207,14 +209,24 @@ export default function Step2Expense() {
               <label className="field">
                 <span className="field-label">예상 지출 나이</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput max={120} value={item.expectedAge} onChange={(e) => update('expectedAge', Number(e.target.value))} />
+                  <FormattedNumberInput
+                    id={`expense.retirementLumpSumExpenses.${i}.expectedAge`}
+                    max={120}
+                    value={item.expectedAge}
+                    onChange={(e) => update('expectedAge', e.target.value === '' ? '' : Number(e.target.value))}
+                  />
                   <span className="field-unit">세</span>
                 </div>
               </label>
               <label className="field">
                 <span className="field-label">예상 금액</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput min={0} value={item.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+                  <FormattedNumberInput
+                    id={`expense.retirementLumpSumExpenses.${i}.amount`}
+                    min={0}
+                    value={item.amount}
+                    onChange={(e) => update('amount', e.target.value === '' ? '' : Number(e.target.value))}
+                  />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
@@ -223,9 +235,9 @@ export default function Step2Expense() {
           }}
         />
         <span className="field-helper">예상 지출 나이는 은퇴(예정) 연령 이후 ~ 기대수명 이내로 입력해 주세요.</span>
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(3) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🛡️</span> 보장성 보험</h3>
         <PresenceField label="보장성 보험 여부" present={hasInsurance} onChange={setHasInsurance} presentLabel="보험 있음" absentLabel="보험 없음" />
         {hasInsurance ? <div className="field-grid">
@@ -237,11 +249,15 @@ export default function Step2Expense() {
           label="기타 보험료(국민건강보험료 등)"
           addLabel="기타 추가"
           emptyItem={{ name: '', monthly: '' }}
-          renderItem={(item, _i, update) => (
+          renderItem={(item, _i, update) => {
+            // 서버 검증(validate.js)과 동일한 기준: 이름·월 보험료 중 하나라도 입력된 항목은 이름이 필수다.
+            const isBlank = (v) => v === '' || v === null || v === undefined;
+            const nameRequired = !isBlank(item.name) || !isBlank(item.monthly);
+            return (
             <div className="field-grid three-col">
               <label className="field">
-                <span className="field-label">항목 이름</span>
-                <input type="text" placeholder="예: 국민건강보험료" value={item.name} onChange={(e) => update('name', e.target.value)} />
+                <span className="field-label">항목 이름{nameRequired ? ' *' : ''}</span>
+                <input type="text" placeholder="예: 국민건강보험료" value={item.name} onChange={(e) => update('name', e.target.value)} required={nameRequired} />
               </label>
               <label className="field">
                 <span className="field-label">월 보험료</span>
@@ -251,22 +267,27 @@ export default function Step2Expense() {
                 </div>
               </label>
             </div>
-          )}
+            );
+          }}
         />
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(4) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">💸</span> 기타 지출</h3>
         <RepeatableList
           path="expense.otherExpenses"
           label="경조사비 등 추가로 예상되는 지출"
           addLabel="지출 항목 추가"
           emptyItem={{ name: '', annual: '', years: '' }}
-          renderItem={(item, _i, update) => (
+          renderItem={(item, _i, update) => {
+            // 서버 검증(validate.js)과 동일한 기준: 이름·연간 금액·기간 중 하나라도 입력된 항목은 이름이 필수다.
+            const isBlank = (v) => v === '' || v === null || v === undefined;
+            const nameRequired = !isBlank(item.name) || !isBlank(item.annual) || !isBlank(item.years);
+            return (
             <div className="field-grid three-col">
               <label className="field">
-                <span className="field-label">지출 항목 이름</span>
-                <input type="text" placeholder="예: 경조사비" value={item.name} onChange={(e) => update('name', e.target.value)} />
+                <span className="field-label">지출 항목 이름{nameRequired ? ' *' : ''}</span>
+                <input type="text" placeholder="예: 경조사비" value={item.name} onChange={(e) => update('name', e.target.value)} required={nameRequired} />
               </label>
               <label className="field">
                 <span className="field-label">연간 지출 금액</span>
@@ -283,13 +304,14 @@ export default function Step2Expense() {
                 </div>
               </label>
             </div>
-          )}
+            );
+          }}
         />
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(5) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧮</span> 총 지출 합계</h3>
-        <table className="grade-table compact">
+        <table className="grade-table compact finance-summary-desktop">
           <thead>
             <tr><th>항목</th><th style={{ textAlign: 'right' }}>월 금액</th></tr>
           </thead>
@@ -301,10 +323,34 @@ export default function Step2Expense() {
             <tr><td>기타 보험료(건강보험료 등)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(healthInsurance)}</td></tr>
           </tbody>
         </table>
+        <div className="finance-summary-mobile">
+          <div className="income-summary-totals">
+            <div className="income-summary-total-card">
+              <span>현재 총 월 지출</span>
+              <strong>{formatWon(totalMonthlyExpense)}</strong>
+            </div>
+            <div className="income-summary-total-card">
+              <span>현재 총 연 지출</span>
+              <strong>{formatWon(totalMonthlyExpense * 12)}</strong>
+            </div>
+          </div>
+          <div className="income-summary-group">
+            <h4>현재 지출</h4>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>현재 생활비</span><strong>{formatWon(monthlyLivingCost)}</strong></div>
+            </div>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>보장성보험료</span><strong>{formatWon(insurancePremium)}</strong></div>
+            </div>
+            <div className="income-summary-item income-summary-item--child">
+              <div className="income-summary-item-main"><span>기타 보험료(건강보험료 등)</span><strong>{formatWon(healthInsurance)}</strong></div>
+            </div>
+          </div>
+        </div>
         <span className="field-helper">
           노후 생활비, 자녀 목돈 지출, 기타 지출은 발생 시점·주기가 달라 위 합계에 포함되지 않습니다.
         </span>
-      </section>
+      </section></Activity>
     </div>
   );
 }

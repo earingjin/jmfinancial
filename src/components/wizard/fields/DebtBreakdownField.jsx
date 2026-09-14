@@ -8,7 +8,21 @@ import { changeDebtInputMode, debtDetailedTotals } from './inputModeTransitions'
 const monthlyBurdenOf = (item) =>
   (!item || item.repaymentType !== 'equalPrincipal' ? Number(item?.monthlyInterest) : Number(item?.monthlyRepayment)) || 0;
 
-function LoanFields({ item, onChange }) {
+// 상환방식(repaymentType)이 바뀌면 이전 방식에서만 쓰던 부담액 필드는 더 이상 화면에 보이지 않지만
+// formData에는 그대로 남아, 나중에 방식을 되돌리면 사용자가 재확인하지 않은 과거 값이 그대로
+// 부활해 계산에 다시 반영되는 문제가 있었다. principal·months·name처럼 상환방식과 무관한 공통
+// 필드는 건드리지 않고, 새 방식에서 쓰지 않게 된 부담액 필드만 비운다.
+export function applyLoanFieldChange(item, field, value) {
+  const current = item || { repaymentType: 'interestOnly' };
+  const next = { ...current, [field]: value };
+  const clearedField = field === 'repaymentType'
+    ? (value === 'equalPrincipal' ? 'monthlyInterest' : 'monthlyRepayment')
+    : null;
+  if (clearedField) next[clearedField] = '';
+  return { next, clearedField };
+}
+
+function LoanFields({ item, onChange, fieldPath }) {
   const repaymentType = item.repaymentType || 'interestOnly';
   return (
     <>
@@ -33,6 +47,7 @@ function LoanFields({ item, onChange }) {
           <span className="field-label">대출 원금</span>
           <div className="field-input-row">
             <FormattedNumberInput
+              id={`${fieldPath}.principal`}
               type="number"
               min={0}
               inputMode="numeric"
@@ -47,6 +62,7 @@ function LoanFields({ item, onChange }) {
             <span className="field-label">월 이자 금액</span>
             <div className="field-input-row">
               <FormattedNumberInput
+                id={`${fieldPath}.monthlyInterest`}
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -61,6 +77,7 @@ function LoanFields({ item, onChange }) {
             <span className="field-label">월 상환 금액</span>
             <div className="field-input-row">
               <FormattedNumberInput
+                id={`${fieldPath}.monthlyRepayment`}
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -75,6 +92,7 @@ function LoanFields({ item, onChange }) {
           <span className="field-label">상환 기간</span>
           <div className="field-input-row">
             <FormattedNumberInput
+              id={`${fieldPath}.months`}
               type="number"
               min={0}
               inputMode="numeric"
@@ -138,9 +156,10 @@ export default function DebtBreakdownField({
   };
 
   const update = (key, field, value) => {
-    const nextItem = { ...(breakdown[key] || { repaymentType: 'interestOnly' }), [field]: value };
+    const { next: nextItem, clearedField } = applyLoanFieldChange(breakdown[key], field, value);
     const nextBreakdown = { ...breakdown, [key]: nextItem };
     setField(`${basePath}.${key}.${field}`, value);
+    if (clearedField) setField(`${basePath}.${key}.${clearedField}`, '');
     recomputeTotals(nextBreakdown, customItems);
   };
 
@@ -171,7 +190,7 @@ export default function DebtBreakdownField({
   };
 
   const updateCustomItem = (index, key, value) => {
-    const next = customItems.map((item, i) => (i === index ? { ...item, [key]: value } : item));
+    const next = customItems.map((item, i) => (i === index ? applyLoanFieldChange(item, key, value).next : item));
     setField(customPath, next);
     recomputeTotals(breakdown, next);
   };
@@ -276,7 +295,7 @@ export default function DebtBreakdownField({
             return (
               <Fragment key={c.key}>
                 <p className="field-label" style={{ marginTop: 14, marginBottom: 8 }}>{c.label}</p>
-                <LoanFields item={item} onChange={(field, value) => update(c.key, field, value)} />
+                <LoanFields item={item} fieldPath={`${basePath}.${c.key}`} onChange={(field, value) => update(c.key, field, value)} />
                 <button type="button" className="repeatable-remove" onClick={() => removePresetItem(c.key)}>
                   이 항목 삭제
                 </button>
@@ -293,13 +312,14 @@ export default function DebtBreakdownField({
                 <label className="field" style={{ marginBottom: 10 }}>
                   <span className="field-label">대출 이름</span>
                   <input
+                    id={`${customPath}.${index}.name`}
                     type="text"
                     placeholder="예: 신용대출"
                     value={item.name}
                     onChange={(e) => updateCustomItem(index, 'name', e.target.value)}
                   />
                 </label>
-                <LoanFields item={item} onChange={(field, value) => updateCustomItem(index, field, value)} />
+                <LoanFields item={item} fieldPath={`${customPath}.${index}`} onChange={(field, value) => updateCustomItem(index, field, value)} />
                 <button type="button" className="repeatable-remove" onClick={() => removeCustomItem(index)}>
                   이 항목 삭제
                 </button>
@@ -310,7 +330,7 @@ export default function DebtBreakdownField({
             </button>
           </div>
 
-          <table className="grade-table compact" style={{ marginTop: 18 }}>
+          <table className="grade-table compact finance-summary-desktop" style={{ marginTop: 18 }}>
             <thead>
               <tr><th>대출 종류</th><th style={{ textAlign: 'right' }}>원금</th><th style={{ textAlign: 'right' }}>월 상환부담</th></tr>
             </thead>
@@ -339,6 +359,30 @@ export default function DebtBreakdownField({
               ))}
             </tbody>
           </table>
+          <div className="finance-summary-mobile finance-summary-mobile--spaced">
+            <div className="income-summary-totals">
+              <div className="income-summary-total-card"><span>총 부채</span><strong>{formatWon(balanceTotal || 0)}</strong></div>
+              <div className="income-summary-total-card"><span>총 월 상환액</span><strong>{formatWon(repaymentTotal || 0)}</strong></div>
+            </div>
+            <div className="income-summary-group">
+              <h4>부채 구성</h4>
+              {openCategories.map((c) => {
+                const item = breakdown[c.key] || {};
+                return (
+                  <div className="income-summary-item income-summary-item--child" key={c.key}>
+                    <div className="income-summary-item-main"><span>{c.label}</span><strong>{formatWon(Number(item.principal) || 0)}</strong></div>
+                    <p>월 상환부담 · {formatWon(monthlyBurdenOf(item))}</p>
+                  </div>
+                );
+              })}
+              {customItems.map((item, i) => (
+                <div className="income-summary-item income-summary-item--child" key={`custom-mobile-${i}`}>
+                  <div className="income-summary-item-main"><span>{item.name || '(이름 미입력)'}</span><strong>{formatWon(Number(item.principal) || 0)}</strong></div>
+                  <p>월 상환부담 · {formatWon(monthlyBurdenOf(item))}</p>
+                </div>
+              ))}
+            </div>
+          </div>
           <span className="field-helper">선택·추가하신 항목의 대출 원금·월 이자·상환액을 자동으로 합산한 값입니다</span>
         </>
       )}

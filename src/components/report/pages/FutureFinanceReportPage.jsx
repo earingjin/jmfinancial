@@ -14,7 +14,7 @@ export default function FutureFinanceReportPage({ futureFinance, pageNumber, tot
     <PageFrame eyebrow="Future Finance" pageNumber={pageNumber} totalPages={totalPages}>
       <SectionBadge number="6" label="미래재무 전망" />
       <p className="intro-text report-compact-intro">
-        현재 생활비와 연금 입력값을 기준으로 60·70·80세의 예상 현금흐름을 비교합니다. 이 충당률은 전체 자산이 아닌
+        현재 생활수준 기준 생활비와 연금 입력값을 바탕으로 60·70·80세의 예상 현금흐름을 비교합니다. 이 충당률은 전체 자산이 아닌
         연금소득만으로 예상 생활비를 얼마나 충당하는지를 나타냅니다.
       </p>
 
@@ -27,7 +27,7 @@ export default function FutureFinanceReportPage({ futureFinance, pageNumber, tot
                 <span>연금소득 기준 생활비 충당률</span>
                 <b>{item.coverageRate == null ? '산출 불가' : formatPercent(item.coverageRate)}</b>
                 <dl>
-                  <div><dt>예상 월 생활비</dt><dd>{item.livingExpense == null ? '-' : formatWon(item.livingExpense)}</dd></div>
+                  <div><dt>현재 생활수준 기준 예상 월 생활비</dt><dd>{item.livingExpense == null ? '-' : formatWon(item.livingExpense)}</dd></div>
                   <div><dt>예상 월 연금소득</dt><dd>{item.pensionIncome == null ? '-' : formatWon(item.pensionIncome)}</dd></div>
                   <div><dt>월 차이</dt><dd className={item.balance < 0 ? 'is-shortfall' : ''}>{item.balance == null ? '-' : item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}</dd></div>
                 </dl>

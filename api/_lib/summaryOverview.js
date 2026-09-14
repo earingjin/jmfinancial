@@ -68,10 +68,8 @@ export function buildFinancialOverviewCards(input, aggregates) {
   ];
 
   return [
-    card('monthlyIncome', '월 총소득', aggregates.householdMonthlyIncomeTotal, [
-      'assets.currentIncome.monthly', 'income.business.monthly', 'income.nationalPension.monthly',
-      'income.severance.pensionMonthly', 'income.severance.lumpsum',
-      'income.personalPension.monthly', 'income.personalPension.lumpsum',
+    card('monthlyIncome', '월 총소득', aggregates.monthlyIncome, [
+      'assets.currentIncome.monthly', 'income.business.monthly', 'income.otherIncomes',
     ]),
     card('monthlyExpense', '월 총지출', aggregates.totalExpenseMonthlyExSavings, [
       'assets.currentLivingCost.monthly', 'expense.housingCost', 'assets.insurance.monthlyPremium',
@@ -457,7 +455,10 @@ export function buildFinancialOverviewDetail(input, aggregates) {
     'assets.pensionAssets',
   ]);
   const realEstateMissing = allBlank(input, ['assets.realEstateAssets.total']);
-  const totalDebtMissing = allBlank(input, ['assets.debtStatus.totalBalance']);
+  // 부채 여부에서 "없음"을 선택한 경우 잔액 필드는 의도적으로 비워 두므로,
+  // 미입력으로 취급하지 않고 화면에 "부채 없음"을 표시할 수 있도록 구분한다.
+  const totalDebtNone = input.assets?.debtStatus?.hasDebt === false;
+  const totalDebtMissing = !totalDebtNone && allBlank(input, ['assets.debtStatus.totalBalance']);
   const realEstateDebtMissing = realEstateMissing && totalDebtMissing;
 
   const salary = aggregates.salaryMonthly;
@@ -519,7 +520,7 @@ export function buildFinancialOverviewDetail(input, aggregates) {
       liquid, liquidMissing,
       financialAndPension, financialAndPensionMissing: financialPensionMissing,
       realEstate: aggregates.realEstateTotal, realEstateMissing,
-      totalDebt: aggregates.totalDebt, totalDebtMissing,
+      totalDebt: aggregates.totalDebt, totalDebtMissing, totalDebtNone,
       realEstateNetOfDebt, realEstateNetOfDebtMissing: realEstateDebtMissing,
       netWorth: aggregates.netWorth,
     },

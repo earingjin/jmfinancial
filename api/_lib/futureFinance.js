@@ -50,6 +50,14 @@ function round1(value) {
 
 const present = (value) => value !== '' && value !== null && value !== undefined;
 
+// docs/future-finance-spec.md:49,76 - "월 수령액 불명"(빈 문자열/공백/null/undefined)은 0으로
+// 정규화하지 않고 산출 불가로 처리해야 한다. n()의 `Number(value) || 0` 변환은 빈 값과 명시적 0을
+// 구분하지 못하므로, monthly를 숫자로 바꾸기 전에 원본 값으로 먼저 빈 값 여부를 판정한다.
+function isBlankAmount(value) {
+  return value === '' || value === null || value === undefined
+    || (typeof value === 'string' && value.trim() === '');
+}
+
 function pensionComponents(input, currentYear) {
   const people = [
     { key: 'self', person: input.income || {}, birthYear: input.basic?.birthYear },
@@ -62,20 +70,30 @@ function pensionComponents(input, currentYear) {
     const personal = person.personalPension || {};
     const nationalStart = present(birthYear) ? getNationalPensionStartAge(n(birthYear)) : null;
     const nationalEligibility = assessNationalPensionEligibility({ pension: national });
+    const nationalActive = nationalPensionMonthlyEligible(nationalEligibility);
+    const severanceActive = severance.type === 'pension';
+    const personalActive = personal.type === 'installment';
     return [
       {
-        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalPensionMonthlyEligible(nationalEligibility) ? n(national.monthly) : 0,
+        key: `${key}.nationalPension`, category: 'nationalPension', monthly: nationalActive ? n(national.monthly) : 0,
+        // legacyFallback(futureContributionPlan 키 자체가 없는 과거 데이터)은 "가입기간 자격판정"만의
+        // 하위호환이다 - 가입기간을 모르는 채로도 기존에 저장된 monthly를 신뢰해 자격을 eligible로
+        // 인정하는 것이지, monthly 자체가 비어 있는지와는 별개 문제다. legacyFallback이어도 monthly가
+        // 비어 있으면(빈 문자열/공백/null/undefined) 다른 연금과 동일하게 unknown으로 처리한다.
+        monthlyUnknown: nationalActive && isBlankAmount(national.monthly),
         startAge: nationalStart, months: national.months, currentAge,
         eligibilityStatus: nationalEligibility.status,
         growthRate: FUTURE_FINANCE_ASSUMPTIONS.nationalPensionGrowthRate,
       },
       {
-        key: `${key}.retirementPension`, category: 'retirementPension', monthly: severance.type === 'pension' ? n(severance.pensionMonthly) : 0,
+        key: `${key}.retirementPension`, category: 'retirementPension', monthly: severanceActive ? n(severance.pensionMonthly) : 0,
+        monthlyUnknown: severanceActive && isBlankAmount(severance.pensionMonthly),
         startAge: severance.pensionStartAge, months: severance.pensionMonths, currentAge,
         growthRate: FUTURE_FINANCE_ASSUMPTIONS.retirementPensionGrowthRate,
       },
       {
-        key: `${key}.personalPension`, category: 'personalPension', monthly: personal.type === 'installment' ? n(personal.monthly) : 0,
+        key: `${key}.personalPension`, category: 'personalPension', monthly: personalActive ? n(personal.monthly) : 0,
+        monthlyUnknown: personalActive && isBlankAmount(personal.monthly),
         startAge: personal.startAge, months: personal.months, currentAge,
         growthRate: FUTURE_FINANCE_ASSUMPTIONS.privatePensionGrowthRate,
       },
@@ -89,9 +107,10 @@ function evaluateNationalPension(component, years) {
   }
   const ageAtTarget = component.currentAge + years;
   const active = ageAtTarget >= n(component.startAge);
+  const yearsSinceStart = Math.max(0, ageAtTarget - n(component.startAge));
   return {
     ...component,
-    amount: active ? calculateFutureValue(component.monthly, component.growthRate, years) : 0,
+    amount: active ? calculateFutureValue(component.monthly, component.growthRate, yearsSinceStart) : 0,
     inclusionStatus: active ? 'included' : 'beforeStart',
     // 국민연금 노령연금은 수급개시연령 이후 종신 지급한다. 레거시 months와 가입·납부기간은
     // 지급 종료연령이 아니므로 endAge 계산에 사용하지 않는다.
@@ -130,6 +149,14 @@ export function calculatePensionIncomeAtTarget({ input, currentYear, years, trea
         amount: null,
         inclusionStatus: 'unknown',
         unknownReason: '국민연금 향후 가입기간을 확정할 수 없음',
+      };
+    }
+    if (component.monthlyUnknown) {
+      return {
+        ...component,
+        amount: null,
+        inclusionStatus: 'unknown',
+        unknownReason: `월 연금액을 확인할 수 없음: ${component.key}`,
       };
     }
     if (component.monthly <= 0) return { ...component, amount: 0, inclusionStatus: 'zero' };
@@ -295,6 +322,51 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
     ], true)
     : [];
 
+  // 1페이지 요약 리포트의 "국민연금 수령 후" 표시에 쓰는 읽기 전용 스냅샷이다.
+  // 연금의 개시·종료·수령 방식은 별도로 판정하지 않고, 기존 목표 나이 계산 함수를
+  // 국민연금 개시 나이에 그대로 재사용한다.
+  const nationalPensionStartSnapshot = (() => {
+    if (!Number.isFinite(currentAge) || !Number.isFinite(nationalPensionStartAge)) {
+      return {
+        calculable: false,
+        reason: '국민연금 수령 시점을 확인할 수 없습니다.',
+        age: null,
+        pensionIncomeMonthly: null,
+        nationalPensionMonthly: null,
+        severancePensionMonthly: null,
+        personalPensionMonthly: null,
+      };
+    }
+
+    if (pensionDataMissing) {
+      return {
+        calculable: false,
+        reason: '연금 정보를 확인할 수 없습니다.',
+        age: nationalPensionStartAge,
+        pensionIncomeMonthly: null,
+        nationalPensionMonthly: null,
+        severancePensionMonthly: null,
+        personalPensionMonthly: null,
+      };
+    }
+
+    const pension = calculatePensionIncomeAtTarget({
+      input,
+      currentYear,
+      years: nationalPensionStartAge - currentAge,
+    });
+
+    return {
+      calculable: pension.calculable,
+      reason: pension.reason,
+      age: nationalPensionStartAge,
+      pensionIncomeMonthly: round(pension.total),
+      nationalPensionMonthly: round(pension.nationalPension),
+      severancePensionMonthly: round(pension.retirementPension),
+      personalPensionMonthly: round(pension.personalPension),
+    };
+  })();
+
   const purchasingPower = netWorthMissing ? null : [0, 10, 20].map((years) => ({
     years,
     requiredAmount: round(calculatePurchasingPowerEquivalent(aggregates.netWorth, years)),
@@ -314,6 +386,7 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
     assumptions: FUTURE_FINANCE_ASSUMPTIONS,
     currentAge,
     nationalPensionStartAge,
+    nationalPensionStartSnapshot,
     missing: { age: ageMissing, livingExpense: livingExpenseMissing, pension: pensionDataMissing, netWorth: netWorthMissing },
     targets,
     fiveYearOutlook,

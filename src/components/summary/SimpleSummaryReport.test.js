@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthStatus } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatAssetProjectionReason, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthExplanation, getFinancialHealthStatus, getFinancialIndicatorInterpretation, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems } from './summaryPresentation';
 
 // getFinancialHealthStatus는 새 재무점수·임계값을 만들지 않고, 서버가 이미 계산한
 // ratioClass(good/caution/risk)만 세어 화면 문구를 고르는 순수 표시 헬퍼다.
@@ -11,7 +11,9 @@ describe('getFinancialHealthStatus', () => {
   const na = { ratioClass: 'na', notCalculable: true };
 
   it('모든 대표지표가 good이면 안정 문구를 반환한다', () => {
-    expect(getFinancialHealthStatus([good, good, good]).icon).toBe('😊');
+    const status = getFinancialHealthStatus([good, good, good]);
+    expect(status.icon).toBe('😊');
+    expect(status.title).toBe('현재 재무상태가 전반적으로 안정적입니다.');
   });
 
   it('caution이 하나라도 있으면 일부 점검 문구를 반환한다', () => {
@@ -38,6 +40,84 @@ describe('getFinancialHealthStatus', () => {
   it('notCalculable 지표는 카운트에서 제외하고 나머지 known 지표만으로 판정한다', () => {
     // na 1개 + good 2개 → known은 good만 2개 → 안정 문구
     expect(getFinancialHealthStatus([na, good, good]).icon).toBe('😊');
+  });
+});
+
+describe('financial health presentation', () => {
+  it.each([
+    [{ key: 'household', ratioClass: 'good', value: 39.1 }, '지출 부담 낮음'],
+    [{ key: 'emergency', ratioClass: 'good', value: 92.2 }, '비상자금 충분'],
+    [{ key: 'dsr', ratioClass: 'good', value: 0 }, '상환 부담 없음'],
+    [{ key: 'dsr', ratioClass: 'good', value: 10 }, '상환 부담 낮음'],
+    [{ key: 'household', ratioClass: 'caution', value: 75 }, '지출 부담 점검'],
+    [{ key: 'household', ratioClass: 'risk', value: 90 }, '지출 부담 높음'],
+    [{ key: 'emergency', ratioClass: 'caution', value: 3 }, '비상자금 점검'],
+    [{ key: 'emergency', ratioClass: 'risk', value: 1 }, '비상자금 부족'],
+    [{ key: 'dsr', ratioClass: 'caution', value: 35 }, '상환 부담 점검'],
+    [{ key: 'dsr', ratioClass: 'risk', value: 50 }, '상환 부담 높음'],
+  ])('%o를 지표별 사용자 문구로 표시한다', (indicator, expected) => {
+    expect(getFinancialIndicatorInterpretation(indicator)).toBe(expected);
+  });
+
+  it('산출 불가 지표는 값이나 상태와 관계없이 산출 불가로 표시한다', () => {
+    expect(getFinancialIndicatorInterpretation({ key: 'dsr', ratioClass: 'good', value: 0, notCalculable: true })).toBe('산출 불가');
+  });
+
+  it('세 지표가 good이면 각 지표가 안정 판정의 근거임을 설명한다', () => {
+    const explanation = getFinancialHealthExplanation([
+      { key: 'household', ratioClass: 'good', value: 39.1 },
+      { key: 'emergency', ratioClass: 'good', value: 92.2 },
+      { key: 'dsr', ratioClass: 'good', value: 0 },
+    ]);
+    expect(explanation).toContain('지출 부담이 낮고');
+    expect(explanation).toContain('비상자금이 충분하며');
+    expect(explanation).toContain('빚 상환 부담이 없어');
+    expect(explanation).toContain('현재 재무구조가 안정적입니다.');
+  });
+
+  it('일부 지표만 계산 가능하면 전체를 단정하지 않는다', () => {
+    const explanation = getFinancialHealthExplanation([
+      { key: 'household', ratioClass: 'good', value: 39.1 },
+      { key: 'emergency', ratioClass: 'na', notCalculable: true },
+    ]);
+    expect(explanation).toContain('확인 가능한 항목에서는');
+  });
+});
+
+describe('getRetirementSustainabilityStatus', () => {
+  it('A) 단순 부족자금이 있어도 기대수명까지 자산이 유지되면 부족 상태로 판정하지 않는다', () => {
+    const simulation = { shortfall: 2450, preparationRate: 74.6 };
+    const status = getRetirementSustainabilityStatus({ assetsRemainAtLifeExpectancy: true });
+
+    expect(status.key).toBe('stable');
+    expect(status.label).toBe('유지 예상');
+    expect(status.titleLines.join(' ')).not.toContain('부족한 상태');
+    expect(simulation).toEqual({ shortfall: 2450, preparationRate: 74.6 });
+  });
+
+  it('B) 기대수명 전에 자산이 소진되면 기존 소진 나이를 최종 문구에 표시한다', () => {
+    const status = getRetirementSustainabilityStatus({
+      assetsRemainAtLifeExpectancy: false,
+      depletionAge: 79,
+      recoveredAfterDepletion: false,
+    });
+
+    expect(status.key).toBe('depleted');
+    expect(status.displayValue).toBe('79세 소진 예상');
+    expect(status.titleLines.join(' ')).toContain('약 79세');
+  });
+
+  it('C) 소진 후 회복되는 경우 일시 소진과 이후 회복을 함께 표시한다', () => {
+    const status = getRetirementSustainabilityStatus({
+      assetsRemainAtLifeExpectancy: false,
+      depletionAge: 65,
+      recoveredAfterDepletion: true,
+    });
+
+    expect(status.key).toBe('recovered');
+    expect(status.displayValue).toBe('65세 일시 소진 후 회복');
+    expect(status.titleLines.join(' ')).toContain('다시 회복');
+    expect(status.titleLines.join(' ')).not.toContain('부족한 상태');
   });
 });
 
@@ -119,5 +199,34 @@ describe('formatRetirementLivingCostBasis', () => {
       retirementLivingCostAtRetirement: 431.3,
       inflationRate: 3,
     })).toBe('현재 입력한 월 필요생활비 200만원을 기준으로, 은퇴까지 연 3% 물가상승률을 반영하면 은퇴 시점에는 월 431.3만원이 필요하다고 계산했습니다.');
+  });
+});
+
+describe('getSeveranceLumpSumDisplayItems', () => {
+  it('퇴직 전·은퇴 시점 일시금은 예상 준비자산 반영 항목으로만 표시한다', () => {
+    const input = {
+      basic: { hasSpouse: true },
+      income: { severance: { type: 'lumpsum', lumpsum: 7000, lumpsumAge: 64 } },
+      spouse: { severance: { type: 'lumpsum', lumpsum: 3000, lumpsumAge: 65 } },
+    };
+    expect(getSeveranceLumpSumDisplayItems(input, 65)).toEqual([
+      { label: '본인', amount: 7000, age: 64, includedAtRetirement: true },
+      { label: '배우자', amount: 3000, age: 65, includedAtRetirement: true },
+    ]);
+  });
+
+  it('은퇴 후 일시금은 미래 자산 전망 반영 항목으로 표시하며 금액을 합산하지 않는다', () => {
+    const input = {
+      basic: { hasSpouse: false },
+      income: { severance: { type: 'lumpsum', lumpsum: 7000, lumpsumAge: 70 } },
+    };
+    expect(getSeveranceLumpSumDisplayItems(input, 65)).toEqual([
+      { label: '본인', amount: 7000, age: 70, includedAtRetirement: false },
+    ]);
+  });
+
+  it('일시금이 없거나 과거 저장 결과에 원본 입력이 없어도 빈 목록을 반환한다', () => {
+    expect(getSeveranceLumpSumDisplayItems(undefined, 65)).toEqual([]);
+    expect(getSeveranceLumpSumDisplayItems({ income: { severance: { type: 'none', lumpsum: 7000, lumpsumAge: 65 } } }, 65)).toEqual([]);
   });
 });

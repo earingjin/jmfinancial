@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Activity, useState, useEffect } from 'react';
 import NumberField from '../fields/NumberField';
 import CategoryBreakdownField from '../fields/CategoryBreakdownField';
 import RepeatableList from '../fields/RepeatableList';
@@ -60,7 +60,7 @@ const PENSION_ASSET_CATEGORIES = [
 const PENSION_BREAKDOWN_NUMERIC_KEYS = ['variableAnnuity', 'pensionSavingsAccount', 'irp', 'other'];
 const RETIREMENT_PENSION_ASSET_KEYS = ['selfRetirementPension', 'spouseRetirementPension'];
 
-export default function Step4Assets() {
+export default function Step4Assets({ subStepIndex }) {
   const { formData, setField } = useFormData();
   const hasSpouse = getIn(formData, 'basic.hasSpouse') === true;
   const hasLiquidAssets = getIn(formData, 'assets.liquidAssets.hasAssets') !== false;
@@ -199,9 +199,9 @@ export default function Step4Assets() {
     const value = pensionBreakdown[key];
     return value !== '' && value != null;
   }) || hasPensionOtherInput;
-  // 본인·배우자 퇴직연금 적립금은 위 4개 카테고리에 더해지는 별도 자산이 아니라, 그 중 이미 입력한
-  // 금액의 일부가 퇴직연금이라는 표시(carve-out)다. 따라서 총액에는 더하지 않는다.
-  const pensionAssetsTotal = PENSION_BREAKDOWN_NUMERIC_KEYS.reduce(
+  // 현재 보유 중인 본인·배우자 퇴직연금 적립금도 상세 연금자산 합계에 포함한다.
+  // 배우자 금액은 현재 배우자 정보가 활성화된 경우에만 포함한다.
+  const pensionAssetsTotal = [...PENSION_BREAKDOWN_NUMERIC_KEYS, ...activeRetirementPensionAssetKeys].reduce(
     (s, k) => s + (k === 'other' ? pensionOtherTotal : Number(pensionBreakdown[k]) || 0),
     0
   );
@@ -268,12 +268,13 @@ export default function Step4Assets() {
   }, [hasRealEstateDetailedInput, realEstateDetailedTotal, realEstateMode, setField]);
 
   const totalAssets = liquidAssets + financialAssetsTotal + pensionAssets + realEstateTotal + otherAssetsTotal;
+  const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
 
   return (
     <div className="step">
       <h2 className="step-title">4. 자산</h2>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">💵</span> 현금성 자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·비상금 등 즉시 인출 가능한 자산입니다.
@@ -296,9 +297,9 @@ export default function Step4Assets() {
           customAmountLabel="금액"
           addItemLabel="현금성 자산 항목 추가"
         /></TotalInputModeField> : <p className="field-helper">현금성 자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(1) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">📈</span> 금융자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           예금·적금·CMA는 위 현금성 자산에서 입력해 주세요. 여기는 주식·펀드·채권 등 투자자산입니다.
@@ -370,9 +371,9 @@ export default function Step4Assets() {
         <TotalAmountBox label="금융자산 총액" amount={financialAssetsTotal} valueLabel="총액은" />
         <span className="field-helper">선택·입력하신 항목의 합으로 자동 계산됩니다</span>
         </TotalInputModeField> : <p className="field-helper">금융자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(2) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🏦</span> 연금자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           해당하는 연금자산 종류를 눌러 금액을 확인·입력해 주세요. 변액연금·연금저축계좌·IRP개인퇴직계좌는
@@ -383,7 +384,7 @@ export default function Step4Assets() {
           modePath="assets.pensionAssetsInputMode" totalPath="assets.pensionAssets"
           simpleTotalPath="assets.pensionAssetsSimpleTotal" simpleStoredPath="assets.pensionAssetsSimpleInputStored"
           detailedTotal={pensionAssetsTotal} detailedHasInput={hasPensionDetailedInput} totalLabel="연금자산 총액"
-          beforeTotal={pensionMode === 'simple' && <div className="field-grid" style={{ marginTop: 14 }}><NumberField path="assets.pensionAssetsBreakdown.selfRetirementPension" label="연금자산 총액 중 본인 퇴직연금 적립금" unit="만원" required={getIn(formData, 'income.severance.type') === 'pension'} />{hasSpouse && <NumberField path="assets.pensionAssetsBreakdown.spouseRetirementPension" label="연금자산 총액 중 배우자 퇴직연금 적립금" unit="만원" required={getIn(formData, 'spouse.severance.type') === 'pension'} />}</div>}
+          beforeTotal={pensionMode === 'simple' && <div className="field-grid" style={{ marginTop: 14 }}><NumberField path="assets.pensionAssetsBreakdown.selfRetirementPension" label="연금자산 총액 중 본인 퇴직연금 적립금" unit="만원" helper="지금까지 쌓여 있는 퇴직연금 금액을 입력해 주세요." required={getIn(formData, 'income.severance.type') === 'pension'} />{hasSpouse && <NumberField path="assets.pensionAssetsBreakdown.spouseRetirementPension" label="연금자산 총액 중 배우자 퇴직연금 적립금" unit="만원" helper="지금까지 쌓여 있는 퇴직연금 금액을 입력해 주세요." required={getIn(formData, 'income.severance.type') === 'pension'} />}</div>}
         >
         <div className="checkbox-group" style={{ marginBottom: 14 }}>
           {PENSION_ASSET_CATEGORIES.map((c) => (
@@ -442,8 +443,8 @@ export default function Step4Assets() {
           />
         )}
         {pensionMode === 'detailed' && <div className="field-grid" style={{ marginTop: 14 }}>
-          <NumberField path="assets.pensionAssetsBreakdown.selfRetirementPension" label="연금자산 총액 중 본인 퇴직연금 적립금" unit="만원" required={getIn(formData, 'income.severance.type') === 'pension'} />
-          {hasSpouse && <NumberField path="assets.pensionAssetsBreakdown.spouseRetirementPension" label="연금자산 총액 중 배우자 퇴직연금 적립금" unit="만원" required={getIn(formData, 'spouse.severance.type') === 'pension'} />}
+          <NumberField path="assets.pensionAssetsBreakdown.selfRetirementPension" label="연금자산 총액 중 본인 퇴직연금 적립금" unit="만원" helper="지금까지 쌓여 있는 퇴직연금 금액을 입력해 주세요." required={getIn(formData, 'income.severance.type') === 'pension'} />
+          {hasSpouse && <NumberField path="assets.pensionAssetsBreakdown.spouseRetirementPension" label="연금자산 총액 중 배우자 퇴직연금 적립금" unit="만원" helper="지금까지 쌓여 있는 퇴직연금 금액을 입력해 주세요." required={getIn(formData, 'spouse.severance.type') === 'pension'} />}
         </div>}
         <TotalAmountBox label="연금자산 총액" amount={pensionAssets} valueLabel="총액은" />
         <span className="field-helper">입력한 연금자산 항목의 합으로 자동 계산됩니다. 금융자산비중지표 계산 시 금융자산과 별도로 취급됩니다.</span>
@@ -465,17 +466,14 @@ export default function Step4Assets() {
           )}
         </div>
         <p className="field-helper" style={{ marginTop: 8 }}>
-          위에서 입력한 연금자산(변액연금·연금저축계좌·IRP개인퇴직계좌·기타) 중 퇴직연금에 해당하는 금액이
-          얼마인지를 표시하는 항목입니다 - 별도로 추가되는 금액이 아니라 이미 입력한 금액의 일부입니다.
+          위에서 입력한 연금자산 중 퇴직연금에 해당하는 금액입니다. 연금자산 총액에 이미 포함된 금액입니다.
           퇴직급여 수령방식을 "월지급(연금)"으로 선택한 경우 현재 적립된 퇴직연금 잔액을 필수로 입력해야
           하며, DB형·확정급여형 등으로 잔액 개념이 없거나 잔액을 정확히 모르면 0을 입력해 주세요.
-          앞으로 일시금으로 받는 금액은 수령 시점의 자산으로, 매월 받는 금액은 연금소득으로 계산합니다.
-          이미 받은 퇴직금·퇴직연금 일시금은 현재 보유 중인 예금·금융자산 등에 포함해 입력해 주세요. 앞으로 받을 예정인 금액만 퇴직금 항목에 입력합니다.
         </p>
         </> : <p className="field-helper">연금자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(3) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🏠</span> 부동산자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           매입가·공시가가 아닌 현재 시세 기준으로 입력해 주세요.
@@ -494,10 +492,11 @@ export default function Step4Assets() {
           />
           <NumberField
             path="assets.realEstateAssets.mainProperty"
-            label="주요 부동산 시세"
+            label={getIn(formData, 'assets.realEstateAssets.mainPropertyType') ? '주요 부동산 시세 *' : '주요 부동산 시세'}
             unit="만원"
             helper={getIn(formData, 'assets.realEstateAssets.mainPropertyType') ? '선택한 주요 보유 부동산 1건의 현재 시세' : '매물 종류를 먼저 선택해 주세요'}
             disabled={!getIn(formData, 'assets.realEstateAssets.mainPropertyType')}
+            required={!!getIn(formData, 'assets.realEstateAssets.mainPropertyType')}
           />
           <NumberField
             path="assets.realEstateAssets.reverseMortgageHouse"
@@ -533,9 +532,9 @@ export default function Step4Assets() {
         <TotalAmountBox label="부동산자산 총액" amount={realEstateTotal} valueLabel="총액은" />
         <span className="field-helper">부동산 시세와 기타 부동산 시세의 합으로 자동 계산됩니다</span>
         </TotalInputModeField> : <p className="field-helper">부동산자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(4) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">📦</span> 기타 자산</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           위 자산 분류에 포함되지 않는 기타 보유 자산을 입력해 주세요.
@@ -570,11 +569,11 @@ export default function Step4Assets() {
           <TotalAmountBox label="기타 자산 총액" amount={otherAssetsTotal} valueLabel="총액은" />
           <span className="field-helper">입력하신 기타 자산의 현재 가치를 자동으로 합산한 금액입니다.</span>
         </TotalInputModeField> : <p className="field-helper">기타 자산 없음으로 선택했습니다.</p>}
-      </section>
+      </section></Activity>
 
-      <section className="step-section">
+      <Activity mode={showSubStep(5) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">🧮</span> 자산 합계</h3>
-        <table className="grade-table compact">
+        <table className="grade-table compact finance-summary-desktop">
           <thead>
             <tr><th>구분</th><th style={{ textAlign: 'right' }}>금액</th></tr>
           </thead>
@@ -587,7 +586,20 @@ export default function Step4Assets() {
             <tr><td>기타 자산</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(otherAssetsTotal)}</td></tr>
           </tbody>
         </table>
-      </section>
+        <div className="finance-summary-mobile">
+          <div className="income-summary-totals income-summary-totals--single">
+            <div className="income-summary-total-card"><span>총 자산</span><strong>{formatWon(totalAssets)}</strong></div>
+          </div>
+          <div className="income-summary-group">
+            <h4>자산 구성</h4>
+            <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>현금성 자산</span><strong>{formatWon(liquidAssets)}</strong></div></div>
+            <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>금융자산</span><strong>{formatWon(financialAssetsTotal)}</strong></div></div>
+            <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>연금자산</span><strong>{formatWon(pensionAssets)}</strong></div></div>
+            <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>부동산자산</span><strong>{formatWon(realEstateTotal)}</strong></div></div>
+            <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>기타 자산</span><strong>{formatWon(otherAssetsTotal)}</strong></div></div>
+          </div>
+        </div>
+      </section></Activity>
     </div>
   );
 }

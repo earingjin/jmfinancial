@@ -20,9 +20,9 @@ function fieldWindow(html, exactLabel) {
   return html.slice(idx, end);
 }
 
-function renderStep() {
+function renderStep(retirementLumpSumExpenses = [{ name: '여행', expectedAge: 70, amount: 500 }]) {
   const formData = structuredClone(initialFormData);
-  formData.expense.retirementLumpSumExpenses = [{ name: '여행', expectedAge: 70, amount: 500 }];
+  formData.expense.retirementLumpSumExpenses = retirementLumpSumExpenses;
   formData.expense.healthInsurance.items = [{ name: '건강보험', monthly: 10 }];
   formData.expense.otherExpenses = [{ name: '경조사', annual: 50, years: 5 }];
 
@@ -58,5 +58,21 @@ describe('Step2Expense - 반복입력 금액 필드의 음수 방어 (A12)', () 
     expect(html).not.toContain('자녀 추가');
     expect(html).toContain('자녀 학자금·결혼지원·기타 지원처럼 예상되는 큰 지출');
     expect(html).toContain('예: 자녀 결혼지원 또는 학자금');
+  });
+});
+
+describe('Step2Expense - 목돈지출 빈 상태 안내', () => {
+  it('등록된 목돈지출이 없을 때 빈 상태 안내 박스를 표시하지 않는다', () => {
+    expect(renderStep([])).not.toContain('현재 등록된 목돈지출 계획이 없습니다.');
+  });
+});
+
+describe('Step2Expense - 총 지출 합계 반응형 표시', () => {
+  it('데스크톱 표와 모바일 합계·항목 목록을 함께 렌더링한다', () => {
+    const html = renderStep();
+    expect(html).toContain('grade-table compact finance-summary-desktop');
+    expect(html).toContain('finance-summary-mobile');
+    expect(html).toContain('현재 총 월 지출');
+    expect(html).toContain('현재 총 연 지출');
   });
 });

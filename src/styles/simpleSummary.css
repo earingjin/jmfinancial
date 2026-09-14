@@ -326,14 +326,23 @@
 .summary-status-card .ss-status-facts {
   margin-top: 10px;
 }
+.mobile-retirement-summary-card .fhs-hero { flex: 0 0 auto; }
+/* 재무 카드도 그리드 행의 전체 높이를 채우지 않고, 은퇴 카드와 같은 콘텐츠 높이로 표시한다. */
+.summary-grid-area--card1 .fhs-hero { flex: 0 0 auto; }
+.summary-grid-area--card1 .summary-status-card { height: auto; }
+.mobile-retirement-coverage-set { display: grid; gap: 10px; margin-top: 10px; }
+.mobile-retirement-coverage-box { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 14px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: #f6ead7; }
+.mobile-retirement-coverage-title { grid-column: 1 / -1; margin-bottom: 2px; color: var(--navy-800); font-size: 12px; font-weight: 800; }
+.mobile-retirement-coverage-title i { margin: 0 3px; color: var(--gold); font-style: normal; }
+.mobile-retirement-coverage-box > div:not(.mobile-retirement-coverage-title) { display: contents; }
+.mobile-retirement-coverage-box span { min-width: 0; color: var(--ink-soft); font-size: 11.5px; line-height: 1.4; }
+.mobile-retirement-coverage-box b { color: var(--navy-800); font-size: 12.5px; font-weight: 750; white-space: nowrap; }
+.mobile-retirement-coverage-box > p { grid-column: 1 / -1; margin: 1px 0 0; color: var(--ink-soft); font-size: 11.5px; line-height: 1.5; }
+.mobile-retirement-coverage-box > strong { grid-column: 1 / -1; margin-top: 4px; color: var(--orange-strong, #ff7a0a); font-size: 16px; font-weight: 850; line-height: 1.3; text-align: right; }
 @media (max-width: 768px) {
   .summary-cards-grid {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "card1"
-      "details1"
-      "card2"
-      "details2";
+    display: flex;
+    flex-direction: column;
     gap: 14px;
   }
 }
@@ -352,6 +361,26 @@
 .fhs-status-pill--risk { background: var(--red-soft); color: var(--red); }
 .fhs-status-pill--unknown,
 .fhs-status-pill--na { background: var(--paper); color: var(--ink-soft); }
+
+@media (max-width: 480px) {
+  .summary-grid-area--card1 .ss-status-facts > div {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px 0;
+  }
+  .summary-grid-area--card1 .ss-status-facts strong {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    white-space: normal;
+  }
+  .summary-grid-area--card1 .fhs-status-pill {
+    flex: 0 0 auto;
+    margin-left: 0;
+  }
+}
 
 /* ---------- 1. 재무 현황 카드 ---------- */
 .overview-card-grid {
@@ -374,9 +403,6 @@
   border-width: 2px;
   background: var(--paper);
 }
-.overview-card--risk {
-  border-color: var(--red);
-}
 .overview-card-label {
   font-size: 12px;
   color: var(--ink-soft);
@@ -398,7 +424,8 @@
   color: var(--navy-800);
   word-break: keep-all;
 }
-.overview-card--risk .overview-card-value { color: var(--red); }
+.overview-card--reference { border-color: var(--line); background: var(--paper); }
+.overview-card--reference .overview-card-value { color: var(--navy-800); }
 .overview-card--clickable {
   display: block;
   width: 100%;
@@ -521,6 +548,36 @@
   border-radius: 0 0 12px 12px;
 }
 .detail-row--highlight .detail-row-value { color: #0E6C5E; font-size: 16px; }
+.summary-breakdown-toggle {
+  display: inline-flex;
+  margin: 0 0 4px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.summary-breakdown-toggle:hover { color: var(--navy-800); }
+.summary-breakdown-list {
+  margin: 0 0 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+.summary-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+.summary-breakdown-row strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 /* 은퇴 필요자금의 핵심 산식만 필요할 때 펼쳐 보는 간단한 설명 */
 .retirement-calculation {
@@ -537,10 +594,10 @@
   font-size: 13.5px;
   font-weight: 800;
   cursor: pointer;
+  border-bottom: 1px solid var(--line);
 }
 .retirement-calculation-body {
   padding: 2px 18px 15px;
-  border-top: 1px solid var(--line);
 }
 .retirement-calculation-body p {
   display: flex;
@@ -564,6 +621,25 @@
   color: var(--ink-soft);
   line-height: 1.55;
 }
+.retirement-detail-card { border: 0; border-radius: 0; }
+.retirement-calculation > .detail-card { border: 0; border-radius: 0; }
+.retirement-detail-card .detail-row { align-items: flex-start; gap: 12px; }
+.retirement-detail-card .detail-row-label { min-width: 0; }
+.retirement-detail-card .detail-row-value { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.retirement-detail-card .retirement-monthly-result { padding-top: 6px; }
+.retirement-funding-breakdown { margin: 0 0 4px; border: 0; }
+.retirement-funding-breakdown > summary { display: inline-flex; margin: 0 0 4px; padding: 2px 0; border: 0; background: transparent; color: var(--ink-soft); font: inherit; font-size: 12px; cursor: pointer; }
+.retirement-funding-breakdown > summary { list-style: none; }
+.retirement-funding-breakdown > summary::-webkit-details-marker { display: none; }
+.retirement-funding-breakdown > div { padding: 0 2px 5px; }
+.retirement-funding-breakdown .detail-row { font-size: 11.5px; }
+.retirement-reference-note { margin: 5px 2px 0; color: var(--ink-soft); font-size: 10.5px; line-height: 1.45; }
+.retirement-final-heading { margin: 2px 0 8px; }
+.retirement-final-heading strong { display: block; color: var(--navy-800); font-size: 13px; }
+.retirement-final-heading span { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 10.5px; line-height: 1.4; }
+.retirement-detail-lumpsums { margin: 6px 0 8px; padding: 8px 10px; background: var(--paper); }
+.retirement-detail-lumpsums > span { display: block; margin-bottom: 3px; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.retirement-detail-lumpsums small { display: block; color: var(--ink); font-size: 11.5px; line-height: 1.5; }
 
 @media (max-width: 640px) {
   .retirement-calculation-body p { flex-direction: column; gap: 4px; }
@@ -908,6 +984,16 @@
 
 /* ---------- 4. 은퇴 준비 현황 ---------- */
 .retirement-card-grid { margin-bottom: 22px; }
+.retirement-lump-sum-note {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid #e7d8bf;
+  border-radius: 10px;
+  background: #fffaf1;
+}
+.retirement-lump-sum-note > span { color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.retirement-lump-sum-note p { display: flex; justify-content: space-between; gap: 12px; margin: 5px 0 0; color: var(--navy-800); font-size: 12px; }
+.retirement-lump-sum-note small { flex: 0 0 auto; color: var(--ink-soft); font-size: 10.5px; }
 .need-breakdown-list {
   margin-top: 8px;
   padding: 8px 14px 10px;
@@ -1054,6 +1140,7 @@
 
 /* ---------- 5. 다운로드 ---------- */
 .ss-download-section { text-align: center; }
+.ss-download-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .ss-download-btn {
   width: 100%;
   padding: 16px;

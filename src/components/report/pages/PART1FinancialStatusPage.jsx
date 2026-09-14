@@ -26,7 +26,7 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
           )) : <tr><td>급여</td><td className="num">{formatWon(agg.salaryMonthly)}</td></tr>}
           <tr><td>사업소득</td><td className="num">{formatWon(agg.businessMonthly)}</td></tr>
           <tr>
-            <td>국민연금 · 퇴직연금 · 개인연금</td>
+            <td>예상 연금소득(참고)</td>
             <td className="num">
               {nationalPensionUnknown ? (
                 <>확인 필요<span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 향후 가입 여부 미확정)</span></>
@@ -40,24 +40,18 @@ export default function PART1FinancialStatusPage({ aggregates: agg, savingsBreak
           </tr>
           <tr><td>기타(임대소득 · 배당금 등)</td><td className="num">{formatWon(agg.otherIncomeMonthly)}</td></tr>
           <tr className="total-row">
-            <td>가구 합계(월평균)</td>
-            <td className="num">
-              {formatWon(agg.householdMonthlyIncomeTotal)}
-              {nationalPensionUnknown && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 미확정분 제외)</span>}
-            </td>
+            <td>현재 월 소득</td>
+            <td className="num">{formatWon(agg.monthlyIncome)}</td>
           </tr>
           <tr>
-            <td>가구 합계(연평균)</td>
-            <td className="num">
-              {formatWon(agg.householdMonthlyIncomeTotal * 12)}
-              {nationalPensionUnknown && <span style={{ color: 'var(--ink-soft)', fontSize: 10.5 }}> (국민연금 미확정분 제외)</span>}
-            </td>
+            <td>현재 연 소득</td>
+            <td className="num">{formatWon(agg.annualIncome)}</td>
           </tr>
         </tbody>
       </table>
       <div className="indicator-feedback" style={{ marginBottom: 8 }}>
-        귀하의 월평균 수입은 {formatWon(agg.monthlyIncome)}이고, 연간 수입은 {formatWon(agg.annualIncome)}입니다.
-        이 금액은 소득에 비해 지출과 저축이 어느 정도인지 확인하는 기준으로 사용됩니다.
+        현재 월 소득은 {formatWon(agg.monthlyIncome)}이고, 현재 연 소득은 {formatWon(agg.annualIncome)}입니다.
+        현재 받고 있는 소득을 기준으로 재무상태를 진단하며, 향후 연금은 은퇴 전망에 별도로 반영합니다.
       </div>
       </section>
 

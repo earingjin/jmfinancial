@@ -225,7 +225,8 @@ export default function ExpenseBreakdownField({
       )}
 
       {openCategories.length > 0 && (
-        <table className="grade-table compact" style={{ marginTop: 16 }}>
+        <>
+        <table className="grade-table compact finance-summary-desktop" style={{ marginTop: 16 }}>
           <thead>
             <tr><th>항목</th><th style={{ textAlign: 'right' }}>금액</th></tr>
           </thead>
@@ -238,6 +239,20 @@ export default function ExpenseBreakdownField({
             ))}
           </tbody>
         </table>
+        <div className="finance-summary-mobile finance-summary-mobile--spaced">
+          <div className="income-summary-group">
+            <h4>지출 항목</h4>
+            {openCategories.map((c) => (
+              <div className="income-summary-item income-summary-item--child" key={c.key}>
+                <div className="income-summary-item-main">
+                  <span>{c.label}</span>
+                  <strong>{formatNumber(Number(breakdown[c.key]) || 0)}만원</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        </>
       )}
       {openCategories.length > 0 && (
         <>

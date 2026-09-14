@@ -82,6 +82,41 @@ describe('simple savings and asset totals', () => {
   });
 });
 
+describe('current recurring income aggregation', () => {
+  it('includes current other recurring income exactly once in monthly, annual, and household totals', () => {
+    const result = buildAggregates(input({
+      income: {
+        business: { monthly: 50 },
+        otherIncomes: [{ name: '임대수입', annual: 1200 }],
+        nationalPension: { monthly: 0, months: 0 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+    }));
+
+    expect(result.otherIncomeMonthly).toBe(100);
+    expect(result.monthlyIncome).toBe(650);
+    expect(result.annualIncome).toBe(7800);
+    expect(result.householdMonthlyIncomeTotal).toBe(650);
+  });
+
+  it('keeps future pension income out of current income while retaining it in the expanded household total', () => {
+    const result = buildAggregates(input({
+      basic: { retirementAge: 65 },
+      income: {
+        otherIncomes: [{ name: '배당수입', annual: 600 }],
+        nationalPension: { monthly: 80, months: 240 },
+        severance: { type: 'pension', pensionMonthly: 40, pensionMonths: 120 },
+        personalPension: { type: 'installment', monthly: 20, months: 120 },
+      },
+    }));
+
+    expect(result.monthlyIncome).toBe(550);
+    expect(result.monthlyRetirementIncome).toBeGreaterThan(0);
+    expect(result.householdMonthlyIncomeTotal).toBe(result.monthlyIncome + result.monthlyRetirementIncome);
+  });
+});
+
 describe('identified retirement-pension assets', () => {
   it('keeps self and spouse balances in current total assets and net worth', () => {
     const result = buildAggregates(input({
@@ -128,6 +163,8 @@ describe('retirementIncomeByPerson', () => {
 
     expect(result.retirementIncomeByPerson.self.severancePensionMonthly).toBe(40);
     expect(result.retirementIncomeByPerson.spouse.severancePensionMonthly).toBe(30);
+    expect(result.retirementIncomeByPerson.self.monthlyTotal).toBe(40);
+    expect(result.retirementIncomeByPerson.spouse.monthlyTotal).toBe(30);
   });
 
   it('exposes each person\'s national-pension eligibility status alongside the monthly amount (self and spouse independently)', () => {
@@ -139,8 +176,10 @@ describe('retirementIncomeByPerson', () => {
 
     expect(result.retirementIncomeByPerson.self.nationalPensionEligibilityStatus).toBe('unknown');
     expect(result.retirementIncomeByPerson.self.nationalPensionMonthly).toBe(0);
+    expect(result.retirementIncomeByPerson.self.monthlyTotal).toBeNull();
     expect(result.retirementIncomeByPerson.spouse.nationalPensionEligibilityStatus).toBe('eligible');
     expect(result.retirementIncomeByPerson.spouse.nationalPensionMonthly).toBe(80);
+    expect(result.retirementIncomeByPerson.spouse.monthlyTotal).toBe(80);
   });
 
   it('marks spouse eligibility as "none" when there is no spouse, without throwing', () => {

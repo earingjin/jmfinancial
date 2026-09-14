@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../state/authState';
-import { isValidLoginId, normalizeLoginId } from '../../state/authIdentifier';
+import { isValidLoginId, normalizeLoginId, normalizeSignupLoginId, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../state/authIdentifier';
 import heroImage from '../../assets/리포트 표지 디자인.png';
 import AppCopyright from '../AppCopyright';
 
@@ -13,8 +13,7 @@ function translateAuthError(message) {
   return message;
 }
 
-function PrivacyConsentModal({ onClose, onConfirm }) {
-  const [checked, setChecked] = useState(false);
+function PrivacyConsentModal({ onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
@@ -44,26 +43,19 @@ function PrivacyConsentModal({ onClose, onConfirm }) {
           <p>기타 이용자가 입력하는 재무 관련 정보</p>
 
           <h5>보유 및 이용기간</h5>
-          <p>자산진단 결과는 진단 완료 후 7일간 보관되며, 이후 자동으로 파기됩니다.</p>
+          <p>자산진단 결과는 진단 완료 후 30일간 보관되며, 이후 자동으로 파기됩니다.</p>
 
           <h5>동의 거부 권리</h5>
           <p>이용자는 개인정보 수집·이용에 대한 동의를 거부할 권리가 있습니다. 다만 필수항목 수집에 동의하지 않을 경우 자산진단 서비스 이용이 제한될 수 있습니다.</p>
 
           <p className="consent-quote">"입력된 재무정보는 진단 결과 생성 목적으로만 사용되며 제3자에게 제공되지 않습니다."</p>
         </div>
-        <label className="consent-checkbox">
-          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
-          <span>개인정보 수집·이용에 동의합니다.</span>
-        </label>
-        <button type="button" className="btn-primary consent-confirm" disabled={!checked} onClick={onConfirm}>
-          확인
-        </button>
       </div>
     </div>
   );
 }
 
-export default function AuthGate({ title = '잭앤리치', allowSignup = true, initialMode = 'login', noticeMessage, secondaryAction }) {
+export default function AuthGate({ title = '잭앤리치', allowSignup = true, initialMode = 'login', noticeMessage, secondaryAction, onForgotPassword }) {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [name, setName] = useState('');
@@ -73,6 +65,7 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [passwordLossAcknowledged, setPasswordLossAcknowledged] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
 
   const switchMode = (next) => {
@@ -89,9 +82,13 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
       setError('개인정보 수집·이용에 동의해야 회원가입할 수 있습니다.');
       return;
     }
+    if (mode === 'signup' && !passwordLossAcknowledged) {
+      setError('비밀번호 분실 시 기존 진단 기록이 삭제되는 정책을 확인해 주세요.');
+      return;
+    }
     const loginId = normalizeLoginId(identifier);
     if (mode === 'signup' && !isValidLoginId(loginId)) {
-      setError('아이디는 영문 소문자와 숫자로 4~20자까지 입력해 주세요.');
+      setError('아이디는 본인 휴대폰 번호 뒤 8자리 숫자로 입력해 주세요.');
       return;
     }
     setSubmitting(true);
@@ -120,11 +117,14 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
         <p className="auth-page-title">제이엠 자산관리 플래너</p>
       </div>
       {mode === 'login' && title === '잭앤리치' && (
-        <ul className="auth-login-notice">
-          <li>제3자에게 제공되지 않습니다</li>
-          <li>진단결과 제공 7일 후 자동삭제됩니다.</li>
-          <li>회원탈퇴시 바로 삭제됩니다.</li>
-        </ul>
+        <section className="auth-login-notice" aria-labelledby="auth-login-notice-title">
+          <h2 id="auth-login-notice-title">안심하고 이용하세요</h2>
+          <ul>
+            <li>입력하신 정보는 제3자에게 제공되지 않습니다.</li>
+            <li>진단 결과는 진단 완료일로부터 30일 후 자동 삭제됩니다.</li>
+            <li>회원 탈퇴 시 저장된 진단 정보는 즉시 삭제됩니다.</li>
+          </ul>
+        </section>
       )}
       <div className="auth-card">
         <div className="auth-card-bg">
@@ -146,49 +146,83 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
             </div>
           )}
 
-          {mode === 'signup' && (
-            <button type="button" className="auth-consent-trigger" onClick={() => setShowConsentModal(true)}>
-              개인정보 수집 동의하기
-            </button>
-          )}
-
           <form onSubmit={handleSubmit} className="auth-form">
             {mode === 'signup' && (
               <p className="auth-signup-reassurance">
-                아이디는 진단 중 중도 이탈할 경우 저장된 기록을 찾기 위해 사용합니다.<br />
-                진단 결과는 진단 완료 후 7일 이내에 자동 삭제됩니다.<br />
-                전화번호 등 추가 개인정보는 요구하지 않습니다.
+                개인정보 보호를 위해 개인정보는 최소한의 수준에서 입력합니다.<br /><br />
+                1. 아이디는 핸드폰 번호 8자리입니다.<br />
+                2. 비밀번호를 재발급하면 이전 기록은 삭제됩니다.<br />
+                3. 진단 완료일로부터 30일이 지나면 진단기록은 자동삭제됩니다.<br />
+                4. 중간에 이탈하는 경우 자동저장된 곳부터 시작합니다.
               </p>
             )}
             {mode === 'signup' && (
               <label className="field">
-                <span className="field-label">이름</span>
+                <span className="field-label">이름 (닉네임)</span>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="홍길동" />
               </label>
             )}
             <label className="field">
-              <span className="field-label">{mode === 'signup' ? '아이디' : '아이디 또는 이메일'}</span>
+              <span className="field-label">휴대폰 번호 8자리 (010 제외)</span>
               <input
                 type="text"
                 value={identifier}
-                onChange={(e) => setIdentifier(mode === 'signup' ? e.target.value.toLowerCase() : e.target.value)}
+                onChange={(e) => setIdentifier(mode === 'signup' ? normalizeSignupLoginId(e.target.value) : e.target.value)}
                 required
-                placeholder={mode === 'signup' ? '영문 소문자와 숫자 4~20자' : '아이디 또는 이메일'}
+                placeholder="예: 12345678"
+                inputMode={mode === 'signup' ? 'numeric' : undefined}
+                pattern={mode === 'signup' ? '[0-9]{8}' : undefined}
                 autoComplete="username"
               />
             </label>
             <label className="field">
-              <span className="field-label">비밀번호</span>
+              <span className="field-label">비밀번호 (입력하는 번호가 최초 비밀번호 입니다.)</span>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={mode === 'signup' ? PASSWORD_MAX_LENGTH : undefined}
                 placeholder="6자 이상"
                 autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               />
             </label>
+
+            {mode === 'signup' && (
+              <div className="auth-password-policy">
+                <strong>비밀번호를 꼭 기억해 주세요</strong>
+                <p>개인정보 보호를 위해 이메일이나 전체 휴대폰 번호 등 별도의 복구 정보를 받지 않습니다.</p>
+                <p>비밀번호를 잊으면 기존 진단 기록을 모두 삭제한 후 새 비밀번호를 설정해야 합니다. 비밀번호는 별도로 안전하게 보관해 주세요.</p>
+              </div>
+            )}
+
+            {mode === 'signup' && (
+              <label className="auth-consent-checkbox auth-password-loss-check">
+                <input
+                  type="checkbox"
+                  checked={passwordLossAcknowledged}
+                  onChange={(e) => setPasswordLossAcknowledged(e.target.checked)}
+                />
+                <span>비밀번호 분실 시 기존 진단 기록이 삭제되는 것을 확인했습니다.</span>
+              </label>
+            )}
+
+            {mode === 'signup' && (
+              <div className="auth-consent-row">
+                <label className="auth-consent-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={consentGiven}
+                    onChange={(e) => setConsentGiven(e.target.checked)}
+                  />
+                  <span>개인정보 수집·이용에 동의합니다.</span>
+                </label>
+                <button type="button" className="auth-consent-details" onClick={() => setShowConsentModal(true)}>
+                  내용 보기
+                </button>
+              </div>
+            )}
 
             {error && <p className="auth-error">{error}</p>}
             {notice && <p className="auth-notice">{notice}</p>}
@@ -196,11 +230,17 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
             <button
               type="submit"
               className="btn-primary auth-submit"
-              disabled={submitting || (mode === 'signup' && !consentGiven)}
+              disabled={submitting || (mode === 'signup' && (!consentGiven || !passwordLossAcknowledged))}
             >
               {submitting ? 'Loading...' : mode === 'signup' ? '회원가입' : '로그인'}
             </button>
           </form>
+
+          {mode === 'login' && onForgotPassword && (
+            <button type="button" className="auth-forgot-password" onClick={onForgotPassword}>
+              비밀번호를 잊으셨나요?
+            </button>
+          )}
 
           {secondaryAction && (
             <button type="button" className="auth-secondary-action" onClick={secondaryAction.onClick}>
@@ -212,10 +252,6 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
       {showConsentModal && (
         <PrivacyConsentModal
           onClose={() => setShowConsentModal(false)}
-          onConfirm={() => {
-            setConsentGiven(true);
-            setShowConsentModal(false);
-          }}
         />
       )}
       <AppCopyright className="auth-copyright" />

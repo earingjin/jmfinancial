@@ -94,3 +94,36 @@ describe('App.jsx wizard header result history button', () => {
     expect(body).toContain("setPhase('history')");
   });
 });
+
+describe('App.jsx forgot-password route', () => {
+  it('routes the login entry point to the account reset screen and back to login', async () => {
+    const source = await readAppSource();
+
+    expect(source).toContain("window.location.pathname === '/forgot-password'");
+    expect(source).toContain("authView === 'forgot-password'");
+    expect(source).toContain('<AccountResetGate');
+    expect(source).toContain("onAuthViewChange('forgot-password')");
+    expect(source).toContain("onComplete={() => onAuthViewChange('login')}");
+  });
+});
+
+describe('App.jsx one-page summary report route', () => {
+  it('keeps the one-page report separate and applies the existing print mode', async () => {
+    const source = await readAppSource();
+
+    expect(source).toContain("setPhase('summary-report')");
+    expect(source).toContain("phase === 'summary-report'");
+    expect(source).toContain("phase === 'summary-report' || phase === 'report' || phase === 'fhs-report'");
+    expect(source).toContain('<SummaryReport');
+    expect(source).toContain("onBack={() => setPhase('summary')}");
+  });
+});
+
+describe('App.jsx mobile summary input handoff', () => {
+  it('passes the saved original input to the mobile summary and safely clears it for old history rows', async () => {
+    const source = await readAppSource();
+    expect(source).toContain('const [resultInput, setResultInput] = useState(null)');
+    expect(extractFunctionBody(source, 'const openPastResult = (row) =>')).toContain('setResultInput(row.input_json || null)');
+    expect(source).toContain('input={resultInput}');
+  });
+});

@@ -115,6 +115,8 @@ export default function Report({ result, onRestart, onBack, onHome, clientName }
         simulation={simulation}
         aggregates={aggregates}
         retirementReadiness={webSummary?.retirementReadiness}
+        retirementAssetProjection={retirementAssetProjection}
+        familyAges={familyAges}
         pageNumber={nextPage()}
         totalPages={totalPages}
       />

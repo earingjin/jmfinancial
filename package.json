@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:auth": "node scripts/verify-auth.mjs"
+    "verify:auth": "node scripts/verify-auth.mjs",
+    "verify:wizard": "node scripts/verify-wizard-screens.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.9",

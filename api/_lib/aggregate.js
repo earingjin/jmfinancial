@@ -76,13 +76,12 @@ export function buildAggregates(input) {
   const expense = input.expense || {};
   const income = input.income || {};
 
-  // ---- 현재 월 소득/연 소득 (사업소득 포함) ----
-  // salaryMonthly(assets.currentIncome.monthly)는 급여(본인+배우자)만을 뜻하고, 사업소득(본인+배우자
-  // 합산)은 businessMonthly로 별도 합산한다. annualIncome은 반드시 monthlyIncome×12로 계산해야
-  // 사업소득이 두 번 반영되거나 누락되지 않는다(currentIncome.annual을 직접 쓰면 안 됨).
+  // ---- 현재 월 소득/연 소득 (급여·사업소득·현재 기타 정기수입) ----
+  // 미래 연금소득은 포함하지 않으며, annualIncome은 반드시 monthlyIncome×12로 계산한다.
   const salaryMonthly = n(assets.currentIncome?.monthly);
   const businessMonthly = n(income.business?.monthly);
-  const monthlyIncome = salaryMonthly + businessMonthly;
+  const otherIncomeMonthly = (income.otherIncomes || []).reduce((sum, item) => sum + n(item.annual), 0) / 12;
+  const monthlyIncome = salaryMonthly + businessMonthly + otherIncomeMonthly;
   const annualIncome = Math.round(monthlyIncome * 12);
 
   // ---- 현재 고정지출 (저축 제외) ----
@@ -141,10 +140,8 @@ export function buildAggregates(input) {
   const monthlyRetirementIncome = retirementIncomeByCategory.total + reverseMortgageMonthly;
 
   // ---- 리포트 3페이지(수입·지출·자산부채 세부 현황) 표시 전용 집계 ----
-  // 아래 값들은 어떤 지표 계산에도 쓰이지 않는다. FHS ①·⑥ 지표의 "총소득" 분모는
-  // 그대로 monthlyIncome/annualIncome(급여+사업소득)을 사용한다.
-  const otherIncomeMonthly = (income.otherIncomes || []).reduce((sum, item) => sum + n(item.annual), 0) / 12;
-  const householdMonthlyIncomeTotal = monthlyIncome + monthlyRetirementIncome + otherIncomeMonthly;
+  // 현재소득에 은퇴 시점의 예상 연금소득을 더한 확장 표시값이다.
+  const householdMonthlyIncomeTotal = monthlyIncome + monthlyRetirementIncome;
   const netWorth = totalAssets - totalDebt;
 
   // 리포트 "부족한 자산 채우기" 페이지 전용 - 본인/배우자로 분리 입력된 항목만 개별 집계한다.
@@ -334,21 +331,34 @@ export function calcRetirementIncomeByPerson(input) {
     return n(s.lumpsum);
   };
 
+  const personIncome = ({ nationalPensionMonthly, nationalPensionEligibilityStatus, severancePensionMonthly: severanceMonthly, severanceLumpsum: lumpsum, personalPensionMonthly: personalMonthly }) => ({
+    nationalPensionMonthly,
+    nationalPensionEligibilityStatus,
+    severancePensionMonthly: severanceMonthly,
+    severanceLumpsum: lumpsum,
+    personalPensionMonthly: personalMonthly,
+    // 가입기간을 알 수 없는 국민연금은 0원이 확정된 것이 아니다. 이 경우 개인별 합계도
+    // 확정 금액으로 만들지 않아 화면이 일부 연금만 합산한 값으로 오해하지 않게 한다.
+    monthlyTotal: nationalPensionEligibilityStatus === 'unknown'
+      ? null
+      : nationalPensionMonthly + severanceMonthly + personalMonthly,
+  });
+
   return {
-    self: {
+    self: personIncome({
       nationalPensionMonthly: pickNationalPension(income.nationalPension, basic.birthYear, retirementAge),
       nationalPensionEligibilityStatus: nationalPensionStatus(income.nationalPension),
       severancePensionMonthly: severancePensionMonthly(income.severance, retirementAge),
       severanceLumpsum: severanceLumpsum(income.severance),
       personalPensionMonthly: personalPensionMonthly(income.personalPension, retirementAge),
-    },
-    spouse: {
+    }),
+    spouse: personIncome({
       nationalPensionMonthly: pickNationalPension(spouse.nationalPension, spouse.birthYear, spouseRetirementAge),
       nationalPensionEligibilityStatus: input.basic?.hasSpouse ? nationalPensionStatus(spouse.nationalPension) : 'none',
       severancePensionMonthly: severancePensionMonthly(spouse.severance, spouseRetirementAge),
       severanceLumpsum: severanceLumpsum(spouse.severance),
       personalPensionMonthly: personalPensionMonthly(spouse.personalPension, spouseRetirementAge),
-    },
+    }),
   };
 }
 

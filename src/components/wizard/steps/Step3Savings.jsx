@@ -1,3 +1,4 @@
+import { Activity } from 'react';
 import AutoAnnualField from '../fields/AutoAnnualField';
 import SavingsBreakdownField from '../fields/SavingsBreakdownField';
 import PresenceField from '../fields/PresenceField';
@@ -38,6 +39,7 @@ export function updateSavingsPresence(formData, setField, value) {
     interestRate: '',
   }));
   setField('assets.savingsPlan.customItems', customItems);
+  setField('assets.savingsPlan.selectedCategories', []);
   setField('assets.savingsPlan.monthly', '');
   setField('assets.savingsPlan.annual', '');
   setField('assets.savingsPlan.retirementMonthly', '');
@@ -46,7 +48,7 @@ export function updateSavingsPresence(formData, setField, value) {
   setField('assets.savingsPlan.additionalRetirementAnnual', '');
 }
 
-export default function Step3Savings() {
+export default function Step3Savings({ subStepIndex }) {
   const { formData, setField } = useFormData();
   const savingsMonthly = Number(getIn(formData, 'assets.savingsPlan.monthly')) || 0;
   const retirementSavingsMonthly = Number(getIn(formData, 'assets.savingsPlan.retirementMonthly')) || 0;
@@ -77,15 +79,19 @@ export default function Step3Savings() {
   const setHasSavings = (value) => {
     updateSavingsPresence(formData, setField, value);
   };
+  const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
 
   return (
     <div className="step">
       <h2 className="step-title">3. 저축</h2>
 
-      <section className="step-section">
-        <h3><span className="step-icon">🌱</span> 저축 · 노후준비</h3>
+      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
+        <h3><span className="step-icon">🌱</span> 현재 저축</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           국민연금 · 개인연금 · 저축성보험(연금보험 등)처럼 노후를 위해 정기적으로 적립하는 금액을 포함해 입력해 주세요.
+        </p>
+        <p className="field-helper field-helper--prominent" style={{ marginBottom: 12 }}>
+          총액만 입력해도 진단할 수 있습니다. 항목별 금액을 확인하고 싶을 때만 상세입력을 이용해 주세요.
         </p>
         <PresenceField label="저축 여부" present={hasSavings} onChange={setHasSavings} presentLabel="저축 있음" absentLabel="저축 없음" />
         {hasSavings ? <TotalInputModeField
@@ -105,14 +111,20 @@ export default function Step3Savings() {
           customPath="assets.savingsPlan.customItems"
           totalPath="assets.savingsPlan.monthly"
           annualPath="assets.savingsPlan.annual"
+          selectedPath="assets.savingsPlan.selectedCategories"
           categories={SAVINGS_CATEGORIES}
         />
-        {isRetirementSavingsV2 ? (
+        </TotalInputModeField> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
+      </section></Activity>
+
+      <Activity mode={showSubStep(1) ? 'visible' : 'hidden'}><section className="step-section">
+        <h3><span className="step-icon">🏦</span> 노후준비 저축 · 확인</h3>
+        {hasSavings ? (isRetirementSavingsV2 ? (
           <>
-            <p className="field-helper" style={{ marginTop: 10 }}>
+            <p className="field-helper" style={{ marginBottom: 10 }}>
               입력한 연금저축과 IRP는 노후준비 저축으로 자동 포함됩니다.
             </p>
-            <div className="field-grid" style={{ marginTop: 10 }}>
+            <div className="field-grid">
               <AutoAnnualField
                 monthlyPath="assets.savingsPlan.additionalRetirementMonthly"
                 annualPath="assets.savingsPlan.additionalRetirementAnnual"
@@ -122,7 +134,7 @@ export default function Step3Savings() {
               />
             </div>
 
-            <table className="grade-table compact" style={{ marginTop: 16 }}>
+            <table className="grade-table compact finance-summary-desktop" style={{ marginTop: 16 }}>
               <tbody>
                 <tr className="total-row"><td>총 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthlyV2)}</td></tr>
                 <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthlyV2 * 12)}</td></tr>
@@ -132,6 +144,18 @@ export default function Step3Savings() {
                 <tr className="total-row"><td>노후준비 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalRetirementSavingsMonthly)}</td></tr>
               </tbody>
             </table>
+            <div className="finance-summary-mobile finance-summary-mobile--spaced">
+              <div className="income-summary-totals">
+                <div className="income-summary-total-card"><span>총 월 저축</span><strong>{formatWon(totalSavingsMonthlyV2)}</strong></div>
+                <div className="income-summary-total-card"><span>총 연 저축</span><strong>{formatWon(totalSavingsMonthlyV2 * 12)}</strong></div>
+              </div>
+              <div className="income-summary-group">
+                <h4>노후준비 저축 <strong>{formatWon(totalRetirementSavingsMonthly)}</strong></h4>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>연금저축(월)</span><strong>{formatWon(pensionSavingsMonthly)}</strong></div></div>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>IRP(월)</span><strong>{formatWon(irpMonthly)}</strong></div></div>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>추가 노후준비 저축(월)</span><strong>{formatWon(additionalRetirementMonthly)}</strong></div></div>
+              </div>
+            </div>
           </>
         ) : (
           <>
@@ -159,7 +183,7 @@ export default function Step3Savings() {
                 : '일반 저축과 겹치지 않는 별도 금액으로 보고, 총 저축 합계에 두 금액을 더합니다.'}
             </span>
 
-            <table className="grade-table compact" style={{ marginTop: 16 }}>
+            <table className="grade-table compact finance-summary-desktop" style={{ marginTop: 16 }}>
               <tbody>
                 <tr className="total-row"><td>총 저축 합계(월)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthly)}</td></tr>
                 <tr className="total-row"><td>총 저축 합계(연)</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(totalSavingsMonthly * 12)}</td></tr>
@@ -167,10 +191,20 @@ export default function Step3Savings() {
                 <tr><td>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</td><td className="num" style={{ textAlign: 'right' }}>{formatWon(retirementSavingsMonthly)}</td></tr>
               </tbody>
             </table>
+            <div className="finance-summary-mobile finance-summary-mobile--spaced">
+              <div className="income-summary-totals">
+                <div className="income-summary-total-card"><span>총 월 저축</span><strong>{formatWon(totalSavingsMonthly)}</strong></div>
+                <div className="income-summary-total-card"><span>총 연 저축</span><strong>{formatWon(totalSavingsMonthly * 12)}</strong></div>
+              </div>
+              <div className="income-summary-group">
+                <h4>저축 구성</h4>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>일반 저축</span><strong>{formatWon(savingsMonthly)}</strong></div></div>
+                <div className="income-summary-item income-summary-item--child"><div className="income-summary-item-main"><span>노후준비 저축{retirementIncluded ? ' (일반 저축에 포함됨)' : ''}</span><strong>{formatWon(retirementSavingsMonthly)}</strong></div></div>
+              </div>
+            </div>
           </>
-        )}
-        </TotalInputModeField> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
-      </section>
+        )) : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
+      </section></Activity>
     </div>
   );
 }

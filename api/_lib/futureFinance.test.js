@@ -61,9 +61,50 @@ describe('future finance projection', () => {
     expect(result.targets.map((item) => item.age)).toEqual([60, 70, 80]);
     expect(result.targets[0].livingExpense).toBe(403);
     expect(result.targets[0].pensionBreakdown.nationalPension).toBe(0);
-    expect(result.targets[1].pensionIncome).toBe(327);
+    expect(result.targets[1].pensionIncome).toBe(266);
     expect(result.targets[2].pensionBreakdown.nationalPension).toBeGreaterThan(0);
     expect(result.purchasingPower.map((item) => item.requiredAmount)).toEqual([50000, 67196, 90306]);
+  });
+
+  it('adds a display-only pension snapshot at the existing national-pension start age', () => {
+    const input = makeInput();
+    const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });
+    const expected = calculatePensionIncomeAtTarget({
+      input,
+      currentYear: 2026,
+      years: result.nationalPensionStartAge - result.currentAge,
+    });
+
+    expect(result.nationalPensionStartSnapshot).toEqual({
+      calculable: expected.calculable,
+      reason: expected.reason,
+      age: result.nationalPensionStartAge,
+      pensionIncomeMonthly: Math.round(expected.total),
+      nationalPensionMonthly: Math.round(expected.nationalPension),
+      severancePensionMonthly: Math.round(expected.retirementPension),
+      personalPensionMonthly: Math.round(expected.personalPension),
+    });
+    expect(result.nationalPensionStartSnapshot.personalPensionMonthly).toBe(0);
+    expect(result.nationalPensionStartSnapshot.severancePensionMonthly).toBeGreaterThan(0);
+  });
+
+  it('keeps the existing national-pension uncertainty fallback in the start-age snapshot', () => {
+    const input = makeInput({
+      income: {
+        nationalPension: { inputMode: 'direct', monthly: 150, paymentMonths: 100, futureContributionPlan: 'continue' },
+        personalPension: { type: 'none' },
+        severance: { type: 'none' },
+      },
+    });
+    const snapshot = buildFutureFinanceProjection({
+      input,
+      aggregates: buildAggregates(input),
+      currentYear: 2026,
+    }).nationalPensionStartSnapshot;
+
+    expect(snapshot.calculable).toBe(false);
+    expect(snapshot.pensionIncomeMonthly).toBeNull();
+    expect(snapshot.reason).toContain('국민연금 향후 가입기간을 확정할 수 없음');
   });
 
   it('adds a five-year outlook without changing the legacy targets', () => {
@@ -125,6 +166,7 @@ describe('future finance projection', () => {
     const at60 = result.fiveYearOutlook.find((item) => item.age === 60);
 
     expect(calculateNonPensionIncomeAtTarget({ input, aggregates, currentAge: 47, years: 0 })).toBe(470);
+    expect(aggregates.otherIncomeMonthly).toBe(10);
     expect(at47.totalIncome).toBe(470);
     expect(at47.incomeLabel).toBe('월급·연금 등');
     expect(at50.nonPensionIncome).toBe(370);
@@ -222,6 +264,42 @@ describe('future finance projection', () => {
     expect(result.retirementCashFlowOutlook.at(-1).pensionBreakdown.nationalPension).toBeGreaterThan(0);
   });
 
+  it('applies national pension growth only after each person reaches the statutory start age', () => {
+    const input = makeInput({
+      basic: { birthYear: 1975, retirementAge: 60, lifeExpectancy: 85, hasSpouse: true },
+      income: {
+        nationalPension: { monthly: 130, months: 240 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+      spouse: {
+        birthYear: 1978,
+        nationalPension: { monthly: 60, months: 240 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+    });
+    const selfAtAge = (age) => calculatePensionIncomeAtTarget({ input: { ...input, basic: { ...input.basic, hasSpouse: false } }, currentYear: 2026, years: age - 51 });
+    const spouseOnlyInput = {
+      ...input,
+      basic: { ...input.basic, birthYear: 1978, hasSpouse: false },
+      income: input.spouse,
+    };
+    const spouseAtAge = (age) => calculatePensionIncomeAtTarget({ input: spouseOnlyInput, currentYear: 2026, years: age - 48 });
+
+    expect(selfAtAge(60).nationalPension).toBe(0);
+    expect(selfAtAge(65).nationalPension).toBe(130);
+    expect(selfAtAge(70).nationalPension).toBeCloseTo(130 * (1.021 ** 5), 10);
+    expect(spouseAtAge(60).nationalPension).toBe(0);
+    expect(spouseAtAge(65).nationalPension).toBe(60);
+    expect(spouseAtAge(70).nationalPension).toBeCloseTo(60 * (1.021 ** 5), 10);
+
+    const householdAtSelf70 = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 19 });
+    const spouseComponent = householdAtSelf70.components.find((item) => item.key === 'spouse.nationalPension');
+    expect(spouseComponent.currentAge + 19).toBe(67);
+    expect(spouseComponent.amount).toBeCloseTo(60 * (1.021 ** 2), 10);
+  });
+
   it.each([
     ['direct paymentMonths', { inputMode: 'direct', monthly: 100, months: 12, paymentMonths: 240 }],
     ['simulated contributionMonths', { inputMode: 'simulate', monthly: 100, months: 12, simulate: { contributionMonths: 240 } }],
@@ -260,6 +338,150 @@ describe('future finance projection', () => {
   });
 });
 
+// docs/future-finance-spec.md:49,76 - "월 수령액 불명"은 산출 불가로 처리해야 하며, null/빈 문자열/
+// 누락 필드를 0으로 정규화해 완전한 합계에 써서는 안 된다. 이 describe는 그 규칙을 검증한다.
+describe('blank monthly pension amount is unknown, not a silent zero (docs/future-finance-spec.md:49,76)', () => {
+  const nationalPensionEligibleBlank = (monthly) => ({
+    basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 95, hasSpouse: false },
+    income: {
+      nationalPension: { inputMode: 'direct', monthly, paymentMonths: 120 },
+      severance: { type: 'none' },
+      personalPension: { type: 'none' },
+    },
+  });
+  const severancePensionBlank = (pensionMonthly) => ({
+    basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 95, hasSpouse: false },
+    income: {
+      nationalPension: { inputMode: 'none' },
+      severance: { type: 'pension', pensionMonthly, pensionStartAge: 65, pensionMonths: 240 },
+      personalPension: { type: 'none' },
+    },
+  });
+  const personalPensionBlank = (monthly) => ({
+    basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 95, hasSpouse: false },
+    income: {
+      nationalPension: { inputMode: 'none' },
+      severance: { type: 'none' },
+      personalPension: { type: 'installment', monthly, startAge: 65, months: 240 },
+    },
+  });
+
+  const cases = [
+    ['income.nationalPension.monthly (eligible)', nationalPensionEligibleBlank, 'self.nationalPension'],
+    ['income.severance.pensionMonthly (type=pension)', severancePensionBlank, 'self.retirementPension'],
+    ['income.personalPension.monthly (type=installment)', personalPensionBlank, 'self.personalPension'],
+  ];
+
+  it.each(cases)('%s: blank string is unknown, not zero', (_label, buildOverrides, componentKey) => {
+    const input = makeInput(buildOverrides(''));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === componentKey);
+    expect(component.inclusionStatus).toBe('unknown');
+    expect(component.amount).toBeNull();
+    expect(result.calculable).toBe(false);
+  });
+
+  it.each(cases)('%s: whitespace-only is unknown, not zero', (_label, buildOverrides, componentKey) => {
+    const input = makeInput(buildOverrides('   '));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === componentKey);
+    expect(component.inclusionStatus).toBe('unknown');
+    expect(component.amount).toBeNull();
+  });
+
+  it.each(cases)('%s: null is unknown, not zero', (_label, buildOverrides, componentKey) => {
+    const input = makeInput(buildOverrides(null));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === componentKey);
+    expect(component.inclusionStatus).toBe('unknown');
+    expect(component.amount).toBeNull();
+  });
+
+  it.each(cases)('%s: undefined is unknown, not zero', (_label, buildOverrides, componentKey) => {
+    const input = makeInput(buildOverrides(undefined));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === componentKey);
+    expect(component.inclusionStatus).toBe('unknown');
+    expect(component.amount).toBeNull();
+  });
+
+  it.each(cases)('%s: an explicit 0 is a real zero, not unknown', (_label, buildOverrides, componentKey) => {
+    const input = makeInput(buildOverrides(0));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === componentKey);
+    expect(component.inclusionStatus).toBe('zero');
+    expect(component.amount).toBe(0);
+    expect(result.calculable).toBe(true);
+  });
+
+  it.each(cases)('%s: a normal positive amount keeps the existing included calculation', (_label, buildOverrides, componentKey) => {
+    const input = makeInput(buildOverrides(100));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === componentKey);
+    expect(component.inclusionStatus).toBe('included');
+    expect(component.amount).toBeGreaterThan(0);
+    expect(result.calculable).toBe(true);
+  });
+
+  it('사례 A (실제 문의 재현): 국민연금 가입기간은 충족했지만 월액이 빈칸이면 60/70/80세 지표 전체가 산출 불가가 된다', () => {
+    const input = makeInput(nationalPensionEligibleBlank(''));
+    const result = buildFutureFinanceProjection({ input, aggregates: buildAggregates(input), currentYear: 2026 });
+    expect(result.targets.length).toBeGreaterThan(0);
+    expect(result.targets.every((target) => (
+      target.calculable === false && target.pensionIncome === null && target.coverageRate === null
+    ))).toBe(true);
+  });
+});
+
+// legacyFallback(futureContributionPlan 키 자체가 없는 과거 데이터)은 "가입기간 자격판정"의
+// 하위호환일 뿐이다. 월 예상연금액(monthly) 자체가 비어 있는지는 별개의 문제이므로, 자격판정이
+// legacyFallback으로 통과했다는 이유만으로 monthly 공란을 0원으로 확정해서는 안 된다.
+describe('legacy national pension (no futureContributionPlan key): eligibility fallback is separate from a blank monthly amount', () => {
+  const legacyNationalPension = (monthly) => ({
+    basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 95, hasSpouse: false },
+    income: {
+      // inputMode/paymentMonths/futureContributionPlan 키 자체가 없는 과거 스키마 형태.
+      nationalPension: { monthly },
+      severance: { type: 'none' },
+      personalPension: { type: 'none' },
+    },
+  });
+
+  it('legacy + monthly 양수 → 기존처럼 정상 계산(포함)된다', () => {
+    const input = makeInput(legacyNationalPension(150));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === 'self.nationalPension');
+    expect(component.eligibilityStatus).toBe('eligible');
+    expect(component.inclusionStatus).toBe('included');
+    expect(component.amount).toBeGreaterThan(0);
+    expect(result.calculable).toBe(true);
+  });
+
+  it.each([
+    ['blank string', ''],
+    ['whitespace-only', '   '],
+    ['null', null],
+    ['undefined', undefined],
+  ])('legacy + monthly가 %s이면 unknown(amount:null)이지 zero가 아니다', (_label, monthly) => {
+    const input = makeInput(legacyNationalPension(monthly));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === 'self.nationalPension');
+    expect(component.eligibilityStatus).toBe('eligible');
+    expect(component.inclusionStatus).toBe('unknown');
+    expect(component.amount).toBeNull();
+    expect(result.calculable).toBe(false);
+  });
+
+  it('legacy + 명시적 0은 실제 0원(zero)으로 유지된다', () => {
+    const input = makeInput(legacyNationalPension(0));
+    const result = calculatePensionIncomeAtTarget({ input, currentYear: 2026, years: 30 });
+    const component = result.components.find((c) => c.key === 'self.nationalPension');
+    expect(component.inclusionStatus).toBe('zero');
+    expect(component.amount).toBe(0);
+    expect(result.calculable).toBe(true);
+  });
+});
+
 describe('calculateFutureValue finite result guard', () => {
   it('throws an explicit calculation error instead of returning null on overflow', () => {
     expect(() => calculateFutureValue(Number.MAX_VALUE, 1, 2)).toThrow(/CALCULATION_NON_FINITE/);
@@ -271,7 +493,10 @@ describe('buildRetirementAssetProjection', () => {
   function projectionInput(overrides = {}) {
     return {
       basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 90, assumedReturnRate: 0, hasSpouse: false },
-      income: {},
+      // 국민연금이 테스트 목적이 아닌 경우 "없음"임을 명시한다 - 국민연금 섹션이 통째로 빠진 채로는
+      // legacyFallback(과거 데이터 자격판정 하위호환)에 우연히 걸려 의도와 무관한 국민연금 판정이
+      // 섞여 들어갈 수 있다.
+      income: { nationalPension: { inputMode: 'none' } },
       spouse: {},
       expense: { retirementLivingCost: 200 },
       assets: {},
@@ -327,7 +552,7 @@ describe('buildRetirementAssetProjection', () => {
     const result = project({
       basic: { birthYear: 1986, retirementAge: 60, lifeExpectancy: 90, assumedReturnRate: 0, hasSpouse: false },
       assets: { liquidAssets: { total: 500 } },
-      income: { nationalPension: { monthly: 300, months: 300 } },
+      income: { nationalPension: { monthly: 500, months: 300 } },
     });
     expect(result.depletionAge).not.toBeNull();
     expect(result.depletionAge).toBeLessThan(65);
@@ -367,7 +592,10 @@ describe('buildRetirementAssetProjection', () => {
     const monthlyExpenseAtRetirement = calculateFutureLivingExpense(200, yearsToRetirement);
     const result = project({
       basic: { birthYear: 1986, retirementAge: 65, lifeExpectancy: 65, assumedReturnRate: 0, hasSpouse: false },
-      income: { personalPension: { type: 'installment', monthly: monthlyExpenseAtRetirement, startAge: 65, months: 12 } },
+      income: {
+        nationalPension: { inputMode: 'none' },
+        personalPension: { type: 'installment', monthly: monthlyExpenseAtRetirement, startAge: 65, months: 12 },
+      },
       assets: { liquidAssets: { total: 0 } },
     });
     expect(result.points.length).toBe(1);
@@ -393,7 +621,10 @@ describe('buildRetirementAssetProjection', () => {
 
   it('7) stops personal pension income once its receiving period ends', () => {
     const result = project({
-      income: { personalPension: { type: 'installment', monthly: 100, startAge: 65, months: 60 } }, // 65~69세, 70세부터 종료
+      income: {
+        nationalPension: { inputMode: 'none' },
+        personalPension: { type: 'installment', monthly: 100, startAge: 65, months: 60 }, // 65~69세, 70세부터 종료
+      },
       assets: { liquidAssets: { total: 1000000 } },
     });
     const during = result.points.find((p) => p.age === 69);
@@ -404,7 +635,10 @@ describe('buildRetirementAssetProjection', () => {
 
   it('8) stops retirement (severance) pension income once its receiving period ends', () => {
     const result = project({
-      income: { severance: { type: 'pension', pensionMonthly: 100, pensionStartAge: 65, pensionMonths: 60 } },
+      income: {
+        nationalPension: { inputMode: 'none' },
+        severance: { type: 'pension', pensionMonthly: 100, pensionStartAge: 65, pensionMonths: 60 },
+      },
       assets: { liquidAssets: { total: 1000000 } },
     });
     const during = result.points.find((p) => p.age === 69);
@@ -413,10 +647,26 @@ describe('buildRetirementAssetProjection', () => {
     expect(after.income).toBe(0);
   });
 
+  it('8a) legacy/bypass data with an active monthly pension but a blank amount is not calculable (previously silently zero)', () => {
+    // 신규 입력은 wizardRequiredFields.js/validate.js가 이 상태를 제출 단계에서 막지만, 과거 저장
+    // 데이터나 validation 우회 데이터가 여기까지 들어오는 경우를 대비한 계산 계층 방어다.
+    const result = project({
+      income: {
+        nationalPension: { inputMode: 'none' },
+        severance: { type: 'pension', pensionMonthly: '', pensionStartAge: 65, pensionMonths: 60 },
+      },
+      assets: { liquidAssets: { total: 1000000 } },
+    });
+    expect(result.notCalculable).toBe(true);
+  });
+
   it('converts an identified retirement-pension balance into monthly income without retaining the same principal', () => {
     const result = project({
       basic: { birthYear: 1961, retirementAge: 65, lifeExpectancy: 67, assumedReturnRate: 0, hasSpouse: false },
-      income: { severance: { type: 'pension', pensionMonthly: 80, pensionStartAge: 65, pensionMonths: 24 } },
+      income: {
+        nationalPension: { inputMode: 'none' },
+        severance: { type: 'pension', pensionMonthly: 80, pensionStartAge: 65, pensionMonths: 24 },
+      },
       expense: { retirementLivingCost: 0 },
       assets: { pensionAssets: 3000, pensionAssetsBreakdown: { selfRetirementPension: 3000 } },
     });
@@ -429,7 +679,7 @@ describe('buildRetirementAssetProjection', () => {
   it('adds a retirement lump sum once at its retirement-age receipt point', () => {
     const result = project({
       basic: { birthYear: 1961, retirementAge: 65, lifeExpectancy: 67, assumedReturnRate: 0, hasSpouse: false },
-      income: { severance: { type: 'lumpsum', lumpsum: 5000, lumpsumAge: 66 } },
+      income: { nationalPension: { inputMode: 'none' }, severance: { type: 'lumpsum', lumpsum: 5000, lumpsumAge: 66 } },
       expense: { retirementLivingCost: 0 },
       assets: { pensionAssets: 3000, pensionAssetsBreakdown: { selfRetirementPension: 3000 } },
     });
@@ -442,7 +692,7 @@ describe('buildRetirementAssetProjection', () => {
   it('does not add again a lump sum already included at the retirement boundary', () => {
     const result = project({
       basic: { birthYear: 1961, retirementAge: 65, lifeExpectancy: 66, assumedReturnRate: 0, hasSpouse: false },
-      income: { severance: { type: 'lumpsum', lumpsum: 5000, lumpsumAge: 65 } },
+      income: { nationalPension: { inputMode: 'none' }, severance: { type: 'lumpsum', lumpsum: 5000, lumpsumAge: 65 } },
       expense: { retirementLivingCost: 0 },
       assets: { pensionAssets: 3000, pensionAssetsBreakdown: { selfRetirementPension: 3000 } },
     });
@@ -543,7 +793,10 @@ describe('buildRetirementAssetProjection', () => {
 
   it('20e) is not calculable when a positive pension amount has no known start age (unknown timing, not treated as zero)', () => {
     const result = project({
-      income: { personalPension: { type: 'installment', monthly: 50, startAge: '', months: 240 } },
+      income: {
+        nationalPension: { inputMode: 'none' },
+        personalPension: { type: 'installment', monthly: 50, startAge: '', months: 240 },
+      },
     });
     expect(result.notCalculable).toBe(true);
     expect(result.reason).toMatch(/연금/);
@@ -667,7 +920,7 @@ describe('buildRetirementAssetProjection', () => {
       const result = project({
         basic: { birthYear: 1986, retirementAge: 60, lifeExpectancy: 90, assumedReturnRate: 0, hasSpouse: false },
         assets: { liquidAssets: { total: 1000 } },
-        income: { nationalPension: { monthly: 300, months: 300 } },
+        income: { nationalPension: { monthly: 500, months: 300 } },
         expense: { retirementLivingCost: 200, retirementLumpSumExpenses: [{ name: '목돈지출', expectedAge: 60, amount: 50000 }] },
       });
       expect(result.depletionAge).toBe(60);

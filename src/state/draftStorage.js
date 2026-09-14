@@ -27,6 +27,17 @@ export const mergeDraft = (defaults, saved) => {
   restoreDetailedMode(savedAssets.otherAssets, merged.assets.otherAssets);
   restoreDetailedMode(savedAssets.savingsPlan, merged.assets.savingsPlan);
   restoreDetailedMode(savedAssets, merged.assets, 'pensionAssetsInputMode');
+
+  // selectedCategories(저축 카테고리 버튼 선택 상태) 필드 자체가 없던 과거 저장 데이터는, 위의
+  // 일반 병합 규칙(defaults의 빈 배열 []로 대체)을 그대로 두면 "아무 것도 선택하지 않음"으로
+  // 잘못 해석되어 사용자가 이미 입력해 둔 저축 항목이 화면에서 사라진다. inputMode와 동일하게
+  // "필드 자체가 없을 때만" 개입해, 월 저축액이 양수인 항목만 선택된 것으로 복원한다.
+  const savedSavingsPlan = savedAssets.savingsPlan;
+  if (isRecord(savedSavingsPlan) && !Object.hasOwn(savedSavingsPlan, 'selectedCategories') && isRecord(savedSavingsPlan.breakdown)) {
+    merged.assets.savingsPlan.selectedCategories = Object.keys(savedSavingsPlan.breakdown)
+      .filter((key) => Number(savedSavingsPlan.breakdown[key]?.monthly) > 0);
+  }
+
   return merged;
 };
 

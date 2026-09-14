@@ -25,7 +25,7 @@ function buildFinancialCashFlowFeedbackCore({ indicators, aggregates }) {
     return '현재 입력된 소득 정보만으로는 지출과 저축의 균형을 판단하기 어렵습니다. 소득 정보를 확인한 뒤 다시 진단해보세요.';
   }
 
-  const displayedIncome = aggregates.householdMonthlyIncomeTotal;
+  const displayedIncome = aggregates.monthlyIncome;
   const displayedOutflow = aggregates.totalExpenseMonthlyExSavings + aggregates.monthlySavings;
   if (displayedOutflow > displayedIncome) {
     return '입력한 지출과 저축을 합하면 현재 월소득보다 많습니다. 일시적인 지출이나 기존 자산에서 충당하는 금액이 포함된 것은 아닌지 확인해보세요. 이런 상태가 지속되면 저축을 하고 있어도 전체 자산은 줄어들 수 있습니다.';

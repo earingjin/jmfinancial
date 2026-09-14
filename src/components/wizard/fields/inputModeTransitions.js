@@ -156,3 +156,9 @@ export function changeTotalInputMode({
   setField(modePath, nextMode);
   return true;
 }
+
+export function removeSpouseRetirementPensionAsset(formData, setField) {
+  const spouseRetirementPensionPath = 'assets.pensionAssetsBreakdown.spouseRetirementPension';
+  syncRetirementPensionAssetTotal(formData, setField, spouseRetirementPensionPath, '');
+  setField(spouseRetirementPensionPath, '');
+}
