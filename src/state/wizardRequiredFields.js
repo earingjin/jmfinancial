@@ -149,8 +149,8 @@ const buildLumpSumExpenseRowFields = (formData) => {
     if (!active) return [];
     return [
       [`expense.retirementLumpSumExpenses.${index}.name`, `목돈지출 계획 ${index + 1}번째 항목의 지출 용도`, true],
-      [`expense.retirementLumpSumExpenses.${index}.amount`, `목돈지출 계획 ${index + 1}번째 항목의 금액`, true, isPositiveNumber],
-      [`expense.retirementLumpSumExpenses.${index}.expectedAge`, `목돈지출 계획 ${index + 1}번째 항목의 발생 나이`, true],
+      [`expense.retirementLumpSumExpenses.${index}.amount`, `목돈지출 계획 ${index + 1}번째 항목의 예상 금액`, true, isPositiveNumber],
+      [`expense.retirementLumpSumExpenses.${index}.expectedAge`, `목돈지출 계획 ${index + 1}번째 항목의 예상 지출 나이`, true],
     ];
   });
 };

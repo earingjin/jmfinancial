@@ -18,9 +18,10 @@ describe('AppFallbackScreen', () => {
     expect(html).not.toContain('supabase.co');
   });
 
-  it('오류 원인이 전달되면 안내 문구와 함께 표시한다', () => {
-    const html = renderToStaticMarkup(<AppFallbackScreen message="오류가 발생했습니다." detail="과거 결과 데이터가 없습니다." />);
-    expect(html).toContain('오류 원인: 과거 결과 데이터가 없습니다.');
+  it('시스템 오류 원인이 전달돼도 사용자 화면에 표시하지 않는다', () => {
+    const html = renderToStaticMarkup(<AppFallbackScreen message="오류가 발생했습니다." detail="TypeError: PostgREST failed" />);
+    expect(html).not.toContain('TypeError');
+    expect(html).not.toContain('PostgREST');
   });
 
   it('새로고침 버튼을 누르면 window.location.reload를 호출한다', () => {

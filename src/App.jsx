@@ -16,6 +16,7 @@ import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, MAX_DRAFT_STEP_IND
 import { resetFormSessionWithServerCleanup, shouldResetFormSession } from './state/formSessionPolicy';
 import { completePlannerSubmission, createSubmissionId, hasSavedPlannerResults } from './services/plannerSubmission';
 import { requestCalculation } from './services/calculationApi';
+import { formatValidationDetailsForUser, getTrustedValidationTarget, toUserFacingCalculationError } from './state/userFacingErrors';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -43,6 +44,8 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const [result, setResult] = useState(null);
   const [resultInput, setResultInput] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [errorKind, setErrorKind] = useState('system');
+  const [errorTarget, setErrorTarget] = useState(null);
   const [wizardResume, setWizardResume] = useState(false);
   // 위저드에서 홈으로 나갔다가 "자산진단 시작하기"로 되돌아와도 마지막으로 입력하던 단계를
   // 그대로 이어가도록, Wizard가 언마운트/재마운트되어도 여기서 마지막 단계를 계속 들고 있는다.
@@ -140,25 +143,41 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const handleSubmit = async (formData) => {
     setPhase('loading');
     setErrorMessage('');
+    setErrorKind('system');
+    setErrorTarget(null);
     setResultSource('new');
     try {
       const res = await requestCalculation(formData);
 
       if (res.status === 401) {
-        throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+        const authError = new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+        authError.kind = 'auth';
+        throw authError;
       }
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const details = Array.isArray(body.details) ? body.details.filter(Boolean) : [];
-        throw new Error(details.length ? details.join('\n') : (body.error || '계산에 실패했습니다.'));
+        const isValidationError = res.status === 400 && details.length > 0;
+        const message = isValidationError
+          ? formatValidationDetailsForUser(details, formData).join('\n')
+          : toUserFacingCalculationError(body.error);
+        const userFacingError = new Error(message);
+        userFacingError.userFacing = true;
+        userFacingError.kind = isValidationError ? 'validation' : 'system';
+        userFacingError.target = isValidationError
+          ? details.map((detail) => getTrustedValidationTarget(detail, formData)).find(Boolean) || null
+          : null;
+        throw userFacingError;
       }
       const body = await res.json();
       const data = deobfuscate(body.payload);
       pendingSubmissionRef.current = { formData, data, resultSaved: false, submissionId: createSubmissionId() };
       await finishSubmission();
     } catch (err) {
-      setErrorMessage(err.message || '알 수 없는 오류가 발생했습니다.');
+      setErrorMessage(err?.userFacing ? err.message : toUserFacingCalculationError(err?.message));
+      setErrorKind(err?.kind || (err?.message === '로그인이 만료되었습니다. 다시 로그인해 주세요.' ? 'auth' : 'system'));
+      setErrorTarget(err?.target || null);
       setPhase('error');
     }
   };
@@ -217,6 +236,15 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     }
     setHasWorkingDraft(draftControllerRef.current?.hasWorkingDraft() ?? false);
     setPhase('home');
+  };
+
+  const correctInvalidInput = () => {
+    if (errorTarget) {
+      setWizardStep(errorTarget.stepIndex);
+      setWizardScreenId(errorTarget.screenId);
+    }
+    setWizardResume(false);
+    setPhase('wizard');
   };
 
   const signOutPreservingDraft = async () => {
@@ -395,6 +423,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
                 startAtLastStep={wizardResume}
                 initialStep={wizardStep}
                 initialScreenId={wizardScreenId}
+                initialFocusPath={errorKind === 'validation' ? errorTarget?.path : null}
                 onStepChange={setWizardStep}
                 onScreenChange={setWizardScreenId}
               />
@@ -411,9 +440,10 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
 
         {phase === 'error' && (
           <div className="error-state">
+            {errorKind === 'validation' && <h2>입력값을 확인해 주세요.</h2>}
             <p>{errorMessage}</p>
-            <button type="button" className="btn-primary" onClick={restart}>
-              처음부터 다시 입력하기
+            <button type="button" className="btn-primary" onClick={errorKind === 'validation' ? correctInvalidInput : restart}>
+              {errorKind === 'validation' ? '입력값 수정하기' : '처음부터 다시 입력하기'}
             </button>
           </div>
         )}

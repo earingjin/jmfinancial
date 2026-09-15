@@ -4,13 +4,15 @@ import { isValidLoginId, normalizeLoginId, normalizeSignupLoginId, PASSWORD_MAX_
 import heroImage from '../../assets/리포트 표지 디자인.png';
 import AppCopyright from '../AppCopyright';
 
-function translateAuthError(message) {
+// This named export is intentionally retained so the user-facing translation boundary can be tested directly.
+// eslint-disable-next-line react-refresh/only-export-components
+export function translateAuthError(message) {
   if (!message) return '알 수 없는 오류가 발생했습니다.';
   if (message.includes('Invalid login credentials')) return '아이디 또는 이메일, 비밀번호가 올바르지 않습니다.';
   if (message.includes('User already registered')) return '이미 가입된 아이디입니다. 로그인해 주세요.';
   if (message.includes('Password should be at least')) return '비밀번호는 6자 이상이어야 합니다.';
   if (message.toLowerCase().includes('rate limit')) return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
-  return message;
+  return '인증 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
 }
 
 function PrivacyConsentModal({ onClose }) {

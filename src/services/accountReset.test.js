@@ -25,7 +25,8 @@ describe('account reset client service', () => {
     const serverFailure = vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'generic failure' }) });
     const networkFailure = vi.fn().mockRejectedValue(new Error('offline'));
 
-    expect(await requestAccountReset({ loginId: '12345678', password: 'abcdef', passwordConfirm: 'abcdef' }, serverFailure)).toEqual({ ok: false, error: 'generic failure' });
+    expect(await requestAccountReset({ loginId: '12345678', password: 'abcdef', passwordConfirm: 'abcdef' }, serverFailure))
+      .toEqual({ ok: false, error: '계정 초기화 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.' });
     expect((await requestAccountReset({ loginId: '12345678', password: 'abcdef', passwordConfirm: 'abcdef' }, networkFailure)).ok).toBe(false);
   });
 });

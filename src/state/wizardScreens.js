@@ -65,3 +65,16 @@ export function getRequiredScreenIndex(stepKey, path, hasSpouse = false) {
   const index = screens.findIndex(({ prefixes }) => prefixes.some((prefix) => path?.startsWith(prefix)));
   return Math.max(0, index);
 }
+
+const WIZARD_STEP_KEYS = ['income', 'expense', 'savings', 'assets', 'debt', 'netWorth'];
+
+export function getWizardLocationForPath(path, hasSpouse = false) {
+  if (typeof path !== 'string') return null;
+  for (let stepIndex = 0; stepIndex < WIZARD_STEP_KEYS.length; stepIndex += 1) {
+    const stepKey = WIZARD_STEP_KEYS[stepIndex];
+    const screenItem = getWizardScreens(stepKey, hasSpouse)
+      .find(({ prefixes }) => prefixes.some((prefix) => path.startsWith(prefix)));
+    if (screenItem) return { stepIndex, stepKey, screenId: screenItem.id };
+  }
+  return null;
+}

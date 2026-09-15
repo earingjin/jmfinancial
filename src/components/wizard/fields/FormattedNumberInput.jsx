@@ -66,7 +66,7 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
           setEditingValue(null);
           onBlur?.(event);
         }}
-        aria-invalid={inputError ? true : undefined}
+        aria-invalid={inputError ? true : props['aria-invalid']}
         data-min={min}
         data-max={max}
       />

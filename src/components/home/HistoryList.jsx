@@ -26,7 +26,14 @@ export async function deletePlannerResult(id, session) {
   });
   if (response.ok) return { ok: true };
   const body = await response.json().catch(() => ({}));
-  return { ok: false, error: body.error || '진단 결과를 삭제하지 못했습니다.' };
+  const allowedMessages = [
+    '로그인이 필요합니다.',
+    '로그인이 만료되었습니다. 다시 로그인해 주세요.',
+    '삭제할 결과 ID가 올바르지 않습니다.',
+    '결과를 영구 삭제하지 못했습니다.',
+    '삭제할 결과를 찾을 수 없거나 삭제 권한이 없습니다.',
+  ];
+  return { ok: false, error: allowedMessages.includes(body.error) ? body.error : '결과를 삭제하지 못했습니다.' };
 }
 
 // 삭제 실패 시 화면에서 먼저 지웠던 행을 되돌린다. 그 사이 같은 행이 이미 다시 들어와 있으면
@@ -60,7 +67,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
 
       if (cancelled) return;
       if (error) {
-        setErrorMessage(error.message);
+        setErrorMessage('이전 결과를 불러오지 못했습니다.');
         setStatus('error');
         return;
       }
@@ -86,8 +93,8 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       outcome = await deletePlannerResult(id, session);
-    } catch (err) {
-      outcome = { ok: false, error: err?.message || '진단 결과를 삭제하지 못했습니다.' };
+    } catch {
+      outcome = { ok: false, error: '결과를 삭제하지 못했습니다.' };
     }
     // 다른 행 삭제가 그 사이 deletingId를 바꿔놨다면(연속 삭제) 그 표시는 건드리지 않는다.
     setDeletingId((current) => (current === id ? null : current));
@@ -111,7 +118,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
   if (status === 'error') {
     return (
       <div className="error-state">
-        <p>이전 결과를 불러오지 못했습니다. {errorMessage}</p>
+        <p>{errorMessage}</p>
         <button type="button" className="btn-primary" onClick={onBackHome}>
           홈으로 돌아가기
         </button>

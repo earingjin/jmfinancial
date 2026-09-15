@@ -572,7 +572,7 @@ describe('computeWizardRequiredFields - 지출(2. 지출)', () => {
       true,
     ]);
     expect(result.requiredErrorMessage).toContain('목돈지출 계획 1번째 항목의 지출 용도');
-    expect(result.requiredErrorMessage).toContain('목돈지출 계획 1번째 항목의 발생 나이');
+    expect(result.requiredErrorMessage).toContain('목돈지출 계획 1번째 항목의 예상 지출 나이');
   });
 
   it('완전히 비어 있는 목돈지출 항목(추가만 하고 아무것도 안 채움)은 필수로 취급하지 않는다', () => {

@@ -8,6 +8,7 @@ import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
+import { getRetirementLumpSumAgeErrors } from '../../../state/retirementLumpSumValidation';
 
 // 국민연금연구원 조사 2024년 기준 적정 노후생활비(단위: 만원, 외부 공식 자료 - 계산에는 쓰이지 않는 참고용 표).
 // 원 자료는 천원 단위이며, 이 앱의 금액 단위(만원)에 맞춰 표시만 변환했다(예: 3,328천원 → 332.8만원).
@@ -77,9 +78,12 @@ const CURRENT_LIVING_COST_CATEGORIES = [
   { key: 'other', label: '기타지출' },
 ];
 
-export default function Step2Expense({ subStepIndex }) {
+export default function Step2Expense({ subStepIndex, showCrossValidationErrors = false }) {
   const [showCostGuide, setShowCostGuide] = useState(false);
+  const [blurredAgePaths, setBlurredAgePaths] = useState(() => new Set());
   const { formData, setField } = useFormData();
+  const lumpSumAgeErrors = getRetirementLumpSumAgeErrors(formData);
+  const lumpSumAgeErrorByPath = new Map(lumpSumAgeErrors.map((error) => [error.path, error.message]));
   const monthlyLivingCost = Number(getIn(formData, 'assets.currentLivingCost.monthly')) || 0;
   const insurancePremium = Number(getIn(formData, 'assets.insurance.monthlyPremium')) || 0;
   const hasInsurance = getIn(formData, 'assets.insurance.hasInsurance') !== false;
@@ -192,6 +196,10 @@ export default function Step2Expense({ subStepIndex }) {
             // 서버 검증(validate.js)과 동일한 기준: 나이·금액 중 하나라도 입력된 항목은 지출 용도(name)가 필수다.
             const isBlank = (v) => v === '' || v === null || v === undefined;
             const nameRequired = !isBlank(item.expectedAge) || !isBlank(item.amount) || !isBlank(item.name);
+            const expectedAgePath = `expense.retirementLumpSumExpenses.${i}.expectedAge`;
+            const expectedAgeError = lumpSumAgeErrorByPath.get(expectedAgePath);
+            const showExpectedAgeError = expectedAgeError && (showCrossValidationErrors || blurredAgePaths.has(expectedAgePath));
+            const expectedAgeErrorId = `${expectedAgePath}-error`;
             return (
             <div className="field-grid three-col">
               <label className="field">
@@ -209,13 +217,19 @@ export default function Step2Expense({ subStepIndex }) {
                 <span className="field-label">예상 지출 나이</span>
                 <div className="field-input-row">
                   <FormattedNumberInput
-                    id={`expense.retirementLumpSumExpenses.${i}.expectedAge`}
+                    id={expectedAgePath}
                     max={120}
                     value={item.expectedAge}
                     onChange={(e) => update('expectedAge', e.target.value === '' ? '' : Number(e.target.value))}
+                    onBlur={() => setBlurredAgePaths((paths) => new Set(paths).add(expectedAgePath))}
+                    aria-invalid={showExpectedAgeError ? true : undefined}
+                    aria-describedby={showExpectedAgeError ? expectedAgeErrorId : undefined}
                   />
                   <span className="field-unit">세</span>
                 </div>
+                {showExpectedAgeError && (
+                  <span id={expectedAgeErrorId} className="field-helper field-helper--error">{expectedAgeError}</span>
+                )}
               </label>
               <label className="field">
                 <span className="field-label">예상 금액</span>

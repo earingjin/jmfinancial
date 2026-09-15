@@ -22,13 +22,13 @@ describe('deletePlannerResult (A6)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('응답이 실패(ok=false)이면 서버 메시지를 담아 실패를 반환한다', async () => {
+  it('알 수 없는 서버 오류는 사용자용 삭제 실패 메시지로 변환한다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       json: async () => ({ error: '권한이 없습니다.' }),
     }));
     const result = await deletePlannerResult('id-1', { access_token: 'token' });
-    expect(result).toEqual({ ok: false, error: '권한이 없습니다.' });
+    expect(result).toEqual({ ok: false, error: '결과를 삭제하지 못했습니다.' });
     vi.unstubAllGlobals();
   });
 

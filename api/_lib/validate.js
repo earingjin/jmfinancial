@@ -687,10 +687,10 @@ export function validateInput(input) {
       }
 
       if (!isBlank(item.expectedAge) && !isBlank(lumpSumRetirementAge) && Number(item.expectedAge) < Number(lumpSumRetirementAge)) {
-        errors.push(`${path}.expectedAge 값은 은퇴(예정) 연령(${lumpSumRetirementAge}세) 이후로 입력해 주세요.`);
+        errors.push(`${path}.expectedAge 값은 은퇴 예정 연령(${lumpSumRetirementAge}세) 이상으로 입력해 주세요.`);
       }
       if (!isBlank(item.expectedAge) && !isBlank(lumpSumLifeExpectancy) && Number(item.expectedAge) > Number(lumpSumLifeExpectancy)) {
-        errors.push(`${path}.expectedAge 값은 기대수명(${lumpSumLifeExpectancy}세) 이내로 입력해 주세요.`);
+        errors.push(`${path}.expectedAge 값은 기대수명(${lumpSumLifeExpectancy}세) 이하로 입력해 주세요.`);
       }
     });
   }
