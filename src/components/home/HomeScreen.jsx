@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import homeImage from '../../assets/홈화면.webp';
 import AppCopyright from '../AppCopyright';
+import { ConfirmModal } from '../common/AppDialog';
 
 // 로그인 직후 랜딩 화면. 바로 마법사로 보내지 않고, 새 진단 시작 / 이전 결과 보기 중 고르게 한다.
 export default function HomeScreen({ userName, hasWorkingDraft = false, onStart, onStartNew, onViewHistory, onSignOut, onDeleteAccount }) {
@@ -8,13 +9,14 @@ export default function HomeScreen({ userName, hasWorkingDraft = false, onStart,
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [showDiagnosisGuide, setShowDiagnosisGuide] = useState(false);
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
 
   const handleDeleteAccount = async () => {
-    if (!window.confirm('회원탈퇴하시겠습니까? 진단 결과를 포함한 모든 정보가 삭제되며 되돌릴 수 없습니다.')) return;
     setDeleteError('');
     setDeleting(true);
     const { error } = await onDeleteAccount();
     setDeleting(false);
+    setShowDeleteAccountConfirm(false);
     if (error) setDeleteError(error.message || '회원탈퇴에 실패했습니다.');
   };
 
@@ -77,7 +79,7 @@ export default function HomeScreen({ userName, hasWorkingDraft = false, onStart,
           <div className="home-account-actions">
             <button type="button" className="home-signout" onClick={onSignOut}>로그아웃</button>
             <span className="home-account-actions-divider" aria-hidden="true">|</span>
-            <button type="button" className="home-signout home-delete-account" onClick={handleDeleteAccount} disabled={deleting}>
+            <button type="button" className="home-signout home-delete-account" onClick={() => setShowDeleteAccountConfirm(true)} disabled={deleting}>
               {deleting ? '탈퇴 처리 중…' : '회원탈퇴'}
             </button>
           </div>
@@ -109,6 +111,18 @@ export default function HomeScreen({ userName, hasWorkingDraft = false, onStart,
               </div>
             </section>
           </div>
+        )}
+        {showDeleteAccountConfirm && (
+          <ConfirmModal
+            title="회원탈퇴할까요?"
+            description="진단 결과를 포함한 모든 정보가 삭제되며 다시 복구할 수 없습니다."
+            cancelLabel="취소"
+            confirmLabel="회원탈퇴"
+            destructive
+            processing={deleting}
+            onCancel={() => setShowDeleteAccountConfirm(false)}
+            onConfirm={() => void handleDeleteAccount()}
+          />
         )}
       </section>
     </div>

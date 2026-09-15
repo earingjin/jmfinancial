@@ -69,14 +69,14 @@ describe('App.jsx - "새 진단"이 아닌 흐름은 서버 draft를 지우지 �
 describe('App.jsx explicit draft replacement safeguards', () => {
   it('새로 입력은 확인을 취소하면 서버 초안을 삭제하지 않는다', async () => {
     const body = extractFunctionBody(await readAppSource(), 'const startNew = async ()');
-    expect(body).toContain('window.confirm');
-    expect(body.indexOf('window.confirm')).toBeLessThan(body.indexOf('deleteDraft'));
+    expect(body).toContain('await requestConfirm');
+    expect(body.indexOf('await requestConfirm')).toBeLessThan(body.indexOf('deleteDraft'));
   });
 
   it('과거 결과 수정은 작성 중 초안 확인 후 저장기를 중지하고 삭제한 뒤 재마운트한다', async () => {
     const body = extractFunctionBody(await readAppSource(), 'const editHistoryResult = ()');
     expect(body).toContain('hasWorkingDraft()');
-    expect(body).toContain('window.confirm');
+    expect(body).toContain('await requestConfirm');
     expect(body.indexOf('stopDraftSaving()')).toBeLessThan(body.indexOf('deleteDraft(user.id)'));
     expect(body.indexOf('deleteDraft(user.id)')).toBeLessThan(body.indexOf('setFormSessionKey'));
   });
@@ -116,8 +116,8 @@ describe('App.jsx home diagnosis CTA state', () => {
   it('confirms before reusing resetFormSession for a new diagnosis from home', async () => {
     const body = extractFunctionBody(await readAppSource(), 'const startNewDiagnosisFromHome = async ()');
 
-    expect(body).toContain("window.confirm('새로 입력하면 현재 작성 중인 내용이 삭제됩니다.')");
-    expect(body.indexOf('window.confirm')).toBeLessThan(body.indexOf('resetFormSession()'));
+    expect(body).toContain('await requestConfirm');
+    expect(body.indexOf('await requestConfirm')).toBeLessThan(body.indexOf('resetFormSession()'));
     expect(body).toContain('if (!didReset)');
     expect(body).toContain("setPhase('error')");
     expect(body).toContain('return false');
@@ -156,7 +156,8 @@ describe('App.jsx wizard header result history button', () => {
 
     expect(source).toContain('이전 결과 보기');
     expect(body).toContain('hasSavedPlannerResults(user.id)');
-    expect(body).toContain("window.alert('이전 결과가 없습니다.')");
+    expect(body).toContain("setNotice({ title: '이전 결과가 없습니다.'");
+    expect(body).toContain("setNotice({ title: '이전 결과를 확인하지 못했습니다.'");
     expect(body).toContain("setPhase('history')");
   });
 });

@@ -9,6 +9,7 @@ import HomeScreen from './components/home/HomeScreen';
 import HistoryList from './components/home/HistoryList';
 import AppCopyright from './components/AppCopyright';
 import WebBrandLogo from './components/WebBrandLogo';
+import { NoticeModal, useConfirmRequest } from './components/common/AppDialog';
 import { deobfuscate } from './utils/obfuscate';
 import { supabase } from './lib/supabaseClient';
 import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, MAX_DRAFT_STEP_INDEX, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
@@ -73,6 +74,8 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const formSessionConsumedRef = useRef(false);
   const draftControllerRef = useRef(null);
   const [hasWorkingDraft, setHasWorkingDraft] = useState(Boolean(initialDraft?.updated_at));
+  const [notice, setNotice] = useState(null);
+  const { requestConfirm, confirmModal } = useConfirmRequest();
 
   const stopDraftSaving = async () => {
     await draftControllerRef.current?.shutdownDraftSaving();
@@ -242,7 +245,12 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   };
 
   const startNewDiagnosisFromHome = async () => {
-    if (!window.confirm('새로 입력하면 현재 작성 중인 내용이 삭제됩니다.')) return false;
+    if (!await requestConfirm({
+      title: '새로 입력할까요?',
+      description: '현재 작성 중인 내용은 삭제되고 처음부터 다시 입력하게 됩니다.',
+      cancelLabel: '계속 작성하기',
+      confirmLabel: '새로 입력하기',
+    })) return false;
     const didReset = await resetFormSession();
     if (!didReset) {
       setErrorMessage('이전 임시 초안을 정리하지 못해 새 진단을 시작할 수 없습니다. 다시 시도해 주세요.');
@@ -257,12 +265,12 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const viewHistoryFromHeader = async () => {
     try {
       if (!await hasSavedPlannerResults(user.id)) {
-        window.alert('이전 결과가 없습니다.');
+        setNotice({ title: '이전 결과가 없습니다.', description: '저장된 이전 진단 결과가 없습니다.' });
         return;
       }
       setPhase('history');
     } catch {
-      window.alert('이전 결과를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      setNotice({ title: '이전 결과를 확인하지 못했습니다.', description: '잠시 후 다시 시도해 주세요.' });
     }
   };
 
@@ -291,8 +299,14 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const editHistoryResult = () => {
     if (!historyInput) return;
     const replaceDraft = async () => {
+      const selectedHistoryInput = historyInput;
       const hasWorkingDraft = draftControllerRef.current?.hasWorkingDraft() ?? false;
-      if (hasWorkingDraft && !window.confirm('작성 중인 진단을 삭제하고 이 과거 결과를 수정하시겠습니까?')) return;
+      if (hasWorkingDraft && !await requestConfirm({
+        title: '이전 진단 결과를 수정할까요?',
+        description: '현재 작성 중인 내용은 삭제되고 선택한 이전 진단 내용을 불러옵니다.',
+        cancelLabel: '취소',
+        confirmLabel: '이전 결과 수정하기',
+      })) return;
       await stopDraftSaving();
       try {
         if (hasWorkingDraft) await deleteDraft(user.id);
@@ -304,7 +318,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
       }
       const editStep = MAX_DRAFT_STEP_INDEX;
       formSessionConsumedRef.current = false;
-      setFormSessionDraft({ form_data: historyInput, step_index: editStep, screen_id: 'net-worth', updated_at: null });
+      setFormSessionDraft({ form_data: selectedHistoryInput, step_index: editStep, screen_id: 'net-worth', updated_at: null });
       setFormSessionKey((key) => key + 1);
       setWizardStep(editStep);
       setWizardScreenId('net-worth');
@@ -468,6 +482,8 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         )}
       </main>
       {phase !== 'summary-report' && phase !== 'report' && phase !== 'fhs-report' && phase !== 'home' && <AppCopyright />}
+      {confirmModal}
+      {notice && <NoticeModal title={notice.title} description={notice.description} onClose={() => setNotice(null)} />}
     </div>
   );
 }
@@ -477,6 +493,7 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
   const [draftDecision, setDraftDecision] = useState(null);
   const [draftLoad, setDraftLoad] = useState({ status: 'idle', source: null, draft: null, message: null });
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const { requestConfirm, confirmModal } = useConfirmRequest();
 
   useEffect(() => {
     if (!user?.id) {
@@ -529,7 +546,12 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
 
   const startNew = async () => {
     if ((draftLoad.source === 'remote' || draftLoad.source === 'legacy')
-      && !window.confirm('작성 중인 진단을 삭제하고 새로 입력하시겠습니까?')) return;
+      && !await requestConfirm({
+        title: '새로 입력할까요?',
+        description: '현재 작성 중인 내용은 삭제되고 처음부터 다시 입력하게 됩니다.',
+        cancelLabel: '계속 작성하기',
+        confirmLabel: '새로 입력하기',
+      })) return;
     setDraftLoad((state) => ({ ...state, status: 'loading' }));
     try {
       if (draftLoad.source === 'remote') await deleteDraft(user.id);
@@ -587,15 +609,18 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
   }
   if (!currentDecision && draftLoad.status === 'choice') {
     return (
-      <div className="draft-choice">
-        <div className="draft-choice-card">
-          <h2>{draftLoad.source === 'legacy' ? '이 브라우저에 기존 초안이 있습니다' : '작성 중인 초안이 있습니다'}</h2>
-          <p>{draftLoad.source === 'legacy' ? '기존 로컬 초안을 Supabase로 이전해 다른 기기에서도 이어서 작성하시겠습니까?' : '다른 기기에서 저장한 내용까지 포함해 이어서 작성할 수 있습니다.'}</p>
-          <button type="button" className="btn-primary" onClick={() => void continueDraft()}>이어서 입력</button>
-          <button type="button" className="btn-secondary" onClick={() => void startNew()}>새로 입력</button>
-          <button type="button" className="btn-secondary" onClick={goHomeFromDraftChoice}>홈으로 이동</button>
+      <>
+        <div className="draft-choice">
+          <div className="draft-choice-card">
+            <h2>{draftLoad.source === 'legacy' ? '이 브라우저에 기존 초안이 있습니다' : '작성 중인 초안이 있습니다'}</h2>
+            <p>{draftLoad.source === 'legacy' ? '기존 로컬 초안을 Supabase로 이전해 다른 기기에서도 이어서 작성하시겠습니까?' : '다른 기기에서 저장한 내용까지 포함해 이어서 작성할 수 있습니다.'}</p>
+            <button type="button" className="btn-primary" onClick={() => void continueDraft()}>이어서 입력</button>
+            <button type="button" className="btn-secondary" onClick={() => void startNew()}>새로 입력</button>
+            <button type="button" className="btn-secondary" onClick={goHomeFromDraftChoice}>홈으로 이동</button>
+          </div>
         </div>
-      </div>
+        {confirmModal}
+      </>
     );
   }
 
@@ -607,10 +632,13 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
     return <div className="draft-choice"><div className="draft-choice-card"><h2>초안을 확인하지 못했습니다</h2><p>{draftLoad.message}</p><button type="button" className="btn-primary" onClick={() => { clearDraftSessionCache(user.id); setLoadAttempt((value) => value + 1); }}>다시 시도</button></div></div>;
   }
 
-  return <AppContent
-    initialDraft={currentDecision?.draft || null}
-    startWithWizard={currentDecision?.startWithWizard ?? false}
-  />;
+  return <>
+    <AppContent
+      initialDraft={currentDecision?.draft || null}
+      startWithWizard={currentDecision?.startWithWizard ?? false}
+    />
+    {confirmModal}
+  </>;
 }
 
 function AdminRoute() {

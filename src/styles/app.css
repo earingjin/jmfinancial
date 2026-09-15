@@ -662,6 +662,16 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
 .diagnosis-guide-expert { margin: 16px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
 .diagnosis-guide-actions { display: grid; grid-template-columns: 1fr 1.45fr; gap: 8px; margin-top: 20px; }
 .diagnosis-guide-actions button { min-height: 44px; border: 0; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.app-dialog-overlay { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+.app-dialog { display: flex; flex-direction: column; max-height: calc(100dvh - 40px); overflow: hidden; }
+.app-dialog-body { overflow-y: auto; }
+.app-dialog-body h4 { margin: 0 0 10px; font-size: 17px; color: var(--navy-900); }
+.app-dialog-body p { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.65; white-space: pre-line; }
+.app-dialog-actions { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1.45fr; gap: 8px; margin-top: 22px; }
+.app-dialog-actions--notice { grid-template-columns: 1fr; }
+.app-dialog-actions button { min-height: 44px; border: 0; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.app-dialog-actions button:disabled { cursor: default; opacity: .6; }
+.app-dialog-destructive { background: var(--red); color: #fff; }
 
 .scenario-card { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
 .scenario-toggle {

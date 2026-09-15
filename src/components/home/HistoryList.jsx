@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatWon } from '../../utils/format';
+import { ConfirmModal } from '../common/AppDialog';
 
 // SimpleSummaryReport.jsx의 formatDesignDate와 같은 용도이지만, 이 목록에서는 연도를
 // 4자리로 온전히 보여줄 필요가 있어("2026.08.11") 별도로 둔다.
@@ -44,6 +45,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
+  const [pendingDeleteRow, setPendingDeleteRow] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,11 +74,10 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
   // 되돌릴 수 없는 작업이라 먼저 확인을 받고, 성공하면 화면 목록에서도 바로 제거한다.
   // 실패하면(응답 실패 또는 네트워크 예외) 화면에서 지웠던 그 행만 복원한다 - 연속으로 다른
   // 행을 삭제 중이었다면 그 결과에는 영향을 주지 않는다(restoreRowAfterFailedDelete 참고).
-  const handleDelete = async (id) => {
-    if (!window.confirm('이 진단 결과를 삭제하시겠습니까? 삭제하면 되돌릴 수 없습니다.')) return;
+  const handleDelete = async (removedRow) => {
+    const id = removedRow.id;
     setDeleteError('');
     setDeletingId(id);
-    const removedRow = rows.find((row) => row.id === id);
     setRows((prev) => prev.filter((row) => row.id !== id));
 
     let outcome;
@@ -93,6 +94,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
       setDeleteError(outcome.error);
       setRows((prev) => restoreRowAfterFailedDelete(prev, removedRow));
     }
+    setPendingDeleteRow(null);
   };
 
   if (status === 'loading') {
@@ -144,7 +146,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
               <button
                 type="button"
                 className="history-delete-btn"
-                onClick={() => handleDelete(row.id)}
+                onClick={() => setPendingDeleteRow(row)}
                 disabled={deletingId === row.id}
                 aria-label="이 진단 결과 삭제"
               >
@@ -153,6 +155,18 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
             </li>
           ))}
         </ul>
+      )}
+      {pendingDeleteRow && (
+        <ConfirmModal
+          title="이 진단 결과를 삭제할까요?"
+          description="삭제한 진단 결과는 다시 복구할 수 없습니다."
+          cancelLabel="취소"
+          confirmLabel="삭제하기"
+          destructive
+          processing={deletingId === pendingDeleteRow.id}
+          onCancel={() => setPendingDeleteRow(null)}
+          onConfirm={() => void handleDelete(pendingDeleteRow)}
+        />
       )}
     </div>
   );
