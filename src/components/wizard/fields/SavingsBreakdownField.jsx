@@ -9,11 +9,8 @@ import TotalAmountBox from './TotalAmountBox';
 // 목록을 유지한다 - 여기 없는 항목이 있으면 저축 쪽에서 다른 항목을 수정할 때마다 그 항목 금액이
 // 총액 재계산에서 빠져 조용히 0으로 취급된다.
 const LIQUID_PRESET_KEYS = ['deposit', 'savings', 'cma', 'subscription', 'emergencyFund'];
-// pensionAssetsBreakdown의 숫자 항목만 명시적으로 나열한다(otherItems는 배열이라 합산 대상이 아님 -
-// "기타" 총액은 이미 그 배열의 합으로 계산되어 있는 값이라 여기서 다시 더하면 이중 계산이 된다).
-const PENSION_BREAKDOWN_NUMERIC_KEYS = [
-  'variableAnnuity', 'pensionSavingsAccount', 'irp', 'selfRetirementPension', 'spouseRetirementPension', 'other',
-];
+const FINANCIAL_DETAIL_KEYS = ['stocks', 'funds', 'bonds'];
+const PENSION_DETAIL_KEYS = ['variableAnnuity', 'pensionSavingsAccount', 'irp', 'selfRetirementPension'];
 
 // 저축 종류의 "현재까지 누적된 금액"이 "4. 자산" 파트의 어느 값과 연동되는지 계산한다(사용자 승인된 매핑:
 // 적금→현금성자산 적금, 주식→금융자산 주식, ISA·청약·파킹통장→현금성자산의 "기본 항목 외 추가" 목록,
@@ -35,6 +32,131 @@ export function isCategorySelected(selectedCategories, breakdown, key) {
 
 export function selectedKeysFrom(selectedCategories, breakdown, categoryKeys) {
   return categoryKeys.filter((key) => isCategorySelected(selectedCategories, breakdown, key));
+}
+
+const isBlank = (value) => value === '' || value == null;
+
+const canActivateLinkedDetailed = ({ mode, simpleInputStored, total, simpleTotal, value }) => (
+  mode === 'simple'
+  && simpleInputStored !== true
+  && isBlank(total)
+  && isBlank(simpleTotal)
+  && value !== ''
+);
+
+// 저축의 주식 누적액은 금융자산 상세값과 같은 필드를 공유한다. 보호할 간편 총액이 없는
+// 신규 상태에서만 상세입력을 활성화하고, 그 외에는 기존 간편 총액을 그대로 보존한다.
+// oxlint-disable-next-line react/only-export-components
+export function updateDirectLinkedAsset(formData, setField, path, raw) {
+  const value = raw === '' ? '' : Number(raw);
+  setField(path, value);
+
+  if (path !== 'assets.financialAssets.stocks') return;
+
+  const financial = getIn(formData, 'assets.financialAssets') || {};
+  const nextFinancial = { ...financial, stocks: value };
+  const otherItems = Array.isArray(financial.otherItems) ? financial.otherItems : [];
+  const hasDetailedInput = FINANCIAL_DETAIL_KEYS.some((key) => !isBlank(nextFinancial[key]))
+    || otherItems.some((item) => !isBlank(item?.amount));
+  const detailedTotal = FINANCIAL_DETAIL_KEYS.reduce(
+    (total, key) => total + (Number(nextFinancial[key]) || 0),
+    0
+  ) + otherItems.reduce((total, item) => total + (Number(item?.amount) || 0), 0);
+
+  if (financial.inputMode === 'detailed') {
+    setField('assets.financialAssets.total', hasDetailedInput ? detailedTotal : '');
+    return;
+  }
+
+  const canActivateDetailed = canActivateLinkedDetailed({
+    mode: financial.inputMode,
+    simpleInputStored: financial.simpleInputStored,
+    total: financial.total,
+    simpleTotal: financial.simpleTotal,
+    value,
+  });
+  if (!canActivateDetailed) return;
+
+  setField('assets.financialAssets.inputMode', 'detailed');
+  setField('assets.financialAssets.total', detailedTotal);
+}
+
+// oxlint-disable-next-line react/only-export-components
+export function updateLinkedLiquidAsset(formData, setField, assetLink, raw) {
+  const value = raw === '' ? '' : Number(raw);
+  const liquid = getIn(formData, 'assets.liquidAssets') || {};
+  const breakdown = liquid.breakdown || {};
+  const customItems = Array.isArray(liquid.customItems) ? liquid.customItems : [];
+  let nextBreakdown = breakdown;
+  let nextCustomItems = customItems;
+
+  if (assetLink.type === 'liquidBreakdown') {
+    nextBreakdown = { ...breakdown, [assetLink.field]: value };
+    setField(`assets.liquidAssets.breakdown.${assetLink.field}`, value);
+  } else {
+    const index = customItems.findIndex((item) => item.name === assetLink.name);
+    nextCustomItems = index >= 0
+      ? customItems.map((item, itemIndex) => (itemIndex === index ? { ...item, amount: value } : item))
+      : [...customItems, { name: assetLink.name, amount: value }];
+    setField('assets.liquidAssets.customItems', nextCustomItems);
+  }
+
+  const detailedTotal = LIQUID_PRESET_KEYS.reduce(
+    (total, key) => total + (Number(nextBreakdown[key]) || 0),
+    0
+  ) + nextCustomItems.reduce((total, item) => total + (Number(item.amount) || 0), 0);
+
+  if (liquid.inputMode === 'detailed') {
+    setField('assets.liquidAssets.total', detailedTotal);
+    return;
+  }
+
+  if (!canActivateLinkedDetailed({
+    mode: liquid.inputMode,
+    simpleInputStored: liquid.simpleInputStored,
+    total: liquid.total,
+    simpleTotal: liquid.simpleTotal,
+    value,
+  })) return;
+
+  setField('assets.liquidAssets.inputMode', 'detailed');
+  setField('assets.liquidAssets.total', detailedTotal);
+}
+
+// oxlint-disable-next-line react/only-export-components
+export function updateLinkedPensionAsset(formData, setField, field, raw) {
+  const value = raw === '' ? '' : Number(raw);
+  const assets = getIn(formData, 'assets') || {};
+  const breakdown = assets.pensionAssetsBreakdown || {};
+  const nextBreakdown = { ...breakdown, [field]: value };
+  const otherItems = Array.isArray(breakdown.otherItems) ? breakdown.otherItems : [];
+  const activeKeys = formData.basic?.hasSpouse === true
+    ? [...PENSION_DETAIL_KEYS, 'spouseRetirementPension']
+    : PENSION_DETAIL_KEYS;
+  const hasDetailedInput = activeKeys.some((key) => !isBlank(nextBreakdown[key]))
+    || otherItems.some((item) => !isBlank(item?.amount));
+  const detailedTotal = activeKeys.reduce(
+    (total, key) => total + (Number(nextBreakdown[key]) || 0),
+    0
+  ) + otherItems.reduce((total, item) => total + (Number(item.amount) || 0), 0);
+
+  setField(`assets.pensionAssetsBreakdown.${field}`, value);
+
+  if (assets.pensionAssetsInputMode === 'detailed') {
+    setField('assets.pensionAssets', hasDetailedInput ? detailedTotal : '');
+    return;
+  }
+
+  if (!canActivateLinkedDetailed({
+    mode: assets.pensionAssetsInputMode,
+    simpleInputStored: assets.pensionAssetsSimpleInputStored,
+    total: assets.pensionAssets,
+    simpleTotal: assets.pensionAssetsSimpleTotal,
+    value,
+  })) return;
+
+  setField('assets.pensionAssetsInputMode', 'detailed');
+  setField('assets.pensionAssets', detailedTotal);
 }
 
 function resolveAssetLink(formData, assetLink) {
@@ -188,50 +310,19 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
     });
   };
 
-  // 현금성 자산(적금 breakdown 항목 또는 ISA/청약/파킹통장/커스텀 항목 같은 이름 기반 항목)의
-  // 총액을 재계산한다.
-  const recomputeLiquidAssetsTotal = (nextLiquidBreakdown, nextLiquidCustomItems) => {
-    const presetSum = LIQUID_PRESET_KEYS.reduce((s, k) => s + (Number(nextLiquidBreakdown[k]) || 0), 0);
-    const customSum = nextLiquidCustomItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
-    setField('assets.liquidAssets.total', presetSum + customSum);
-  };
-
   const updateAccumulated = (assetLink, raw) => {
-    const value = raw === '' ? '' : Number(raw);
-
     if (assetLink.type === 'direct') {
-      setField(assetLink.path, value);
+      updateDirectLinkedAsset(formData, setField, assetLink.path, raw);
       return;
     }
 
     if (assetLink.type === 'pensionBreakdown') {
-      const pensionBreakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
-      const nextPensionBreakdown = { ...pensionBreakdown, [assetLink.field]: value };
-      setField(`assets.pensionAssetsBreakdown.${assetLink.field}`, value);
-      const pensionTotal = PENSION_BREAKDOWN_NUMERIC_KEYS.reduce((s, k) => (
-        k === 'spouseRetirementPension' && formData.basic?.hasSpouse !== true
-          ? s
-          : s + (Number(nextPensionBreakdown[k]) || 0)
-      ), 0);
-      setField('assets.pensionAssets', pensionTotal);
+      updateLinkedPensionAsset(formData, setField, assetLink.field, raw);
       return;
     }
 
-    const liquidBreakdown = getIn(formData, 'assets.liquidAssets.breakdown') || {};
-    const liquidCustomItems = getIn(formData, 'assets.liquidAssets.customItems') || [];
-
-    if (assetLink.type === 'liquidBreakdown') {
-      const nextBreakdown = { ...liquidBreakdown, [assetLink.field]: value };
-      setField(`assets.liquidAssets.breakdown.${assetLink.field}`, value);
-      recomputeLiquidAssetsTotal(nextBreakdown, liquidCustomItems);
-    } else if (assetLink.type === 'liquidCustomItem') {
-      const idx = liquidCustomItems.findIndex((it) => it.name === assetLink.name);
-      const nextCustomItems =
-        idx >= 0
-          ? liquidCustomItems.map((it, i) => (i === idx ? { ...it, amount: value } : it))
-          : [...liquidCustomItems, { name: assetLink.name, amount: value }];
-      setField('assets.liquidAssets.customItems', nextCustomItems);
-      recomputeLiquidAssetsTotal(liquidBreakdown, nextCustomItems);
+    if (assetLink.type === 'liquidBreakdown' || assetLink.type === 'liquidCustomItem') {
+      updateLinkedLiquidAsset(formData, setField, assetLink, raw);
     }
   };
 

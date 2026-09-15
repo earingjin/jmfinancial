@@ -1,9 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
 import TotalAmountBox from './TotalAmountBox';
+
+// oxlint-disable-next-line react/only-export-components
+export function includePopulatedCategoryKeys(openKeys, populatedKeySignature) {
+  const next = new Set(openKeys);
+  populatedKeySignature.split('|').filter(Boolean).forEach((key) => next.add(key));
+  return next.size === openKeys.size ? openKeys : next;
+}
 
 /**
  * 항목 종류를 버튼(pill)으로 나열해 클릭한 종류만 금액 입력창을 펼쳐서 보여주는 필드.
@@ -42,6 +49,14 @@ export default function CategoryBreakdownField({
     });
     return initial;
   });
+  const populatedKeySignature = categories
+    .filter(({ key }) => Number(breakdown[key]) > 0)
+    .map(({ key }) => key)
+    .join('|');
+
+  useEffect(() => {
+    setOpenKeys((previous) => includePopulatedCategoryKeys(previous, populatedKeySignature));
+  }, [populatedKeySignature]);
 
   const toggle = (key) => {
     setOpenKeys((prev) => {
