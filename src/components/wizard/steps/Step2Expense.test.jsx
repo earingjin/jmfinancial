@@ -20,8 +20,10 @@ function fieldWindow(html, exactLabel) {
   return html.slice(idx, end);
 }
 
-function renderStep(retirementLumpSumExpenses = [{ name: '여행', expectedAge: 70, amount: 500 }]) {
+function renderStep(retirementLumpSumExpenses = [{ name: '여행', expectedAge: 70, amount: 500 }], props = {}) {
   const formData = structuredClone(initialFormData);
+  formData.basic.retirementAge = 65;
+  formData.basic.lifeExpectancy = 85;
   formData.expense.retirementLumpSumExpenses = retirementLumpSumExpenses;
   formData.expense.healthInsurance.items = [{ name: '건강보험', monthly: 10 }];
   formData.expense.otherExpenses = [{ name: '경조사', annual: 50, years: 5 }];
@@ -30,7 +32,7 @@ function renderStep(retirementLumpSumExpenses = [{ name: '여행', expectedAge: 
     <FormContext.Provider value={{
       formData, setField: vi.fn(), addListItem: vi.fn(), removeListItem: vi.fn(), updateListItem: vi.fn(),
     }}>
-      <Step2Expense />
+      <Step2Expense {...props} />
     </FormContext.Provider>
   );
 }
@@ -58,6 +60,28 @@ describe('Step2Expense - 반복입력 금액 필드의 음수 방어 (A12)', () 
     expect(html).not.toContain('자녀 추가');
     expect(html).toContain('자녀 학자금·결혼지원·기타 지원처럼 예상되는 큰 지출');
     expect(html).toContain('예: 자녀 결혼지원 또는 학자금');
+  });
+});
+
+describe('Step2Expense - 목돈지출 나이 교차 검증 표시', () => {
+  it('입력 완료 전에는 성급하게 표시하지 않고 다음 이동이 차단된 상태에서는 input과 오류를 연결한다', () => {
+    const untouched = renderStep([{ name: '여행', expectedAge: 60, amount: 500 }]);
+    expect(untouched).not.toContain('은퇴 예정 연령(65세) 이상으로 입력해 주세요.');
+
+    const blocked = renderStep(
+      [{ name: '여행', expectedAge: 60, amount: 500 }],
+      { showCrossValidationErrors: true },
+    );
+    expect(blocked).toContain('은퇴 예정 연령(65세) 이상으로 입력해 주세요.');
+    expect(blocked).toContain('aria-invalid="true"');
+    expect(blocked).toContain('aria-describedby="expense.retirementLumpSumExpenses.0.expectedAge-error"');
+  });
+
+  it('정상 경계값으로 수정되면 오류가 사라진다', () => {
+    expect(renderStep(
+      [{ name: '여행', expectedAge: 65, amount: 500 }],
+      { showCrossValidationErrors: true },
+    )).not.toContain('field-helper--error');
   });
 });
 

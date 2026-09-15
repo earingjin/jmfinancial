@@ -8,7 +8,7 @@ import { getWizardScreens, resolveWizardScreenIndex } from '../../state/wizardSc
 globalThis.React = React;
 vi.mock('../../lib/supabaseClient', () => ({ supabase: {} }));
 
-const { getNextWizardPosition, getPreviousWizardPosition, getRequiredFieldSubStep, submitAfterDraftSave } = await import('./Wizard.jsx');
+const { getCurrentCrossValidationError, getNextWizardPosition, getPreviousWizardPosition, getRequiredFieldSubStep, submitAfterDraftSave } = await import('./Wizard.jsx');
 
 describe('Wizard sub-step navigation', () => {
   const keys = ['income', 'expense', 'savings', 'assets', 'debt', 'netWorth'];
@@ -43,6 +43,15 @@ describe('Wizard sub-step navigation', () => {
     expect(getRequiredFieldSubStep('income', 'income.personalPension.startAge')).toBe(9);
     expect(getRequiredFieldSubStep('expense', 'expense.retirementLivingCost')).toBe(1);
     expect(getRequiredFieldSubStep('expense', 'expense.retirementLumpSumExpenses.0.name')).toBe(2);
+  });
+
+  it('목돈지출 화면에서 여러 오류 중 첫 번째 잘못된 input path로 이동을 차단한다', () => {
+    const errors = [
+      { path: 'expense.retirementLumpSumExpenses.1.expectedAge', message: '두 번째 오류' },
+      { path: 'expense.retirementLumpSumExpenses.2.expectedAge', message: '세 번째 오류' },
+    ];
+    expect(getCurrentCrossValidationError(errors, 'expense', 2)).toEqual(errors[0]);
+    expect(getCurrentCrossValidationError(errors, 'income', 2)).toBeNull();
   });
 });
 

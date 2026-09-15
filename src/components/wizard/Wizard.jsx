@@ -8,6 +8,7 @@ import Step6NetWorth from './steps/Step6NetWorth';
 import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
 import { computeWizardRequiredFields } from '../../state/wizardRequiredFields';
+import { getRetirementLumpSumAgeErrors } from '../../state/retirementLumpSumValidation';
 import { getWizardScreens, resolveWizardScreenIndex, getRequiredScreenIndex } from '../../state/wizardScreens';
 import DiagnosisAreaIcon from '../DiagnosisAreaIcon';
 
@@ -52,6 +53,12 @@ export function getRequiredFieldSubStep(stepKey, path, hasSpouse = false) {
   return getRequiredScreenIndex(stepKey, path, hasSpouse);
 }
 
+// oxlint-disable-next-line react/only-export-components
+export function getCurrentCrossValidationError(errors, stepKey, subStepIndex) {
+  if (stepKey !== 'expense') return null;
+  return errors.find(({ path }) => getRequiredFieldSubStep('expense', path) === subStepIndex) || null;
+}
+
 // 최종 제출 시 "임시 저장 실패가 계산·결과 저장 자체를 막으면 안 된다"는 규칙만 분리해 둔다
 // (App.jsx의 handleSubmit → completePlannerSubmission은 이 formData를 그대로 쓰고 서버에 저장된
 // 초안을 다시 읽지 않으므로, 임시 저장은 최종 제출의 필수 선행조건이 아니다). 클릭 시뮬레이션이
@@ -67,11 +74,12 @@ const formatSavedAt = (value) => value
   ? new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
   : null;
 
-export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, initialScreenId = null, onStepChange, onScreenChange }) {
+export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, initialScreenId = null, initialFocusPath = null, onStepChange, onScreenChange }) {
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
   const [screenId, setScreenId] = useState(initialScreenId);
   const [visitedSteps, setVisitedSteps] = useState(() => new Set([stepIndex]));
   const [showRequiredError, setShowRequiredError] = useState(false);
+  const [blockedCrossValidationPath, setBlockedCrossValidationPath] = useState(null);
   const [showProgressHint, setShowProgressHint] = useState(false);
   const [isSubStepMenuOpen, setIsSubStepMenuOpen] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
@@ -197,6 +205,8 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   // wizardRequiredFields.js 참고(api/_lib/validate.js와 동일 기준).
   const { missingIncomeFields, missingExpenseFields, basicInfoMissing, retirementLivingCostMissing, firstMissingGroup, requiredErrorMessage } =
     computeWizardRequiredFields(formData);
+  const crossValidationErrors = getRetirementLumpSumAgeErrors(formData);
+  const visibleCrossValidationError = crossValidationErrors.find(({ path }) => path === blockedCrossValidationPath);
 
   // 안내 문구가 가리키는 첫 번째 미입력 항목으로 화면을 이동한다. moveToStep이 다른 스텝으로
   // 넘어가는 경우 그 스텝의 DOM이 그려질 시간이 필요하므로(150ms는 위 79번째 줄의 포커스 스크롤과
@@ -211,7 +221,36 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     }, 150);
   };
 
+  useEffect(() => {
+    if (initialFocusPath) scrollToField(initialFocusPath);
+    // 복구 진입 시 최초 한 번만 서버가 지정한 입력 위치로 이동한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const blockForCrossValidation = (error, moveAcrossSteps = false) => {
+    if (!error) return false;
+    setBlockedCrossValidationPath(error.path);
+    setShowRequiredError(false);
+    if (moveAcrossSteps) {
+      moveToStep(
+        STEPS.findIndex((step) => step.key === 'expense'),
+        getRequiredFieldSubStep('expense', error.path),
+      );
+    }
+    scrollToField(error.path);
+    return true;
+  };
+
   const goNext = () => {
+    const currentCrossValidationError = getCurrentCrossValidationError(crossValidationErrors, currentStepKey, subStepIndex);
+    const blockingCrossValidationError = currentStepKey === 'expense' && isLastSubStep
+      ? crossValidationErrors[0] || null
+      : currentCrossValidationError;
+    const blockingSubStep = blockingCrossValidationError
+      ? getRequiredFieldSubStep('expense', blockingCrossValidationError.path)
+      : subStepIndex;
+    if (blockForCrossValidation(blockingCrossValidationError, blockingSubStep !== subStepIndex)) return;
+    setBlockedCrossValidationPath(null);
     if (!isLastSubStep) {
       moveToSubStep(subStepIndex + 1);
       return;
@@ -253,7 +292,9 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
       scrollToField(firstMissingPath);
       return;
     }
+    if (blockForCrossValidation(crossValidationErrors[0], true)) return;
     setShowRequiredError(false);
+    setBlockedCrossValidationPath(null);
     await submitAfterDraftSave(saveCurrentDraft, stepIndex, onSubmit, formData, resolvedScreenId);
   };
 
@@ -347,13 +388,14 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
             <Component
               subStepIndex={index === stepIndex ? subStepIndex : 0}
               screenId={index === stepIndex ? resolvedScreenId : getWizardScreens(key, hasSpouse)[0].id}
+              showCrossValidationErrors={Boolean(visibleCrossValidationError)}
             />
           </Activity>
         ))}
       </div>
 
-      {showRequiredError && (
-        <p className="wizard-required-error">{requiredErrorMessage}</p>
+      {(showRequiredError || visibleCrossValidationError) && (
+        <p className="wizard-required-error">{visibleCrossValidationError?.message || requiredErrorMessage}</p>
       )}
 
       <div className="wizard-nav">

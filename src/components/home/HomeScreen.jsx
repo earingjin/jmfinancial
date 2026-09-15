@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import homeImage from '../../assets/홈화면.webp';
 import AppCopyright from '../AppCopyright';
 import { ConfirmModal } from '../common/AppDialog';
+import { toKnownUserMessage } from '../../state/userFacingErrors';
+
+const DELETE_ACCOUNT_MESSAGES = [
+  '로그인이 만료되었습니다. 다시 로그인해 주세요.',
+  '서버 설정이 누락되어 회원탈퇴를 처리할 수 없습니다.',
+  '회원 정보를 삭제하지 못했습니다.',
+  '계정을 삭제하지 못했습니다.',
+  '회원탈퇴에 실패했습니다.',
+];
 
 // 로그인 직후 랜딩 화면. 바로 마법사로 보내지 않고, 새 진단 시작 / 이전 결과 보기 중 고르게 한다.
 export default function HomeScreen({ userName, hasWorkingDraft = false, onStart, onStartNew, onViewHistory, onSignOut, onDeleteAccount }) {
@@ -14,10 +23,15 @@ export default function HomeScreen({ userName, hasWorkingDraft = false, onStart,
   const handleDeleteAccount = async () => {
     setDeleteError('');
     setDeleting(true);
-    const { error } = await onDeleteAccount();
-    setDeleting(false);
-    setShowDeleteAccountConfirm(false);
-    if (error) setDeleteError(error.message || '회원탈퇴에 실패했습니다.');
+    try {
+      const { error } = await onDeleteAccount();
+      if (error) setDeleteError(toKnownUserMessage(error.message, DELETE_ACCOUNT_MESSAGES, '회원탈퇴에 실패했습니다.'));
+    } catch {
+      setDeleteError('회원탈퇴에 실패했습니다.');
+    } finally {
+      setDeleting(false);
+      setShowDeleteAccountConfirm(false);
+    }
   };
 
   const startAfterGuide = () => {

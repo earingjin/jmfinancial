@@ -7,7 +7,7 @@ export default function AdminDashboard({ onSignOut }) {
 
   useEffect(() => {
     supabase.rpc('admin_daily_stats').then(({ data, error: err }) => {
-      if (err) setError(err.message);
+      if (err) setError('관리자 통계를 불러오지 못했습니다.');
       else setRows(data);
     });
   }, []);
@@ -38,7 +38,7 @@ export default function AdminDashboard({ onSignOut }) {
         </div>
       </div>
 
-      {error && <p className="auth-error">데이터를 불러오지 못했습니다: {error}</p>}
+      {error && <p className="auth-error">{error}</p>}
 
       <h3 className="ss-section-title" style={{ margin: '0 0 10px' }}>날짜별 현황</h3>
       <table className="grade-table compact">

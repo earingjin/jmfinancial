@@ -1071,7 +1071,7 @@ describe('expense.retirementLumpSumExpenses[] - post-retirement lump-sum expense
   it('rejects an expected age before the retirement age (retirementAge=65)', () => {
     const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ expectedAge: 64 })] } }));
     expect(result.ok).toBe(false);
-    expect(result.errors.join(' ')).toMatch(/은퇴\(예정\) 연령/);
+    expect(result.errors.join(' ')).toContain('은퇴 예정 연령(65세) 이상으로 입력해 주세요.');
   });
 
   it('accepts an expected age exactly at the retirement age (T boundary)', () => {
@@ -1081,7 +1081,7 @@ describe('expense.retirementLumpSumExpenses[] - post-retirement lump-sum expense
   it('rejects an expected age after life expectancy (lifeExpectancy=90)', () => {
     const result = validateInput(makeInput({ expense: { retirementLumpSumExpenses: [item({ expectedAge: 91 })] } }));
     expect(result.ok).toBe(false);
-    expect(result.errors.join(' ')).toMatch(/기대수명/);
+    expect(result.errors.join(' ')).toContain('기대수명(90세) 이하로 입력해 주세요.');
   });
 
   it('accepts an expected age exactly at life expectancy (T boundary)', () => {

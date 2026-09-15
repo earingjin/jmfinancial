@@ -11,18 +11,15 @@ import AppFallbackScreen from './AppFallbackScreen';
 // 처리한다. 이벤트 핸들러 안에서 발생하는 오류도 React ErrorBoundary의 대상이 아니다(React 공식
 // 동작).
 export default class ErrorBoundary extends Component {
-  state = { hasError: false, errorMessage: '' };
+  state = { hasError: false };
 
-  static getDerivedStateFromError(error) {
-    const errorMessage = typeof error?.message === 'string' && error.message.trim()
-      ? error.message.trim().slice(0, 300)
-      : '알 수 없는 렌더링 오류';
-    return { hasError: true, errorMessage };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
   componentDidCatch(error, info) {
-    // 사용자 화면에는 짧은 error.message만 표시하고, 스택 트레이스와 컴포넌트 경로는
-    // 노출하지 않는다. 개발자가 원인을 찾을 전체 정보는 console에만 남긴다.
+    // 사용자 화면에는 error.message·스택·컴포넌트 경로를 노출하지 않는다.
+    // 개발자가 원인을 찾을 전체 정보는 console에만 남긴다.
     // eslint-disable-next-line no-console
     console.error('예상하지 못한 렌더링 오류가 발생했습니다.', error, info?.componentStack);
   }
@@ -32,7 +29,6 @@ export default class ErrorBoundary extends Component {
       return (
         <AppFallbackScreen
           message="예상하지 못한 오류가 발생했습니다. 새로고침 후 다시 시도해 주세요."
-          detail={this.state.errorMessage}
         />
       );
     }

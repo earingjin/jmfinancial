@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../../state/authState';
 
 globalThis.React = React;
-const { default: AuthGate } = await import('./AuthGate');
+const { default: AuthGate, translateAuthError } = await import('./AuthGate');
 
 function renderSignup() {
   return renderToStaticMarkup(
@@ -23,6 +23,11 @@ function renderLogin() {
 }
 
 describe('AuthGate signup consent', () => {
+  it('알려진 인증 오류는 번역하고 알 수 없는 시스템 메시지는 노출하지 않는다', () => {
+    expect(translateAuthError('Invalid login credentials')).toBe('아이디 또는 이메일, 비밀번호가 올바르지 않습니다.');
+    expect(translateAuthError('PostgREST users.email failed')).toBe('인증 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  });
+
   it('shows the concise 30-day data policy above the login form', () => {
     const html = renderLogin();
 
