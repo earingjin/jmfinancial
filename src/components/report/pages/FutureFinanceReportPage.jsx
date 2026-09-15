@@ -1,6 +1,7 @@
 import PageFrame from './PageFrame';
 import SectionBadge from './SectionBadge';
 import { formatNumber, formatPercent, formatWon } from '../../../utils/format';
+import { getPensionSourcePresentation } from '../../summary/summaryPresentation';
 
 export default function FutureFinanceReportPage({ futureFinance, pageNumber, totalPages }) {
   const targets = futureFinance?.targets || [];
@@ -21,7 +22,9 @@ export default function FutureFinanceReportPage({ futureFinance, pageNumber, tot
       {targets.length > 0 ? (
         <>
           <div className="report-future-card-grid">
-            {targets.map((item) => (
+            {targets.map((item) => {
+              const pensionSources = getPensionSourcePresentation(item);
+              return (
               <article className="report-future-card" key={item.age}>
                 <strong>{formatNumber(item.age)}세</strong>
                 <span>연금소득 기준 생활비 충당률</span>
@@ -29,11 +32,22 @@ export default function FutureFinanceReportPage({ futureFinance, pageNumber, tot
                 <dl>
                   <div><dt>현재 생활수준 기준 예상 월 생활비</dt><dd>{item.livingExpense == null ? '-' : formatWon(item.livingExpense)}</dd></div>
                   <div><dt>예상 월 연금소득</dt><dd>{item.pensionIncome == null ? '-' : formatWon(item.pensionIncome)}</dd></div>
+                  {pensionSources.summary && (
+                    <div className="report-future-pension-sources">
+                      <dt>수령 중인 연금</dt>
+                      <dd>
+                        {pensionSources.sources.length > 0
+                          ? pensionSources.sources.map((source) => <span key={source.key}>{source.label} {formatWon(source.amount)}</span>)
+                          : pensionSources.summary}
+                      </dd>
+                    </div>
+                  )}
                   <div><dt>월 차이</dt><dd className={item.balance < 0 ? 'is-shortfall' : ''}>{item.balance == null ? '-' : item.balance < 0 ? `${formatWon(Math.abs(item.balance))} 부족` : `${formatWon(item.balance)} 여유`}</dd></div>
                 </dl>
                 {item.calculationReason && <small>{item.calculationReason}</small>}
               </article>
-            ))}
+              );
+            })}
           </div>
 
           {futureFinance.diagnosis && <div className="report-diagnosis-box">{futureFinance.diagnosis}</div>}

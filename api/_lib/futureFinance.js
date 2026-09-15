@@ -364,6 +364,7 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
       nationalPensionMonthly: round(pension.nationalPension),
       severancePensionMonthly: round(pension.retirementPension),
       personalPensionMonthly: round(pension.personalPension),
+      components: pension.components,
     };
   })();
 
