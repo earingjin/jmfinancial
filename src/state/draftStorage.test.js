@@ -85,9 +85,9 @@ describe('Supabase planner drafts', () => {
     const select = vi.fn(() => ({ single }));
     const upsert = vi.fn(() => ({ select }));
     const client = { from: vi.fn(() => ({ upsert })) };
-    await upsertDraft('user-1', compatibleFormData(), 2, client);
+    await upsertDraft('user-1', compatibleFormData(), 2, 'expense-total', client);
     expect(client.from).toHaveBeenCalledWith('planner_drafts');
-    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1', step_index: 2, schema_version: DRAFT_SCHEMA_VERSION }), { onConflict: 'user_id' });
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1', step_index: 2, screen_id: 'expense-total', schema_version: DRAFT_SCHEMA_VERSION }), { onConflict: 'user_id' });
     expect(upsert.mock.calls[0][0]).not.toHaveProperty('updated_at');
   });
 
@@ -117,6 +117,8 @@ describe('Supabase planner drafts', () => {
     expect(validateDraft({ schema_version: 'old', step_index: 0, form_data: compatibleFormData() }).valid).toBe(false);
     expect(validateDraft({ schema_version: DRAFT_SCHEMA_VERSION, step_index: 6, form_data: compatibleFormData() }).valid).toBe(false);
     expect(validateDraft({ schema_version: DRAFT_SCHEMA_VERSION, step_index: 0, form_data: { basic: {} } }).valid).toBe(false);
+    expect(validateDraft({ schema_version: DRAFT_SCHEMA_VERSION, step_index: 0, screen_id: null, form_data: compatibleFormData() }).valid).toBe(true);
+    expect(validateDraft({ schema_version: DRAFT_SCHEMA_VERSION, step_index: 0, screen_id: 42, form_data: compatibleFormData() }).valid).toBe(false);
   });
 
   it('migrates a compatible legacy draft once and deletes local financial data only after success', async () => {
@@ -152,11 +154,48 @@ describe('Supabase planner drafts', () => {
     expect(persisted).toEqual([1, 2]);
   });
 
+  it('stops queued saves and waits for the in-flight save before draft deletion can continue', async () => {
+    let finishFirst;
+    const persisted = [];
+    const saver = createLatestDraftSaver({
+      persist: (snapshot) => new Promise((resolve) => {
+        persisted.push(snapshot.stepIndex);
+        finishFirst = resolve;
+      }),
+      onSaved: vi.fn(),
+      onError: vi.fn(),
+    });
+    saver.save({ stepIndex: 1 });
+    saver.save({ stepIndex: 2 });
+    const stopping = saver.stop();
+    finishFirst({ updated_at: 'now' });
+    await stopping;
+    await saver.save({ stepIndex: 3 });
+    expect(persisted).toEqual([1]);
+  });
+
+  it('can resume after a failed deletion without losing future saves', async () => {
+    const persisted = [];
+    const saver = createLatestDraftSaver({
+      persist: async (snapshot) => {
+        persisted.push(snapshot.stepIndex);
+        return { updated_at: 'now' };
+      },
+      onSaved: vi.fn(),
+      onError: vi.fn(),
+    });
+    await saver.stop();
+    await saver.save({ stepIndex: 1 });
+    saver.resume();
+    await saver.save({ stepIndex: 2 });
+    expect(persisted).toEqual([2]);
+  });
+
   it('surfaces save failures without mutating the submitted form data', async () => {
     const formData = compatibleFormData();
     const original = structuredClone(formData);
     const client = { from: () => ({ upsert: () => ({ select: () => ({ single: async () => ({ data: null, error: new Error('offline') }) }) }) }) };
-    await expect(upsertDraft('user-1', formData, 0, client)).rejects.toThrow('offline');
+    await expect(upsertDraft('user-1', formData, 0, null, client)).rejects.toThrow('offline');
     expect(formData).toEqual(original);
   });
 });

@@ -112,7 +112,7 @@ describe('submitAfterDraftSave (A5)', () => {
 
     await submitAfterDraftSave(saveCurrentDraft, 3, onSubmit, formData);
 
-    expect(saveCurrentDraft).toHaveBeenCalledWith(3);
+    expect(saveCurrentDraft).toHaveBeenCalledWith(3, null);
     expect(onSubmit).toHaveBeenCalledWith(formData);
   });
 

@@ -74,6 +74,14 @@ function seed(hasSpouse) {
   data.assets.pensionAssetsBreakdown.selfRetirementPension = 1000;
   data.assets.pensionAssetsBreakdown.spouseRetirementPension = hasSpouse ? 1000 : '';
   data.expense.retirementLivingCost = 300;
+  Object.assign(data.assets.currentLivingCost, { monthly: 200, annual: 2400 });
+  Object.assign(data.assets.insurance, { monthlyPremium: 10, coverageAmount: 1000 });
+  Object.assign(data.assets.savingsPlan, { monthly: 30, annual: 360 });
+  Object.assign(data.assets.liquidAssets, { total: 1000, simpleTotal: 1000, simpleInputStored: true });
+  Object.assign(data.assets.financialAssets, { total: 2000, simpleTotal: 2000, simpleInputStored: true });
+  Object.assign(data.assets.realEstateAssets, { total: 3000, simpleTotal: 3000, simpleInputStored: true });
+  Object.assign(data.assets.otherAssets, { total: 100, simpleTotal: 100, simpleInputStored: true });
+  Object.assign(data.assets.debtStatus, { totalBalance: 500, monthlyRepayment: 5, simpleTotalBalance: 500, simpleMonthlyRepayment: 5, simpleInputStored: true });
   return data;
 }
 async function calculate(data) {
@@ -88,7 +96,7 @@ async function mount(data, initialStep = 0, draft = null) {
   await flush(() => root.render(
     <FormProvider key={++mountKey} userId="local-test" initialDraft={draft || { form_data: data, step_index: initialStep }}>
       <Probe />
-      <div className="app-main"><Wizard initialStep={initialStep} onSubmit={async (latest) => {
+      <div className="app-main"><Wizard initialStep={initialStep} initialScreenId={draft?.screen_id ?? null} onSubmit={async (latest) => {
         submitted = structuredClone(latest);
         result = await calculate(latest);
         await completePlannerSubmission({ formData: latest, data: result, submissionId: 'local-test', resultSaved: false }, { id: 'local-test' });
@@ -162,10 +170,11 @@ async function run() {
   check(allVisible('input').some((node) => node.value === '4,321'), '왕복 후 저축 누적액 표시');
   messages.push('퇴직연금↔자산, 저축↔자산 연동·중복 합산 방지');
 
-  await flush(() => context.saveCurrentDraft(2));
+  await flush(() => context.saveCurrentDraft(2, 'current'));
   const draft = await fetchDraft('local-test');
-  check(!Object.hasOwn(draft, 'screenId'), '저장 스키마 확장 없음');
+  check(Object.hasOwn(draft, 'screen_id'), '세부 화면 위치 저장');
   await mount(null, draft.step_index, draft);
+  equal(title(), '현재 저축', '저장된 세부 화면 위치 복원');
   for (const [, path, value] of edits) equal(getIn(context.formData, path), value, '임시저장 복원 연금 수정값');
   await area('순자산');
   await click(button('진단 결과 보기'));
