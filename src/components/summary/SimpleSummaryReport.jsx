@@ -1288,6 +1288,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
           <p className="ss-guidance">80세 이후에는 현재 시점 기준 전망 대상 연령이 없습니다.</p>
         ) : (
           <>
+            {/* oxlint-disable-next-line no-constant-binary-expression */}
             {false && <div className="future-card-grid">
               {future.targets.map((item) => (
                 <article className={`future-card future-card--${item.status}`} key={item.age}>

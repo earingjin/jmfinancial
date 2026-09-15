@@ -91,6 +91,7 @@ export function NoticeModal({ title, description, confirmLabel = '확인', onClo
   );
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function useConfirmRequest() {
   const [options, setOptions] = useState(null);
   const resolverRef = useRef(null);

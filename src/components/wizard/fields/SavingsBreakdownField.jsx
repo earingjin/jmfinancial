@@ -25,11 +25,13 @@ const PENSION_DETAIL_KEYS = ['variableAnnuity', 'pensionSavingsAccount', 'irp', 
 // 데이터) 기존처럼 월 저축액이 양수인 항목만 선택된 것으로 복원한다 - 과거 사용자의 저축 항목이
 // 갑자기 화면에서 사라지지 않게 하기 위함이다. api/_lib/validate.js·wizardRequiredFields.js도
 // 동일한 규칙을 각자 독립적으로 구현해 서버가 이 판정을 프론트(openKeys)에 의존하지 않게 한다.
+// oxlint-disable-next-line react/only-export-components
 export function isCategorySelected(selectedCategories, breakdown, key) {
   if (Array.isArray(selectedCategories)) return selectedCategories.includes(key);
   return Number(breakdown?.[key]?.monthly) > 0;
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function selectedKeysFrom(selectedCategories, breakdown, categoryKeys) {
   return categoryKeys.filter((key) => isCategorySelected(selectedCategories, breakdown, key));
 }

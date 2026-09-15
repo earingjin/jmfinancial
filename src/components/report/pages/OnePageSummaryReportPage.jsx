@@ -41,6 +41,12 @@ function displayIndicator(indicator) {
     : formatPercent(indicator.value);
 }
 
+function monthlyCoverageResultLabel(result) {
+  if (result?.includes('부족')) return '매월 부족한 금액';
+  if (result?.includes('여유')) return '매월 여유 금액';
+  return '월 생활비 충당 결과';
+}
+
 function peerStatus(metric) {
   if (!metric) return '비교 데이터 부족';
   return metric.percentileLabel || metric.comparisonLabel || '비교 데이터 부족';
@@ -139,7 +145,6 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
   const {
     retirementStatus,
     retirementStatusPresentation: retirementPresentation,
-    retirementMonthlyCoverage,
     nationalPensionMonthlyCoverage,
     nationalPensionCoverageFallbackMessage,
   } = getRetirementSummaryPresentation(retirement, futureFinance);
@@ -198,35 +203,31 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
                 <strong>{retirementPresentation.headline}</strong>
               </div>
             </div>
-            <div className="one-summary-monthly-coverage-set">
-              <div className="one-summary-monthly-coverage">
-                <span>월 생활비 충당 <i aria-hidden="true">·</i> 은퇴 시점 기준</span>
-                {retirementMonthlyCoverage.calculable ? (
-                  <>
-                    <small><b>은퇴 목표생활비(물가 반영)</b>{displayWon(retirementMonthlyCoverage.livingCost)}</small>
-                    <small className="one-summary-pension-income"><b>은퇴 시점 예상 연금소득</b><span><em>{displayWon(retirementMonthlyCoverage.pensionIncome)}</em>{retirementMonthlyCoverage.pensionSources?.summary && <i>{retirementMonthlyCoverage.pensionSources.summary}</i>}</span></small>
-                  </>
-                ) : <small className="one-summary-monthly-coverage-reason">{retirementMonthlyCoverage.reason}</small>}
-                <strong>→ {retirementMonthlyCoverage.result}</strong>
+            <div className="one-summary-retirement-coverage">
+              <div className="one-summary-retirement-coverage-heading">
+                <h3>월 생활비 충당</h3>
+                <span>국민연금 수령 후 기준</span>
               </div>
-              <div className="one-summary-monthly-coverage">
-                <span>월 생활비 충당 <i aria-hidden="true">·</i> 국민연금 수령 후 기준</span>
-                {nationalPensionMonthlyCoverage.calculable ? (
-                  <>
-                    <small><b>은퇴 목표생활비(물가 반영)</b>{displayWon(nationalPensionMonthlyCoverage.livingCost)}</small>
-                    <small className="one-summary-pension-income"><b>예상 연금소득</b><span><em>{displayWon(nationalPensionMonthlyCoverage.pensionIncome)}</em>{nationalPensionMonthlyCoverage.pensionSources?.summary && <i>{nationalPensionMonthlyCoverage.pensionSources.summary}</i>}</span></small>
-                    <small><b>기준 시점</b>본인 {formatNumber(futureFinance.nationalPensionStartSnapshot?.age)}세</small>
-                  </>
-                ) : (
-                  <>
-                    <small className="one-summary-monthly-coverage-reason">{nationalPensionCoverageFallbackMessage}</small>
-                    {futureFinance.nationalPensionStartSnapshot && (
-                      <small><b>기준 시점</b>{Number.isFinite(futureFinance.nationalPensionStartSnapshot.age) ? `본인 ${formatNumber(futureFinance.nationalPensionStartSnapshot.age)}세` : '확인 필요'}</small>
-                    )}
-                  </>
-                )}
-                <strong>→ {nationalPensionMonthlyCoverage.result}</strong>
+              {nationalPensionMonthlyCoverage.calculable ? (
+                <div className="one-summary-retirement-coverage-values">
+                  <div><span>은퇴 목표생활비(물가 반영)</span><strong>{displayWon(nationalPensionMonthlyCoverage.livingCost)}</strong></div>
+                  <div>
+                    <span>예상 연금소득</span>
+                    <strong>{displayWon(nationalPensionMonthlyCoverage.pensionIncome)}</strong>
+                    {nationalPensionMonthlyCoverage.pensionSources?.summary && <small>{nationalPensionMonthlyCoverage.pensionSources.summary}</small>}
+                  </div>
+                </div>
+              ) : <p className="one-summary-retirement-coverage-reason">{nationalPensionCoverageFallbackMessage}</p>}
+              <div className="one-summary-retirement-coverage-result">
+                <span>{monthlyCoverageResultLabel(nationalPensionMonthlyCoverage.result)}</span>
+                <strong>{nationalPensionMonthlyCoverage.result.replace(/^월\s*/, '')}</strong>
               </div>
+              {futureFinance.nationalPensionStartSnapshot && (
+                <div className="one-summary-retirement-coverage-basis">
+                  <span>기준 시점</span>
+                  <strong>{Number.isFinite(futureFinance.nationalPensionStartSnapshot.age) ? `본인 ${formatNumber(futureFinance.nationalPensionStartSnapshot.age)}세` : '확인 필요'}</strong>
+                </div>
+              )}
             </div>
           </article>
         </div>

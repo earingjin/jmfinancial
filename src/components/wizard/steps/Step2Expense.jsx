@@ -115,7 +115,6 @@ export default function Step2Expense({ subStepIndex }) {
       : null;
   const retirementLivingCostTotal =
     retirementLivingMonths != null ? retirementLivingCost * retirementLivingMonths : null;
-  const retirementLumpSumExpenses = getIn(formData, 'expense.retirementLumpSumExpenses') || [];
   const showSubStep = (index) => subStepIndex == null || subStepIndex === index;
 
   return (

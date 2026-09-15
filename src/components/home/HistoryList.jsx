@@ -17,6 +17,7 @@ function formatHistoryDate(iso) {
 // { ok, error } 형태로 정규화한다. handleSeveranceType(Step1Income.jsx)과 같은 이유로
 // top-level에 둔다 - 클릭 시뮬레이션이 가능한 테스트 환경이 없어 fetch/세션 결과만 바꿔가며
 // 성공·실패 경로를 단위 테스트하기 위함이다.
+// oxlint-disable-next-line react/only-export-components
 export async function deletePlannerResult(id, session) {
   if (!session) return { ok: false, error: '로그인 세션을 확인할 수 없어 서버에서 삭제하지 못했습니다.' };
   const response = await fetch(`/api/delete-result?id=${encodeURIComponent(id)}`, {
@@ -31,6 +32,7 @@ export async function deletePlannerResult(id, session) {
 // 삭제 실패 시 화면에서 먼저 지웠던 행을 되돌린다. 그 사이 같은 행이 이미 다시 들어와 있으면
 // (예: 이전 실패 복원이 먼저 반영된 경우) 중복 추가하지 않고, 없으면 원래 정렬 기준
 // (created_at 내림차순)에 맞는 위치로 되돌려 놓는다 - 다른 행의 성공한 삭제 결과는 건드리지 않는다.
+// oxlint-disable-next-line react/only-export-components
 export function restoreRowAfterFailedDelete(rows, removedRow) {
   if (!removedRow || rows.some((row) => row.id === removedRow.id)) return rows;
   return [...rows, removedRow].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));

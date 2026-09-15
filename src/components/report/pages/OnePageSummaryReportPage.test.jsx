@@ -144,7 +144,7 @@ describe('OnePageSummaryReportPage', () => {
       ] },
     }];
 
-    expect(render(result)).toContain('배우자 국민연금 포함');
+    expect(render(result)).not.toContain('배우자 국민연금 포함');
     expect(renderMobileRetirement(result)).toContain('배우자 국민연금 포함');
   });
 
@@ -167,8 +167,8 @@ describe('OnePageSummaryReportPage', () => {
 
     const html = render(result);
     const mobileHtml = renderMobileRetirement(result);
-    expect(html).toContain('<em>180만원</em><i>본인 국민연금 · 본인 개인연금 포함</i>');
-    expect(html).toContain('기준 시점</b>본인 67세');
+    expect(html).toContain('<strong>180만원</strong><small>본인 국민연금 · 본인 개인연금 포함</small>');
+    expect(html).toContain('<span>기준 시점</span><strong>본인 67세</strong>');
     expect(mobileHtml).toContain('본인 국민연금 · 본인 개인연금 포함');
     expect(mobileHtml).toContain('기준 시점</span><b>본인 67세</b>');
   });
@@ -197,17 +197,16 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).toContain('Part 2. 은퇴');
     expect(html).toContain('예상 자산 유지 기간</span><strong>기대수명까지 유지</strong>');
     expect(html).not.toContain('현재 계획을 유지하면 기대수명까지 준비자산이 유지될 것으로 예상됩니다.');
-    expect(html).toContain('월 생활비 충당 <i aria-hidden="true">·</i> 은퇴 시점 기준');
-    expect(html).toContain('은퇴 목표생활비(물가 반영)</b>420만원');
-    expect(html).toContain('은퇴 시점 예상 연금소득</b><span><em>350만원</em>');
-    expect(html).toContain('<strong>→ 월 70만원 부족</strong>');
-    expect(html).toContain('월 생활비 충당 <i aria-hidden="true">·</i> 국민연금 수령 후 기준');
-    expect(html).toContain('기준 시점</b>본인 65세');
+    expect(html).not.toContain('월 생활비 충당 <i aria-hidden="true">·</i> 은퇴 시점 기준');
+    expect(html).not.toContain('은퇴 시점 예상 연금소득');
+    expect(html).toContain('<h3>월 생활비 충당</h3><span>국민연금 수령 후 기준</span>');
+    expect(html).toContain('<span>기준 시점</span><strong>본인 65세</strong>');
     expect(html).toContain('본인 국민연금 · 본인 퇴직연금 포함');
+    expect(html).toContain('<span>매월 부족한 금액</span><strong>70만원 부족</strong>');
     ['현재 계획을 유지하면 기대수명까지', '은퇴 목표생활비(물가 반영)', '420만원', '350만원', '월 70만원 부족', '65세'].forEach((text) => {
       expect(mobileHtml).toContain(text);
     });
-    expect((html.match(/one-summary-monthly-coverage"/g) || [])).toHaveLength(2);
+    expect(html).not.toContain('one-summary-monthly-coverage');
     expect(html).not.toContain('현재 월 생활비');
     expect(html).toContain('진단 당시의 재무상태와 은퇴 준비상태를 한 장에 담았습니다.');
   });
@@ -267,7 +266,7 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).toContain('예상 자산 유지 기간</span><strong>약 76세</strong>');
     expect(mobileHtml).toContain('약 76세');
     expect(html).not.toContain('현재 계획을 유지하면 준비자산이 소진될 것으로 예상됩니다.');
-    expect(html).toContain('<strong>→ 월 70만원 부족</strong>');
+    expect(html).toContain('<strong>70만원 부족</strong>');
   });
 
   it('예상 연금소득이 목표 생활비보다 크면 기존 값의 표시용 차이를 여유로 보여준다', () => {
@@ -279,7 +278,7 @@ describe('OnePageSummaryReportPage', () => {
       calculable: true,
       calculationReason: null,
     }];
-    expect(render(result)).toContain('<strong>→ 월 50만원 여유</strong>');
+    expect(render(result)).toContain('<span>매월 여유 금액</span><strong>50만원 여유</strong>');
     expect(renderMobileRetirement(result)).toContain('→ 월 50만원 여유');
   });
 
@@ -292,7 +291,7 @@ describe('OnePageSummaryReportPage', () => {
       calculable: true,
       calculationReason: null,
     }];
-    expect(render(result)).toContain('<strong>→ 월 생활비 충당 가능</strong>');
+    expect(render(result)).not.toContain('월 생활비 충당 가능');
     expect(renderMobileRetirement(result)).toContain('→ 월 생활비 충당 가능');
   });
 
@@ -312,10 +311,10 @@ describe('OnePageSummaryReportPage', () => {
     };
     const html = render(result);
     const mobileHtml = renderMobileRetirement(result);
-    expect(html).toContain('<strong>→ 확인 필요</strong>');
+    expect(html).toContain('<strong>확인 필요</strong>');
     expect(html).toContain('국민연금 가입기간 확인 필요');
-    expect((html.match(/국민연금 향후 가입기간을 확정할 수 없음/g) || [])).toHaveLength(1);
-    expect(html).toContain('기준 시점</b>본인 65세');
+    expect((html.match(/국민연금 향후 가입기간을 확정할 수 없음/g) || [])).toHaveLength(0);
+    expect(html).toContain('<span>기준 시점</span><strong>본인 65세</strong>');
     expect(html).not.toContain('월 0만원 부족');
     expect(mobileHtml).toContain('국민연금 가입기간 확인 필요');
     expect(mobileHtml).toContain('기준 시점</span><b>본인 65세</b>');
@@ -336,9 +335,9 @@ describe('OnePageSummaryReportPage', () => {
     };
     const html = render(result);
     const mobileHtml = renderMobileRetirement(result);
-    expect(html).toContain('예상 연금소득</b><span><em>0만원</em><i>해당 시점에 수령 중인 연금 없음</i>');
+    expect(html).toContain('<span>예상 연금소득</span><strong>0만원</strong><small>해당 시점에 수령 중인 연금 없음</small>');
     expect(mobileHtml).toContain('해당 시점에 수령 중인 연금 없음');
-    expect(html).toContain('<strong>→ 월 420만원 부족</strong>');
+    expect(html).toContain('<strong>420만원 부족</strong>');
     expect(html).not.toContain('연금정보 확인 필요');
     expect(mobileHtml).toContain('예상 연금소득</span><b>0만원</b>');
     expect(mobileHtml).toContain('→ 월 420만원 부족');
@@ -355,7 +354,7 @@ describe('OnePageSummaryReportPage', () => {
     const html = render(result);
     const mobileHtml = renderMobileRetirement(result);
     expect(html).toContain('국민연금 수령 시점 확인 필요');
-    expect(html).toContain('기준 시점</b>확인 필요');
+    expect(html).toContain('<span>기준 시점</span><strong>확인 필요</strong>');
     expect(mobileHtml).toContain('국민연금 수령 시점 확인 필요');
     expect(mobileHtml).toContain('기준 시점</span><b>확인 필요</b>');
   });
@@ -366,8 +365,8 @@ describe('OnePageSummaryReportPage', () => {
     const html = render(result);
     const mobileHtml = renderMobileRetirement(result);
     expect(html).toContain('최신 기준으로 다시 진단하면 확인할 수 있습니다');
-    expect(html).toContain('<strong>→ 확인 필요</strong>');
-    expect(html).not.toContain('기준 시점</b>확인 필요');
+    expect(html).toContain('<strong>확인 필요</strong>');
+    expect(html).not.toContain('<span>기준 시점</span>');
     expect(mobileHtml).toContain('최신 기준으로 다시 진단하면 확인할 수 있습니다');
     expect(mobileHtml).not.toContain('기준 시점</span>');
   });
