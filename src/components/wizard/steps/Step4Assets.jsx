@@ -60,6 +60,17 @@ const PENSION_ASSET_CATEGORIES = [
 const PENSION_BREAKDOWN_NUMERIC_KEYS = ['variableAnnuity', 'pensionSavingsAccount', 'irp', 'other'];
 const RETIREMENT_PENSION_ASSET_KEYS = ['selfRetirementPension', 'spouseRetirementPension'];
 
+// 이미 열린 패널은 그대로 두고, 다른 화면에서 연동되어 새로 값이 생긴 항목만 펼친다.
+// 패널을 접는 UI 상태와 실제 자산 값은 서로 독립적으로 유지한다.
+// oxlint-disable-next-line react/only-export-components
+export function includePopulatedAssetKeys(openKeys, categories, values, hasOtherItems = false) {
+  const next = new Set(openKeys);
+  categories.forEach(({ key }) => {
+    if (Number(values?.[key]) > 0 || (key === 'other' && hasOtherItems)) next.add(key);
+  });
+  return next.size === openKeys.size ? openKeys : next;
+}
+
 export default function Step4Assets({ subStepIndex }) {
   const { formData, setField } = useFormData();
   const hasSpouse = getIn(formData, 'basic.hasSpouse') === true;
@@ -124,6 +135,21 @@ export default function Step4Assets({ subStepIndex }) {
     return initial;
   });
 
+  const financialStocks = getIn(formData, 'assets.financialAssets.stocks');
+  const financialFunds = getIn(formData, 'assets.financialAssets.funds');
+  const financialBonds = getIn(formData, 'assets.financialAssets.bonds');
+  const financialOther = getIn(formData, 'assets.financialAssets.other');
+  const financialOtherItems = getIn(formData, 'assets.financialAssets.otherItems') || [];
+
+  useEffect(() => {
+    setOpenFinancialKeys((prev) => includePopulatedAssetKeys(
+      prev,
+      FINANCIAL_ASSET_CATEGORIES,
+      { stocks: financialStocks, funds: financialFunds, bonds: financialBonds, other: financialOther },
+      financialOtherItems.length > 0
+    ));
+  }, [financialStocks, financialFunds, financialBonds, financialOther, financialOtherItems.length]);
+
   const toggleFinancialKey = (key) => {
     setOpenFinancialKeys((prev) => {
       const next = new Set(prev);
@@ -152,6 +178,22 @@ export default function Step4Assets({ subStepIndex }) {
     });
     return initial;
   });
+
+  const pensionBreakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
+  const variableAnnuity = pensionBreakdown.variableAnnuity;
+  const pensionSavingsAccount = pensionBreakdown.pensionSavingsAccount;
+  const irp = pensionBreakdown.irp;
+  const pensionOther = pensionBreakdown.other;
+  const pensionOtherItems = getIn(formData, 'assets.pensionAssetsBreakdown.otherItems') || [];
+
+  useEffect(() => {
+    setOpenPensionKeys((prev) => includePopulatedAssetKeys(
+      prev,
+      PENSION_ASSET_CATEGORIES,
+      { variableAnnuity, pensionSavingsAccount, irp, other: pensionOther },
+      pensionOtherItems.length > 0
+    ));
+  }, [variableAnnuity, pensionSavingsAccount, irp, pensionOther, pensionOtherItems.length]);
 
   const togglePensionKey = (key) => {
     setOpenPensionKeys((prev) => {
@@ -182,7 +224,6 @@ export default function Step4Assets({ subStepIndex }) {
 
   // "기타" 연금자산은 종류별(name)로 나눠 입력받고, 합계만 pensionAssetsBreakdown.other에 반영한다.
   // 그 합계 변경이 다시 4개 항목 합계(assets.pensionAssets)에도 반영되도록 함께 재계산한다.
-  const pensionOtherItems = getIn(formData, 'assets.pensionAssetsBreakdown.otherItems') || [];
   const pensionOtherTotal = pensionOtherItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
   const hasPensionOtherInput = pensionOtherItems.some((item) => item?.amount !== '' && item?.amount != null);
 
@@ -191,7 +232,6 @@ export default function Step4Assets({ subStepIndex }) {
     setField('assets.pensionAssetsBreakdown.other', hasPensionOtherInput ? pensionOtherTotal : '');
   }, [hasPensionOtherInput, pensionMode, pensionOtherTotal, setField]);
 
-  const pensionBreakdown = getIn(formData, 'assets.pensionAssetsBreakdown') || {};
   const activeRetirementPensionAssetKeys = hasSpouse
     ? RETIREMENT_PENSION_ASSET_KEYS
     : ['selfRetirementPension'];
@@ -212,7 +252,6 @@ export default function Step4Assets({ subStepIndex }) {
   }, [hasPensionDetailedInput, pensionAssetsTotal, pensionMode, setField]);
 
   // "기타 금융자산"도 종류별로 나눠 입력받고, 합계만 financialAssets.other에 반영한다.
-  const financialOtherItems = getIn(formData, 'assets.financialAssets.otherItems') || [];
   const financialOtherTotal = financialOtherItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
   const hasFinancialOtherInput = financialOtherItems.some((item) => item?.amount !== '' && item?.amount != null);
 

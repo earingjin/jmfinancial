@@ -6,11 +6,73 @@ vi.mock('../../../lib/supabaseClient', () => ({ supabase: {} }));
 
 import { FormContext } from '../../../state/formState';
 import { initialFormData } from '../../../state/initialFormData';
-import Step4Assets from './Step4Assets';
+import { includePopulatedCategoryKeys } from '../fields/CategoryBreakdownField';
+import Step4Assets, { includePopulatedAssetKeys } from './Step4Assets';
 
 globalThis.React = React;
 
+describe('Step4Assets linked asset panel state', () => {
+  const categories = [
+    { key: 'variableAnnuity' },
+    { key: 'pensionSavingsAccount' },
+    { key: 'irp' },
+    { key: 'other' },
+  ];
+
+  it('opens linked items whose values appeared after the asset step mounted', () => {
+    const result = includePopulatedAssetKeys(new Set(), categories, {
+      variableAnnuity: 3000,
+      pensionSavingsAccount: 500,
+      irp: 700,
+    });
+
+    expect([...result]).toEqual(['variableAnnuity', 'pensionSavingsAccount', 'irp']);
+  });
+
+  it('does not remove a populated value when its panel is closed', () => {
+    const values = { variableAnnuity: 3000 };
+    const closed = new Set();
+
+    expect(values.variableAnnuity).toBe(3000);
+    expect(includePopulatedAssetKeys(closed, categories, values).has('variableAnnuity')).toBe(true);
+  });
+
+  it('applies the same late-linked-value behavior to stocks', () => {
+    const result = includePopulatedAssetKeys(
+      new Set(),
+      [{ key: 'stocks' }, { key: 'funds' }, { key: 'bonds' }, { key: 'other' }],
+      { stocks: 1200 }
+    );
+
+    expect(result.has('stocks')).toBe(true);
+  });
+
+  it('opens late-linked liquid preset items without closing an existing panel', () => {
+    const result = includePopulatedCategoryKeys(new Set(['deposit']), 'savings|subscription');
+
+    expect([...result]).toEqual(['deposit', 'savings', 'subscription']);
+  });
+});
+
 describe('Step4Assets input mode selectors', () => {
+  it('shows a linked stock amount and its detailed financial total together', () => {
+    const formData = structuredClone(initialFormData);
+    Object.assign(formData.assets.financialAssets, {
+      inputMode: 'detailed', stocks: 4000, total: 4000,
+    });
+
+    const html = renderToStaticMarkup(
+      <FormContext.Provider value={{ formData, setField: vi.fn() }}>
+        <Step4Assets subStepIndex={1} />
+      </FormContext.Provider>
+    );
+
+    const financialSection = html.slice(html.indexOf('금융자산</h3>'), html.indexOf('연금자산</h3>'));
+    expect(financialSection).toContain('value="4,000"');
+    expect(financialSection).toContain('<span class="field-navy-label">총액은</span>');
+    expect(financialSection).toContain('<span>4,000만원</span>');
+  });
+
   it('shows separate retirement-pension balances and the asset/income treatment guidance', () => {
     const formData = structuredClone(initialFormData);
     formData.basic.hasSpouse = true;
