@@ -11,7 +11,7 @@ import AppCopyright from './components/AppCopyright';
 import WebBrandLogo from './components/WebBrandLogo';
 import { deobfuscate } from './utils/obfuscate';
 import { supabase } from './lib/supabaseClient';
-import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
+import { clearDraftSessionCache, deleteDraft, fetchDraftOnce, MAX_DRAFT_STEP_INDEX, migrateLegacyDraft, readLegacyLocalDraft, removeLegacyLocalDraft, validateDraft } from './state/draftStorage';
 import { resetFormSessionWithServerCleanup, shouldResetFormSession } from './state/formSessionPolicy';
 import { completePlannerSubmission, createSubmissionId, hasSavedPlannerResults } from './services/plannerSubmission';
 import { requestCalculation } from './services/calculationApi';
@@ -46,6 +46,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   // 위저드에서 홈으로 나갔다가 "자산진단 시작하기"로 되돌아와도 마지막으로 입력하던 단계를
   // 그대로 이어가도록, Wizard가 언마운트/재마운트되어도 여기서 마지막 단계를 계속 들고 있는다.
   const [wizardStep, setWizardStep] = useState(initialDraft?.step_index || 0);
+  const [wizardScreenId, setWizardScreenId] = useState(initialDraft?.screen_id ?? null);
   // 지금 보고 있는 result가 방금 새로 진단한 것인지('new'), 과거 목록에서 열어본 것인지('history')
   // 구분한다 - 요약 화면의 "뒤로가기"가 어디로 돌아가야 하는지를 이 값으로 분기한다.
   const [resultSource, setResultSource] = useState('new');
@@ -70,6 +71,15 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   // 나갔다가 다시 "자산진단 시작하기"를 누른 경우(미완성 이어쓰기)는 그대로 이어가야 하므로
   // 여기 해당하지 않는다.
   const formSessionConsumedRef = useRef(false);
+  const draftControllerRef = useRef(null);
+
+  const stopDraftSaving = async () => {
+    await draftControllerRef.current?.shutdownDraftSaving();
+  };
+
+  const resumeDraftSaving = () => {
+    draftControllerRef.current?.resumeDraftSaving();
+  };
 
   // 완료된(또는 실패한) 현재 formData 세션을 버리고 완전히 새 진단용 세션을 시작한다.
   // "새 진단 시작"(자산진단 시작하기 - 완료 후)과 "다시 입력하기"/"처음부터 다시 입력하기"
@@ -78,6 +88,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   // 지워진 경우는 그냥 무해한 재시도가 된다). 삭제가 실패하면 false를 반환하고 지금 formData·
   // 결과 화면은 그대로 둔다 - 호출부가 에러만 안내한다.
   const resetFormSession = async () => {
+    await stopDraftSaving();
     const { ok } = await resetFormSessionWithServerCleanup({
       userId: user.id,
       deleteDraft,
@@ -86,8 +97,10 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         setFormSessionDraft(null);
         setFormSessionKey((key) => key + 1);
         setWizardStep(0);
+        setWizardScreenId(null);
       },
     });
+    if (!ok) resumeDraftSaving();
     return ok;
   };
 
@@ -102,6 +115,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         setResult(completedResult);
         setResultInput(pending.formData);
         pendingSubmissionRef.current = null;
+        draftControllerRef.current?.markDraftDeleted();
         // 이 formData로 진단이 완료·저장됐다 - 다음 "자산진단 시작하기"는 새 세션으로 리셋해야 한다.
         formSessionConsumedRef.current = true;
         setPhase('summary');
@@ -191,7 +205,19 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setPhase('report');
   };
 
-  const goHome = () => setPhase('home');
+  const goHome = async () => {
+    if (phase === 'wizard' && draftControllerRef.current?.hasWorkingDraft()) {
+      await draftControllerRef.current.saveCurrentDraft(wizardStep, wizardScreenId).catch(() => {});
+    }
+    setPhase('home');
+  };
+
+  const signOutPreservingDraft = async () => {
+    if (draftControllerRef.current?.hasWorkingDraft()) {
+      await draftControllerRef.current.saveCurrentDraft(wizardStep, wizardScreenId).catch(() => {});
+    }
+    return signOut();
+  };
 
   // "자산진단 시작하기"(홈/히스토리) - 위저드를 다 채우기 전에 홈으로 나왔다가 돌아온 경우는
   // 같은 formData를 이어서 채워야 하므로 그대로 두고, 직전 진단이 이미 완료·저장된 뒤라면
@@ -243,19 +269,34 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   };
 
   // 과거 결과 화면의 "수정하기" - 그 결과를 만들었던 원본 입력값을 위저드에 다시 불러와
-  // 마지막 단계부터 이어서 수정할 수 있게 한다. 지금 진행 중이던 별도의 미완성 초안이 있어도
-  // 사용자가 명시적으로 과거 결과를 편집하겠다고 선택한 것이므로 그대로 덮어쓴다(다음 편집
-  // 시 자동저장이 서버 draft도 이 내용으로 갱신한다). handleSubmit이 제출 시 resultSource를
+  // 마지막 단계부터 이어서 수정할 수 있게 한다. 별도의 작성 중 초안이 있으면 명시적 교체 확인 후
+  // 이전 저장기를 완전히 멈추고 서버 초안을 삭제한 다음 편집 세션을 시작한다. handleSubmit이 제출 시 resultSource를
   // 'new'로 되돌리므로, 수정 후 다시 제출하면 새 진단 결과로 저장되고 "뒤로가기"도 정상적으로
   // 위저드로 돌아간다(overwrite가 아니라 새 결과 추가 - 기존 "새 결과 수정 후 재제출"과 동일한 동작).
   const editHistoryResult = () => {
     if (!historyInput) return;
-    formSessionConsumedRef.current = false;
-    setFormSessionDraft({ form_data: historyInput, step_index: null, updated_at: null });
-    setFormSessionKey((key) => key + 1);
-    setWizardStep(0);
-    setWizardResume(true);
-    setPhase('wizard');
+    const replaceDraft = async () => {
+      const hasWorkingDraft = draftControllerRef.current?.hasWorkingDraft() ?? false;
+      if (hasWorkingDraft && !window.confirm('작성 중인 진단을 삭제하고 이 과거 결과를 수정하시겠습니까?')) return;
+      await stopDraftSaving();
+      try {
+        if (hasWorkingDraft) await deleteDraft(user.id);
+      } catch {
+        resumeDraftSaving();
+        setErrorMessage('작성 중인 초안을 삭제하지 못해 과거 결과 수정을 시작할 수 없습니다. 다시 시도해 주세요.');
+        setPhase('error');
+        return;
+      }
+      const editStep = MAX_DRAFT_STEP_INDEX;
+      formSessionConsumedRef.current = false;
+      setFormSessionDraft({ form_data: historyInput, step_index: editStep, screen_id: 'net-worth', updated_at: null });
+      setFormSessionKey((key) => key + 1);
+      setWizardStep(editStep);
+      setWizardScreenId('net-worth');
+      setWizardResume(true);
+      setPhase('wizard');
+    };
+    void replaceDraft();
   };
 
   // 상세/재무건강 리포트에서 요약 화면으로 "바로" 돌아왔을 때만 저장해둔 스크롤 위치로
@@ -293,7 +334,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
                 </button>
               </>
             )}
-            <button type="button" className="app-header-signout" onClick={signOut}>
+            <button type="button" className="app-header-signout" onClick={() => void signOutPreservingDraft()}>
               로그아웃
             </button>
           </div>
@@ -306,7 +347,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
             userName={user?.user_metadata?.name}
             onStart={startDiagnosis}
             onViewHistory={viewHistory}
-            onSignOut={signOut}
+            onSignOut={signOutPreservingDraft}
             onDeleteAccount={deleteAccount}
           />
         )}
@@ -315,10 +356,17 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
           <HistoryList user={user} onSelect={openPastResult} onBackHome={goHome} onStart={startDiagnosis} />
         )}
 
-        <FormProvider key={formSessionKey} userId={user.id} initialDraft={formSessionDraft}>
+        <FormProvider key={formSessionKey} userId={user.id} initialDraft={formSessionDraft} draftControllerRef={draftControllerRef}>
           {phase === 'wizard' && (
             <Suspense fallback={<LazyScreenFallback />}>
-              <Wizard onSubmit={handleSubmit} startAtLastStep={wizardResume} initialStep={wizardStep} onStepChange={setWizardStep} />
+              <Wizard
+                onSubmit={handleSubmit}
+                startAtLastStep={wizardResume}
+                initialStep={wizardStep}
+                initialScreenId={wizardScreenId}
+                onStepChange={setWizardStep}
+                onScreenChange={setWizardScreenId}
+              />
             </Suspense>
           )}
         </FormProvider>
@@ -463,6 +511,8 @@ function AuthGatedApp({ authView, onAuthViewChange }) {
   };
 
   const startNew = async () => {
+    if ((draftLoad.source === 'remote' || draftLoad.source === 'legacy')
+      && !window.confirm('작성 중인 진단을 삭제하고 새로 입력하시겠습니까?')) return;
     setDraftLoad((state) => ({ ...state, status: 'loading' }));
     try {
       if (draftLoad.source === 'remote') await deleteDraft(user.id);

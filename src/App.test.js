@@ -66,6 +66,29 @@ describe('App.jsx - "새 진단"이 아닌 흐름은 서버 draft를 지우지 �
   });
 });
 
+describe('App.jsx explicit draft replacement safeguards', () => {
+  it('새로 입력은 확인을 취소하면 서버 초안을 삭제하지 않는다', async () => {
+    const body = extractFunctionBody(await readAppSource(), 'const startNew = async ()');
+    expect(body).toContain('window.confirm');
+    expect(body.indexOf('window.confirm')).toBeLessThan(body.indexOf('deleteDraft'));
+  });
+
+  it('과거 결과 수정은 작성 중 초안 확인 후 저장기를 중지하고 삭제한 뒤 재마운트한다', async () => {
+    const body = extractFunctionBody(await readAppSource(), 'const editHistoryResult = ()');
+    expect(body).toContain('hasWorkingDraft()');
+    expect(body).toContain('window.confirm');
+    expect(body.indexOf('stopDraftSaving()')).toBeLessThan(body.indexOf('deleteDraft(user.id)'));
+    expect(body.indexOf('deleteDraft(user.id)')).toBeLessThan(body.indexOf('setFormSessionKey'));
+  });
+
+  it('과거 결과 수정 화면과 FormProvider 저장 단계가 모두 마지막 단계로 시작한다', async () => {
+    const body = extractFunctionBody(await readAppSource(), 'const editHistoryResult = ()');
+    expect(body).toContain('step_index: editStep');
+    expect(body).toContain('setWizardStep(editStep)');
+    expect(body).toContain("screen_id: 'net-worth'");
+  });
+});
+
 // A5 관련 검증(코드 변경 없음, 기존 동작 확인): draft 저장 실패가 계산 제출을 막지 않도록
 // Wizard.jsx만 고쳤을 뿐, 계산 API 실패·최종 결과 저장 실패는 원래도 handleSubmit/finishSubmission이
 // 각자 명확한 오류 화면으로 전환하고 있었다. 이 두 경로가 이번 변경으로 깨지지 않았는지 잠가둔다.

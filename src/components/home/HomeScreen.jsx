@@ -88,7 +88,7 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
               </div>
               <p className="diagnosis-guide-expert">자산관리에 대한 정확한 피드백은 전문가와 상담해 주세요.</p>
               <div className="diagnosis-guide-actions">
-                <button type="button" className="welcome-signup" onClick={() => setShowDiagnosisGuide(false)}>다음에 하기</button>
+                <button type="button" className="welcome-signup" onClick={() => setShowDiagnosisGuide(false)}>닫기</button>
                 <button type="button" className="welcome-login" onClick={startAfterGuide}>내용을 확인하고 시작하기</button>
               </div>
             </section>

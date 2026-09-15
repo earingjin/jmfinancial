@@ -59,6 +59,9 @@ export function validateDraft(draft) {
   if (!Number.isInteger(draft.step_index) || draft.step_index < 0 || draft.step_index > MAX_DRAFT_STEP_INDEX) {
     return { valid: false, reason: '초안의 작성 단계가 올바르지 않습니다.' };
   }
+  if (draft.screen_id != null && (typeof draft.screen_id !== 'string' || draft.screen_id.length > 100)) {
+    return { valid: false, reason: '초안의 세부 작성 위치가 올바르지 않습니다.' };
+  }
   const formData = draft.form_data;
   if (!isRecord(formData) || !['basic', 'income', 'spouse', 'expense', 'assets'].every((key) => isRecord(formData[key]))) {
     return { valid: false, reason: '현재 입력 구조와 호환되지 않는 초안입니다.' };
@@ -68,7 +71,7 @@ export function validateDraft(draft) {
 
 export async function fetchDraft(userId, client = supabase) {
   const { data, error } = await client.from('planner_drafts')
-    .select('user_id, form_data, step_index, schema_version, updated_at')
+    .select('user_id, form_data, step_index, screen_id, schema_version, updated_at')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
@@ -90,13 +93,14 @@ export function clearDraftSessionCache(userId) {
   if (userId) sessionDraftCache.delete(userId);
 }
 
-export async function upsertDraft(userId, formData, stepIndex, client = supabase) {
+export async function upsertDraft(userId, formData, stepIndex, screenId = null, client = supabase) {
   const { data, error } = await client.from('planner_drafts').upsert({
     user_id: userId,
     form_data: formData,
     step_index: stepIndex,
+    screen_id: screenId,
     schema_version: DRAFT_SCHEMA_VERSION,
-  }, { onConflict: 'user_id' }).select('user_id, form_data, step_index, schema_version, updated_at').single();
+  }, { onConflict: 'user_id' }).select('user_id, form_data, step_index, screen_id, schema_version, updated_at').single();
   if (error) throw error;
   sessionDraftCache.set(userId, Promise.resolve(data));
   return data;
@@ -134,7 +138,7 @@ export function removeLegacyLocalDraft(userId, storage = window.localStorage) {
 export async function migrateLegacyDraft(userId, legacyDraft, client = supabase, storage = window.localStorage) {
   const validation = validateDraft(legacyDraft);
   if (!validation.valid) throw new Error(validation.reason);
-  const saved = await upsertDraft(userId, legacyDraft.form_data, legacyDraft.step_index, client);
+  const saved = await upsertDraft(userId, legacyDraft.form_data, legacyDraft.step_index, legacyDraft.screen_id ?? null, client);
   removeLegacyLocalDraft(userId, storage);
   return saved;
 }
@@ -142,8 +146,9 @@ export async function migrateLegacyDraft(userId, legacyDraft, client = supabase,
 export function createLatestDraftSaver({ persist, onSaved, onError }) {
   let queued = null;
   let inFlight = null;
+  let active = true;
   const drain = async () => {
-    while (queued) {
+    while (active && queued) {
       const snapshot = queued;
       queued = null;
       try {
@@ -158,9 +163,18 @@ export function createLatestDraftSaver({ persist, onSaved, onError }) {
   };
   return {
     save(snapshot) {
+      if (!active) return Promise.resolve();
       queued = snapshot;
       if (!inFlight) inFlight = drain().finally(() => { inFlight = null; });
       return inFlight;
+    },
+    async stop() {
+      active = false;
+      queued = null;
+      if (inFlight) await inFlight.catch(() => {});
+    },
+    resume() {
+      active = true;
     },
   };
 }

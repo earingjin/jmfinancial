@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { initialFormData } from './initialFormData';
 import { setIn } from './pathUtils';
 import { FormContext } from './formState';
 import { createLatestDraftSaver, mergeDraft, resolveRetirementSavingsInputVersion, upsertDraft } from './draftStorage';
 
-const snapshotOf = (formData, stepIndex) => JSON.stringify({ formData, stepIndex });
+const AUTO_SAVE_DELAY_MS = 500;
+const snapshotOf = (formData, stepIndex, screenId) => JSON.stringify({ formData, stepIndex, screenId });
 
 // Repeatable financial item names are display labels, not calculation inputs.
 // Keep their stored form consistent regardless of which field component edits them.
@@ -26,7 +27,7 @@ function trimRepeatableItemNames(data) {
   }, data);
 }
 
-export function FormProvider({ children, userId, initialDraft }) {
+export function FormProvider({ children, userId, initialDraft, draftControllerRef }) {
   const [formData, setFormData] = useState(() => {
     // 버전은 반드시 병합 "전" 원본 저장 데이터(initialDraft?.form_data)로만 판정한다 - mergeDraft
     // 이후의 formData를 보고 판정하면 initialFormData의 기본값이 끼어들어 v1 초안이 v2로
@@ -48,19 +49,28 @@ export function FormProvider({ children, userId, initialDraft }) {
   }));
   const formDataRef = useRef(formData);
   const stepIndexRef = useRef(initialDraft?.step_index || 0);
-  const lastSavedSnapshotRef = useRef(initialDraft ? snapshotOf(formData, stepIndexRef.current) : null);
+  const screenIdRef = useRef(initialDraft?.screen_id ?? null);
+  const lastSavedSnapshotRef = useRef(initialDraft?.updated_at
+    ? snapshotOf(formData, stepIndexRef.current, screenIdRef.current)
+    : null);
+  const autoSaveTimerRef = useRef(null);
+  const dirtyRef = useRef(false);
+  const persistedRef = useRef(Boolean(initialDraft?.updated_at));
+  const stoppedRef = useRef(false);
   const saverRef = useRef(null);
   if (!saverRef.current) {
     saverRef.current = createLatestDraftSaver({
-      persist: (snapshot) => upsertDraft(userId, snapshot.formData, snapshot.stepIndex),
+      persist: (snapshot) => upsertDraft(userId, snapshot.formData, snapshot.stepIndex, snapshot.screenId),
       onSaved: (snapshot, saved, hasQueued) => {
+        persistedRef.current = true;
         lastSavedSnapshotRef.current = snapshot.serialized;
-        const currentSerialized = snapshotOf(formDataRef.current, stepIndexRef.current);
+        const currentSerialized = snapshotOf(formDataRef.current, stepIndexRef.current, screenIdRef.current);
+        dirtyRef.current = currentSerialized !== snapshot.serialized;
         setDraftState({
           status: hasQueued ? 'saving' : currentSerialized === snapshot.serialized ? 'saved' : 'idle',
           updatedAt: saved.updated_at,
           error: null,
-          dirty: currentSerialized !== snapshot.serialized,
+          dirty: dirtyRef.current,
         });
       },
       onError: () => setDraftState((state) => ({ ...state, status: 'error', error: '임시 저장에 실패했습니다.', dirty: true })),
@@ -71,33 +81,104 @@ export function FormProvider({ children, userId, initialDraft }) {
     setFormData((previous) => {
       const next = trimRepeatableItemNames(typeof updater === 'function' ? updater(previous) : updater);
       formDataRef.current = next;
+      dirtyRef.current = true;
       setDraftState((state) => ({ ...state, status: state.status === 'saving' ? state.status : 'idle', error: null, dirty: true }));
       return next;
     });
   }, []);
 
-  const saveCurrentDraft = useCallback(async (stepIndex = stepIndexRef.current) => {
+  const clearAutoSaveTimer = useCallback(() => {
+    if (autoSaveTimerRef.current != null) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+  }, []);
+
+  const saveCurrentDraft = useCallback(async (stepIndex = stepIndexRef.current, screenId = screenIdRef.current) => {
+    clearAutoSaveTimer();
+    if (stoppedRef.current) return { skipped: true, stopped: true };
     stepIndexRef.current = stepIndex;
+    screenIdRef.current = screenId ?? null;
     const requested = {
       formData: formDataRef.current,
       stepIndex,
-      serialized: snapshotOf(formDataRef.current, stepIndex),
+      screenId: screenIdRef.current,
+      serialized: snapshotOf(formDataRef.current, stepIndex, screenIdRef.current),
     };
     if (requested.serialized === lastSavedSnapshotRef.current) {
+      dirtyRef.current = false;
       setDraftState((state) => ({ ...state, status: 'saved', error: null, dirty: false }));
       return { skipped: true };
     }
     setDraftState((state) => ({ ...state, status: 'saving', error: null }));
     await saverRef.current.save(requested);
     return { skipped: false };
-  }, []);
+  }, [clearAutoSaveTimer]);
 
-  const setDraftStep = useCallback((stepIndex) => {
-    if (stepIndexRef.current !== stepIndex) {
+  const scheduleAutoSave = useCallback(() => {
+    clearAutoSaveTimer();
+    if (stoppedRef.current) return;
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
+      void saveCurrentDraft().catch(() => {});
+    }, AUTO_SAVE_DELAY_MS);
+  }, [clearAutoSaveTimer, saveCurrentDraft]);
+
+  useEffect(() => {
+    if (dirtyRef.current) scheduleAutoSave();
+  }, [formData, scheduleAutoSave]);
+
+  const setDraftPosition = useCallback((stepIndex, screenId) => {
+    const nextScreenId = screenId ?? null;
+    if (stepIndexRef.current !== stepIndex || screenIdRef.current !== nextScreenId) {
       stepIndexRef.current = stepIndex;
+      screenIdRef.current = nextScreenId;
+      dirtyRef.current = true;
       setDraftState((state) => ({ ...state, status: state.status === 'saving' ? state.status : 'idle', dirty: true }));
     }
   }, []);
+
+  const setDraftStep = useCallback((stepIndex) => {
+    setDraftPosition(stepIndex, screenIdRef.current);
+  }, [setDraftPosition]);
+
+  const shutdownDraftSaving = useCallback(async () => {
+    clearAutoSaveTimer();
+    stoppedRef.current = true;
+    await saverRef.current.stop();
+  }, [clearAutoSaveTimer]);
+
+  const resumeDraftSaving = useCallback(() => {
+    stoppedRef.current = false;
+    saverRef.current.resume();
+    if (dirtyRef.current) scheduleAutoSave();
+  }, [scheduleAutoSave]);
+
+  const hasWorkingDraft = useCallback(() => persistedRef.current || dirtyRef.current, []);
+
+  const markDraftDeleted = useCallback(() => {
+    clearAutoSaveTimer();
+    persistedRef.current = false;
+    dirtyRef.current = false;
+    lastSavedSnapshotRef.current = null;
+    setDraftState({ status: 'idle', updatedAt: null, error: null, dirty: false });
+  }, [clearAutoSaveTimer]);
+
+  useEffect(() => {
+    if (!draftControllerRef) return undefined;
+    const controller = {
+      saveCurrentDraft,
+      shutdownDraftSaving,
+      resumeDraftSaving,
+      hasWorkingDraft,
+      markDraftDeleted,
+    };
+    draftControllerRef.current = controller;
+    return () => {
+      clearAutoSaveTimer();
+      if (draftControllerRef.current === controller) draftControllerRef.current = null;
+    };
+  }, [clearAutoSaveTimer, draftControllerRef, hasWorkingDraft, markDraftDeleted, resumeDraftSaving, saveCurrentDraft, shutdownDraftSaving]);
 
   // path 예: "income.salary.monthly"
   const setField = useCallback((path, value) => {
@@ -127,8 +208,8 @@ export function FormProvider({ children, userId, initialDraft }) {
   }, [changeFormData]);
 
   const value = useMemo(
-    () => ({ formData, setField, addListItem, removeListItem, updateListItem, setFormData: changeFormData, draftState, saveCurrentDraft, setDraftStep }),
-    [formData, setField, addListItem, removeListItem, updateListItem, changeFormData, draftState, saveCurrentDraft, setDraftStep]
+    () => ({ formData, setField, addListItem, removeListItem, updateListItem, setFormData: changeFormData, draftState, saveCurrentDraft, setDraftStep, setDraftPosition }),
+    [formData, setField, addListItem, removeListItem, updateListItem, changeFormData, draftState, saveCurrentDraft, setDraftStep, setDraftPosition]
   );
 
   return <FormContext.Provider value={value}>{children}</FormContext.Provider>;

@@ -57,8 +57,8 @@ export function getRequiredFieldSubStep(stepKey, path, hasSpouse = false) {
 // 초안을 다시 읽지 않으므로, 임시 저장은 최종 제출의 필수 선행조건이 아니다). 클릭 시뮬레이션이
 // 가능한 테스트 환경이 없어, Step1Income.jsx의 handleSeveranceType과 같은 이유로 컴포넌트 클로저
 // 밖의 top-level 함수로 두어 saveCurrentDraft/onSubmit을 목(mock)으로 바꿔가며 단위 테스트한다.
-export async function submitAfterDraftSave(saveCurrentDraft, stepIndex, onSubmit, formData) {
-  await saveCurrentDraft(stepIndex).catch(() => {});
+export async function submitAfterDraftSave(saveCurrentDraft, stepIndex, onSubmit, formData, screenId = null) {
+  await saveCurrentDraft(stepIndex, screenId).catch(() => {});
   await onSubmit(formData);
 }
 
@@ -66,9 +66,9 @@ const formatSavedAt = (value) => value
   ? new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
   : null;
 
-export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, onStepChange }) {
+export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, initialScreenId = null, onStepChange, onScreenChange }) {
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
-  const [screenId, setScreenId] = useState(null);
+  const [screenId, setScreenId] = useState(initialScreenId);
   const [visitedSteps, setVisitedSteps] = useState(() => new Set([stepIndex]));
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [showProgressHint, setShowProgressHint] = useState(false);
@@ -77,7 +77,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const [isScrolled, setIsScrolled] = useState(false);
   const progressRef = useRef(null);
   const restingViewportHeightRef = useRef(0);
-  const { formData, draftState, saveCurrentDraft, setDraftStep } = useFormData();
+  const { formData, draftState, saveCurrentDraft, setDraftPosition } = useFormData();
   const { key: currentStepKey } = STEPS[stepIndex];
   const hasSpouse = !!formData.basic.hasSpouse;
   const subSteps = getWizardScreens(currentStepKey, hasSpouse);
@@ -95,8 +95,16 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   // 정확한 단계를 이어갈 수 있게 한다.
   useEffect(() => {
     onStepChange?.(stepIndex);
+    onScreenChange?.(resolvedScreenId);
+    setDraftPosition(stepIndex, resolvedScreenId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (screenId === resolvedScreenId) return;
+    onScreenChange?.(resolvedScreenId);
+    setDraftPosition(stepIndex, resolvedScreenId);
+  }, [onScreenChange, resolvedScreenId, screenId, setDraftPosition, stepIndex]);
   // 모바일 브라우저에서 가상 키보드가 열린 동안 상단 진행 영역을 축소해 입력칸에 쓸 세로 공간을 확보한다.
   // visualViewport를 지원하지 않는 브라우저에서는 포커스 자동 스크롤만 적용된다.
   useEffect(() => {
@@ -162,19 +170,25 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     setIsSubStepMenuOpen(false);
     if (nextSubStep === subStepIndex) return;
     prepareForScreenChange();
+    const nextScreenId = subSteps[nextSubStep].id;
     setSubStepIndex(nextSubStep);
+    setDraftPosition(stepIndex, nextScreenId);
+    onScreenChange?.(nextScreenId);
+    void saveCurrentDraft(stepIndex, nextScreenId).catch(() => {});
   };
 
   const moveToStep = (next, nextSubStep = 0) => {
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
     setIsSubStepMenuOpen(false);
     if (resolved !== stepIndex || nextSubStep !== subStepIndex) prepareForScreenChange();
-    setDraftStep(resolved);
+    const nextScreenId = getWizardScreens(STEPS[resolved].key, hasSpouse)[nextSubStep].id;
+    setDraftPosition(resolved, nextScreenId);
     setVisitedSteps((previous) => previous.has(resolved) ? previous : new Set([...previous, resolved]));
     setStepIndexState(resolved);
-    setScreenId(getWizardScreens(STEPS[resolved].key, hasSpouse)[nextSubStep].id);
+    setScreenId(nextScreenId);
     onStepChange?.(resolved);
-    void saveCurrentDraft(resolved).catch(() => {});
+    onScreenChange?.(nextScreenId);
+    void saveCurrentDraft(resolved, nextScreenId).catch(() => {});
   };
 
   // path·label을 함께 들고 있어야 안내 문구에 항목명을 나열하고, 그 중 첫 번째 항목으로 화면을
@@ -239,7 +253,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
       return;
     }
     setShowRequiredError(false);
-    await submitAfterDraftSave(saveCurrentDraft, stepIndex, onSubmit, formData);
+    await submitAfterDraftSave(saveCurrentDraft, stepIndex, onSubmit, formData, resolvedScreenId);
   };
 
   return (

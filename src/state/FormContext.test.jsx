@@ -96,8 +96,8 @@ describe('FormProvider - draftState 초기값 (A14)', () => {
   });
 
   it('결과 수정하기 재진입(updated_at: null) - status와 updatedAt이 모순 없이 idle로 일치한다', () => {
-    // App.jsx의 editHistoryResult가 실제로 만드는 모양: { form_data: historyInput, step_index: null, updated_at: null }.
-    const draft = { form_data: { basic: {} }, step_index: null, updated_at: null };
+    // App.jsx의 editHistoryResult가 실제로 만드는 모양: 과거 입력 + 마지막 화면 위치, updated_at은 null.
+    const draft = { form_data: { basic: {} }, step_index: 5, screen_id: 'net-worth', updated_at: null };
     const state = renderDraftState(draft);
     expect(state.status).toBe('idle'); // 'saved'가 아니다 - 실제로 저장된 draft가 아직 없음
     expect(state.updatedAt).toBeNull();
@@ -118,7 +118,7 @@ describe('Wizard 저장 상태 배지 - 결과 수정 재진입 시 모순 없�
   }
 
   it('결과 수정하기 재진입 시 "저장됨" 배지 없이 "아직 저장되지 않았습니다"만 보인다', () => {
-    const html = renderWizardWithDraft({ form_data: { basic: {} }, step_index: null, updated_at: null });
+    const html = renderWizardWithDraft({ form_data: { basic: {} }, step_index: 5, screen_id: 'net-worth', updated_at: null });
     const bannerStart = html.indexOf('wizard-draft-status');
     const bannerEnd = html.indexOf('</div>', bannerStart);
     const banner = html.slice(bannerStart, bannerEnd);
@@ -176,7 +176,7 @@ describe('FormProvider - detailed debt draft restoration', () => {
         select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: structuredClone(storedRow), error: null }) }) }),
       }),
     };
-    await upsertDraft('debt-restore-user', original, 4, client);
+    await upsertDraft('debt-restore-user', original, 4, 'debt', client);
     const fetched = await fetchDraft('debt-restore-user', client);
     expect(fetched.form_data.assets.debtStatus).toEqual(original.assets.debtStatus);
 
