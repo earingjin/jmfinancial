@@ -4,6 +4,7 @@ import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
 import { changeDebtInputMode, debtDetailedTotals } from './inputModeTransitions';
+import { ConfirmModal } from '../../common/AppDialog';
 
 const monthlyBurdenOf = (item) =>
   (!item || item.repaymentType !== 'equalPrincipal' ? Number(item?.monthlyInterest) : Number(item?.monthlyRepayment)) || 0;
@@ -12,6 +13,7 @@ const monthlyBurdenOf = (item) =>
 // formData에는 그대로 남아, 나중에 방식을 되돌리면 사용자가 재확인하지 않은 과거 값이 그대로
 // 부활해 계산에 다시 반영되는 문제가 있었다. principal·months·name처럼 상환방식과 무관한 공통
 // 필드는 건드리지 않고, 새 방식에서 쓰지 않게 된 부담액 필드만 비운다.
+// oxlint-disable-next-line react/only-export-components
 export function applyLoanFieldChange(item, field, value) {
   const current = item || { repaymentType: 'interestOnly' };
   const next = { ...current, [field]: value };
@@ -120,6 +122,7 @@ export default function DebtBreakdownField({
   basePath, customPath, balanceTotalPath, repaymentTotalPath, modePath,
   simpleBalancePath, simpleRepaymentPath, simpleStoredPath, categories,
 }) {
+  const [pendingModeChange, setPendingModeChange] = useState(null);
   const { formData, setField } = useFormData();
   const breakdown = getIn(formData, basePath) || {};
   const customItems = getIn(formData, customPath) || [];
@@ -195,11 +198,16 @@ export default function DebtBreakdownField({
     recomputeTotals(breakdown, next);
   };
 
-  const changeMode = (nextMode) => changeDebtInputMode({
-    formData, setField, nextMode, basePath, customPath, balanceTotalPath, repaymentTotalPath,
-    modePath, simpleBalancePath, simpleRepaymentPath, simpleStoredPath, categories,
-    confirmChange: (message) => window.confirm(message),
-  });
+  const changeMode = (nextMode) => {
+    const run = (confirmChange) => changeDebtInputMode({
+      formData, setField, nextMode, basePath, customPath, balanceTotalPath, repaymentTotalPath,
+      modePath, simpleBalancePath, simpleRepaymentPath, simpleStoredPath, categories, confirmChange,
+    });
+    run((message) => {
+      setPendingModeChange({ message, confirm: () => run(() => true) });
+      return false;
+    });
+  };
 
   useEffect(() => {
     if (mode !== 'detailed') return;
@@ -386,6 +394,7 @@ export default function DebtBreakdownField({
           <span className="field-helper">선택·추가하신 항목의 대출 원금·월 이자·상환액을 자동으로 합산한 값입니다</span>
         </>
       )}
+      {pendingModeChange && <ConfirmModal title="입력 방식을 변경할까요?" description={pendingModeChange.message} cancelLabel="취소" confirmLabel="변경하기" onCancel={() => setPendingModeChange(null)} onConfirm={() => { pendingModeChange.confirm(); setPendingModeChange(null); }} />}
     </div>
   );
 }

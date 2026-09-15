@@ -6,6 +6,7 @@ import FormattedNumberInput from './FormattedNumberInput';
 import RepeatableList from './RepeatableList';
 import TotalAmountBox from './TotalAmountBox';
 import { changeLivingInputMode, livingDetailedTotal } from './inputModeTransitions';
+import { ConfirmModal } from '../../common/AppDialog';
 
 /**
  * 세부 항목을 버튼(pill)으로 나열해 클릭한 항목만 금액 입력창을 펼쳐서 보여주는 필드.
@@ -26,6 +27,7 @@ export default function ExpenseBreakdownField({
   categories,
   totalLabel = '월 합계',
 }) {
+  const [pendingModeChange, setPendingModeChange] = useState(null);
   const { formData, setField } = useFormData();
   const breakdown = getIn(formData, basePath) || {};
   const total = getIn(formData, totalPath);
@@ -77,11 +79,16 @@ export default function ExpenseBreakdownField({
     setField(simpleStoredPath, true);
   };
 
-  const changeMode = (nextMode) => changeLivingInputMode({
-    formData, setField, nextMode, basePath, totalPath, annualPath, modePath,
-    simpleTotalPath, simpleAnnualPath, simpleStoredPath, categories,
-    confirmChange: (message) => window.confirm(message),
-  });
+  const changeMode = (nextMode) => {
+    const run = (confirmChange) => changeLivingInputMode({
+      formData, setField, nextMode, basePath, totalPath, annualPath, modePath,
+      simpleTotalPath, simpleAnnualPath, simpleStoredPath, categories, confirmChange,
+    });
+    run((message) => {
+      setPendingModeChange({ message, confirm: () => run(() => true) });
+      return false;
+    });
+  };
 
   useEffect(() => {
     if (mode !== 'detailed' || Number(total) === detailedTotal) return;
@@ -267,6 +274,7 @@ export default function ExpenseBreakdownField({
         </>
       )}
       </>}
+      {pendingModeChange && <ConfirmModal title="입력 방식을 변경할까요?" description={pendingModeChange.message} cancelLabel="취소" confirmLabel="변경하기" onCancel={() => setPendingModeChange(null)} onConfirm={() => { pendingModeChange.confirm(); setPendingModeChange(null); }} />}
     </div>
   );
 }

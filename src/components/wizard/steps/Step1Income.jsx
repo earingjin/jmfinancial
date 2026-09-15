@@ -79,14 +79,17 @@ function NationalPensionEligibilityNotice({ basePath, eligibility }) {
 // 리셋)이며, type 자체는 건드리지 않는다(RadioField가 이미 setField(path, 'none')을 호출한 뒤 이
 // 핸들러가 실행됨). 컴포넌트 클로저 밖의 top-level 함수로 둔 것은, 이 프로젝트에 클릭 시뮬레이션이
 // 가능한 테스트 환경(jsdom 등)이 없어 setField 목(mock)을 직접 넘겨 단위 테스트하기 위함이다.
+// oxlint-disable-next-line react/only-export-components
 export const SEVERANCE_RESET_FIELDS_ON_NONE = ['lumpsum', 'lumpsumAge', 'pensionMonthly', 'pensionStartAge', 'pensionYears', 'pensionMonths'];
 
+// oxlint-disable-next-line react/only-export-components
 export function handleSeveranceType(setField, basePath, value) {
   if (value === 'none') {
     SEVERANCE_RESET_FIELDS_ON_NONE.forEach((field) => setField(`${basePath}.${field}`, ''));
   }
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function remainingRetirementYearsToMonths(value) {
   if (value === '' || value == null) return '';
   return Math.round(Number(value) * 12);

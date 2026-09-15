@@ -1,26 +1,32 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import homeImage from '../../assets/홈화면.webp';
 import AppCopyright from '../AppCopyright';
+import { ConfirmModal } from '../common/AppDialog';
 
 // 로그인 직후 랜딩 화면. 바로 마법사로 보내지 않고, 새 진단 시작 / 이전 결과 보기 중 고르게 한다.
-export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut, onDeleteAccount }) {
+export default function HomeScreen({ userName, hasWorkingDraft = false, onStart, onStartNew, onViewHistory, onSignOut, onDeleteAccount }) {
   const displayName = userName?.trim() || '고객';
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [showDiagnosisGuide, setShowDiagnosisGuide] = useState(false);
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
 
   const handleDeleteAccount = async () => {
-    if (!window.confirm('회원탈퇴하시겠습니까? 진단 결과를 포함한 모든 정보가 삭제되며 되돌릴 수 없습니다.')) return;
     setDeleteError('');
     setDeleting(true);
     const { error } = await onDeleteAccount();
     setDeleting(false);
+    setShowDeleteAccountConfirm(false);
     if (error) setDeleteError(error.message || '회원탈퇴에 실패했습니다.');
   };
 
   const startAfterGuide = () => {
     setShowDiagnosisGuide(false);
     onStart();
+  };
+
+  const startNewAfterReset = async () => {
+    if (await onStartNew()) setShowDiagnosisGuide(true);
   };
 
   return (
@@ -55,13 +61,25 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
           </div>
 
           <div className="welcome-actions">
-            <button type="button" className="welcome-login" onClick={() => setShowDiagnosisGuide(true)}>자산진단 시작하기</button>
+            {hasWorkingDraft && (
+              <p className="home-resume-notice">작성 중인 진단이 있습니다. 이전에 입력하던 단계부터 계속할 수 있습니다.</p>
+            )}
+            <button
+              type="button"
+              className="welcome-login"
+              onClick={hasWorkingDraft ? onStart : () => setShowDiagnosisGuide(true)}
+            >
+              {hasWorkingDraft ? '자산진단 이어하기' : '자산진단 시작하기'}
+            </button>
+            {hasWorkingDraft && (
+              <button type="button" className="welcome-signup" onClick={() => void startNewAfterReset()}>새로 입력</button>
+            )}
             <button type="button" className="welcome-signup" onClick={onViewHistory}>이전 결과 보기</button>
           </div>
           <div className="home-account-actions">
             <button type="button" className="home-signout" onClick={onSignOut}>로그아웃</button>
             <span className="home-account-actions-divider" aria-hidden="true">|</span>
-            <button type="button" className="home-signout home-delete-account" onClick={handleDeleteAccount} disabled={deleting}>
+            <button type="button" className="home-signout home-delete-account" onClick={() => setShowDeleteAccountConfirm(true)} disabled={deleting}>
               {deleting ? '탈퇴 처리 중…' : '회원탈퇴'}
             </button>
           </div>
@@ -93,6 +111,18 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
               </div>
             </section>
           </div>
+        )}
+        {showDeleteAccountConfirm && (
+          <ConfirmModal
+            title="회원탈퇴할까요?"
+            description="진단 결과를 포함한 모든 정보가 삭제되며 다시 복구할 수 없습니다."
+            cancelLabel="취소"
+            confirmLabel="회원탈퇴"
+            destructive
+            processing={deleting}
+            onCancel={() => setShowDeleteAccountConfirm(false)}
+            onConfirm={() => void handleDeleteAccount()}
+          />
         )}
       </section>
     </div>

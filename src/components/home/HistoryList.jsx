@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatWon } from '../../utils/format';
+import { ConfirmModal } from '../common/AppDialog';
 
 // SimpleSummaryReport.jsx의 formatDesignDate와 같은 용도이지만, 이 목록에서는 연도를
 // 4자리로 온전히 보여줄 필요가 있어("2026.08.11") 별도로 둔다.
@@ -16,6 +17,7 @@ function formatHistoryDate(iso) {
 // { ok, error } 형태로 정규화한다. handleSeveranceType(Step1Income.jsx)과 같은 이유로
 // top-level에 둔다 - 클릭 시뮬레이션이 가능한 테스트 환경이 없어 fetch/세션 결과만 바꿔가며
 // 성공·실패 경로를 단위 테스트하기 위함이다.
+// oxlint-disable-next-line react/only-export-components
 export async function deletePlannerResult(id, session) {
   if (!session) return { ok: false, error: '로그인 세션을 확인할 수 없어 서버에서 삭제하지 못했습니다.' };
   const response = await fetch(`/api/delete-result?id=${encodeURIComponent(id)}`, {
@@ -30,6 +32,7 @@ export async function deletePlannerResult(id, session) {
 // 삭제 실패 시 화면에서 먼저 지웠던 행을 되돌린다. 그 사이 같은 행이 이미 다시 들어와 있으면
 // (예: 이전 실패 복원이 먼저 반영된 경우) 중복 추가하지 않고, 없으면 원래 정렬 기준
 // (created_at 내림차순)에 맞는 위치로 되돌려 놓는다 - 다른 행의 성공한 삭제 결과는 건드리지 않는다.
+// oxlint-disable-next-line react/only-export-components
 export function restoreRowAfterFailedDelete(rows, removedRow) {
   if (!removedRow || rows.some((row) => row.id === removedRow.id)) return rows;
   return [...rows, removedRow].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -44,6 +47,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
+  const [pendingDeleteRow, setPendingDeleteRow] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,11 +76,10 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
   // 되돌릴 수 없는 작업이라 먼저 확인을 받고, 성공하면 화면 목록에서도 바로 제거한다.
   // 실패하면(응답 실패 또는 네트워크 예외) 화면에서 지웠던 그 행만 복원한다 - 연속으로 다른
   // 행을 삭제 중이었다면 그 결과에는 영향을 주지 않는다(restoreRowAfterFailedDelete 참고).
-  const handleDelete = async (id) => {
-    if (!window.confirm('이 진단 결과를 삭제하시겠습니까? 삭제하면 되돌릴 수 없습니다.')) return;
+  const handleDelete = async (removedRow) => {
+    const id = removedRow.id;
     setDeleteError('');
     setDeletingId(id);
-    const removedRow = rows.find((row) => row.id === id);
     setRows((prev) => prev.filter((row) => row.id !== id));
 
     let outcome;
@@ -93,6 +96,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
       setDeleteError(outcome.error);
       setRows((prev) => restoreRowAfterFailedDelete(prev, removedRow));
     }
+    setPendingDeleteRow(null);
   };
 
   if (status === 'loading') {
@@ -144,7 +148,7 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
               <button
                 type="button"
                 className="history-delete-btn"
-                onClick={() => handleDelete(row.id)}
+                onClick={() => setPendingDeleteRow(row)}
                 disabled={deletingId === row.id}
                 aria-label="이 진단 결과 삭제"
               >
@@ -153,6 +157,18 @@ export default function HistoryList({ user, onSelect, onBackHome, onStart }) {
             </li>
           ))}
         </ul>
+      )}
+      {pendingDeleteRow && (
+        <ConfirmModal
+          title="이 진단 결과를 삭제할까요?"
+          description="삭제한 진단 결과는 다시 복구할 수 없습니다."
+          cancelLabel="취소"
+          confirmLabel="삭제하기"
+          destructive
+          processing={deletingId === pendingDeleteRow.id}
+          onCancel={() => setPendingDeleteRow(null)}
+          onConfirm={() => void handleDelete(pendingDeleteRow)}
+        />
       )}
     </div>
   );

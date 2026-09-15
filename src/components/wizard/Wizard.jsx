@@ -57,6 +57,7 @@ export function getRequiredFieldSubStep(stepKey, path, hasSpouse = false) {
 // 초안을 다시 읽지 않으므로, 임시 저장은 최종 제출의 필수 선행조건이 아니다). 클릭 시뮬레이션이
 // 가능한 테스트 환경이 없어, Step1Income.jsx의 handleSeveranceType과 같은 이유로 컴포넌트 클로저
 // 밖의 top-level 함수로 두어 saveCurrentDraft/onSubmit을 목(mock)으로 바꿔가며 단위 테스트한다.
+// oxlint-disable-next-line react/only-export-components
 export async function submitAfterDraftSave(saveCurrentDraft, stepIndex, onSubmit, formData, screenId = null) {
   await saveCurrentDraft(stepIndex, screenId).catch(() => {});
   await onSubmit(formData);

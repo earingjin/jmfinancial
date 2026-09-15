@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import FormattedNumberInput from './FormattedNumberInput';
 import TotalAmountBox from './TotalAmountBox';
 import { changeTotalInputMode } from './inputModeTransitions';
+import { ConfirmModal } from '../../common/AppDialog';
 
 const amount = (value) => Number(value) || 0;
 
@@ -14,11 +15,18 @@ export default function TotalInputModeField({
   const { formData, setField } = useFormData();
   const mode = getIn(formData, modePath) || 'detailed';
   const total = getIn(formData, totalPath);
+  const [pendingModeChange, setPendingModeChange] = useState(null);
 
-  const changeMode = (nextMode) => changeTotalInputMode({
-    formData, setField, nextMode, modePath, totalPath, simpleTotalPath, simpleStoredPath,
-    detailedTotal, detailedHasInput, annualPath, simpleAnnualPath, totalLabel, confirmChange: (message) => window.confirm(message),
-  });
+  const changeMode = (nextMode) => {
+    const run = (confirmChange) => changeTotalInputMode({
+      formData, setField, nextMode, modePath, totalPath, simpleTotalPath, simpleStoredPath,
+      detailedTotal, detailedHasInput, annualPath, simpleAnnualPath, totalLabel, confirmChange,
+    });
+    run((message) => {
+      setPendingModeChange({ message, confirm: () => run(() => true) });
+      return false;
+    });
+  };
 
   useEffect(() => {
     const nextTotal = detailedHasInput ? detailedTotal : '';
@@ -50,5 +58,6 @@ export default function TotalInputModeField({
       {beforeTotal}
       <TotalAmountBox label={totalLabel} amount={amount(total)} valueLabel="총액은" />
     </> : children}
+    {pendingModeChange && <ConfirmModal title="입력 방식을 변경할까요?" description={pendingModeChange.message} cancelLabel="취소" confirmLabel="변경하기" onCancel={() => setPendingModeChange(null)} onConfirm={() => { pendingModeChange.confirm(); setPendingModeChange(null); }} />}
   </div>;
 }
