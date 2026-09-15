@@ -83,6 +83,7 @@ describe('future finance projection', () => {
       nationalPensionMonthly: Math.round(expected.nationalPension),
       severancePensionMonthly: Math.round(expected.retirementPension),
       personalPensionMonthly: Math.round(expected.personalPension),
+      components: expected.components,
     });
     expect(result.nationalPensionStartSnapshot.personalPensionMonthly).toBe(0);
     expect(result.nationalPensionStartSnapshot.severancePensionMonthly).toBeGreaterThan(0);

@@ -229,13 +229,16 @@ function MobileMonthlyCoverageBlock({ title, incomeLabel, coverage, fallbackMess
         <>
           <div><span>은퇴 목표생활비(물가 반영)</span><b>{formatWon(coverage.livingCost)}</b></div>
           <div><span>{incomeLabel}</span><b>{formatWon(coverage.pensionIncome)}</b></div>
-          {startSnapshot && <div><span>국민연금 수령 시점</span><b>{formatNumber(startSnapshot.age)}세</b></div>}
+          {coverage.pensionSources?.summary && (
+            <small className="mobile-retirement-pension-sources">{coverage.pensionSources.summary}</small>
+          )}
+          {startSnapshot && <div><span>기준 시점</span><b>본인 {formatNumber(startSnapshot.age)}세</b></div>}
         </>
       ) : (
         <>
           <p>{fallbackMessage}</p>
           {startSnapshot && (
-            <div><span>국민연금 수령 시점</span><b>{Number.isFinite(startSnapshot.age) ? `${formatNumber(startSnapshot.age)}세` : '확인 필요'}</b></div>
+            <div><span>기준 시점</span><b>{Number.isFinite(startSnapshot.age) ? `본인 ${formatNumber(startSnapshot.age)}세` : '확인 필요'}</b></div>
           )}
         </>
       )}

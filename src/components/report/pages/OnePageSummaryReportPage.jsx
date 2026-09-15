@@ -204,7 +204,7 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
                 {retirementMonthlyCoverage.calculable ? (
                   <>
                     <small><b>은퇴 목표생활비(물가 반영)</b>{displayWon(retirementMonthlyCoverage.livingCost)}</small>
-                    <small><b>은퇴 시점 예상 연금소득</b>{displayWon(retirementMonthlyCoverage.pensionIncome)}</small>
+                    <small className="one-summary-pension-income"><b>은퇴 시점 예상 연금소득</b><span><em>{displayWon(retirementMonthlyCoverage.pensionIncome)}</em>{retirementMonthlyCoverage.pensionSources?.summary && <i>{retirementMonthlyCoverage.pensionSources.summary}</i>}</span></small>
                   </>
                 ) : <small className="one-summary-monthly-coverage-reason">{retirementMonthlyCoverage.reason}</small>}
                 <strong>→ {retirementMonthlyCoverage.result}</strong>
@@ -214,14 +214,14 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
                 {nationalPensionMonthlyCoverage.calculable ? (
                   <>
                     <small><b>은퇴 목표생활비(물가 반영)</b>{displayWon(nationalPensionMonthlyCoverage.livingCost)}</small>
-                    <small><b>예상 연금소득</b>{displayWon(nationalPensionMonthlyCoverage.pensionIncome)}</small>
-                    <small><b>국민연금 수령 시점</b>{formatNumber(futureFinance.nationalPensionStartSnapshot?.age)}세</small>
+                    <small className="one-summary-pension-income"><b>예상 연금소득</b><span><em>{displayWon(nationalPensionMonthlyCoverage.pensionIncome)}</em>{nationalPensionMonthlyCoverage.pensionSources?.summary && <i>{nationalPensionMonthlyCoverage.pensionSources.summary}</i>}</span></small>
+                    <small><b>기준 시점</b>본인 {formatNumber(futureFinance.nationalPensionStartSnapshot?.age)}세</small>
                   </>
                 ) : (
                   <>
                     <small className="one-summary-monthly-coverage-reason">{nationalPensionCoverageFallbackMessage}</small>
                     {futureFinance.nationalPensionStartSnapshot && (
-                      <small><b>국민연금 수령 시점</b>{Number.isFinite(futureFinance.nationalPensionStartSnapshot.age) ? `${formatNumber(futureFinance.nationalPensionStartSnapshot.age)}세` : '확인 필요'}</small>
+                      <small><b>기준 시점</b>{Number.isFinite(futureFinance.nationalPensionStartSnapshot.age) ? `본인 ${formatNumber(futureFinance.nationalPensionStartSnapshot.age)}세` : '확인 필요'}</small>
                     )}
                   </>
                 )}

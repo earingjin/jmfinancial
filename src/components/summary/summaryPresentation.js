@@ -2,6 +2,44 @@
 // 사용자가 이해하기 쉬운 표시 문구를 적용한다. 점수와 ratioClass에는 관여하지 않는다.
 import { formatNumber, formatPercent, formatWon } from '../../utils/format';
 
+const PENSION_SOURCE_LABELS = {
+  'self.nationalPension': '본인 국민연금',
+  'spouse.nationalPension': '배우자 국민연금',
+  'self.personalPension': '본인 개인연금',
+  'spouse.personalPension': '배우자 개인연금',
+  'self.retirementPension': '본인 퇴직연금',
+  'spouse.retirementPension': '배우자 퇴직연금',
+};
+
+export function getIncludedPensionSources(components) {
+  if (!Array.isArray(components)) return null;
+
+  return components
+    .filter((component) => component?.inclusionStatus === 'included')
+    .map((component) => ({
+      key: component.key,
+      label: PENSION_SOURCE_LABELS[component.key],
+      amount: component.amount,
+    }))
+    .filter((component) => component.label);
+}
+
+export function getPensionSourcePresentation(snapshot) {
+  const sources = getIncludedPensionSources(snapshot?.pensionBreakdown?.components ?? snapshot?.components);
+  if (sources == null) return { sources: null, summary: null };
+  if (snapshot?.calculable !== true) return { sources, summary: null };
+  if (sources.length === 0) {
+    return {
+      sources,
+      summary: '해당 시점에 수령 중인 연금 없음',
+    };
+  }
+  return {
+    sources,
+    summary: `${sources.map((source) => source.label).join(' · ')} 포함`,
+  };
+}
+
 export const RETIREMENT_SIMPLE_COMPARISON_NOTE = '은퇴생활비 기준 필요자금과 예상 준비자산만 비교한 참고값입니다. 은퇴 후 연금소득과 지출을 반영한 최종 자산 유지 전망과는 다를 수 있습니다.';
 
 const FHS_STATUS_BADGE_LABELS = {
@@ -164,16 +202,17 @@ export function getMonthlyCoveragePresentation(snapshot, livingCostAtRetirement)
       calculable: false,
       result: '확인 필요',
       reason: snapshot?.reason || snapshot?.calculationReason || '월 생활비 충당 정보를 산출할 수 없습니다.',
+      pensionSources: getPensionSourcePresentation(snapshot),
     };
   }
 
   if (livingCostAtRetirement > pensionIncome) {
-    return { calculable: true, result: `월 ${formatWon(livingCostAtRetirement - pensionIncome)} 부족`, livingCost: livingCostAtRetirement, pensionIncome };
+    return { calculable: true, result: `월 ${formatWon(livingCostAtRetirement - pensionIncome)} 부족`, livingCost: livingCostAtRetirement, pensionIncome, pensionSources: getPensionSourcePresentation(snapshot) };
   }
   if (pensionIncome > livingCostAtRetirement) {
-    return { calculable: true, result: `월 ${formatWon(pensionIncome - livingCostAtRetirement)} 여유`, livingCost: livingCostAtRetirement, pensionIncome };
+    return { calculable: true, result: `월 ${formatWon(pensionIncome - livingCostAtRetirement)} 여유`, livingCost: livingCostAtRetirement, pensionIncome, pensionSources: getPensionSourcePresentation(snapshot) };
   }
-  return { calculable: true, result: '월 생활비 충당 가능', livingCost: livingCostAtRetirement, pensionIncome };
+  return { calculable: true, result: '월 생활비 충당 가능', livingCost: livingCostAtRetirement, pensionIncome, pensionSources: getPensionSourcePresentation(snapshot) };
 }
 
 export function getNationalPensionCoverageFallback(snapshot) {

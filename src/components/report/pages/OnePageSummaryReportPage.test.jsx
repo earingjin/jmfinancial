@@ -56,12 +56,22 @@ function buildResult() {
           nationalPensionMonthly: 300,
           severancePensionMonthly: 50,
           personalPensionMonthly: 0,
+          components: [
+            { key: 'self.nationalPension', amount: 300, inclusionStatus: 'included' },
+            { key: 'self.retirementPension', amount: 50, inclusionStatus: 'included' },
+          ],
         },
         retirementCashFlowOutlook: [{
           age: 65,
           pensionIncome: 350,
           calculable: true,
           calculationReason: null,
+          pensionBreakdown: {
+            components: [
+              { key: 'self.nationalPension', amount: 300, inclusionStatus: 'included' },
+              { key: 'self.retirementPension', amount: 50, inclusionStatus: 'included' },
+            ],
+          },
         }],
         retirementAssetProjection: {
           assetsRemainAtLifeExpectancy: true,
@@ -115,6 +125,54 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).toContain('01 / 1');
   });
 
+  it('연금 출처는 기존 박스 안에서 최대 두 줄로 잘리고 넘침을 숨긴다', async () => {
+    const css = await readFile(new URL('../../../styles/app.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.one-summary-pension-income i \{[^}]*max-width:\s*180px[^}]*overflow:\s*hidden[^}]*-webkit-line-clamp:\s*2/s);
+    expect((render().match(/class="page"/g) || [])).toHaveLength(1);
+  });
+
+  it('본인 은퇴 시점에 지급 중인 배우자 국민연금만 출처로 표시한다', () => {
+    const result = buildResult();
+    result.webSummary.futureFinance.retirementCashFlowOutlook = [{
+      age: 65,
+      pensionIncome: 123,
+      calculable: true,
+      calculationReason: null,
+      pensionBreakdown: { components: [
+        { key: 'self.nationalPension', amount: 0, inclusionStatus: 'beforeStart' },
+        { key: 'spouse.nationalPension', amount: 123, inclusionStatus: 'included' },
+      ] },
+    }];
+
+    expect(render(result)).toContain('배우자 국민연금 포함');
+    expect(renderMobileRetirement(result)).toContain('배우자 국민연금 포함');
+  });
+
+  it('본인 국민연금과 개인연금만 지급 중이면 동적 기준 나이와 두 출처를 표시한다', () => {
+    const result = buildResult();
+    result.webSummary.futureFinance.nationalPensionStartSnapshot = {
+      calculable: true,
+      reason: null,
+      age: 67,
+      pensionIncomeMonthly: 180,
+      nationalPensionMonthly: 130,
+      severancePensionMonthly: 0,
+      personalPensionMonthly: 50,
+      components: [
+        { key: 'self.nationalPension', amount: 130, inclusionStatus: 'included' },
+        { key: 'self.personalPension', amount: 50, inclusionStatus: 'included' },
+        { key: 'spouse.nationalPension', amount: 0, inclusionStatus: 'beforeStart' },
+      ],
+    };
+
+    const html = render(result);
+    const mobileHtml = renderMobileRetirement(result);
+    expect(html).toContain('<em>180만원</em><i>본인 국민연금 · 본인 개인연금 포함</i>');
+    expect(html).toContain('기준 시점</b>본인 67세');
+    expect(mobileHtml).toContain('본인 국민연금 · 본인 개인연금 포함');
+    expect(mobileHtml).toContain('기준 시점</span><b>본인 67세</b>');
+  });
+
   it('모바일과 같은 재무·은퇴 상태 문구와 대표 재무지표 3개를 표시한다', () => {
     const html = render();
     const mobileHtml = renderMobileRetirement();
@@ -141,10 +199,11 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).not.toContain('현재 계획을 유지하면 기대수명까지 준비자산이 유지될 것으로 예상됩니다.');
     expect(html).toContain('월 생활비 충당 <i aria-hidden="true">·</i> 은퇴 시점 기준');
     expect(html).toContain('은퇴 목표생활비(물가 반영)</b>420만원');
-    expect(html).toContain('은퇴 시점 예상 연금소득</b>350만원');
+    expect(html).toContain('은퇴 시점 예상 연금소득</b><span><em>350만원</em>');
     expect(html).toContain('<strong>→ 월 70만원 부족</strong>');
     expect(html).toContain('월 생활비 충당 <i aria-hidden="true">·</i> 국민연금 수령 후 기준');
-    expect(html).toContain('국민연금 수령 시점</b>65세');
+    expect(html).toContain('기준 시점</b>본인 65세');
+    expect(html).toContain('본인 국민연금 · 본인 퇴직연금 포함');
     ['현재 계획을 유지하면 기대수명까지', '은퇴 목표생활비(물가 반영)', '420만원', '350만원', '월 70만원 부족', '65세'].forEach((text) => {
       expect(mobileHtml).toContain(text);
     });
@@ -256,10 +315,10 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).toContain('<strong>→ 확인 필요</strong>');
     expect(html).toContain('국민연금 가입기간 확인 필요');
     expect((html.match(/국민연금 향후 가입기간을 확정할 수 없음/g) || [])).toHaveLength(1);
-    expect(html).toContain('국민연금 수령 시점</b>65세');
+    expect(html).toContain('기준 시점</b>본인 65세');
     expect(html).not.toContain('월 0만원 부족');
     expect(mobileHtml).toContain('국민연금 가입기간 확인 필요');
-    expect(mobileHtml).toContain('국민연금 수령 시점</span><b>65세</b>');
+    expect(mobileHtml).toContain('기준 시점</span><b>본인 65세</b>');
     expect(mobileHtml).toContain('→ 확인 필요');
   });
 
@@ -273,10 +332,12 @@ describe('OnePageSummaryReportPage', () => {
       nationalPensionMonthly: 0,
       severancePensionMonthly: 0,
       personalPensionMonthly: 0,
+      components: [],
     };
     const html = render(result);
     const mobileHtml = renderMobileRetirement(result);
-    expect(html).toContain('예상 연금소득</b>0만원');
+    expect(html).toContain('예상 연금소득</b><span><em>0만원</em><i>해당 시점에 수령 중인 연금 없음</i>');
+    expect(mobileHtml).toContain('해당 시점에 수령 중인 연금 없음');
     expect(html).toContain('<strong>→ 월 420만원 부족</strong>');
     expect(html).not.toContain('연금정보 확인 필요');
     expect(mobileHtml).toContain('예상 연금소득</span><b>0만원</b>');
@@ -294,9 +355,9 @@ describe('OnePageSummaryReportPage', () => {
     const html = render(result);
     const mobileHtml = renderMobileRetirement(result);
     expect(html).toContain('국민연금 수령 시점 확인 필요');
-    expect(html).toContain('국민연금 수령 시점</b>확인 필요');
+    expect(html).toContain('기준 시점</b>확인 필요');
     expect(mobileHtml).toContain('국민연금 수령 시점 확인 필요');
-    expect(mobileHtml).toContain('국민연금 수령 시점</span><b>확인 필요</b>');
+    expect(mobileHtml).toContain('기준 시점</span><b>확인 필요</b>');
   });
 
   it('새 스냅샷이 없는 과거 저장 결과는 최신 진단 안내를 표시한다', () => {
@@ -306,9 +367,9 @@ describe('OnePageSummaryReportPage', () => {
     const mobileHtml = renderMobileRetirement(result);
     expect(html).toContain('최신 기준으로 다시 진단하면 확인할 수 있습니다');
     expect(html).toContain('<strong>→ 확인 필요</strong>');
-    expect(html).not.toContain('국민연금 수령 시점</b>확인 필요');
+    expect(html).not.toContain('기준 시점</b>확인 필요');
     expect(mobileHtml).toContain('최신 기준으로 다시 진단하면 확인할 수 있습니다');
-    expect(mobileHtml).not.toContain('국민연금 수령 시점</span>');
+    expect(mobileHtml).not.toContain('기준 시점</span>');
   });
 
   it('그 밖의 산출 불가 reason은 중립적인 연금정보 안내로 표시한다', () => {
