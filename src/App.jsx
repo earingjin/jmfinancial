@@ -72,6 +72,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   // 여기 해당하지 않는다.
   const formSessionConsumedRef = useRef(false);
   const draftControllerRef = useRef(null);
+  const [hasWorkingDraft, setHasWorkingDraft] = useState(Boolean(initialDraft?.updated_at));
 
   const stopDraftSaving = async () => {
     await draftControllerRef.current?.shutdownDraftSaving();
@@ -94,6 +95,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
       deleteDraft,
       onReset: () => {
         formSessionConsumedRef.current = false;
+        setHasWorkingDraft(false);
         setFormSessionDraft(null);
         setFormSessionKey((key) => key + 1);
         setWizardStep(0);
@@ -116,6 +118,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         setResultInput(pending.formData);
         pendingSubmissionRef.current = null;
         draftControllerRef.current?.markDraftDeleted();
+        setHasWorkingDraft(false);
         // 이 formData로 진단이 완료·저장됐다 - 다음 "자산진단 시작하기"는 새 세션으로 리셋해야 한다.
         formSessionConsumedRef.current = true;
         setPhase('summary');
@@ -209,6 +212,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     if (phase === 'wizard' && draftControllerRef.current?.hasWorkingDraft()) {
       await draftControllerRef.current.saveCurrentDraft(wizardStep, wizardScreenId).catch(() => {});
     }
+    setHasWorkingDraft(draftControllerRef.current?.hasWorkingDraft() ?? false);
     setPhase('home');
   };
 
@@ -235,6 +239,17 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
     setResultSource('new');
     setWizardResume(false);
     setPhase('wizard');
+  };
+
+  const startNewDiagnosisFromHome = async () => {
+    if (!window.confirm('새로 입력하면 현재 작성 중인 내용이 삭제됩니다.')) return false;
+    const didReset = await resetFormSession();
+    if (!didReset) {
+      setErrorMessage('이전 임시 초안을 정리하지 못해 새 진단을 시작할 수 없습니다. 다시 시도해 주세요.');
+      setPhase('error');
+      return false;
+    }
+    return true;
   };
 
   const viewHistory = () => setPhase('history');
@@ -345,7 +360,9 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         {phase === 'home' && (
           <HomeScreen
             userName={user?.user_metadata?.name}
+            hasWorkingDraft={hasWorkingDraft}
             onStart={startDiagnosis}
+            onStartNew={startNewDiagnosisFromHome}
             onViewHistory={viewHistory}
             onSignOut={signOutPreservingDraft}
             onDeleteAccount={deleteAccount}

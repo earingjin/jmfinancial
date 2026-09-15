@@ -89,6 +89,49 @@ describe('App.jsx explicit draft replacement safeguards', () => {
   });
 });
 
+describe('App.jsx home diagnosis CTA state', () => {
+  it('initializes the reactive home state from the existing persisted draft', async () => {
+    const source = await readAppSource();
+
+    expect(source).toContain('useState(Boolean(initialDraft?.updated_at))');
+    expect(source).toContain('hasWorkingDraft={hasWorkingDraft}');
+  });
+
+  it('refreshes the home state from the existing draft controller after saving the current position', async () => {
+    const body = extractFunctionBody(await readAppSource(), 'const goHome = async ()');
+
+    expect(body).toContain('saveCurrentDraft(wizardStep, wizardScreenId)');
+    expect(body).toContain('setHasWorkingDraft(draftControllerRef.current?.hasWorkingDraft() ?? false)');
+    expect(body.indexOf('saveCurrentDraft')).toBeLessThan(body.indexOf('setHasWorkingDraft'));
+    expect(body.indexOf('setHasWorkingDraft')).toBeLessThan(body.indexOf("setPhase('home')"));
+  });
+
+  it('clears the home state when a completed draft is deleted or the form session is reset', async () => {
+    const source = await readAppSource();
+
+    expect(extractFunctionBody(source, 'const finishSubmission = async ()')).toContain('setHasWorkingDraft(false)');
+    expect(extractFunctionBody(source, 'const resetFormSession = async ()')).toContain('setHasWorkingDraft(false)');
+  });
+
+  it('confirms before reusing resetFormSession for a new diagnosis from home', async () => {
+    const body = extractFunctionBody(await readAppSource(), 'const startNewDiagnosisFromHome = async ()');
+
+    expect(body).toContain("window.confirm('새로 입력하면 현재 작성 중인 내용이 삭제됩니다.')");
+    expect(body.indexOf('window.confirm')).toBeLessThan(body.indexOf('resetFormSession()'));
+    expect(body).toContain('if (!didReset)');
+    expect(body).toContain("setPhase('error')");
+    expect(body).toContain('return false');
+    expect(body).toMatch(/return true;\s*}$/);
+  });
+
+  it('passes the existing start and home reset handlers to HomeScreen separately', async () => {
+    const source = await readAppSource();
+
+    expect(source).toContain('onStart={startDiagnosis}');
+    expect(source).toContain('onStartNew={startNewDiagnosisFromHome}');
+  });
+});
+
 // A5 관련 검증(코드 변경 없음, 기존 동작 확인): draft 저장 실패가 계산 제출을 막지 않도록
 // Wizard.jsx만 고쳤을 뿐, 계산 API 실패·최종 결과 저장 실패는 원래도 handleSubmit/finishSubmission이
 // 각자 명확한 오류 화면으로 전환하고 있었다. 이 두 경로가 이번 변경으로 깨지지 않았는지 잠가둔다.

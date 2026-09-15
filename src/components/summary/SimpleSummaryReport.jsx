@@ -1021,17 +1021,6 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                 <div className="overview-card-value">{formatWon(rr.requiredAtRetirement)}</div>
                 <span className="overview-card-hint">내역 보기</span>
               </button>
-              {severanceLumpSums.length > 0 && (
-                <div className="retirement-lump-sum-note">
-                  <span>향후 예정 목돈</span>
-                  {severanceLumpSums.map((item) => (
-                    <p key={`${item.label}-${item.age}`}>
-                      <strong>{item.label} 퇴직급여 일시금 {formatWon(item.amount)} · {formatNumber(item.age)}세 수령 예정</strong>
-                      <small>{item.includedAtRetirement ? '예상 준비자산에 반영되어 있습니다.' : '은퇴 후 자산 전망에 반영됩니다.'}</small>
-                    </p>
-                  ))}
-                </div>
-              )}
               <button
                 type="button"
                 className="overview-card overview-card--highlight overview-card--clickable"
@@ -1050,6 +1039,17 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
                 <div className="overview-card-value">{formatWon(rr.shortfall)}</div>
                 <span className="overview-card-hint">참고값 · 내역 보기</span>
               </button>
+              {severanceLumpSums.length > 0 && (
+                <div className="retirement-lump-sum-note">
+                  <span>향후 예정 목돈</span>
+                  {severanceLumpSums.map((item) => (
+                    <p key={`${item.label}-${item.age}`}>
+                      <strong>{item.label} 퇴직급여 일시금 {formatWon(item.amount)} · {formatNumber(item.age)}세 수령 예정</strong>
+                      <small>{item.includedAtRetirement ? '예상 준비자산에 반영되어 있습니다.' : '은퇴 후 자산 전망에 반영됩니다.'}</small>
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {retirementDetailKey && (

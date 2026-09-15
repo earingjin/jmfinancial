@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import homeImage from '../../assets/홈화면.webp';
 import AppCopyright from '../AppCopyright';
 
 // 로그인 직후 랜딩 화면. 바로 마법사로 보내지 않고, 새 진단 시작 / 이전 결과 보기 중 고르게 한다.
-export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut, onDeleteAccount }) {
+export default function HomeScreen({ userName, hasWorkingDraft = false, onStart, onStartNew, onViewHistory, onSignOut, onDeleteAccount }) {
   const displayName = userName?.trim() || '고객';
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -21,6 +21,10 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
   const startAfterGuide = () => {
     setShowDiagnosisGuide(false);
     onStart();
+  };
+
+  const startNewAfterReset = async () => {
+    if (await onStartNew()) setShowDiagnosisGuide(true);
   };
 
   return (
@@ -55,7 +59,19 @@ export default function HomeScreen({ userName, onStart, onViewHistory, onSignOut
           </div>
 
           <div className="welcome-actions">
-            <button type="button" className="welcome-login" onClick={() => setShowDiagnosisGuide(true)}>자산진단 시작하기</button>
+            {hasWorkingDraft && (
+              <p className="home-resume-notice">작성 중인 진단이 있습니다. 이전에 입력하던 단계부터 계속할 수 있습니다.</p>
+            )}
+            <button
+              type="button"
+              className="welcome-login"
+              onClick={hasWorkingDraft ? onStart : () => setShowDiagnosisGuide(true)}
+            >
+              {hasWorkingDraft ? '자산진단 이어하기' : '자산진단 시작하기'}
+            </button>
+            {hasWorkingDraft && (
+              <button type="button" className="welcome-signup" onClick={() => void startNewAfterReset()}>새로 입력</button>
+            )}
             <button type="button" className="welcome-signup" onClick={onViewHistory}>이전 결과 보기</button>
           </div>
           <div className="home-account-actions">
