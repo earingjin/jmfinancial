@@ -116,7 +116,143 @@ function renderMobileRetirement(result = buildResult()) {
   );
 }
 
+function withCashFlowDiagnosis(result = buildResult()) {
+  result.webSummary.futureFinance.retirementCashFlowDiagnosis = {
+    version: 1,
+    hasSpouse: true,
+    retirementPoint: {
+      key: 'retirementPoint', meaning: '본인 은퇴 시점', calculable: true, reason: null,
+      selfAge: 65, spouseAge: 63, totalIncome: 430, livingExpense: 500, balance: -70, status: 'shortfall',
+      selfIncome: { total: 250 }, spouseIncome: { total: 150 }, householdSharedIncome: { total: 30 },
+      uncertaintyNotice: null, includedIncomes: [],
+    },
+    nationalPensionPoint: {
+      key: 'nationalPensionPoint', meaning: '부부 국민연금 수령 후', calculable: true, reason: null,
+      selfAge: 67, spouseAge: 65, totalIncome: 560, livingExpense: 530, balance: 30, status: 'surplus',
+      selfIncome: { total: 300 }, spouseIncome: { total: 210 }, householdSharedIncome: { total: 50 },
+      uncertaintyNotice: '배우자 국민연금은 수령 여부가 불확실하여 국민연금 소득에서 제외했습니다.', includedIncomes: [],
+    },
+  };
+  return result;
+}
+
 describe('OnePageSummaryReportPage', () => {
+  it('모바일과 A4가 동일한 서버 현금흐름 금액과 상태를 표시한다', () => {
+    const result = withCashFlowDiagnosis();
+    const html = render(result, { basic: { hasSpouse: true } });
+    const mobileHtml = renderMobileRetirement(result);
+
+    for (const expected of ['70만원 부족', '30만원 여유', '430만원', '500만원', '560만원', '530만원']) {
+      expect(html).toContain(expected);
+      expect(mobileHtml).toContain(expected);
+    }
+    expect(html).toContain('부부 국민연금 수령 후');
+    expect(html).toContain('배우자 국민연금은 수령 여부가 불확실하여 국민연금 소득에서 제외했습니다.');
+    expect(mobileHtml).toContain('본인 67세 · 배우자 65세');
+    expect(mobileHtml.indexOf('70만원 부족')).toBeLessThan(mobileHtml.indexOf('가구 전체 월소득'));
+    expect(mobileHtml.indexOf('가구 전체 월소득')).toBeLessThan(mobileHtml.indexOf('본인 소득'));
+    expect(mobileHtml.indexOf('배우자 국민연금은')).toBeLessThan(mobileHtml.indexOf('자산 지속 가능성'));
+  });
+
+  it('국민연금 수령 후 종합 카드, 두 상세 카드, 자산 보조 정보 순서를 모바일과 A4에서 유지한다', () => {
+    const result = withCashFlowDiagnosis();
+    const mobileHtml = renderMobileRetirement(result);
+    const reportHtml = render(result, { basic: { hasSpouse: true } });
+
+    expect(mobileHtml).toContain('mobile-retirement-overview-card is-surplus');
+    expect(reportHtml).toContain('one-summary-cashflow-overview is-surplus');
+    for (const html of [mobileHtml, reportHtml]) {
+      expect(html.indexOf('부부 국민연금 수령 후 월 30만원 여유가 예상됩니다.')).toBeLessThan(html.indexOf('본인 은퇴 시점'));
+      expect(html.lastIndexOf('부부 국민연금 수령 후')).toBeLessThan(html.indexOf('자산 지속 가능성'));
+    }
+  });
+
+  it.each([
+    ['surplus', 20, '😊', '부부 국민연금 수령 후 월 20만원 여유가 예상됩니다.', '월소득으로 생활비를 충당하고 남는 수준입니다.'],
+    ['shortfall', -20, '😟', '부부 국민연금 수령 후 월 20만원 부족이 예상됩니다.', '월소득이 생활비보다 적은 수준입니다.'],
+    ['balanced', 0, '😐', '부부 국민연금 수령 후 월소득과 생활비가 같습니다.', '월소득과 생활비가 같은 수준입니다.'],
+  ])('국민연금 수령 후 %s 상태를 서버 상태 그대로 종합 카드에 표시한다', (status, balance, icon, headline, description) => {
+    const result = withCashFlowDiagnosis();
+    Object.assign(result.webSummary.futureFinance.retirementCashFlowDiagnosis.nationalPensionPoint, { status, balance });
+    for (const html of [renderMobileRetirement(result), render(result, { basic: { hasSpouse: true } })]) {
+      expect(html).toContain(icon);
+      expect(html).toContain(headline);
+      expect(html).toContain(description);
+    }
+  });
+
+  it('산출 불가 국민연금 수령 후 시점의 서버 사유를 종합 카드에 금액 없이 표시한다', () => {
+    const result = withCashFlowDiagnosis();
+    Object.assign(result.webSummary.futureFinance.retirementCashFlowDiagnosis.nationalPensionPoint, {
+      calculable: false,
+      status: 'unavailable',
+      balance: null,
+      reason: '국민연금 수령 후 기준 나이를 산출할 수 없습니다.',
+    });
+    for (const html of [renderMobileRetirement(result), render(result, { basic: { hasSpouse: true } })]) {
+      expect(html).toContain('❔');
+      expect(html).toContain('부부 국민연금 수령 후 월 현금흐름을 산출할 수 없습니다.');
+      expect(html).toContain('산출 불가');
+      expect(html).toContain('국민연금 수령 후 기준 나이를 산출할 수 없습니다.');
+      expect(html).not.toContain('월 30만원 여유');
+    }
+  });
+
+  it('갈색 종합 카드는 재무 카드와 같은 배지·표정·제목·설명 행 구조를 사용한다', () => {
+    const mobileHtml = renderMobileRetirement(withCashFlowDiagnosis());
+    expect(mobileHtml).toContain('fhs-hero mobile-retirement-overview-card is-surplus');
+    expect(mobileHtml).toContain('fhs-hero-row');
+    expect(mobileHtml).toContain('fhs-hero-text ss-status-copy');
+    expect(mobileHtml.indexOf('Part 2. 은퇴')).toBeLessThan(mobileHtml.indexOf('😊'));
+    expect(mobileHtml.indexOf('😊')).toBeLessThan(mobileHtml.indexOf('부부 국민연금 수령 후 월 30만원 여유가 예상됩니다.'));
+    expect(mobileHtml.indexOf('부부 국민연금 수령 후 월 30만원 여유가 예상됩니다.')).toBeLessThan(mobileHtml.indexOf('월소득으로 생활비를 충당하고 남는 수준입니다.'));
+  });
+
+  it('재무와 은퇴 갈색 카드는 같은 모바일 표정·제목·설명 행 레이아웃을 사용한다', async () => {
+    const source = await readFile(new URL('../../summary/SimpleSummaryReport.jsx', import.meta.url), 'utf8');
+    const css = await readFile(new URL('../../../styles/simpleSummary.css', import.meta.url), 'utf8');
+    expect(source).toContain('fhs-hero financial-overview-card');
+    expect(source).toContain('fhs-hero mobile-retirement-overview-card');
+    expect(css).toMatch(/\.financial-overview-card \.fhs-hero-row,\s*\.mobile-retirement-overview-card \.fhs-hero-row \{ flex-wrap: nowrap; \}/s);
+    expect(css).toMatch(/\.financial-overview-card \.fhs-hero-text,\s*\.mobile-retirement-overview-card \.fhs-hero-text \{ min-width: 0; \}/s);
+  });
+
+  it('두 상세 카드는 같은 3열 소득 구성과 서버 수치를 표시한다', () => {
+    const result = withCashFlowDiagnosis();
+    const mobileHtml = renderMobileRetirement(result);
+    const reportHtml = render(result, { basic: { hasSpouse: true } });
+    for (const html of [mobileHtml, reportHtml]) {
+      for (const expected of ['본인', '배우자', '공통', '250만원', '150만원', '30만원', '300만원', '210만원', '50만원']) {
+        expect(html).toContain(expected);
+      }
+    }
+    expect(mobileHtml.match(/mobile-retirement-cashflow-breakdown is-compact/g)).toHaveLength(2);
+    expect(reportHtml.match(/one-summary-cashflow-breakdown/g)).toHaveLength(2);
+  });
+
+  it('배우자가 없으면 모바일과 A4 현금흐름에서 배우자 행을 표시하지 않는다', () => {
+    const result = withCashFlowDiagnosis();
+    result.webSummary.futureFinance.retirementCashFlowDiagnosis.hasSpouse = false;
+    result.webSummary.futureFinance.retirementCashFlowDiagnosis.retirementPoint.spouseIncome = null;
+    result.webSummary.futureFinance.retirementCashFlowDiagnosis.nationalPensionPoint.spouseIncome = null;
+    for (const html of [renderMobileRetirement(result), render(result, { basic: { hasSpouse: false } })]) {
+      expect(html).not.toContain('배우자 소득');
+      expect(html).not.toContain('배우자 <b>');
+      expect(html).not.toContain('· 배우자 63세');
+    }
+  });
+
+  it('새 필드가 없는 과거 결과는 기존 은퇴 정보와 정확한 호환 안내를 함께 유지한다', () => {
+    const result = buildResult();
+    const html = render(result);
+    const mobileHtml = renderMobileRetirement(result);
+    const message = '이 결과는 이전 진단 방식으로 저장되어 새로운 은퇴 현금흐름 정보가 포함되어 있지 않습니다. 최신 기준으로 다시 진단하면 확인할 수 있습니다.';
+    expect(html).toContain('예상 자산 유지 기간');
+    expect(mobileHtml).toContain('은퇴 시점 예상 연금소득');
+    expect(html).toContain(message);
+    expect(mobileHtml).toContain(message);
+  });
+
   it('계산 모듈을 import하지 않고 기존 PageFrame 한 페이지만 사용한다', async () => {
     const source = await readFile(new URL('./OnePageSummaryReportPage.jsx', import.meta.url), 'utf8');
     expect(source).not.toMatch(/from\s+['"][^'"]*(api\/_lib|calculate|futureFinance|indicators|grading|summaryOverview)[^'"]*['"]/);

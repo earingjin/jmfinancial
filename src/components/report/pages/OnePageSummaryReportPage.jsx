@@ -4,6 +4,8 @@ import {
   getFinancialHealthExplanation,
   getFinancialHealthStatus,
   getFinancialIndicatorInterpretation,
+  getCashFlowPointPresentation,
+  getNationalPensionCashFlowStatusPresentation,
   getRetirementSummaryPresentation,
   getSeveranceLumpSumDisplayItems,
   RETIREMENT_SIMPLE_COMPARISON_NOTE,
@@ -127,6 +129,58 @@ function RecordGroup({ title, values, finalLabel, finalValue, finalTone = 'prima
   );
 }
 
+function CashFlowComparison({ diagnosis }) {
+  const retirementPoint = diagnosis.retirementPoint;
+  const nationalPensionPoint = diagnosis.nationalPensionPoint;
+  const nationalPensionOverview = getNationalPensionCashFlowStatusPresentation(nationalPensionPoint);
+  const incomeBreakdown = (point) => point && (
+    <div className="one-summary-cashflow-breakdown" aria-label="월소득 구성">
+      <span>본인 <b>{displayWon(point.selfIncome.total)}</b></span>
+      {diagnosis.hasSpouse && point.spouseIncome && <span>배우자 <b>{displayWon(point.spouseIncome.total)}</b></span>}
+      <span>공통 <b>{displayWon(point.householdSharedIncome.total)}</b></span>
+    </div>
+  );
+  const detailCard = (point) => {
+    const presentation = getCashFlowPointPresentation(point);
+    return (
+      <div key={point.key} className={`one-summary-cashflow-point one-summary-cashflow-point--detail is-${presentation.tone}`}>
+        <div className="one-summary-cashflow-point-heading">
+          <span>{point.meaning}</span>
+          <strong>{presentation.result}</strong>
+        </div>
+        {Number.isFinite(point.selfAge) && <small>본인 {formatNumber(point.selfAge)}세 기준</small>}
+        {presentation.available ? <>
+          <div className="one-summary-cashflow-values">
+            <span>전체소득 <b>{displayWon(point.totalIncome)}</b></span>
+            <span>생활비 <b>{displayWon(point.livingExpense)}</b></span>
+          </div>
+          {incomeBreakdown(point)}
+        </> : <p>{presentation.reason}</p>}
+        {point.uncertaintyNotice && <em>{point.uncertaintyNotice}</em>}
+      </div>
+    );
+  };
+  return (
+    <div className="one-summary-cashflow-comparison">
+      <div className={`one-summary-cashflow-overview is-${nationalPensionOverview.tone}`}>
+        <div className="one-summary-cashflow-overview-heading">
+          <span aria-hidden="true">{nationalPensionOverview.icon}</span>
+          <div>
+            <strong>{nationalPensionOverview.headline}</strong>
+            {nationalPensionOverview.description && <span>{nationalPensionOverview.description}</span>}
+          </div>
+        </div>
+        {!nationalPensionOverview.available && <p>{nationalPensionOverview.reason}</p>}
+        {nationalPensionPoint.uncertaintyNotice && <em>{nationalPensionPoint.uncertaintyNotice}</em>}
+      </div>
+      <div className="one-summary-cashflow-details">
+        {detailCard(retirementPoint)}
+        {detailCard(nationalPensionPoint)}
+      </div>
+    </div>
+  );
+}
+
 export default function OnePageSummaryReportPage({ result, input, clientName }) {
   const aggregates = result?.aggregates || {};
   const indicators = result?.indicators || [];
@@ -147,6 +201,7 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
     retirementStatusPresentation: retirementPresentation,
     nationalPensionMonthlyCoverage,
     nationalPensionCoverageFallbackMessage,
+    retirementCashFlowDiagnosis,
   } = getRetirementSummaryPresentation(retirement, futureFinance);
   const severanceLumpSums = getSeveranceLumpSumDisplayItems(input, retirement.retirementAge);
   const peerRows = [
@@ -196,14 +251,23 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
 
           <article className="one-summary-result-card one-summary-result-card--retirement">
             <div className="one-summary-part">Part 2. 은퇴</div>
-            <div className="one-summary-result-heading">
-              <span aria-hidden="true">{retirementStatus.icon}</span>
-              <div>
-                <span>예상 자산 유지 기간</span>
-                <strong>{retirementPresentation.headline}</strong>
+            {retirementCashFlowDiagnosis ? (
+              <>
+                <CashFlowComparison diagnosis={retirementCashFlowDiagnosis} />
+                <div className="one-summary-asset-support">
+                  <span>자산 지속 가능성 · 보조 정보</span>
+                  <strong>{retirementStatus.icon} {retirementPresentation.headline}</strong>
+                </div>
+              </>
+            ) : <>
+              <div className="one-summary-result-heading">
+                <span aria-hidden="true">{retirementStatus.icon}</span>
+                <div>
+                  <span>예상 자산 유지 기간</span>
+                  <strong>{retirementPresentation.headline}</strong>
+                </div>
               </div>
-            </div>
-            <div className="one-summary-retirement-coverage">
+              <div className="one-summary-retirement-coverage">
               <div className="one-summary-retirement-coverage-heading">
                 <h3>월 생활비 충당</h3>
                 <span>국민연금 수령 후 기준</span>
@@ -228,7 +292,9 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
                   <strong>{Number.isFinite(futureFinance.nationalPensionStartSnapshot.age) ? `본인 ${formatNumber(futureFinance.nationalPensionStartSnapshot.age)}세` : '확인 필요'}</strong>
                 </div>
               )}
-            </div>
+              </div>
+              <p className="one-summary-cashflow-legacy">이 결과는 이전 진단 방식으로 저장되어 새로운 은퇴 현금흐름 정보가 포함되어 있지 않습니다. 최신 기준으로 다시 진단하면 확인할 수 있습니다.</p>
+            </>}
           </article>
         </div>
       </section>

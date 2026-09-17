@@ -49,6 +49,7 @@ function round1(value) {
 }
 
 const present = (value) => value !== '' && value !== null && value !== undefined;
+const finiteNumberOrNull = (value) => present(value) && Number.isFinite(Number(value)) ? Number(value) : null;
 
 // docs/future-finance-spec.md:49,76 - "월 수령액 불명"(빈 문자열/공백/null/undefined)은 0으로
 // 정규화하지 않고 산출 불가로 처리해야 한다. n()의 `Number(value) || 0` 변환은 빈 값과 명시적 0을
@@ -212,6 +213,298 @@ export function calculateNonPensionIncomeAtTarget({ input, aggregates, currentAg
   }, 0);
 
   return salaryIncome + businessIncome + otherIncome;
+}
+
+const RETIREMENT_CASH_FLOW_LEGACY_MESSAGE = '이 결과는 이전 진단 방식으로 저장되어 새로운 은퇴 현금흐름 정보가 포함되어 있지 않습니다. 최신 기준으로 다시 진단하면 확인할 수 있습니다.';
+
+function unavailableCashFlowPoint({ key, meaning, selfAge = null, spouseAge = null, reason, uncertaintyNotice = null }) {
+  return {
+    key,
+    meaning,
+    calculable: false,
+    reason,
+    selfAge,
+    spouseAge,
+    selfIncome: null,
+    spouseIncome: null,
+    householdSharedIncome: null,
+    totalIncome: null,
+    livingExpense: null,
+    balance: null,
+    status: 'unavailable',
+    uncertaintyNotice,
+    includedIncomes: [],
+  };
+}
+
+function nationalPensionUncertainty(input) {
+  const people = [
+    { owner: 'self', label: '본인', pension: input.income?.nationalPension || {} },
+    ...(input.basic?.hasSpouse === true
+      ? [{ owner: 'spouse', label: '배우자', pension: input.spouse?.nationalPension || {} }]
+      : []),
+  ];
+  const uncertain = people.filter(({ pension }) => assessNationalPensionEligibility({ pension }).status === 'unknown');
+  return {
+    owners: uncertain.map(({ owner }) => owner),
+    notice: uncertain.length > 0
+      ? `${uncertain.map(({ label }) => label).join('·')} 국민연금은 수령 여부가 불확실하여 국민연금 소득에서 제외했습니다.`
+      : null,
+  };
+}
+
+function salaryIncomeAtTarget({ salary = {}, retirementAge, currentAge, years, owner, label }) {
+  const hasSalary = salary.hasSalary !== false;
+  const monthlyMissing = isBlankAmount(salary.monthly);
+  const bonusMissing = isBlankAmount(salary.annualBonus);
+  const durationYears = present(salary.months)
+    ? n(salary.months) / 12
+    : finiteNumberOrNull(retirementAge) != null && Number.isFinite(currentAge)
+      ? Math.max(0, Number(retirementAge) - currentAge)
+      : null;
+  const active = hasSalary && (years === 0 || (durationYears != null && durationYears > 0 && years < durationYears));
+
+  if (!active) return { amount: 0, included: [] };
+  // annualBonus는 선택 입력이라 공란이면 0이지만, 급여 있음 상태의 월 급여는 필수 정보다.
+  if (monthlyMissing) return { amount: null, reason: `${label} 급여 금액을 확인할 수 없습니다.` };
+  const amount = n(salary.monthly) + (bonusMissing ? 0 : n(salary.annualBonus) / 12);
+  return {
+    amount,
+    included: amount > 0 ? [{ owner, category: 'salary', label: `${label} 급여·상여`, amount: round(amount) }] : [],
+  };
+}
+
+function sharedIncomeAtTarget({ input, aggregates, currentAge, years }) {
+  const selfSalary = input.income?.salary || {};
+  const retirementAge = finiteNumberOrNull(input.basic?.retirementAge);
+  const selfIncomeYears = present(selfSalary.months)
+    ? Math.max(0, n(selfSalary.months) / 12)
+    : Number.isFinite(retirementAge) ? Math.max(0, retirementAge - currentAge) : null;
+  const businessMonthly = aggregates.businessMonthly;
+  const businessActive = businessMonthly > 0
+    && (years === 0 || (selfIncomeYears != null && selfIncomeYears > 0 && years < selfIncomeYears));
+  const business = businessActive ? businessMonthly : 0;
+  let otherRegular = 0;
+  const included = business > 0
+    ? [{ owner: 'household', category: 'business', label: '가구 사업소득', amount: round(business) }]
+    : [];
+
+  for (const [index, item] of (input.income?.otherIncomes || []).entries()) {
+    const annualMissing = isBlankAmount(item?.annual);
+    const annual = annualMissing ? 0 : n(item.annual);
+    if (annual <= 0) continue;
+    if (!present(item?.years)) {
+      return { calculable: false, reason: `기타 정기소득 ${index + 1}의 유지기간을 확인할 수 없습니다.` };
+    }
+    const active = years === 0 || (n(item.years) > 0 && years < n(item.years));
+    if (!active) continue;
+    const monthly = annual / 12;
+    otherRegular += monthly;
+    included.push({
+      owner: 'household',
+      category: 'otherRegularIncome',
+      label: typeof item.name === 'string' && item.name.trim() ? item.name.trim() : '가구 기타 정기소득',
+      amount: round(monthly),
+    });
+  }
+
+  return {
+    calculable: true,
+    business,
+    otherRegular,
+    total: business + otherRegular,
+    included,
+  };
+}
+
+function incomeByPersonFromPension(pension, owner) {
+  const amountFor = (category) => pension.components
+    .filter((component) => component.key.startsWith(`${owner}.`) && component.category === category)
+    .reduce((sum, component) => sum + (Number.isFinite(component.amount) ? component.amount : 0), 0);
+  return {
+    nationalPension: amountFor('nationalPension'),
+    retirementPension: amountFor('retirementPension'),
+    personalPension: amountFor('personalPension'),
+  };
+}
+
+function buildCashFlowPoint({ input, aggregates, currentYear, currentAge, targetAge, key, meaning, uncertaintyNotice }) {
+  const years = targetAge - currentAge;
+  const selfBirthYear = finiteNumberOrNull(input.basic?.birthYear);
+  const spouseBirthYear = finiteNumberOrNull(input.spouse?.birthYear);
+  const spouseAge = input.basic?.hasSpouse === true && Number.isFinite(spouseBirthYear)
+    ? targetAge + selfBirthYear - spouseBirthYear
+    : null;
+  const baseUnavailable = (reason) => unavailableCashFlowPoint({
+    key, meaning, selfAge: targetAge, spouseAge, reason, uncertaintyNotice,
+  });
+
+  if (!Number.isFinite(years) || years < 0) {
+    return baseUnavailable('현재보다 이전 시점의 소득을 현재 입력값으로 산출할 수 없습니다.');
+  }
+  if (isBlank(input.expense?.retirementLivingCost)) {
+    return baseUnavailable('은퇴 목표생활비를 확인할 수 없습니다.');
+  }
+
+  const pension = calculatePensionIncomeAtTarget({
+    input,
+    currentYear,
+    years,
+    treatUnknownNationalPensionAsZero: true,
+  });
+  if (!pension.calculable) return baseUnavailable(pension.reason || '연금 개시·종료 정보를 확인할 수 없습니다.');
+
+  const selfSalary = salaryIncomeAtTarget({
+    salary: input.income?.salary,
+    retirementAge: input.basic?.retirementAge,
+    currentAge,
+    years,
+    owner: 'self',
+    label: '본인',
+  });
+  if (selfSalary.amount == null) return baseUnavailable(selfSalary.reason);
+
+  const spouseCurrentAge = Number.isFinite(spouseBirthYear) ? currentYear - spouseBirthYear : null;
+  const spouseSalary = input.basic?.hasSpouse === true
+    ? salaryIncomeAtTarget({
+        salary: input.spouse?.salary,
+        retirementAge: input.spouse?.retirementAge,
+        currentAge: spouseCurrentAge,
+        years,
+        owner: 'spouse',
+        label: '배우자',
+      })
+    : { amount: 0, included: [] };
+  if (spouseSalary.amount == null) return baseUnavailable(spouseSalary.reason);
+
+  const shared = sharedIncomeAtTarget({ input, aggregates, currentAge, years });
+  if (!shared.calculable) return baseUnavailable(shared.reason);
+
+  const selfPension = incomeByPersonFromPension(pension, 'self');
+  const spousePension = incomeByPersonFromPension(pension, 'spouse');
+  const personResult = (salary, pensions) => {
+    const total = salary.amount + pensions.nationalPension + pensions.retirementPension + pensions.personalPension;
+    return {
+      salary: round(salary.amount),
+      nationalPension: round(pensions.nationalPension),
+      retirementPension: round(pensions.retirementPension),
+      personalPension: round(pensions.personalPension),
+      total: round(total),
+    };
+  };
+  const selfIncome = personResult(selfSalary, selfPension);
+  const spouseIncome = input.basic?.hasSpouse === true ? personResult(spouseSalary, spousePension) : null;
+  const rawTotalIncome = selfSalary.amount + spouseSalary.amount + pension.total + shared.total;
+  const livingExpense = calculateFutureLivingExpense(n(input.expense.retirementLivingCost), years);
+  const balance = rawTotalIncome - livingExpense;
+  const pensionIncluded = pension.components
+    .filter((component) => component.inclusionStatus === 'included' && component.amount > 0)
+    .map((component) => ({
+      owner: component.key.startsWith('spouse.') ? 'spouse' : 'self',
+      category: component.category,
+      label: component.key,
+      amount: round(component.amount),
+    }));
+
+  return {
+    key,
+    meaning,
+    calculable: true,
+    reason: null,
+    selfAge: targetAge,
+    spouseAge,
+    selfIncome,
+    spouseIncome,
+    householdSharedIncome: {
+      business: round(shared.business),
+      otherRegular: round(shared.otherRegular),
+      total: round(shared.total),
+    },
+    totalIncome: round(rawTotalIncome),
+    livingExpense: round(livingExpense),
+    balance: round(balance),
+    status: balance > 0 ? 'surplus' : balance < 0 ? 'shortfall' : 'balanced',
+    uncertaintyNotice,
+    includedIncomes: [...selfSalary.included, ...spouseSalary.included, ...pensionIncluded, ...shared.included],
+  };
+}
+
+export function buildRetirementCashFlowDiagnosis({ input, aggregates, currentYear = new Date().getFullYear() }) {
+  const selfBirthYear = finiteNumberOrNull(input.basic?.birthYear);
+  const currentAge = selfBirthYear == null ? null : currentYear - selfBirthYear;
+  const lifeExpectancyRaw = present(input.basic?.lifeExpectancy) ? input.basic.lifeExpectancy : input.basic?.retirementEndAge;
+  const lifeExpectancy = finiteNumberOrNull(lifeExpectancyRaw);
+  const retirementAge = finiteNumberOrNull(input.basic?.retirementAge);
+  const hasSpouse = input.basic?.hasSpouse === true;
+  const uncertainty = nationalPensionUncertainty(input);
+
+  const retirementPoint = !Number.isFinite(currentAge) || !Number.isFinite(retirementAge)
+    ? unavailableCashFlowPoint({ key: 'retirementPoint', meaning: '본인 은퇴 시점', reason: '본인 은퇴 시점을 확인할 수 없습니다.', uncertaintyNotice: uncertainty.notice })
+    : retirementAge < currentAge
+      ? unavailableCashFlowPoint({
+          key: 'retirementPoint', meaning: '본인 은퇴 시점', selfAge: retirementAge,
+          spouseAge: hasSpouse && finiteNumberOrNull(input.spouse?.birthYear) != null
+            ? retirementAge + selfBirthYear - finiteNumberOrNull(input.spouse.birthYear)
+            : null,
+          reason: '입력한 은퇴 나이가 현재 나이보다 이전이어서 은퇴 시점 현금흐름을 산출할 수 없습니다.',
+          uncertaintyNotice: uncertainty.notice,
+        })
+      : buildCashFlowPoint({
+          input, aggregates, currentYear, currentAge, targetAge: retirementAge,
+          key: 'retirementPoint', meaning: '본인 은퇴 시점', uncertaintyNotice: uncertainty.notice,
+        });
+
+  const pensionCandidates = [
+    { owner: 'self', birthYear: selfBirthYear, pension: input.income?.nationalPension || {} },
+    ...(hasSpouse ? [{ owner: 'spouse', birthYear: finiteNumberOrNull(input.spouse?.birthYear), pension: input.spouse?.nationalPension || {} }] : []),
+  ].flatMap((candidate) => {
+    const eligibility = assessNationalPensionEligibility({ pension: candidate.pension });
+    const startAge = getNationalPensionStartAge(candidate.birthYear);
+    return eligibility.status === 'eligible' && Number.isFinite(startAge) && Number.isFinite(candidate.birthYear)
+      ? [{ ...candidate, eligibility, startAge, calendarYear: candidate.birthYear + startAge }]
+      : [];
+  });
+  const latestPensionYear = pensionCandidates.length > 0
+    ? Math.max(...pensionCandidates.map((candidate) => candidate.calendarYear))
+    : null;
+  const pensionTargetAge = latestPensionYear == null ? null : latestPensionYear - selfBirthYear;
+  const pensionMeaning = pensionCandidates.length > 1
+    ? '부부 국민연금 수령 후'
+    : pensionCandidates[0]?.owner === 'spouse'
+      ? '배우자 국민연금 수령 후'
+      : '본인 국민연금 수령 후';
+  const pensionSpouseBirthYear = finiteNumberOrNull(input.spouse?.birthYear);
+  const pensionSpouseAge = hasSpouse && pensionSpouseBirthYear != null && Number.isFinite(pensionTargetAge)
+    ? pensionTargetAge + selfBirthYear - pensionSpouseBirthYear
+    : null;
+
+  let nationalPensionPoint;
+  if (pensionCandidates.length === 0 || !Number.isFinite(pensionTargetAge)) {
+    nationalPensionPoint = unavailableCashFlowPoint({
+      key: 'nationalPensionPoint', meaning: '국민연금 수령 후',
+      reason: '국민연금 수령이 확인된 가구 구성원이 없어 비교 시점을 산출할 수 없습니다.',
+      uncertaintyNotice: uncertainty.notice,
+    });
+  } else if (Number.isFinite(lifeExpectancy) && pensionTargetAge > lifeExpectancy) {
+    nationalPensionPoint = unavailableCashFlowPoint({
+      key: 'nationalPensionPoint', meaning: pensionMeaning, selfAge: pensionTargetAge, spouseAge: pensionSpouseAge,
+      reason: '국민연금 비교 시점이 본인의 기대수명을 초과해 현금흐름을 산출할 수 없습니다.',
+      uncertaintyNotice: uncertainty.notice,
+    });
+  } else {
+    nationalPensionPoint = buildCashFlowPoint({
+      input, aggregates, currentYear, currentAge, targetAge: pensionTargetAge,
+      key: 'nationalPensionPoint', meaning: pensionMeaning, uncertaintyNotice: uncertainty.notice,
+    });
+  }
+
+  return {
+    version: 1,
+    legacyMessage: RETIREMENT_CASH_FLOW_LEGACY_MESSAGE,
+    hasSpouse,
+    retirementPoint,
+    nationalPensionPoint,
+  };
 }
 
 function assetDataMissing(input) {
@@ -392,6 +685,7 @@ export function buildFutureFinanceProjection({ input, aggregates, currentYear = 
     targets,
     fiveYearOutlook,
     retirementCashFlowOutlook,
+    retirementCashFlowDiagnosis: buildRetirementCashFlowDiagnosis({ input, aggregates, currentYear }),
     purchasingPower,
     diagnosis,
   };

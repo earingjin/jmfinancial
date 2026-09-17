@@ -66,6 +66,12 @@ describe('POST /api/calculate 응답에서 화면 미사용 필드 제외', () =
     expect(result).not.toHaveProperty('scenarioComparison');
     // webSummary.donuts.expense.items 쪽은 화면이 실제로 쓰므로 그대로 유지되어야 한다.
     expect(result.webSummary?.donuts?.expense?.items).toBeDefined();
+    expect(result.webSummary?.futureFinance?.retirementCashFlowDiagnosis).toMatchObject({
+      version: 1,
+      hasSpouse: false,
+      retirementPoint: { key: 'retirementPoint' },
+      nationalPensionPoint: { key: 'nationalPensionPoint' },
+    });
   });
 
   it('summary 객체에서 화면 미사용 파생값을 포함하지 않는다', async () => {

@@ -1944,6 +1944,36 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .one-page-summary-report .one-summary-retirement-coverage-basis { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 5px; }
 .one-page-summary-report .one-summary-retirement-coverage-basis span,
 .one-page-summary-report .one-summary-retirement-coverage-basis strong { color: var(--ink-soft); font-size: 10px; font-weight: 500; line-height: 1.35; }
+.one-summary-cashflow-comparison { display: grid; gap: 7px; }
+.one-summary-cashflow-overview { min-width: 0; padding: 9px 11px; border-radius: 6px; background: linear-gradient(135deg, var(--navy-800), var(--navy-700)); color: #fff; }
+.one-summary-cashflow-overview-heading { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 7px; align-items: start; }
+.one-summary-cashflow-overview-heading > span { font-size: 20px; line-height: 1; }
+.one-summary-cashflow-overview-heading > div { display: grid; gap: 2px; }
+.one-summary-cashflow-overview-heading strong { color: #fff; font-size: 10px; font-weight: 800; line-height: 1.35; }
+.one-summary-cashflow-overview-heading > div > span { color: #f5e6cc; font-size: 8px; font-weight: 600; line-height: 1.3; }
+.one-summary-cashflow-overview > p,
+.one-summary-cashflow-overview > em { display: block; margin: 5px 0 0; color: rgba(255,255,255,.78); font-size: 7px; font-style: normal; line-height: 1.3; }
+.one-summary-cashflow-details { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.one-summary-cashflow-point { min-width: 0; padding: 7px 8px; border: 1px solid #e5ddd2; border-radius: 5px; background: rgba(248,245,239,.9); }
+.one-summary-cashflow-point.is-surplus { border-color: #b8d8cf; background: #f1f8f5; }
+.one-summary-cashflow-point.is-shortfall { border-color: #efd0bd; background: #fff7f1; }
+.one-summary-cashflow-point--detail { border-color: #b7d4eb; background: #eef7fd; }
+.one-summary-cashflow-point-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.one-summary-cashflow-point-heading span { color: var(--ink-soft); font-size: 8.5px; font-weight: 700; line-height: 1.25; }
+.one-summary-cashflow-point-heading strong { flex: 0 0 auto; color: var(--orange-strong, #ff7a0a); font-size: 13px; font-weight: 850; line-height: 1.2; }
+.one-summary-cashflow-point > small { display: block; margin-top: 3px; color: var(--ink-soft); font-size: 8px; }
+.one-summary-cashflow-values { display: grid; gap: 2px; margin-top: 5px; padding-top: 4px; border-top: 1px solid rgba(117,95,64,.14); }
+.one-summary-cashflow-values span { display: flex; justify-content: space-between; gap: 5px; color: var(--ink-soft); font-size: 8px; }
+.one-summary-cashflow-values b { color: var(--navy-900); font-size: 8.5px; white-space: nowrap; }
+.one-summary-cashflow-breakdown { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 4px; }
+.one-summary-cashflow-breakdown span { color: var(--ink-soft); font-size: 7.5px; white-space: nowrap; }
+.one-summary-cashflow-breakdown b { color: inherit; font-size: inherit; }
+.one-summary-cashflow-point > p { margin: 5px 0 0; color: var(--ink-soft); font-size: 8px; line-height: 1.3; }
+.one-summary-cashflow-point > em { display: block; max-height: 22px; margin-top: 4px; overflow: hidden; color: var(--ink-soft); font-size: 7px; font-style: normal; line-height: 1.3; }
+.one-summary-asset-support { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; border-top: 1px solid #e8e0d4; }
+.one-summary-asset-support span { color: var(--ink-soft); font-size: 8.5px; }
+.one-summary-asset-support strong { color: var(--navy-900); font-size: 10px; white-space: nowrap; }
+.one-summary-cashflow-legacy { margin: 5px 0 0; color: var(--ink-soft); font-size: 7.5px; line-height: 1.3; }
 .one-summary-monthly-coverage > span { color: var(--ink-soft); font-size: 8.5px; font-weight: 700; line-height: 1.25; }
 .one-summary-monthly-coverage > span i { margin: 0 3px; color: #d8a254; font-style: normal; }
 .one-summary-monthly-coverage > strong { grid-column: 2; grid-row: 1 / span 3; align-self: center; color: var(--orange-strong, #ff7a0a); font-size: 13px; font-weight: 850; line-height: 1.2; white-space: nowrap; }

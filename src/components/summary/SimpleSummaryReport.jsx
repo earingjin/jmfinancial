@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
-import { formatAssetProjectionOutlook, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getFinancialHealthExplanation, getFinancialHealthStatus, getFinancialIndicatorInterpretation, getRetirementSummaryPresentation, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
+import { formatAssetProjectionOutlook, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getCashFlowPointPresentation, getFinancialHealthExplanation, getFinancialHealthStatus, getFinancialIndicatorInterpretation, getNationalPensionCashFlowStatusPresentation, getRetirementSummaryPresentation, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
 const CHART_COLORS = ['#e76f00', '#1976d2', '#2e8b57', '#c23b73', '#d4a017', '#d64545', '#708238', '#8c564b'];
@@ -188,7 +188,7 @@ function FinancialHealthSummaryCard({ indicators }) {
 
   return (
     <div className="summary-status-card">
-      <div className="fhs-hero">
+      <div className="fhs-hero financial-overview-card">
         <div className="summary-card-kicker">Part 1. 재무</div>
         <div className="fhs-hero-row">
           <div className="ss-status-icon" aria-hidden="true">{status.icon}</div>
@@ -247,6 +247,62 @@ function MobileMonthlyCoverageBlock({ title, incomeLabel, coverage, fallbackMess
   );
 }
 
+function MobileCashFlowDetails({ point, hasSpouse, compact = false }) {
+  return (
+    <>
+      <div className={`mobile-retirement-cashflow-main${compact ? ' is-compact' : ''}`}>
+        <div><span>가구 전체 월소득</span><b>{formatWon(point.totalIncome)}</b></div>
+        <div><span>물가 반영 은퇴 목표생활비</span><b>{formatWon(point.livingExpense)}</b></div>
+      </div>
+      <div className={`mobile-retirement-cashflow-breakdown${compact ? ' is-compact' : ''}`} aria-label="월소득 구성">
+        <div><span>본인 소득</span><b>{formatWon(point.selfIncome.total)}</b></div>
+        {hasSpouse && point.spouseIncome && <div><span>배우자 소득</span><b>{formatWon(point.spouseIncome.total)}</b></div>}
+        <div><span>가구 공통소득</span><b>{formatWon(point.householdSharedIncome.total)}</b></div>
+      </div>
+    </>
+  );
+}
+
+function MobileCashFlowDetailPoint({ point, hasSpouse }) {
+  const presentation = getCashFlowPointPresentation(point);
+  return (
+    <div className={`mobile-retirement-cashflow-point mobile-retirement-cashflow-point--detail is-${presentation.tone}`}>
+      <div className="mobile-retirement-cashflow-heading">
+        <span>{point?.meaning || '은퇴 현금흐름'}</span>
+        <strong>{presentation.result}</strong>
+      </div>
+      {Number.isFinite(point?.selfAge) && (
+        <div className="mobile-retirement-cashflow-age">
+          <span>기준 시점</span>
+          <b>본인 {formatNumber(point.selfAge)}세{hasSpouse && Number.isFinite(point.spouseAge) ? ` · 배우자 ${formatNumber(point.spouseAge)}세` : ''}</b>
+        </div>
+      )}
+      {presentation.available ? (
+        <MobileCashFlowDetails point={point} hasSpouse={hasSpouse} compact />
+      ) : <p>{presentation.reason}</p>}
+      {point?.uncertaintyNotice && <small>{point.uncertaintyNotice}</small>}
+    </div>
+  );
+}
+
+function MobileNationalPensionOverview({ point }) {
+  const presentation = getNationalPensionCashFlowStatusPresentation(point);
+  return (
+    <div className={`fhs-hero mobile-retirement-overview-card is-${presentation.tone}`}>
+      <div className="summary-card-kicker">Part 2. 은퇴</div>
+      <div className="fhs-hero-row">
+        <div className="ss-status-icon" aria-hidden="true">{presentation.icon}</div>
+        <div className="fhs-hero-text ss-status-copy">
+          <div className="ss-status-title"><span>{presentation.headline}</span></div>
+          {presentation.description && <div className="ss-status-detail"><span>{presentation.description}</span></div>}
+        </div>
+      </div>
+      {!presentation.available && <p>{presentation.reason}</p>}
+      {point?.uncertaintyNotice && <small>{point.uncertaintyNotice}</small>}
+    </div>
+  );
+}
+
 // "종합 결과"의 오른쪽 카드. 기존 모바일의 자산 유지 상태 문장 표현은 유지하고,
 // 두 시점의 월 생활비 충당 결과만 아래에 추가한다.
 export function RetirementSummaryCard({ rr, futureFinance }) {
@@ -256,39 +312,58 @@ export function RetirementSummaryCard({ rr, futureFinance }) {
     nationalPensionMonthlyCoverage,
     nationalPensionCoverageFallbackMessage,
     nationalPensionStartSnapshot,
+    retirementCashFlowDiagnosis,
   } = getRetirementSummaryPresentation(rr, futureFinance);
 
-  return (
-    <div className="summary-status-card mobile-retirement-summary-card">
-      <div className="fhs-hero">
-        <div className="summary-card-kicker">Part 2. 은퇴</div>
-        <div className="fhs-hero-row">
-          <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
-          <div className="fhs-hero-text ss-status-copy">
-            <div className="ss-status-title">
-              {retirementStatus.titleLines.map((line) => <span key={line}>{line}</span>)}
-            </div>
-            <div className="ss-status-detail">
-              {retirementStatus.detailLines.map((line) => <span key={line}>{line}</span>)}
-            </div>
+  const assetStatus = (
+    <div className="mobile-retirement-asset-support">
+      <div className="mobile-retirement-asset-label">자산 지속 가능성 · 보조 정보</div>
+      <div className="mobile-retirement-asset-content">
+        <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
+        <div className="ss-status-copy">
+          <div className="ss-status-title">
+            {retirementStatus.titleLines.map((line) => <span key={line}>{line}</span>)}
+          </div>
+          <div className="ss-status-detail">
+            {retirementStatus.detailLines.map((line) => <span key={line}>{line}</span>)}
           </div>
         </div>
       </div>
-      <div className="mobile-retirement-coverage-set">
-        <MobileMonthlyCoverageBlock
-          title="은퇴 시점 기준"
-          incomeLabel="은퇴 시점 예상 연금소득"
-          coverage={retirementMonthlyCoverage}
-          fallbackMessage={retirementMonthlyCoverage.reason}
-        />
-        <MobileMonthlyCoverageBlock
-          title="국민연금 수령 후 기준"
-          incomeLabel="예상 연금소득"
-          coverage={nationalPensionMonthlyCoverage}
-          fallbackMessage={nationalPensionCoverageFallbackMessage}
-          startSnapshot={nationalPensionStartSnapshot}
-        />
-      </div>
+    </div>
+  );
+
+  return (
+    <div className="summary-status-card mobile-retirement-summary-card">
+      {retirementCashFlowDiagnosis ? (
+        <>
+          <div className="mobile-retirement-cashflow-set">
+            <MobileNationalPensionOverview point={retirementCashFlowDiagnosis.nationalPensionPoint} />
+            <MobileCashFlowDetailPoint point={retirementCashFlowDiagnosis.retirementPoint} hasSpouse={retirementCashFlowDiagnosis.hasSpouse} />
+            <MobileCashFlowDetailPoint point={retirementCashFlowDiagnosis.nationalPensionPoint} hasSpouse={retirementCashFlowDiagnosis.hasSpouse} />
+          </div>
+          {assetStatus}
+        </>
+      ) : (
+        <>
+          {assetStatus}
+          <div className="mobile-retirement-coverage-set">
+            <MobileMonthlyCoverageBlock
+              title="은퇴 시점 기준"
+              incomeLabel="은퇴 시점 예상 연금소득"
+              coverage={retirementMonthlyCoverage}
+              fallbackMessage={retirementMonthlyCoverage.reason}
+            />
+            <MobileMonthlyCoverageBlock
+              title="국민연금 수령 후 기준"
+              incomeLabel="예상 연금소득"
+              coverage={nationalPensionMonthlyCoverage}
+              fallbackMessage={nationalPensionCoverageFallbackMessage}
+              startSnapshot={nationalPensionStartSnapshot}
+            />
+            <p className="mobile-retirement-cashflow-legacy">이 결과는 이전 진단 방식으로 저장되어 새로운 은퇴 현금흐름 정보가 포함되어 있지 않습니다. 최신 기준으로 다시 진단하면 확인할 수 있습니다.</p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
