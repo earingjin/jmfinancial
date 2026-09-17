@@ -269,6 +269,39 @@ describe('OnePageSummaryReportPage', () => {
     expect(html).toContain('01 / 1');
   });
 
+  it('종합 결과를 재무와 은퇴의 독립된 두 열로 묶고 Part 제목을 카드 밖에 두다', async () => {
+    const source = await readFile(new URL('./OnePageSummaryReportPage.jsx', import.meta.url), 'utf8');
+    const css = await readFile(new URL('../../../styles/app.css', import.meta.url), 'utf8');
+    const html = render();
+
+    expect(html).toContain('one-summary-column-grid');
+    expect(html.match(/class="one-summary-column one-summary-column--/g)).toHaveLength(2);
+    expect(html).not.toContain('one-summary-overall-grid');
+    expect(html).not.toContain('one-summary-middle-grid');
+    expect(source).toMatch(/one-summary-column--financial[\s\S]*?<h3 className="one-summary-part">Part 1\. 재무<\/h3>[\s\S]*?one-summary-result-card--financial[\s\S]*?one-summary-column-detail/);
+    expect(source).toMatch(/one-summary-column--retirement[\s\S]*?<h3 className="one-summary-part">Part 2\. 은퇴<\/h3>[\s\S]*?one-summary-result-card--retirement[\s\S]*?one-summary-column-detail/);
+    expect(css).toMatch(/\.one-summary-column-grid \{[^}]*grid-template-rows:\s*auto auto auto/s);
+    expect(css).toMatch(/\.one-summary-column \{[^}]*grid-template-rows:\s*subgrid[^}]*background:\s*rgba\(250,243,230,\.42\)/s);
+    expect(css).not.toMatch(/\.one-summary-column \{[^}]*border:/s);
+  });
+
+  it('긴 은퇴 안내와 부부의 예정 목돈을 생략 없이 한 PageFrame에 렌더링한다', () => {
+    const result = withCashFlowDiagnosis();
+    const longNotice = '배우자 국민연금 수령 정보와 기준 시점의 현금흐름을 확인하기 위한 긴 안내 문구입니다.';
+    result.webSummary.futureFinance.retirementCashFlowDiagnosis.nationalPensionPoint.uncertaintyNotice = longNotice;
+    const sourceInput = {
+      basic: { hasSpouse: true },
+      income: { severance: { type: 'lumpsum', lumpsum: 5000, lumpsumAge: 65 } },
+      spouse: { severance: { type: 'lumpsum', lumpsum: 3500, lumpsumAge: 67 } },
+    };
+    const html = render(result, sourceInput);
+
+    expect(html).toContain(longNotice);
+    expect(html).toContain('본인 퇴직급여 일시금');
+    expect(html).toContain('배우자 퇴직급여 일시금');
+    expect((html.match(/class="page"/g) || [])).toHaveLength(1);
+  });
+
   it('연금 출처는 기존 박스 안에서 최대 두 줄로 잘리고 넘침을 숨긴다', async () => {
     const css = await readFile(new URL('../../../styles/app.css', import.meta.url), 'utf8');
     expect(css).toMatch(/\.one-summary-pension-income i \{[^}]*max-width:\s*180px[^}]*overflow:\s*hidden[^}]*-webkit-line-clamp:\s*2/s);
@@ -322,7 +355,7 @@ describe('OnePageSummaryReportPage', () => {
     const mobileHtml = renderMobileRetirement();
     const indicators = buildResult().indicators;
     const financialHealth = getFinancialHealthStatus(indicators);
-    expect(html).toContain('01. 종합 결과');
+    expect(html).toContain('Ⅰ. 종합 결과');
     expect(html).toContain('Part 1. 재무');
     expect(html).toContain('one-summary-result-card one-summary-result-card--financial');
     expect(html).toContain('현재 재무상태</span><strong>전반적으로 안정적</strong>');
@@ -530,7 +563,7 @@ describe('OnePageSummaryReportPage', () => {
 
   it('현재 재무상태는 모바일 세부내역의 핵심 총계 6개만 표시한다', () => {
     const html = render();
-    expect(html).toContain('02. 현재 재무상태');
+    expect(html).toContain('현재 재무상태');
     expect(html).toContain('월 현금흐름');
     expect(html).toContain('자산 현황');
     expect(html).toContain('월 수입 합계');
@@ -548,7 +581,7 @@ describe('OnePageSummaryReportPage', () => {
 
   it('은퇴 준비 핵심 6개 값과 모바일 기준의 예정 퇴직급여 일시금을 표시한다', () => {
     const html = render();
-    expect(html).toContain('03. 은퇴 준비 현황');
+    expect(html).toContain('은퇴 준비 현황');
     expect(html).toContain('은퇴 시점');
     expect(html).toContain('은퇴자금 비교');
     expect(html).toContain('예상 은퇴 나이');
@@ -571,7 +604,7 @@ describe('OnePageSummaryReportPage', () => {
 
   it('또래 비교는 기존 peerComparison의 3개 값과 위치를 가로 막대로 표시한다', () => {
     const html = render();
-    expect(html).toContain('04. 또래와 비교');
+    expect(html).toContain('Ⅱ. 또래와 비교');
     expect(html).toContain('one-summary-peer-comparison-list');
     expect((html.match(/one-summary-peer-row/g) || [])).toHaveLength(3);
     expect(html).toContain('one-summary-peer-bar-fill--mine" style="width:100%"');

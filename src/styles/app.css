@@ -1912,15 +1912,20 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .one-page-summary-report .one-summary-header p { line-height: 1.35; }
 .one-page-summary-report .one-summary-header .one-summary-meta { padding-top: 1px; }
 .one-page-summary-report .one-summary-section { margin-top: 16px; padding-top: 0; }
-.one-page-summary-report .one-summary-overall { margin-top: 10px; }
+.one-page-summary-report .one-summary-overall { margin-top: 6px; }
 .one-page-summary-report .one-summary-overall .one-summary-section-heading { margin-bottom: 6px; padding-bottom: 5px; }
+.one-page-summary-report .one-summary-column-detail .one-summary-section-heading { margin-bottom: 6px; padding-bottom: 5px; }
 .one-page-summary-report .one-summary-section-heading { align-items: flex-end; margin-bottom: 9px; padding-bottom: 7px; border-bottom: 1px solid #d8a254; }
 .one-page-summary-report .one-summary-section-heading h2 { font-size: 16px; }
 .one-page-summary-report .one-summary-section-description { font-size: 10px; }
-.one-summary-overall-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.one-summary-column-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto auto; column-gap: 16px; align-items: stretch; }
+.one-summary-column { display: grid; min-width: 0; grid-row: 1 / span 3; grid-template-rows: subgrid; padding: 8px; border-radius: 7px; background: rgba(250,243,230,.42); }
+.one-summary-column--financial { grid-column: 1; }
+.one-summary-column--retirement { grid-column: 2; }
 .one-summary-result-card { min-width: 0; min-height: 206px; padding: 14px 16px; border: 1px solid #e3ddd4; border-radius: 7px; background: rgba(255,255,255,.8); }
+.one-page-summary-report .one-summary-column > .one-summary-result-card { min-height: 182px; box-sizing: border-box; }
 .one-summary-result-card--retirement { display: flex; flex-direction: column; border-color: #e3ddd4; }
-.one-summary-part { margin-bottom: 8px; color: var(--ink-soft); font-size: 10px; font-weight: 800; letter-spacing: .03em; }
+.one-summary-part { margin: 0 0 6px; color: #9b4d16; font-size: 18px; font-weight: 850; letter-spacing: -.03em; line-height: 1.2; text-align: center; }
 .one-summary-result-heading { display: grid; grid-template-columns: 32px 1fr; align-items: start; gap: 9px; }
 .one-summary-result-heading > span { font-size: 27px; line-height: 1; }
 .one-summary-result-heading > div { display: grid; min-width: 0; gap: 3px; }
@@ -1999,12 +2004,6 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .one-summary-indicator-row small { color: var(--ink); text-align: right; white-space: nowrap; }
 
 /* 1페이지 종합결과의 재무 카드만: 기존 정보 구조 안에서 결론·근거·지표의 위계를 분명히 한다. */
-.one-page-summary-report .one-summary-result-card--financial .one-summary-part {
-  color: var(--ink-soft);
-  font-size: 9.5px;
-  font-weight: 750;
-  letter-spacing: .04em;
-}
 .one-page-summary-report .one-summary-result-card--financial .one-summary-result-heading > div > span {
   color: var(--ink-soft);
   font-weight: 750;
@@ -2100,10 +2099,11 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .one-summary-fact-list > div { display: flex; justify-content: space-between; gap: 8px; padding: 4px; font-size: 9.5px; }
 .one-summary-fact-list span { color: var(--ink-soft); }
 .one-summary-fact-list strong { color: var(--navy-900); font-size: 11px; white-space: nowrap; }
-.one-summary-middle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: stretch; }
-.one-summary-middle-grid > .one-summary-section { display: flex; min-width: 0; flex-direction: column; }
+.one-page-summary-report .one-summary-column > .one-summary-column-detail { display: flex; min-width: 0; flex-direction: column; margin-top: 8px; }
+.one-page-summary-report .one-summary-column-detail .one-summary-section-heading { justify-content: center; text-align: center; }
+.one-page-summary-report .one-summary-column-detail .one-summary-section-heading h2 { font-size: 14px; }
 .one-summary-record-panel { display: flex; min-height: 268px; flex: 1; flex-direction: column; padding: 13px 15px; border: 1px solid #e3ddd4; border-radius: 7px; background: rgba(255,255,255,.78); }
-.one-summary-middle-grid > .one-summary-section:nth-child(2) .one-summary-record-panel { border-color: #e3ddd4; }
+.one-summary-column--retirement .one-summary-record-panel { border-color: #e3ddd4; }
 .one-summary-record-group + .one-summary-record-group { margin-top: 13px; padding-top: 12px; border-top: 1px solid #dfd5c4; }
 .one-summary-record-group h3 { margin: 0 0 7px; color: var(--navy-900); font-size: 11px; font-weight: 800; }
 .one-summary-record-values { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -2121,11 +2121,11 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .one-summary-record-final strong small { padding: 2px 4px; border: 1px solid #d8a254; border-radius: 3px; color: var(--ink-soft); font-size: 8px; font-weight: 700; line-height: 1; }
 .one-summary-record-final--secondary { border-top-color: #dfd5c4; }
 .one-summary-record-final--secondary strong { color: var(--navy-900); font-size: 17px; }
-.one-page-summary-report .one-summary-retirement-reference { margin: 8px 0 0; font-size: 9px; line-height: 1.45; }
-.one-page-summary-report .one-summary-lumpsums { display: grid; grid-template-columns: 88px 1fr; gap: 8px; margin-top: 8px; padding: 8px 0 0; border-top: 1px solid #d8a254; font-size: 9px; }
+.one-page-summary-report .one-summary-retirement-reference { min-width: 0; margin: 8px 0 0; font-size: 9px; line-height: 1.45; overflow-wrap: anywhere; }
+.one-page-summary-report .one-summary-lumpsums { display: grid; min-width: 0; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; margin-top: 8px; padding: 8px 0 0; border-top: 1px solid #d8a254; font-size: 9px; }
 .one-page-summary-report .one-summary-lumpsums > span { color: var(--navy-900); font-weight: 800; }
-.one-page-summary-report .one-summary-lumpsum-items { display: grid; gap: 4px; }
-.one-page-summary-report .one-summary-lumpsums b { color: var(--ink); font-size: 9px; font-weight: 600; line-height: 1.35; }
+.one-page-summary-report .one-summary-lumpsum-items { display: grid; min-width: 0; gap: 4px; }
+.one-page-summary-report .one-summary-lumpsums b { min-width: 0; color: var(--ink); font-size: 9px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
 .one-page-summary-report .one-summary-peer { margin-top: 16px; }
 .one-page-summary-report .one-summary-peer .one-summary-section-heading { margin-bottom: 6px; padding-bottom: 5px; }
 .one-page-summary-report .one-summary-peer-comparison-list { width: 100%; max-width: 100%; box-sizing: border-box; }
