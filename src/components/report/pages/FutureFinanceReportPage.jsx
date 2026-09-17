@@ -73,19 +73,12 @@ export default function FutureFinanceReportPage({ futureFinance, pageNumber, tot
             </div>
           )}
 
-          <div className="report-assumption-box">
+          <div className="report-assumption-box report-assumption-box--future">
             <strong>계산 가정</strong>
             <span>생활비는 연 3%의 물가상승률을 복리로 적용합니다.</span>
             <span>국민연금은 수급개시 후 연 2.1% 증가하며, 개인연금과 퇴직연금은 현재 월 수령액이 유지된다고 가정합니다.</span>
             <span>실제 물가·연금·자산가치 변화에 따라 결과는 달라질 수 있습니다.</span>
           </div>
-          <section className="report-key-note report-key-note--future" aria-label="사용자 메모 영역">
-            <div className="report-key-note-heading">
-              <strong>KEY NOTE</strong>
-              <span>미래 생활비와 연금소득 전망을 확인하며 준비할 내용을 기록해 보세요.</span>
-            </div>
-            <div className="report-key-note-space" aria-hidden="true" />
-          </section>
         </>
       ) : (
         <div className="report-empty-box">이전 저장 결과이거나 필수 입력값이 없어 미래 재무 전망을 표시할 수 없습니다.</div>

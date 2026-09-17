@@ -352,7 +352,7 @@
 .mobile-retirement-cashflow-point { padding: 14px 15px; border: 1px solid var(--line); border-radius: 10px; background: #f8f5ef; }
 .mobile-retirement-cashflow-point.is-surplus { border-color: #b8d8cf; background: #f1f8f5; }
 .mobile-retirement-cashflow-point.is-shortfall { border-color: #efd0bd; background: #fff7f1; }
-.mobile-retirement-cashflow-point--detail { border-color: #b7d4eb; background: #eef7fd; }
+.mobile-retirement-cashflow-point.mobile-retirement-cashflow-point--detail { border-color: var(--line); background: #f6ead7; }
 .mobile-retirement-cashflow-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(117,95,64,.18); }
 .mobile-retirement-cashflow-heading span { color: var(--navy-800); font-size: 12px; font-weight: 800; }
 .mobile-retirement-cashflow-heading strong { flex: 0 0 auto; color: var(--orange-strong, #ff7a0a); font-size: 17px; font-weight: 850; }
@@ -367,9 +367,9 @@
 .mobile-retirement-cashflow-breakdown b { flex: 0 0 auto; color: var(--navy-800); font-size: 12.5px; white-space: nowrap; }
 .mobile-retirement-cashflow-breakdown { display: grid; gap: 4px; margin-top: 8px; }
 .mobile-retirement-cashflow-breakdown.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 10px; }
-.mobile-retirement-cashflow-breakdown.is-compact > div { display: grid; justify-items: center; gap: 3px; min-width: 0; padding: 0 5px; text-align: center; }
+.mobile-retirement-cashflow-breakdown.is-compact > div { display: grid; justify-items: center; justify-content: center; gap: 3px; min-width: 0; padding: 0 5px; text-align: center; }
 .mobile-retirement-cashflow-breakdown.is-compact > div + div { border-left: 1px solid rgba(39,105,145,.2); }
-.mobile-retirement-cashflow-breakdown.is-compact span { font-size: 10.5px; }
+.mobile-retirement-cashflow-breakdown.is-compact span { width: 100%; font-size: 10.5px; text-align: center; }
 .mobile-retirement-cashflow-breakdown.is-compact b { max-width: 100%; font-size: 11.5px; }
 .mobile-retirement-cashflow-point > p { margin: 9px 0 0; color: var(--ink-soft); font-size: 11.5px; line-height: 1.5; }
 .mobile-retirement-cashflow-point > small { display: block; margin-top: 8px; color: var(--ink-soft); font-size: 10.5px; line-height: 1.45; }
@@ -1183,6 +1183,12 @@
 
 /* ---------- 5. 다운로드 ---------- */
 .ss-download-section { text-align: center; }
+.ss-result-notice { display: grid; gap: 11px; margin-bottom: 20px; padding: 18px 16px 15px; border: 1px solid var(--line); border-radius: 10px; background: #fff; text-align: left; }
+.ss-result-notice .simple-summary-title { margin: 0; padding-bottom: 11px; border-bottom: 1px solid var(--line); color: var(--navy-800); font-size: 16px; text-align: center; }
+.ss-result-notice p { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.75; word-break: keep-all; }
+.ss-result-notice-brand { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; margin-top: 2px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 11px; font-weight: 700; text-align: center; }
+.ss-result-notice-brand img { display: block; flex: 0 0 auto; width: 36px; height: 24px; object-fit: contain; object-position: center; }
+.ss-result-notice-brand span { min-width: 0; word-break: keep-all; }
 .ss-download-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .ss-download-btn {
   width: 100%;

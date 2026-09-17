@@ -144,7 +144,7 @@ export default function RetirementAssetProjectionReportPage({ retirementAssetPro
             </>
           )}
 
-          <div className="report-assumption-box">
+          <div className="report-assumption-box report-assumption-box--asset-projection">
             <strong>계산 기준</strong>
             <span className="report-assumption-note">
               연 단위 전망으로, 연초 자산에 예상수익률을 적용한 뒤 해당 연도의 소득과 생활비를 반영합니다. 실제 월별

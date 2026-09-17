@@ -2078,6 +2078,25 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
   background: var(--paper);
   color: var(--ink-soft);
 }
+.one-page-summary-report .one-summary-result-card--retirement .one-summary-retirement-explanation {
+  box-sizing: border-box;
+  min-height: 34px;
+  margin: 9px 0 10px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #edf8f2;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.one-page-summary-report .one-summary-retirement-explanation small { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 8px; font-weight: 500; }
+.one-page-summary-report .one-summary-result-card--retirement .one-summary-retirement-metrics { border-top-color: #dfe9e4; }
+.one-page-summary-report .one-summary-result-card--retirement .one-summary-indicator-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.one-page-summary-report .one-summary-result-card--retirement .one-summary-indicator-row::before { content: none; }
+.one-page-summary-report .one-summary-result-card--retirement .one-summary-indicator-row + .one-summary-indicator-row { box-shadow: inset 0 1px 0 #edf0ed; }
+.one-page-summary-report .one-summary-result-card--retirement .one-summary-indicator-row span { color: #526170; font-size: 10px; font-weight: 500; line-height: 1.35; }
+.one-page-summary-report .one-summary-result-card--retirement .one-summary-indicator-row strong { color: var(--navy-900); font-size: 12px; font-weight: 850; line-height: 1.35; }
 .one-summary-fact-list > div { display: flex; justify-content: space-between; gap: 8px; padding: 4px; font-size: 9.5px; }
 .one-summary-fact-list span { color: var(--ink-soft); }
 .one-summary-fact-list strong { color: var(--navy-900); font-size: 11px; white-space: nowrap; }
@@ -2089,7 +2108,8 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .one-summary-record-group h3 { margin: 0 0 7px; color: var(--navy-900); font-size: 11px; font-weight: 800; }
 .one-summary-record-values { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .one-summary-record-values.is-three { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.one-summary-record-value { min-width: 0; }
+.one-summary-record-value { min-width: 0; padding: 7px 6px; border-radius: 6px; background: #fff4e5; box-sizing: border-box; }
+.one-summary-record-panel .one-summary-record-value { text-align: center; }
 .one-summary-record-value span,
 .one-summary-record-value strong { display: block; }
 .one-summary-record-value span { min-height: 25px; color: var(--ink-soft); font-size: 9.5px; line-height: 1.35; }
@@ -2561,6 +2581,32 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .report-purchasing-feedback + .report-assumption-box { margin-top: 10px; }
 .report-assumption-box { display: grid; gap: 6px; margin-top: 18px; padding: 16px 18px; border-left: 4px solid var(--orange-strong, #ff7a0a); border-radius: 0 8px 8px 0; background: var(--paper); color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
 .report-assumption-box strong { margin-bottom: 2px; color: var(--ink); font-size: 13px; }
+.report-assumption-box--future {
+  gap: 4px;
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid #e7ddd0;
+  border-left: 1px solid #e7ddd0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .42);
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.report-assumption-box--future strong { margin-bottom: 1px; color: var(--ink-soft); font-size: 10.5px; font-weight: 800; }
+.report-assumption-box--asset-projection {
+  gap: 4px;
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid #e7ddd0;
+  border-left: 1px solid #e7ddd0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .42);
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.report-assumption-box--asset-projection strong { margin-bottom: 1px; color: var(--ink-soft); font-size: 10.5px; font-weight: 800; }
 .report-assumption-note { font-size: 10.5px; line-height: 1.55; }
 .report-assumption-row {
   display: flex; justify-content: space-between; gap: 14px; padding: 5px 0;
@@ -2721,8 +2767,6 @@ table.matrix th { background: var(--navy-800); color: #fff; font-weight: 600; }
 .report-key-note--composition .report-key-note-space { min-height: 72px; }
 .report-key-note--fhs { padding-top: 11px; padding-bottom: 10px; }
 .report-key-note--fhs .report-key-note-space { min-height: 48px; }
-.report-key-note--future { bottom: 8px; }
-.report-key-note--future .report-key-note-space { min-height: 105px; }
 .page-pad.fhs-keynote-page { display: flex; flex-direction: column; padding-bottom: 10px; }
 .fhs-keynote-gap { flex: 0 0 10px; }
 .page-pad.fhs-keynote-page .report-key-note--fhs {

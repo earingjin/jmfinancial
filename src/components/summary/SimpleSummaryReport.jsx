@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { formatWon, formatPercent, formatNumber, round1 } from '../../utils/format';
 import DonutChart from './DonutChart';
+import aiDataCenterLogo from '../../assets/ai데이터센터로고.png';
 import { formatAssetProjectionOutlook, formatPensionIncomeAtRetirement, formatRetirementLivingCostBasis, getCashFlowPointPresentation, getFinancialHealthExplanation, getFinancialHealthStatus, getFinancialIndicatorInterpretation, getNationalPensionCashFlowStatusPresentation, getRetirementSummaryPresentation, getRetirementSustainabilityStatus, getSeveranceLumpSumDisplayItems, RETIREMENT_SIMPLE_COMPARISON_NOTE } from './summaryPresentation';
 import '../../styles/simpleSummary.css';
 
@@ -317,9 +318,8 @@ export function RetirementSummaryCard({ rr, futureFinance }) {
 
   const assetStatus = (
     <div className="mobile-retirement-asset-support">
-      <div className="mobile-retirement-asset-label">자산 지속 가능성 · 보조 정보</div>
+      <div className="mobile-retirement-asset-label">자산 지속 가능성</div>
       <div className="mobile-retirement-asset-content">
-        <div className="ss-status-icon" aria-hidden="true">{retirementStatus.icon}</div>
         <div className="ss-status-copy">
           <div className="ss-status-title">
             {retirementStatus.titleLines.map((line) => <span key={line}>{line}</span>)}
@@ -848,7 +848,6 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
         <a href="#ss-h-hero">종합 결과</a>
         <a href="#ss-h-peer">또래 비교</a>
         <a href="#ss-h-retirement">은퇴 준비 현황</a>
-        <a href="#ss-h-future">미래 재무 전망</a>
       </nav>
 
       <div className="simple-summary-date">최근 설계일 {formatDesignDate(generatedAt)}</div>
@@ -1353,7 +1352,7 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
       </section>
 
       {/* 4. 미래 재무 전망 */}
-      <section aria-labelledby="ss-h-future">
+      {showOptionalMobileSections && <section aria-labelledby="ss-h-future">
         <h2 id="ss-h-future" className="simple-summary-title">미래 재무 전망</h2>
         <p className="simple-summary-subtitle">물가와 연금의 변화를 반영해 60·70·80세의 예상 현금흐름을 살펴봅니다.</p>
 
@@ -1443,12 +1442,19 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
         </div>
 
         <p className="future-disclaimer">본 결과는 현재 입력값과 가정에 따른 예상치이며 실제 물가, 연금 및 자산가치 변화에 따라 달라질 수 있습니다.</p>
-      </section>
+      </section>}
 
       {/* 5. 상세 리포트 다운로드 */}
       <section className="ss-download-section" aria-labelledby="ss-h-download">
-        <h2 id="ss-h-download" className="simple-summary-title">이 진단은 방향을 처방하지 않습니다</h2>
-        <p className="simple-summary-subtitle">이 결과는 정답이나 솔루션 제공이 아닌, 현재의 재무상태와 은퇴 준비 정도를 이해하기 위한 진단입니다.</p>
+        <div className="ss-result-notice">
+          <h2 id="ss-h-download" className="simple-summary-title">진단 결과 이용 안내</h2>
+          <p>본 진단 결과는 현재 재무상태와 은퇴 준비 수준을 파악하기 위한 참고자료입니다.</p>
+          <p>본 서비스는 개인별 자산 조정, 투자, 절세 등 구체적인 재무 솔루션을 제공하지 않습니다. 진단 결과를 바탕으로 자산관리와 관련된 의사결정을 진행하실 경우, 관련 분야 전문가와 충분히 상담하시기 바랍니다.</p>
+          <div className="ss-result-notice-brand">
+            <img src={aiDataCenterLogo} alt="제이엠커리어 더휴먼 AI센터" />
+            <span>제이엠커리어 더휴먼 AI센터</span>
+          </div>
+        </div>
         <div className="ss-download-actions">
           <button type="button" className="btn-primary ss-download-btn" onClick={onSummaryReport}>1페이지 요약 PDF</button>
           <button type="button" className="btn-secondary ss-download-btn" onClick={onDownload}>상세 리포트 PDF</button>
