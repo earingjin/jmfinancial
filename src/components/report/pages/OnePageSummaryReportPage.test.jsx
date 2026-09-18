@@ -581,7 +581,7 @@ describe('OnePageSummaryReportPage', () => {
 
   it('은퇴 준비 핵심 6개 값과 모바일 기준의 예정 퇴직급여 일시금을 표시한다', () => {
     const html = render();
-    expect(html).toContain('은퇴 준비 현황');
+    expect(html).toContain('은퇴 준비 자산 현황');
     expect(html).toContain('은퇴 시점');
     expect(html).toContain('은퇴자금 비교');
     expect(html).toContain('예상 은퇴 나이');
