@@ -86,7 +86,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const [isScrolled, setIsScrolled] = useState(false);
   const progressRef = useRef(null);
   const restingViewportHeightRef = useRef(0);
-  const { formData, draftState, saveCurrentDraft, setDraftPosition } = useFormData();
+  const { formData, draftState, saveCurrentDraft, setDraftPosition, runNavigationGuards } = useFormData();
   const { key: currentStepKey } = STEPS[stepIndex];
   const hasSpouse = !!formData.basic.hasSpouse;
   const subSteps = getWizardScreens(currentStepKey, hasSpouse);
@@ -178,6 +178,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const moveToSubStep = (nextSubStep) => {
     setIsSubStepMenuOpen(false);
     if (nextSubStep === subStepIndex) return;
+    if (!runNavigationGuards()) return;
     prepareForScreenChange();
     const nextScreenId = subSteps[nextSubStep].id;
     setSubStepIndex(nextSubStep);
@@ -189,6 +190,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const moveToStep = (next, nextSubStep = 0) => {
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
     setIsSubStepMenuOpen(false);
+    if ((resolved !== stepIndex || nextSubStep !== subStepIndex) && !runNavigationGuards()) return;
     if (resolved !== stepIndex || nextSubStep !== subStepIndex) prepareForScreenChange();
     const nextScreenId = getWizardScreens(STEPS[resolved].key, hasSpouse)[nextSubStep].id;
     setDraftPosition(resolved, nextScreenId);
@@ -282,6 +284,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   };
 
   const submit = async () => {
+    if (!runNavigationGuards()) return;
     if (firstMissingGroup) {
       const firstMissingPath = firstMissingGroup.missingFields[0][0];
       setShowRequiredError(true);
