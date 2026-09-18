@@ -241,7 +241,49 @@ export function getRetirementSummaryPresentation(retirementReadiness = {}, futur
     nationalPensionMonthlyCoverage: getMonthlyCoveragePresentation(nationalPensionStartSnapshot, livingCost),
     nationalPensionCoverageFallbackMessage: getNationalPensionCoverageFallback(nationalPensionStartSnapshot),
     nationalPensionStartSnapshot,
+    retirementCashFlowDiagnosis: futureFinance.retirementCashFlowDiagnosis || null,
   };
+}
+
+export function getCashFlowPointPresentation(point) {
+  if (!point?.calculable || point.status === 'unavailable') {
+    return { available: false, result: '산출 불가', tone: 'unavailable', reason: point?.reason || '현금흐름 정보를 산출할 수 없습니다.' };
+  }
+  if (point.status === 'surplus') {
+    return { available: true, result: `월 ${formatWon(Math.abs(point.balance))} 여유`, tone: 'surplus' };
+  }
+  if (point.status === 'shortfall') {
+    return { available: true, result: `월 ${formatWon(Math.abs(point.balance))} 부족`, tone: 'shortfall' };
+  }
+  return { available: true, result: '월소득과 생활비 균형', tone: 'balanced' };
+}
+
+export function getNationalPensionCashFlowStatusPresentation(point) {
+  const cashFlow = getCashFlowPointPresentation(point);
+  const meaning = point?.meaning || '국민연금 수령 후';
+  const byTone = {
+    surplus: {
+      icon: '😊',
+      headline: `${meaning} ${cashFlow.result}가 예상됩니다.`,
+      description: '월소득으로 생활비를 충당하고 남는 수준입니다.',
+    },
+    shortfall: {
+      icon: '😟',
+      headline: `${meaning} ${cashFlow.result}이 예상됩니다.`,
+      description: '월소득이 생활비보다 적은 수준입니다.',
+    },
+    balanced: {
+      icon: '😐',
+      headline: `${meaning} 월소득과 생활비가 같습니다.`,
+      description: '월소득과 생활비가 같은 수준입니다.',
+    },
+    unavailable: {
+      icon: '❔',
+      headline: `${meaning} 월 현금흐름을 산출할 수 없습니다.`,
+      description: null,
+    },
+  };
+  return { ...cashFlow, ...byTone[cashFlow.tone] };
 }
 
 export function formatPensionIncomeAtRetirement(amount, status, schedules = []) {

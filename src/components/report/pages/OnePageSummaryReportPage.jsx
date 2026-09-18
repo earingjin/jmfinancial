@@ -4,6 +4,7 @@ import {
   getFinancialHealthExplanation,
   getFinancialHealthStatus,
   getFinancialIndicatorInterpretation,
+  getNationalPensionCashFlowStatusPresentation,
   getRetirementSummaryPresentation,
   getSeveranceLumpSumDisplayItems,
   RETIREMENT_SIMPLE_COMPARISON_NOTE,
@@ -127,6 +128,42 @@ function RecordGroup({ title, values, finalLabel, finalValue, finalTone = 'prima
   );
 }
 
+function RetirementCashFlowSummary({ diagnosis }) {
+  const nationalPensionPoint = diagnosis.nationalPensionPoint;
+  const nationalPensionOverview = getNationalPensionCashFlowStatusPresentation(nationalPensionPoint);
+  const ages = [
+    Number.isFinite(nationalPensionPoint?.selfAge) && `본인 ${formatNumber(nationalPensionPoint.selfAge)}세`,
+    diagnosis.hasSpouse && Number.isFinite(nationalPensionPoint?.spouseAge) && `배우자 ${formatNumber(nationalPensionPoint.spouseAge)}세`,
+  ].filter(Boolean).join(' · ') || '확인 필요';
+
+  return (
+    <>
+      <div className="one-summary-result-heading">
+        <span aria-hidden="true">{nationalPensionOverview.icon}</span>
+        <div>
+          <span>국민연금 수령 후 월 현금흐름</span>
+          <strong>{nationalPensionOverview.result}</strong>
+        </div>
+      </div>
+      <p className="one-summary-retirement-explanation">
+        {nationalPensionOverview.description || nationalPensionOverview.reason}
+        {nationalPensionPoint?.uncertaintyNotice && <small>{nationalPensionPoint.uncertaintyNotice}</small>}
+      </p>
+      <div className="one-summary-indicator-list one-summary-retirement-metrics">
+        <div className="one-summary-indicator-row one-summary-indicator-row--unknown">
+          <span>기준 시점</span><strong>{ages}</strong>
+        </div>
+        <div className="one-summary-indicator-row one-summary-indicator-row--unknown">
+          <span>가구 전체 월소득</span><strong>{displayWon(nationalPensionPoint?.totalIncome)}</strong>
+        </div>
+        <div className="one-summary-indicator-row one-summary-indicator-row--unknown">
+          <span>물가 반영 은퇴 생활비</span><strong>{displayWon(nationalPensionPoint?.livingExpense)}</strong>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function OnePageSummaryReportPage({ result, input, clientName }) {
   const aggregates = result?.aggregates || {};
   const indicators = result?.indicators || [];
@@ -143,10 +180,10 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
   const financialHealth = getFinancialHealthStatus(financialIndicators);
   const financialExplanation = getFinancialHealthExplanation(financialIndicators, financialHealth.detail);
   const {
-    retirementStatus,
     retirementStatusPresentation: retirementPresentation,
     nationalPensionMonthlyCoverage,
     nationalPensionCoverageFallbackMessage,
+    retirementCashFlowDiagnosis,
   } = getRetirementSummaryPresentation(retirement, futureFinance);
   const severanceLumpSums = getSeveranceLumpSumDisplayItems(input, retirement.retirementAge);
   const peerRows = [
@@ -170,151 +207,163 @@ export default function OnePageSummaryReportPage({ result, input, clientName }) 
 
       <section className="one-summary-section one-summary-overall" aria-labelledby="one-summary-overall-title">
         <div className="one-summary-section-heading">
-          <h2 className="subsection-head" id="one-summary-overall-title">01. 종합 결과</h2>
+          <h2 className="subsection-head" id="one-summary-overall-title">Ⅰ. 종합 결과</h2>
         </div>
-        <div className="one-summary-overall-grid">
-          <article className="one-summary-result-card one-summary-result-card--financial">
-            <div className="one-summary-part">Part 1. 재무</div>
-            <div className="one-summary-result-heading">
-              <span aria-hidden="true">{financialHealth.icon}</span>
-              <div>
-                <span>현재 재무상태</span>
-                <strong>{financialStatusHeadline(financialHealth.title)}</strong>
-              </div>
-            </div>
-            <p>{financialExplanation}</p>
-            <div className="one-summary-indicator-list">
-              {representativeIndicators.map(({ key, label, indicator }) => (
-                <div key={key} className={`one-summary-indicator-row one-summary-indicator-row--${indicator?.ratioClass || 'unknown'}`}>
-                  <span>{label}</span>
-                  <strong>{displayIndicator(indicator)}</strong>
-                  <small>{getFinancialIndicatorInterpretation(indicator)}</small>
+        <div className="one-summary-column-grid">
+          <div className="one-summary-column one-summary-column--financial">
+            <h3 className="one-summary-part">Part 1. 재무</h3>
+            <article className="one-summary-result-card one-summary-result-card--financial">
+              <div className="one-summary-result-heading">
+                <span aria-hidden="true">{financialHealth.icon}</span>
+                <div>
+                  <span>현재 재무상태</span>
+                  <strong>{financialStatusHeadline(financialHealth.title)}</strong>
                 </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="one-summary-result-card one-summary-result-card--retirement">
-            <div className="one-summary-part">Part 2. 은퇴</div>
-            <div className="one-summary-result-heading">
-              <span aria-hidden="true">{retirementStatus.icon}</span>
-              <div>
-                <span>예상 자산 유지 기간</span>
-                <strong>{retirementPresentation.headline}</strong>
               </div>
-            </div>
-            <div className="one-summary-retirement-coverage">
-              <div className="one-summary-retirement-coverage-heading">
-                <h3>월 생활비 충당</h3>
-                <span>국민연금 수령 후 기준</span>
-              </div>
-              {nationalPensionMonthlyCoverage.calculable ? (
-                <div className="one-summary-retirement-coverage-values">
-                  <div><span>은퇴 목표생활비(물가 반영)</span><strong>{displayWon(nationalPensionMonthlyCoverage.livingCost)}</strong></div>
-                  <div>
-                    <span>예상 연금소득</span>
-                    <strong>{displayWon(nationalPensionMonthlyCoverage.pensionIncome)}</strong>
-                    {nationalPensionMonthlyCoverage.pensionSources?.summary && <small>{nationalPensionMonthlyCoverage.pensionSources.summary}</small>}
+              <p>{financialExplanation}</p>
+              <div className="one-summary-indicator-list">
+                {representativeIndicators.map(({ key, label, indicator }) => (
+                  <div key={key} className={`one-summary-indicator-row one-summary-indicator-row--${indicator?.ratioClass || 'unknown'}`}>
+                    <span>{label}</span>
+                    <strong>{displayIndicator(indicator)}</strong>
+                    <small>{getFinancialIndicatorInterpretation(indicator)}</small>
                   </div>
-                </div>
-              ) : <p className="one-summary-retirement-coverage-reason">{nationalPensionCoverageFallbackMessage}</p>}
-              <div className="one-summary-retirement-coverage-result">
-                <span>{monthlyCoverageResultLabel(nationalPensionMonthlyCoverage.result)}</span>
-                <strong>{nationalPensionMonthlyCoverage.result.replace(/^월\s*/, '')}</strong>
+                ))}
               </div>
-              {futureFinance.nationalPensionStartSnapshot && (
-                <div className="one-summary-retirement-coverage-basis">
-                  <span>기준 시점</span>
-                  <strong>{Number.isFinite(futureFinance.nationalPensionStartSnapshot.age) ? `본인 ${formatNumber(futureFinance.nationalPensionStartSnapshot.age)}세` : '확인 필요'}</strong>
+            </article>
+
+            <section className="one-summary-section one-summary-column-detail" aria-labelledby="one-summary-current-title">
+              <div className="one-summary-section-heading">
+                <div>
+                  <h2 className="subsection-head" id="one-summary-current-title">현재 재무상태</h2>
                 </div>
-              )}
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <div className="one-summary-middle-grid">
-        <section className="one-summary-section" aria-labelledby="one-summary-current-title">
-          <div className="one-summary-section-heading">
-            <div>
-              <h2 className="subsection-head" id="one-summary-current-title">02. 현재 재무상태</h2>
-            </div>
-          </div>
-          <div className="one-summary-record-panel">
-            <RecordGroup
-              title="월 현금흐름"
-              values={[
-                { label: '월 수입 합계', value: displayWon(overview.income?.monthlyTotal) },
-                { label: '월 고정지출 합계', value: displayWon(overview.expense?.fixedTotal) },
-              ]}
-              finalLabel="월 소득 합계 − 고정지출 합계"
-              finalValue={displayWon(overview.expense?.incomeMinusExpense)}
-              finalTone="secondary"
-            />
-            <RecordGroup
-              title="자산 현황"
-              values={[
-                { label: '총자산', value: displayWon(aggregates.totalAssets) },
-                { label: '총부채', value: totalDebtDisplay },
-              ]}
-              finalLabel="순자산"
-              finalValue={displayWon(aggregates.netWorth)}
-            />
-          </div>
-        </section>
-
-        <section className="one-summary-section" aria-labelledby="one-summary-retirement-title">
-          <div className="one-summary-section-heading">
-            <div>
-              <h2 className="subsection-head" id="one-summary-retirement-title">03. 은퇴 준비 현황</h2>
-            </div>
-          </div>
-          {retirement.notCalculable ? (
-            <p className="one-summary-empty">{retirement.reason || '은퇴 준비 결과를 표시할 수 없습니다.'}</p>
-          ) : (
-            <>
+              </div>
               <div className="one-summary-record-panel">
                 <RecordGroup
-                  title="은퇴 시점"
+                  title="월 현금흐름"
                   values={[
-                    { label: '예상 은퇴 나이', value: Number.isFinite(retirement.retirementAge) ? `${formatNumber(retirement.retirementAge)}세` : '산출 불가' },
-                    { label: '은퇴까지 남은 기간', value: displayYears(retirement.yearsToRetirement) },
-                    { label: '은퇴 후 생활 기간', value: displayYears(retirement.retirementYears, true) },
+                    { label: '월 수입 합계', value: displayWon(overview.income?.monthlyTotal) },
+                    { label: '월 고정지출 합계', value: displayWon(overview.expense?.fixedTotal) },
                   ]}
+                  finalLabel="월 소득 합계 − 고정지출 합계"
+                  finalValue={displayWon(overview.expense?.incomeMinusExpense)}
+                  finalTone="secondary"
                 />
                 <RecordGroup
-                  title="은퇴자금 비교"
+                  title="자산 현황"
                   values={[
-                    { label: '은퇴생활비 기준 필요자금', value: displayWon(retirement.requiredAtRetirement) },
-                    { label: '은퇴 시점 예상 준비자산', value: displayWon(retirement.readyAssetsAtRetirement) },
+                    { label: '총자산', value: displayWon(aggregates.totalAssets) },
+                    { label: '총부채', value: totalDebtDisplay },
                   ]}
-                  finalLabel="은퇴 시점 단순 비교 차이"
-                  finalValue={displayWon(retirement.shortfall)}
-                  finalNote="참고값"
+                  finalLabel="순자산"
+                  finalValue={displayWon(aggregates.netWorth)}
                 />
               </div>
-              <p className="one-summary-retirement-reference">{RETIREMENT_SIMPLE_COMPARISON_NOTE}</p>
-              {severanceLumpSums.length > 0 && (
-                <div className="one-summary-lumpsums">
-                  <span>향후 예정 목돈</span>
-                  <div className="one-summary-lumpsum-items">
-                    {severanceLumpSums.map((item) => (
-                      <b key={`${item.label}-${item.age}`}>
-                        {item.label} 퇴직급여 일시금 · {displayWon(item.amount)} · {formatNumber(item.age)}세 수령 예정
-                      </b>
-                    ))}
+            </section>
+          </div>
+
+          <div className="one-summary-column one-summary-column--retirement">
+            <h3 className="one-summary-part">Part 2. 은퇴</h3>
+            <article className="one-summary-result-card one-summary-result-card--retirement">
+              {retirementCashFlowDiagnosis ? (
+                <>
+                  <RetirementCashFlowSummary diagnosis={retirementCashFlowDiagnosis} />
+                  <div className="one-summary-asset-support">
+                    <span>자산 지속 가능성</span>
+                    <strong>{retirementPresentation.headline}</strong>
+                  </div>
+                </>
+              ) : <>
+                <div className="one-summary-result-heading">
+                  <div>
+                    <span>예상 자산 유지 기간</span>
+                    <strong>{retirementPresentation.headline}</strong>
                   </div>
                 </div>
+                <div className="one-summary-retirement-coverage">
+                  <div className="one-summary-retirement-coverage-heading">
+                    <h3>월 생활비 충당</h3>
+                    <span>국민연금 수령 후 기준</span>
+                  </div>
+                  {nationalPensionMonthlyCoverage.calculable ? (
+                    <div className="one-summary-retirement-coverage-values">
+                      <div><span>은퇴 목표생활비(물가 반영)</span><strong>{displayWon(nationalPensionMonthlyCoverage.livingCost)}</strong></div>
+                      <div>
+                        <span>예상 연금소득</span>
+                        <strong>{displayWon(nationalPensionMonthlyCoverage.pensionIncome)}</strong>
+                        {nationalPensionMonthlyCoverage.pensionSources?.summary && <small>{nationalPensionMonthlyCoverage.pensionSources.summary}</small>}
+                      </div>
+                    </div>
+                  ) : <p className="one-summary-retirement-coverage-reason">{nationalPensionCoverageFallbackMessage}</p>}
+                  <div className="one-summary-retirement-coverage-result">
+                    <span>{monthlyCoverageResultLabel(nationalPensionMonthlyCoverage.result)}</span>
+                    <strong>{nationalPensionMonthlyCoverage.result.replace(/^월\s*/, '')}</strong>
+                  </div>
+                  {futureFinance.nationalPensionStartSnapshot && (
+                    <div className="one-summary-retirement-coverage-basis">
+                      <span>기준 시점</span>
+                      <strong>{Number.isFinite(futureFinance.nationalPensionStartSnapshot.age) ? `본인 ${formatNumber(futureFinance.nationalPensionStartSnapshot.age)}세` : '확인 필요'}</strong>
+                    </div>
+                  )}
+                </div>
+                <p className="one-summary-cashflow-legacy">이 결과는 이전 진단 방식으로 저장되어 새로운 은퇴 현금흐름 정보가 포함되어 있지 않습니다. 최신 기준으로 다시 진단하면 확인할 수 있습니다.</p>
+              </>}
+            </article>
+
+            <section className="one-summary-section one-summary-column-detail" aria-labelledby="one-summary-retirement-title">
+              <div className="one-summary-section-heading">
+                <div>
+                  <h2 className="subsection-head" id="one-summary-retirement-title">은퇴 준비 자산 현황</h2>
+                </div>
+              </div>
+              {retirement.notCalculable ? (
+                <p className="one-summary-empty">{retirement.reason || '은퇴 준비 결과를 표시할 수 없습니다.'}</p>
+              ) : (
+                <>
+                  <div className="one-summary-record-panel">
+                    <RecordGroup
+                      title="은퇴 시점"
+                      values={[
+                        { label: '예상 은퇴 나이', value: Number.isFinite(retirement.retirementAge) ? `${formatNumber(retirement.retirementAge)}세` : '산출 불가' },
+                        { label: '은퇴까지 남은 기간', value: displayYears(retirement.yearsToRetirement) },
+                        { label: '은퇴 후 생활 기간', value: displayYears(retirement.retirementYears, true) },
+                      ]}
+                    />
+                    <RecordGroup
+                      title="은퇴자금 비교"
+                      values={[
+                        { label: '은퇴생활비 기준 필요자금', value: displayWon(retirement.requiredAtRetirement) },
+                        { label: '은퇴 시점 예상 준비자산', value: displayWon(retirement.readyAssetsAtRetirement) },
+                      ]}
+                      finalLabel="은퇴 시점 단순 비교 차이"
+                      finalValue={displayWon(retirement.shortfall)}
+                      finalNote="참고값"
+                    />
+                  </div>
+                  <p className="one-summary-retirement-reference">{RETIREMENT_SIMPLE_COMPARISON_NOTE}</p>
+                  {severanceLumpSums.length > 0 && (
+                    <div className="one-summary-lumpsums">
+                      <span>향후 예정 목돈</span>
+                      <div className="one-summary-lumpsum-items">
+                        {severanceLumpSums.map((item) => (
+                          <b key={`${item.label}-${item.age}`}>
+                            {item.label} 퇴직급여 일시금 · {displayWon(item.amount)} · {formatNumber(item.age)}세 수령 예정
+                          </b>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </section>
-      </div>
+            </section>
+          </div>
+        </div>
+      </section>
 
       <section className="one-summary-section one-summary-peer" aria-labelledby="one-summary-peer-title">
         <div className="one-summary-section-heading">
           <div>
-            <h2 className="subsection-head" id="one-summary-peer-title">04. 또래와 비교</h2>
+            <h2 className="subsection-head" id="one-summary-peer-title">Ⅱ. 또래와 비교</h2>
             <p className="intro-text one-summary-section-description">동일 연령대 가구와 진단 당시의 재무 수준을 비교합니다.</p>
           </div>
           <p className="one-summary-section-meta">{peerComparison.userBracketLabel || peerComparison.benchmarkMeta?.ageBasis || '동일 연령대 기준'}</p>

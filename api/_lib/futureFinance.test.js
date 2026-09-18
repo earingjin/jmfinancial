@@ -5,6 +5,7 @@ import {
   buildFiveYearOutlookAges,
   buildFutureFinanceProjection,
   buildRetirementAssetProjection,
+  buildRetirementCashFlowDiagnosis,
   calculatePensionIncomeAtTarget,
   calculateNonPensionIncomeAtTarget,
   calculateFutureValue,
@@ -35,6 +36,183 @@ function allNumbersAreFinite(value) {
   if (value && typeof value === 'object') return Object.values(value).every(allNumbersAreFinite);
   return true;
 }
+
+function makeCashFlowInput(overrides = {}) {
+  const base = {
+    basic: { birthYear: 1980, retirementAge: 60, lifeExpectancy: 90, hasSpouse: false },
+    income: {
+      salary: { hasSalary: true, monthly: 300, annualBonus: 120, months: 120 },
+      business: { monthly: 40 },
+      otherIncomes: [{ name: '임대소득', annual: 120, years: 30 }],
+      nationalPension: { inputMode: 'direct', monthly: 150, months: 240, paymentMonths: 120 },
+      severance: { type: 'pension', pensionMonthly: 50, pensionStartAge: 60, pensionMonths: 120 },
+      personalPension: { type: 'installment', monthly: 30, startAge: 60, months: 240 },
+    },
+    spouse: {},
+    expense: { retirementLivingCost: 250 },
+    assets: {
+      currentIncome: { monthly: 0 }, currentLivingCost: { monthly: 9999 },
+      liquidAssets: {}, financialAssets: {}, pensionAssetsBreakdown: {}, realEstateAssets: {}, debtStatus: {}, savingsPlan: {},
+    },
+  };
+  return {
+    ...base,
+    ...overrides,
+    basic: { ...base.basic, ...overrides.basic },
+    income: { ...base.income, ...overrides.income },
+    spouse: { ...base.spouse, ...overrides.spouse },
+    expense: { ...base.expense, ...overrides.expense },
+    assets: { ...base.assets, ...overrides.assets },
+  };
+}
+
+describe('retirement cash-flow diagnosis', () => {
+  it('uses retirement target living cost independently at retirement and national-pension ages', () => {
+    const input = makeCashFlowInput();
+    const result = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 });
+
+    expect(result.retirementPoint.selfAge).toBe(60);
+    expect(result.nationalPensionPoint.selfAge).toBe(65);
+    expect(result.retirementPoint.livingExpense).toBe(Math.round(250 * (1.03 ** 10)));
+    expect(result.nationalPensionPoint.livingExpense).toBe(Math.round(250 * (1.03 ** 15)));
+    expect(result.retirementPoint.livingExpense).not.toBe(result.nationalPensionPoint.livingExpense);
+    expect(result.retirementPoint.livingExpense).not.toBe(9999);
+    expect(result.retirementPoint.balance).toBe(result.retirementPoint.totalIncome - result.retirementPoint.livingExpense);
+  });
+
+  it('chooses the later confirmed spouse start and displays the target as self age', () => {
+    const input = makeCashFlowInput({
+      basic: { hasSpouse: true },
+      spouse: {
+        birthYear: 1970,
+        retirementAge: 70,
+        salary: { hasSalary: true, monthly: 200, annualBonus: 0, months: 240 },
+        nationalPension: { inputMode: 'direct', monthly: 100, months: 240, paymentMonths: 120 },
+        severance: { type: 'none' },
+        personalPension: { type: 'none' },
+      },
+    });
+    const result = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 });
+
+    // 본인 2045년 개시, 배우자 2035년 개시이므로 더 늦은 2045년 = 본인 65세/배우자 75세.
+    expect(result.nationalPensionPoint.meaning).toBe('부부 국민연금 수령 후');
+    expect(result.nationalPensionPoint.selfAge).toBe(65);
+    expect(result.nationalPensionPoint.spouseAge).toBe(75);
+    expect(result.nationalPensionPoint.selfIncome.nationalPension).toBeGreaterThan(0);
+    expect(result.nationalPensionPoint.spouseIncome.nationalPension).toBeGreaterThan(0);
+  });
+
+  it('uses the spouse-only confirmed start and converts it to self age', () => {
+    const input = makeCashFlowInput({
+      basic: { hasSpouse: true },
+      income: { nationalPension: { inputMode: 'none' } },
+      spouse: {
+        birthYear: 1985, retirementAge: 62,
+        salary: { hasSalary: false, monthly: '', annualBonus: '', months: 0 },
+        nationalPension: { inputMode: 'direct', monthly: 90, months: 240, paymentMonths: 120 },
+        severance: { type: 'none' }, personalPension: { type: 'none' },
+      },
+    });
+    const point = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 }).nationalPensionPoint;
+    expect(point.meaning).toBe('배우자 국민연금 수령 후');
+    expect(point.selfAge).toBe(70);
+    expect(point.spouseAge).toBe(65);
+  });
+
+  it('excludes only an uncertain spouse national pension while keeping spouse salary and other pensions', () => {
+    const input = makeCashFlowInput({
+      basic: { hasSpouse: true },
+      spouse: {
+        birthYear: 1982, retirementAge: 70,
+        salary: { hasSalary: true, monthly: 200, annualBonus: 0, months: 300 },
+        nationalPension: { inputMode: 'direct', monthly: 90, paymentMonths: 100, futureContributionPlan: 'unknown' },
+        severance: { type: 'pension', pensionMonthly: 40, pensionStartAge: 62, pensionMonths: 120 },
+        personalPension: { type: 'none' },
+      },
+    });
+    const point = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 }).nationalPensionPoint;
+    expect(point.meaning).toBe('본인 국민연금 수령 후');
+    expect(point.calculable).toBe(true);
+    expect(point.spouseIncome.salary).toBe(200);
+    expect(point.spouseIncome.retirementPension).toBe(40);
+    expect(point.spouseIncome.nationalPension).toBe(0);
+    expect(point.uncertaintyNotice).toContain('배우자 국민연금');
+  });
+
+  it('keeps household business and other income separate and sums each once', () => {
+    const input = makeCashFlowInput({ basic: { retirementAge: 55 } });
+    const point = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 }).retirementPoint;
+    expect(point.householdSharedIncome).toEqual({ business: 40, otherRegular: 10, total: 50 });
+    expect(point.selfIncome.total + point.householdSharedIncome.total).toBe(point.totalIncome);
+    expect(point.includedIncomes.filter((item) => item.category === 'business')).toHaveLength(1);
+    expect(point.includedIncomes.filter((item) => item.category === 'otherRegularIncome')).toHaveLength(1);
+  });
+
+  it('keeps a past retirement point unavailable while calculating B independently', () => {
+    const input = makeCashFlowInput({ basic: { retirementAge: 45 } });
+    const result = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 });
+    expect(result.retirementPoint.status).toBe('unavailable');
+    expect(result.nationalPensionPoint.calculable).toBe(true);
+  });
+
+  it('calculates retirement at the current age as the current point', () => {
+    const input = makeCashFlowInput({ basic: { retirementAge: 50 } });
+    const point = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 }).retirementPoint;
+    expect(point.calculable).toBe(true);
+    expect(point.selfAge).toBe(50);
+    expect(point.livingExpense).toBe(250);
+    expect(point.selfIncome.salary).toBe(310);
+  });
+
+  it('allows the life-expectancy boundary and rejects a point beyond it', () => {
+    const boundary = makeCashFlowInput({ basic: { lifeExpectancy: 65 } });
+    const beyond = makeCashFlowInput({ basic: { lifeExpectancy: 64 } });
+    expect(buildRetirementCashFlowDiagnosis({ input: boundary, aggregates: buildAggregates(boundary), currentYear: 2030 }).nationalPensionPoint.calculable).toBe(true);
+    const point = buildRetirementCashFlowDiagnosis({ input: beyond, aggregates: buildAggregates(beyond), currentYear: 2030 }).nationalPensionPoint;
+    expect(point.status).toBe('unavailable');
+    expect(point.totalIncome).toBeNull();
+  });
+
+  it('does not fabricate B when no household member has confirmed eligibility', () => {
+    const input = makeCashFlowInput({ income: { nationalPension: { inputMode: 'none' } } });
+    const point = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 }).nationalPensionPoint;
+    expect(point.status).toBe('unavailable');
+    expect(point.reason).toContain('수령이 확인된');
+  });
+
+  it('calculates A and B independently even when they are the same age', () => {
+    const input = makeCashFlowInput({ basic: { retirementAge: 65 } });
+    const result = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 });
+    expect(result.retirementPoint.selfAge).toBe(65);
+    expect(result.nationalPensionPoint.selfAge).toBe(65);
+    expect(result.retirementPoint.livingExpense).toBe(result.nationalPensionPoint.livingExpense);
+    expect(result.retirementPoint.totalIncome).toBe(result.nationalPensionPoint.totalIncome);
+  });
+
+  it('ignores stale spouse income when hasSpouse is false', () => {
+    const input = makeCashFlowInput({
+      spouse: {
+        birthYear: 1970, retirementAge: 90,
+        salary: { hasSalary: true, monthly: 999, annualBonus: 1200, months: 500 },
+        nationalPension: { inputMode: 'direct', monthly: 999, months: 240, paymentMonths: 120 },
+      },
+    });
+    const result = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 });
+    expect(result.hasSpouse).toBe(false);
+    expect(result.retirementPoint.spouseIncome).toBeNull();
+    expect(result.retirementPoint.includedIncomes.every((item) => item.owner !== 'spouse')).toBe(true);
+  });
+
+  it('does not turn an active finite pension with missing timing into zero', () => {
+    const input = makeCashFlowInput({
+      income: { personalPension: { type: 'installment', monthly: 30, startAge: '', months: 240 } },
+    });
+    const point = buildRetirementCashFlowDiagnosis({ input, aggregates: buildAggregates(input), currentYear: 2030 }).retirementPoint;
+    expect(point.status).toBe('unavailable');
+    expect(point.totalIncome).toBeNull();
+    expect(point.reason).toContain('연금 개시·종료');
+  });
+});
 
 describe('future finance projection', () => {
   it('does not turn unknown national-pension eligibility into a calculable zero', () => {
