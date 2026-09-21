@@ -11,7 +11,9 @@ import TotalInputModeField from '../fields/TotalInputModeField';
 // 변액연금·연금저축·IRP는 "4. 자산 > 연금자산"의 각각 전용 항목(pensionAssetsBreakdown)에 바로 연동된다
 // (연금자산은 변액연금·연금저축계좌·IRP개인퇴직계좌·기타 4개 버튼으로 나뉘어 있고, "기타"만 자산 파트에서
 // 직접 입력하며 저축 파트와는 연동하지 않는다).
-const SAVINGS_CATEGORIES = [
+// 실제 화면 항목 정의를 이름 중복 검증 테스트에서도 그대로 사용한다.
+// oxlint-disable-next-line react/only-export-components
+export const SAVINGS_CATEGORIES = [
   { key: 'installment', label: '적금', assetLink: { type: 'liquidBreakdown', field: 'savings' }, assetLinkLabel: '현금성 자산 > 적금' },
   { key: 'isa', label: 'ISA', assetLink: { type: 'liquidCustomItem', name: 'ISA' }, assetLinkLabel: '현금성 자산의 "ISA" 추가 항목' },
   { key: 'variableAnnuity', label: '변액연금', assetLink: { type: 'pensionBreakdown', field: 'variableAnnuity' }, assetLinkLabel: '연금자산 > 변액연금' },

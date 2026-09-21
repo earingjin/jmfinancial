@@ -54,7 +54,10 @@ function DialogFrame({ title, description, role, children, onDismiss }) {
   );
 }
 
-export function ConfirmModal({ title, description, cancelLabel = '취소', confirmLabel = '확인', destructive = false, onCancel, onConfirm, processing = false, disabled = false }) {
+export function ConfirmModal({
+  title, description, cancelLabel = '취소', secondaryLabel, confirmLabel = '확인', destructive = false,
+  onCancel, onSecondary, onConfirm, processing = false, disabled = false, children,
+}) {
   const [internalProcessing, setInternalProcessing] = useState(false);
   const confirmingRef = useRef(false);
   const blocked = processing || internalProcessing || disabled;
@@ -71,8 +74,12 @@ export function ConfirmModal({ title, description, cancelLabel = '취소', confi
   };
   return (
     <DialogFrame title={title} description={description} role="alertdialog" onDismiss={blocked ? undefined : onCancel}>
-      <div className="app-dialog-actions">
+      {children}
+      <div className={`app-dialog-actions ${secondaryLabel ? 'app-dialog-actions--three' : ''}`}>
         <button type="button" className="welcome-signup" onClick={onCancel} disabled={blocked}>{cancelLabel}</button>
+        {secondaryLabel && <button type="button" className="welcome-login" onClick={onSecondary} disabled={blocked}>
+          {secondaryLabel}
+        </button>}
         <button type="button" className={destructive ? 'app-dialog-destructive' : 'welcome-login'} onClick={() => void handleConfirm()} disabled={blocked}>
           {processing || internalProcessing ? '처리 중…' : confirmLabel}
         </button>

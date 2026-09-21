@@ -57,6 +57,7 @@ export function FormProvider({ children, userId, initialDraft, draftControllerRe
   const dirtyRef = useRef(false);
   const persistedRef = useRef(Boolean(initialDraft?.updated_at));
   const stoppedRef = useRef(false);
+  const navigationGuardsRef = useRef(new Set());
   const saverRef = useRef(null);
   if (!saverRef.current) {
     saverRef.current = createLatestDraftSaver({
@@ -199,6 +200,18 @@ export function FormProvider({ children, userId, initialDraft, draftControllerRe
     });
   }, [changeFormData]);
 
+  const registerNavigationGuard = useCallback((guard) => {
+    navigationGuardsRef.current.add(guard);
+    return () => navigationGuardsRef.current.delete(guard);
+  }, []);
+
+  const runNavigationGuards = useCallback(() => {
+    for (const guard of navigationGuardsRef.current) {
+      if (guard() === false) return false;
+    }
+    return true;
+  }, []);
+
   const updateListItem = useCallback((path, index, key, value) => {
     changeFormData((prev) => {
       const list = path.split('.').reduce((acc, k) => acc[k], prev) || [];
@@ -208,8 +221,14 @@ export function FormProvider({ children, userId, initialDraft, draftControllerRe
   }, [changeFormData]);
 
   const value = useMemo(
-    () => ({ formData, setField, addListItem, removeListItem, updateListItem, setFormData: changeFormData, draftState, saveCurrentDraft, setDraftStep, setDraftPosition }),
-    [formData, setField, addListItem, removeListItem, updateListItem, changeFormData, draftState, saveCurrentDraft, setDraftStep, setDraftPosition]
+    () => ({
+      formData, setField, addListItem, removeListItem, updateListItem, setFormData: changeFormData,
+      draftState, saveCurrentDraft, setDraftStep, setDraftPosition, registerNavigationGuard, runNavigationGuards,
+    }),
+    [
+      formData, setField, addListItem, removeListItem, updateListItem, changeFormData, draftState,
+      saveCurrentDraft, setDraftStep, setDraftPosition, registerNavigationGuard, runNavigationGuards,
+    ]
   );
 
   return <FormContext.Provider value={value}>{children}</FormContext.Provider>;

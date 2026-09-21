@@ -1,12 +1,16 @@
 import { forwardRef, useState } from 'react';
 import { formatNumericText, getNumericInputUpdate } from './numericInputText';
+import { logSavingsDiagnostic } from './savingsDiagnostics';
 
 /**
  * A text-backed numeric input that displays thousands separators while keeping
  * the same onChange contract as a native number input (target.value is plain).
  */
 const FormattedNumberInput = forwardRef(function FormattedNumberInput(
-  { value, onChange, onBlur, min, max, inputMode = 'decimal', integerOnly = false, useGrouping = true, ...props },
+  {
+    value, onChange, onBlur, min, max, inputMode = 'decimal', integerOnly = false, useGrouping = true,
+    savingsDiagnostic, ...props
+  },
   ref,
 ) {
   // 상위 필드는 저장값을 Number로 보관하므로 사용자가 "2."까지 입력한 순간 2로 바뀔 수 있다.
@@ -15,10 +19,19 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
   const [inputError, setInputError] = useState(null);
 
   const handleChange = (event) => {
+    if (savingsDiagnostic) logSavingsDiagnostic('numeric_native_change', {
+      ...savingsDiagnostic,
+      disabled: Boolean(props.disabled),
+      readOnly: Boolean(props.readOnly),
+    });
     const allowsNegative = min == null || Number(min) < 0;
     const update = getNumericInputUpdate(event.target.value, { integerOnly, allowsNegative, max });
 
     if (!update.shouldCommit) {
+      if (savingsDiagnostic) logSavingsDiagnostic('numeric_change_blocked', {
+        ...savingsDiagnostic,
+        reason: update.error || 'normalization',
+      });
       setInputError(update.error);
       // Keep the original text available for correction, but never forward a
       // transformed version of invalid input to form state.
@@ -31,6 +44,7 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
     if (normalized === '-' || normalized === '.' || normalized === '-.') return;
     setInputError(null);
     setEditingValue(normalized);
+    if (savingsDiagnostic) logSavingsDiagnostic('numeric_parent_change_dispatched', savingsDiagnostic);
 
     onChange?.({
       ...event,
@@ -63,6 +77,7 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
         value={displayValue}
         onChange={handleChange}
         onBlur={(event) => {
+          if (savingsDiagnostic) logSavingsDiagnostic('numeric_blur', savingsDiagnostic);
           setEditingValue(null);
           onBlur?.(event);
         }}

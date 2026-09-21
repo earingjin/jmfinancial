@@ -20,4 +20,22 @@ describe('application dialogs', () => {
     expect(html).toContain('현재 화면을 유지합니다.');
     expect(html).not.toContain('app-dialog-destructive');
   });
+
+  it('renders three clearly separated choices when a secondary action is provided', () => {
+    const html = renderToStaticMarkup(<ConfirmModal
+      title="삭제 범위 선택"
+      description="연결 자산이 있습니다."
+      cancelLabel="취소"
+      secondaryLabel="저축만 삭제하고 자산 유지"
+      confirmLabel="저축과 연결 자산 모두 삭제"
+      onCancel={vi.fn()}
+      onSecondary={vi.fn()}
+      onConfirm={vi.fn()}
+    />);
+    expect(html).toContain('app-dialog-actions--three');
+    expect(html).toContain('취소');
+    expect(html).toContain('저축만 삭제하고 자산 유지');
+    expect(html).toContain('저축과 연결 자산 모두 삭제');
+    expect(html.match(/<button/g)).toHaveLength(3);
+  });
 });
