@@ -78,3 +78,38 @@ export function getWizardLocationForPath(path, hasSpouse = false) {
   }
   return null;
 }
+
+const VALIDATION_PATH_TARGETS = {
+  'assets.currentLivingCost.monthly': 'wizard-region-expense-current-living',
+  'assets.savingsPlan.monthly': 'wizard-region-savings-current',
+  'assets.liquidAssets.total': 'wizard-region-assets-liquid',
+  'assets.financialAssets.total': 'wizard-region-assets-financial',
+  'assets.pensionAssets': 'wizard-region-assets-pension',
+  'assets.realEstateAssets.total': 'wizard-region-assets-real-estate',
+  'assets.otherAssets.total': 'wizard-region-assets-other',
+  'assets.debtStatus.totalBalance': 'wizard-region-debt',
+  'assets.debtStatus.monthlyRepayment': 'wizard-region-debt',
+};
+
+export function getWizardIssueLocationForPath(path, hasSpouse = false) {
+  const location = getWizardLocationForPath(path, hasSpouse);
+  return location ? { ...location, targetId: VALIDATION_PATH_TARGETS[path] || path } : null;
+}
+
+const VALIDATION_MESSAGE_LOCATIONS = [
+  ['노후 월 평균 생활비는 필수 입력 항목입니다.', 'expense', 'living-retirement', 'expense.retirementLivingCost', '노후 월 평균 생활비'],
+  ['본인·배우자 퇴직연금 적립금 합계는 연금자산 총액을 초과할 수 없습니다.', 'assets', 'pension', 'wizard-region-assets-pension', '연금자산과 퇴직연금 적립금'],
+  ['노후준비 월 저축액은 총 월 저축액보다 클 수 없습니다.', 'savings', 'retirement', 'wizard-region-savings-retirement', '노후준비 월 저축액'],
+  ['노후준비 연 저축액은 총 연 저축액보다 클 수 없습니다.', 'savings', 'retirement', 'wizard-region-savings-retirement', '노후준비 연 저축액'],
+  ['기대수명(은퇴 종료 연령)은 은퇴 시작 연령보다 작을 수 없습니다.', 'income', 'basic-self', 'wizard-region-income-basic-self', '기대수명과 은퇴 연령'],
+  ['배우자 기대여명은 배우자 은퇴(예정) 연령보다 작을 수 없습니다.', 'income', 'basic-spouse', 'wizard-region-income-basic-spouse', '배우자 기대여명과 은퇴 연령'],
+];
+
+export function getWizardLocationForValidationMessage(message, formData) {
+  const match = VALIDATION_MESSAGE_LOCATIONS.find(([known]) => known === message);
+  if (!match) return null;
+  const [, stepKey, screenId, targetId, label] = match;
+  if (screenId === 'basic-spouse' && formData?.basic?.hasSpouse !== true) return null;
+  const stepIndex = WIZARD_STEP_KEYS.indexOf(stepKey);
+  return stepIndex >= 0 ? { stepIndex, stepKey, screenId, targetId, label } : null;
+}

@@ -5,6 +5,7 @@ import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
 import { changeDebtInputMode, debtDetailedTotals } from './inputModeTransitions';
 import { ConfirmModal } from '../../common/AppDialog';
+import { WizardValidatedTextInput } from '../WizardValidationContext';
 
 const monthlyBurdenOf = (item) =>
   (!item || item.repaymentType !== 'equalPrincipal' ? Number(item?.monthlyInterest) : Number(item?.monthlyRepayment)) || 0;
@@ -249,6 +250,7 @@ export default function DebtBreakdownField({
             <span className="field-label">총 부채잔액 합계</span>
             <div className="field-input-row">
               <FormattedNumberInput
+                id={balanceTotalPath}
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -267,6 +269,7 @@ export default function DebtBreakdownField({
             <span className="field-label">매월 납입 원리금 상환액 합계</span>
             <div className="field-input-row">
               <FormattedNumberInput
+                id={repaymentTotalPath}
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -319,8 +322,8 @@ export default function DebtBreakdownField({
               <div className="repeatable-item" key={index}>
                 <label className="field" style={{ marginBottom: 10 }}>
                   <span className="field-label">대출 이름</span>
-                  <input
-                    id={`${customPath}.${index}.name`}
+                  <WizardValidatedTextInput
+                    path={`${customPath}.${index}.name`}
                     type="text"
                     placeholder="예: 신용대출"
                     value={item.name}

@@ -87,7 +87,7 @@ export default function Step3Savings({ subStepIndex }) {
     <div className="step">
       <h2 className="step-title">3. 저축</h2>
 
-      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
+      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section id="wizard-region-savings-current" tabIndex={-1} className="step-section">
         <h3><span className="step-icon">🌱</span> 현재 저축</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           국민연금 · 개인연금 · 저축성보험(연금보험 등)처럼 노후를 위해 정기적으로 적립하는 금액을 포함해 입력해 주세요.
@@ -119,7 +119,7 @@ export default function Step3Savings({ subStepIndex }) {
         </TotalInputModeField> : <p className="field-helper">현재 납입하는 저축액은 0원으로 반영됩니다. 기존 보유자산은 유지됩니다.</p>}
       </section></Activity>
 
-      <Activity mode={showSubStep(1) ? 'visible' : 'hidden'}><section className="step-section">
+      <Activity mode={showSubStep(1) ? 'visible' : 'hidden'}><section id="wizard-region-savings-retirement" tabIndex={-1} className="step-section">
         <h3><span className="step-icon">🏦</span> 노후준비 저축 · 확인</h3>
         {hasSavings ? (isRetirementSavingsV2 ? (
           <>

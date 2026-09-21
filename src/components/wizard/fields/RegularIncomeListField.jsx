@@ -1,6 +1,7 @@
 import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import FormattedNumberInput from './FormattedNumberInput';
+import { WizardValidatedTextInput } from '../WizardValidationContext';
 
 /**
  * 기타 정기수입(임대수입 등)을 본인·배우자 구분 없이 하나의 목록에서 입력받는 필드.
@@ -31,8 +32,8 @@ export default function RegularIncomeListField({ path, otherIncomesPath }) {
           <div className="field-grid three-col">
             <label className="field">
               <span className="field-label">수입 항목 이름</span>
-              <input
-                id={`income.regularIncomes.${index}.name`}
+              <WizardValidatedTextInput
+                path={`income.regularIncomes.${index}.name`}
                 type="text"
                 placeholder="예: 임대수입, 배당수입 등"
                 value={item.name}

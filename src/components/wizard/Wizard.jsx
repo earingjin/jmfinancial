@@ -9,8 +9,11 @@ import Step7Scenarios from './steps/Step7Scenarios';
 import { useFormData } from '../../state/formState';
 import { computeWizardRequiredFields } from '../../state/wizardRequiredFields';
 import { getRetirementLumpSumAgeErrors } from '../../state/retirementLumpSumValidation';
-import { getWizardScreens, resolveWizardScreenIndex, getRequiredScreenIndex } from '../../state/wizardScreens';
+import { getWizardScreens, resolveWizardScreenIndex, getRequiredScreenIndex, getWizardIssueLocationForPath } from '../../state/wizardScreens';
+import { mergeWizardValidationIssues } from '../../state/wizardValidationIssues';
 import DiagnosisAreaIcon from '../DiagnosisAreaIcon';
+import WizardErrorSummary from './WizardErrorSummary';
+import { WizardValidationProvider } from './WizardValidationContext';
 
 const SHOW_SCENARIO_STEP = false;
 
@@ -74,7 +77,7 @@ const formatSavedAt = (value) => value
   ? new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
   : null;
 
-export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, initialScreenId = null, initialFocusPath = null, onStepChange, onScreenChange }) {
+export default function Wizard({ onSubmit, startAtLastStep = false, initialStep = 0, initialScreenId = null, serverValidationIssues = [], onStepChange, onScreenChange }) {
   const [stepIndex, setStepIndexState] = useState(startAtLastStep ? STEPS.length - 1 : Math.min(initialStep, STEPS.length - 1));
   const [screenId, setScreenId] = useState(initialScreenId);
   const [visitedSteps, setVisitedSteps] = useState(() => new Set([stepIndex]));
@@ -86,6 +89,9 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
   const [isScrolled, setIsScrolled] = useState(false);
   const progressRef = useRef(null);
   const restingViewportHeightRef = useRef(0);
+  const suppressNextFocusScrollRef = useRef(false);
+  const highlightTimerRef = useRef(null);
+  const [pendingIssueFocus, setPendingIssueFocus] = useState(null);
   const { formData, draftState, saveCurrentDraft, setDraftPosition, runNavigationGuards } = useFormData();
   const { key: currentStepKey } = STEPS[stepIndex];
   const hasSpouse = !!formData.basic.hasSpouse;
@@ -145,6 +151,10 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     const scrollFocusedFieldIntoView = (event) => {
       const field = event.target;
       if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement)) return;
+      if (suppressNextFocusScrollRef.current) {
+        suppressNextFocusScrollRef.current = false;
+        return;
+      }
       window.setTimeout(() => field.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }), 150);
     };
     document.addEventListener('focusin', scrollFocusedFieldIntoView);
@@ -177,20 +187,21 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
 
   const moveToSubStep = (nextSubStep) => {
     setIsSubStepMenuOpen(false);
-    if (nextSubStep === subStepIndex) return;
-    if (!runNavigationGuards()) return;
+    if (nextSubStep === subStepIndex) return true;
+    if (!runNavigationGuards()) return false;
     prepareForScreenChange();
     const nextScreenId = subSteps[nextSubStep].id;
     setSubStepIndex(nextSubStep);
     setDraftPosition(stepIndex, nextScreenId);
     onScreenChange?.(nextScreenId);
     void saveCurrentDraft(stepIndex, nextScreenId).catch(() => {});
+    return true;
   };
 
   const moveToStep = (next, nextSubStep = 0) => {
     const resolved = typeof next === 'function' ? next(stepIndex) : next;
     setIsSubStepMenuOpen(false);
-    if ((resolved !== stepIndex || nextSubStep !== subStepIndex) && !runNavigationGuards()) return;
+    if ((resolved !== stepIndex || nextSubStep !== subStepIndex) && !runNavigationGuards()) return false;
     if (resolved !== stepIndex || nextSubStep !== subStepIndex) prepareForScreenChange();
     const nextScreenId = getWizardScreens(STEPS[resolved].key, hasSpouse)[nextSubStep].id;
     setDraftPosition(resolved, nextScreenId);
@@ -200,34 +211,74 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     onStepChange?.(resolved);
     onScreenChange?.(nextScreenId);
     void saveCurrentDraft(resolved, nextScreenId).catch(() => {});
+    return true;
   };
 
   // path·label을 함께 들고 있어야 안내 문구에 항목명을 나열하고, 그 중 첫 번째 항목으로 화면을
   // 스크롤·포커스할 수 있다(NumberField가 path를 그대로 input id로 쓴다). 판정 조건 자체는
   // wizardRequiredFields.js 참고(api/_lib/validate.js와 동일 기준).
-  const { missingIncomeFields, missingExpenseFields, basicInfoMissing, retirementLivingCostMissing, firstMissingGroup, requiredErrorMessage } =
+  const { missingIncomeFields, missingExpenseFields, basicInfoMissing, retirementLivingCostMissing, firstMissingGroup, requiredIssues } =
     computeWizardRequiredFields(formData);
   const crossValidationErrors = getRetirementLumpSumAgeErrors(formData);
   const visibleCrossValidationError = crossValidationErrors.find(({ path }) => path === blockedCrossValidationPath);
-
-  // 안내 문구가 가리키는 첫 번째 미입력 항목으로 화면을 이동한다. moveToStep이 다른 스텝으로
-  // 넘어가는 경우 그 스텝의 DOM이 그려질 시간이 필요하므로(150ms는 위 79번째 줄의 포커스 스크롤과
-  // 동일한 지연), 스텝 이동이 없을 때도 같은 지연을 그대로 써서 로직을 하나로 유지한다.
-  const scrollToField = (path) => {
-    if (!path) return;
-    window.setTimeout(() => {
-      const el = document.getElementById(path);
-      if (!el) return;
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.focus({ preventScroll: true });
-    }, 150);
-  };
+  const showIssueSummary = showRequiredError || Boolean(blockedCrossValidationPath) || serverValidationIssues.length > 0;
+  const clientRequiredIssues = showIssueSummary ? requiredIssues.map((issue) => {
+    const location = getWizardIssueLocationForPath(issue.path, hasSpouse);
+    return { ...issue, ...location };
+  }) : [];
+  const clientCrossIssues = blockedCrossValidationPath ? crossValidationErrors.map((error, order) => {
+    const location = getWizardIssueLocationForPath(error.path, hasSpouse);
+    return {
+      key: `cross:${error.path}`, source: 'client', status: 'active', path: error.path,
+      label: '목돈지출 예상 나이', message: error.message, messages: [error.message], order,
+      ...location,
+    };
+  }) : [];
+  const validationIssues = showIssueSummary
+    ? mergeWizardValidationIssues([...clientRequiredIssues, ...clientCrossIssues], serverValidationIssues, formData)
+    : [];
 
   useEffect(() => {
-    if (initialFocusPath) scrollToField(initialFocusPath);
-    // 복구 진입 시 최초 한 번만 서버가 지정한 입력 위치로 이동한다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (serverValidationIssues.length > 0) window.scrollTo(0, 0);
+  }, [serverValidationIssues.length]);
+
+  useEffect(() => {
+    if (!pendingIssueFocus) return undefined;
+    if (pendingIssueFocus.stepIndex !== stepIndex || pendingIssueFocus.screenId !== resolvedScreenId) return undefined;
+    const timer = window.setTimeout(() => {
+      const target = pendingIssueFocus.targetId
+        ? document.getElementById(pendingIssueFocus.targetId)
+        : document.querySelector('.wizard-body');
+      if (!target) {
+        setPendingIssueFocus(null);
+        return;
+      }
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      target.classList.add('wizard-error-target-highlight');
+      if (target instanceof HTMLElement) {
+        suppressNextFocusScrollRef.current = true;
+        target.focus({ preventScroll: true });
+      }
+      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);
+      highlightTimerRef.current = window.setTimeout(
+        () => target.classList.remove('wizard-error-target-highlight'), 1800,
+      );
+      setPendingIssueFocus(null);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [pendingIssueFocus, resolvedScreenId, stepIndex]);
+
+  const selectValidationIssue = (issue) => {
+    if (issue.stepIndex == null || !issue.screenId) return;
+    const targetSubStep = getWizardScreens(STEPS[issue.stepIndex].key, hasSpouse)
+      .findIndex(({ id }) => id === issue.screenId);
+    if (targetSubStep < 0) return;
+    const moved = issue.stepIndex === stepIndex
+      ? moveToSubStep(targetSubStep)
+      : moveToStep(issue.stepIndex, targetSubStep);
+    if (!moved) return;
+    setPendingIssueFocus(issue);
+  };
 
   const blockForCrossValidation = (error, moveAcrossSteps = false) => {
     if (!error) return false;
@@ -238,8 +289,9 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
         STEPS.findIndex((step) => step.key === 'expense'),
         getRequiredFieldSubStep('expense', error.path),
       );
+    } else {
+      window.scrollTo(0, 0);
     }
-    scrollToField(error.path);
     return true;
   };
 
@@ -260,13 +312,13 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
     if (currentStepKey === 'income' && basicInfoMissing) {
       setShowRequiredError(true);
       moveToSubStep(getRequiredFieldSubStep('income', missingIncomeFields[0][0], hasSpouse));
-      scrollToField(missingIncomeFields[0][0]);
+      window.scrollTo(0, 0);
       return;
     }
     if (currentStepKey === 'expense' && retirementLivingCostMissing) {
       setShowRequiredError(true);
       moveToSubStep(getRequiredFieldSubStep('expense', missingExpenseFields[0][0]));
-      scrollToField(missingExpenseFields[0][0]);
+      window.scrollTo(0, 0);
       return;
     }
     setShowRequiredError(false);
@@ -292,7 +344,6 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
         STEPS.findIndex((s) => s.key === firstMissingGroup.stepKey),
         getRequiredFieldSubStep(firstMissingGroup.stepKey, firstMissingPath, hasSpouse),
       );
-      scrollToField(firstMissingPath);
       return;
     }
     if (blockForCrossValidation(crossValidationErrors[0], true)) return;
@@ -384,6 +435,11 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
         )}
       </div>
 
+      {validationIssues.length > 0 && (
+        <WizardErrorSummary issues={validationIssues} currentStepKey={currentStepKey} onSelect={selectValidationIssue} />
+      )}
+
+      <WizardValidationProvider issues={validationIssues}>
       <div className="wizard-body">
         {/* Activity는 화면의 내부 상태를 보존하고 비활성 영역의 effect는 중지한다. */}
         {STEPS.map(({ key, Component }, index) => visitedSteps.has(index) && (
@@ -396,10 +452,7 @@ export default function Wizard({ onSubmit, startAtLastStep = false, initialStep 
           </Activity>
         ))}
       </div>
-
-      {(showRequiredError || visibleCrossValidationError) && (
-        <p className="wizard-required-error">{visibleCrossValidationError?.message || requiredErrorMessage}</p>
-      )}
+      </WizardValidationProvider>
 
       <div className="wizard-nav">
         <button

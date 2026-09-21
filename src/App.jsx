@@ -17,6 +17,7 @@ import { resetFormSessionWithServerCleanup, shouldResetFormSession } from './sta
 import { completePlannerSubmission, createSubmissionId, hasSavedPlannerResults } from './services/plannerSubmission';
 import { requestCalculation } from './services/calculationApi';
 import { formatValidationDetailsForUser, getTrustedValidationTarget, toUserFacingCalculationError } from './state/userFacingErrors';
+import { normalizeServerValidationIssues } from './state/wizardValidationIssues';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -46,6 +47,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [errorKind, setErrorKind] = useState('system');
   const [errorTarget, setErrorTarget] = useState(null);
+  const [serverValidationIssues, setServerValidationIssues] = useState([]);
   const [wizardResume, setWizardResume] = useState(false);
   // 위저드에서 홈으로 나갔다가 "자산진단 시작하기"로 되돌아와도 마지막으로 입력하던 단계를
   // 그대로 이어가도록, Wizard가 언마운트/재마운트되어도 여기서 마지막 단계를 계속 들고 있는다.
@@ -162,15 +164,20 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
         const message = isValidationError
           ? formatValidationDetailsForUser(details, formData).join('\n')
           : toUserFacingCalculationError(body.error);
+        const validationIssues = isValidationError
+          ? normalizeServerValidationIssues(details, formData)
+          : [];
         const userFacingError = new Error(message);
         userFacingError.userFacing = true;
         userFacingError.kind = isValidationError ? 'validation' : 'system';
         userFacingError.target = isValidationError
-          ? details.map((detail) => getTrustedValidationTarget(detail, formData)).find(Boolean) || null
+          ? validationIssues.find((issue) => issue.stepIndex != null) || details.map((detail) => getTrustedValidationTarget(detail, formData)).find(Boolean) || null
           : null;
+        userFacingError.validationIssues = validationIssues;
         throw userFacingError;
       }
       const body = await res.json();
+      setServerValidationIssues([]);
       const data = deobfuscate(body.payload);
       pendingSubmissionRef.current = { formData, data, resultSaved: false, submissionId: createSubmissionId() };
       await finishSubmission();
@@ -178,6 +185,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
       setErrorMessage(err?.userFacing ? err.message : toUserFacingCalculationError(err?.message));
       setErrorKind(err?.kind || (err?.message === '로그인이 만료되었습니다. 다시 로그인해 주세요.' ? 'auth' : 'system'));
       setErrorTarget(err?.target || null);
+      setServerValidationIssues(err?.kind === 'validation' ? err?.validationIssues || [] : []);
       setPhase('error');
     }
   };
@@ -423,7 +431,7 @@ function AppContent({ initialDraft = null, startWithWizard = false }) {
                 startAtLastStep={wizardResume}
                 initialStep={wizardStep}
                 initialScreenId={wizardScreenId}
-                initialFocusPath={errorKind === 'validation' ? errorTarget?.path : null}
+                serverValidationIssues={errorKind === 'validation' ? serverValidationIssues : []}
                 onStepChange={setWizardStep}
                 onScreenChange={setWizardScreenId}
               />
