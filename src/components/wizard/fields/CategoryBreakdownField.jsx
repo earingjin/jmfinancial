@@ -4,6 +4,26 @@ import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
 import TotalAmountBox from './TotalAmountBox';
+import { createLinkedAssetId } from './linkedAssetId';
+
+// oxlint-disable-next-line react/only-export-components
+export function getSavingsAssetConnectionLabel(formData, asset) {
+  const savingsItems = getIn(formData, 'assets.savingsPlan.customItems') || [];
+  if (asset?.id && savingsItems.some((item) => item.linkedAssetId === asset.id)) {
+    return '추가 저축과 연결됨';
+  }
+  if (!asset?.id && asset?.name) {
+    const assets = getIn(formData, 'assets.liquidAssets.customItems') || [];
+    const uniqueAssetName = assets.filter((item) => item.name === asset.name).length === 1;
+    const legacySavings = savingsItems.some((item) => (
+      !item.linkedAssetId
+      && !['unlinked', 'later'].includes(item.assetConnection)
+      && item.name === asset.name
+    ));
+    if (uniqueAssetName && legacySavings) return '추가 저축과 이름 기반 연결';
+  }
+  return null;
+}
 
 // oxlint-disable-next-line react/only-export-components
 export function includePopulatedCategoryKeys(openKeys, populatedKeySignature) {
@@ -35,6 +55,7 @@ export default function CategoryBreakdownField({
   customNamePlaceholder = '예: 기타',
   customAmountLabel = '금액',
   addItemLabel = '항목 추가',
+  trackSavingsConnections = false,
 }) {
   const { formData, setField } = useFormData();
   const breakdown = getIn(formData, basePath) || {};
@@ -96,7 +117,9 @@ export default function CategoryBreakdownField({
   };
 
   const addCustomItem = () => {
-    const next = [...customItems, { name: '', amount: '' }];
+    const next = [...customItems, {
+      ...(trackSavingsConnections ? { id: createLinkedAssetId() } : {}), name: '', amount: '',
+    }];
     setField(customPath, next);
     recomputeTotal(breakdown, next);
   };
@@ -158,8 +181,11 @@ export default function CategoryBreakdownField({
         <div className="repeatable-list-head">
           <span className="field-label">{customListLabel}</span>
         </div>
-        {customItems.map((item, index) => (
-          <div className="repeatable-item" key={index}>
+        {customItems.map((item, index) => {
+          const connectionLabel = trackSavingsConnections
+            ? getSavingsAssetConnectionLabel(formData, item)
+            : null;
+          return <div className="repeatable-item" key={item.id || index}>
             <div className="field-grid three-col">
               <label className="field">
                 <span className="field-label">{customNameLabel}</span>
@@ -184,11 +210,12 @@ export default function CategoryBreakdownField({
                 </div>
               </label>
             </div>
+            {connectionLabel && <span className="field-helper">{connectionLabel}</span>}
             <button type="button" className="repeatable-remove" onClick={() => removeCustomItem(index)}>
               이 항목 삭제
             </button>
           </div>
-        ))}
+        })}
         <button type="button" className="repeatable-add" onClick={addCustomItem}>
           + {addItemLabel}
         </button>

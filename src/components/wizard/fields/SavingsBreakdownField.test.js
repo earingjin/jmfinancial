@@ -8,11 +8,15 @@ import { mergeDraft } from '../../../state/draftStorage';
 import { setIn } from '../../../state/pathUtils';
 import { changeTotalInputMode } from './inputModeTransitions';
 import {
+  applyCustomSavingsConnectionChange,
+  createPendingCustomSavingsAsset,
   clearPresetSavingsItem,
   commitCustomSavingsNameData,
+  customSavingsAssetLink,
   CustomSavingsNameField,
   AMBIGUOUS_SAVINGS_ASSET_ERROR,
   DUPLICATE_SAVINGS_NAME_ERROR,
+  getCustomSavingsAssetCandidates,
   getCustomSavingsNameError,
   hasEnteredSavingsDetails,
   initialCustomSavingsNameState,
@@ -20,7 +24,16 @@ import {
   getLinkedSavingsAssetState,
   REQUIRED_SAVINGS_NAME_ERROR,
   removeSavingsWithAssetChoice,
+  resolveAssetLink,
+  SAME_NAME_ASSET_DIALOG_DESCRIPTION,
+  SAME_NAME_ASSET_DIALOG_TITLE,
+  SAVINGS_ASSET_CONNECTION_LINKED,
+  SAVINGS_ASSET_CONNECTION_LATER,
+  SAVINGS_ASSET_CONNECTION_SEPARATE,
+  SAVINGS_ASSET_CONNECTION_UNLINKED,
+  SavingsAssetConnectionChoices,
   SavingsItemFields,
+  shouldPromptForSavingsAssetConnection,
   selectedKeysFrom,
   updateDirectLinkedAsset,
   updateLinkedLiquidAsset,
@@ -719,14 +732,465 @@ describe('저축 삭제 전 자산 처리 선택', () => {
     assertAsset(next);
   });
 
-  it('자산 유지 후 같은 이름 저축은 현 스키마에서 기존 자산과 구분되지 않음을 명시적으로 고정한다', () => {
+  it('자산 유지 후 같은 이름 저축에서 연결하지 않기를 선택하면 기존 자산을 연결 대상으로 보지 않는다', () => {
     const formData = structuredClone(initialFormData);
     formData.assets.savingsPlan.customItems = [{ name: '여행 적금', monthly: 10 }];
     formData.assets.liquidAssets.customItems = [{ name: '여행 적금', amount: 60 }];
     const retained = removeCustom(formData, false);
-    retained.assets.savingsPlan.customItems = [{ name: '여행 적금', monthly: '' }];
+    retained.assets.savingsPlan.customItems = [{ name: '', monthly: '' }];
 
-    expect(getLinkedSavingsAssetState(retained, { type: 'liquidCustomItem', name: '여행 적금' }).count).toBe(1);
+    const disconnected = commitCustomSavingsNameData({
+      formData: retained,
+      customPath: 'assets.savingsPlan.customItems',
+      index: 0,
+      value: '여행 적금',
+      assetConnection: SAVINGS_ASSET_CONNECTION_UNLINKED,
+      renameLinkedAsset: false,
+    });
+
+    expect(disconnected.assets.liquidAssets.customItems).toEqual([{ name: '여행 적금', amount: 60 }]);
+    expect(getLinkedSavingsAssetState(disconnected, {
+      type: 'liquidCustomItem', name: '여행 적금', connection: SAVINGS_ASSET_CONNECTION_UNLINKED,
+    }).count).toBe(0);
+    expect(resolveAssetLink(disconnected, {
+      type: 'liquidCustomItem', name: '여행 적금', connection: SAVINGS_ASSET_CONNECTION_UNLINKED,
+    })).toMatchObject({ value: '', editable: false, disconnected: true });
+  });
+});
+
+describe('동일 이름 기존 자산 연결 선택', () => {
+  const customPath = 'assets.savingsPlan.customItems';
+
+  const withCandidate = (count = 1) => {
+    const formData = structuredClone(initialFormData);
+    formData.assets.savingsPlan.customItems = [{ name: '', monthly: 10, remainingMonths: '', interestRate: '' }];
+    formData.assets.liquidAssets.inputMode = 'detailed';
+    formData.assets.liquidAssets.customItems = Array.from({ length: count }, (_, index) => ({
+      name: '여행 적금', amount: 60 + index * 10,
+    }));
+    formData.assets.liquidAssets.total = formData.assets.liquidAssets.customItems
+      .reduce((sum, item) => sum + item.amount, 0);
+    return formData;
+  };
+
+  it('관리 방식을 설명과 선택 상태가 있는 네이티브 라디오 카드로 표시한다', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(SavingsAssetConnectionChoices, {
+        value: SAVINGS_ASSET_CONNECTION_LINKED, onChange: vi.fn(),
+      }),
+    );
+    expect(html).toContain('<fieldset class="app-dialog-choice-group">');
+    expect(html.match(/type="radio"/g)).toHaveLength(3);
+    expect(html).toContain('기존 자산과 연결');
+    expect(html).toContain('새 자산을 생성해 별도로 관리');
+    expect(html).toContain('나중에 결정');
+    expect(html).toContain('app-dialog-choice-card is-selected');
+    expect(html).toContain('checked=""');
+  });
+
+  it('동일 이름 자산이 있는 신규 항목에만 선택창을 열고 확정 문구를 사용한다', () => {
+    expect(shouldPromptForSavingsAssetConnection({ name: '' }, 1)).toBe(true);
+    expect(shouldPromptForSavingsAssetConnection({ name: '' }, 2)).toBe(true);
+    expect(shouldPromptForSavingsAssetConnection({ name: '' }, 0)).toBe(false);
+    expect(shouldPromptForSavingsAssetConnection({ name: '여행 적금' }, 1)).toBe(false);
+    expect(SAME_NAME_ASSET_DIALOG_TITLE).toBe('같은 이름의 자산이 있습니다');
+    expect(SAME_NAME_ASSET_DIALOG_DESCRIPTION).toContain('기존 자산과 연결하면');
+  });
+
+  it('동일 이름 자산이 없으면 이름만 확정하고 누적액 전에는 자산을 생성하지 않는다', () => {
+    const formData = withCandidate(0);
+    const named = commitCustomSavingsNameData({
+      formData, customPath, index: 0, value: '여행 적금',
+      assetConnection: SAVINGS_ASSET_CONNECTION_SEPARATE, renameLinkedAsset: false,
+    });
+    expect(named.assets.savingsPlan.customItems[0]).toMatchObject({
+      name: '여행 적금', assetConnection: SAVINGS_ASSET_CONNECTION_SEPARATE,
+    });
+    expect(named.assets.savingsPlan.customItems[0]).not.toHaveProperty('linkedAssetId');
+    expect(named.assets.liquidAssets.customItems).toEqual([]);
+    expect(resolveAssetLink(named, customSavingsAssetLink(named.assets.savingsPlan.customItems[0])))
+      .toMatchObject({ value: '', editable: true, pendingAsset: true });
+    const blank = createPendingCustomSavingsAsset({
+      formData: named, customPath, index: 0, raw: '', newAssetId: 'asset-new',
+    });
+    expect(blank).toMatchObject({ ok: true, created: false, formData: named });
+  });
+
+  it('명시적 0원을 첫 확정하면 자산을 한 번만 생성하고 ID로 연결한다', () => {
+    const formData = withCandidate(0);
+    formData.assets.savingsPlan.customItems[0] = {
+      name: '여행 적금', monthly: 10, assetConnection: SAVINGS_ASSET_CONNECTION_SEPARATE,
+    };
+    const created = createPendingCustomSavingsAsset({
+      formData, customPath, index: 0, raw: '0', newAssetId: 'asset-new',
+    });
+    expect(created).toMatchObject({ ok: true, created: true });
+    expect(created.formData.assets.liquidAssets.customItems).toEqual([
+      { id: 'asset-new', name: '여행 적금', amount: 0 },
+    ]);
+    expect(created.formData.assets.savingsPlan.customItems[0].linkedAssetId).toBe('asset-new');
+  });
+
+  it('누적액을 수정·삭제했다가 다시 입력해도 같은 ID 자산 하나만 갱신한다', () => {
+    const formData = withCandidate(0);
+    formData.assets.savingsPlan.customItems[0] = {
+      name: '여행 적금', monthly: 10, assetConnection: SAVINGS_ASSET_CONNECTION_SEPARATE,
+    };
+    const created = createPendingCustomSavingsAsset({
+      formData, customPath, index: 0, raw: '1', newAssetId: 'asset-new',
+    }).formData;
+    const link = customSavingsAssetLink(created.assets.savingsPlan.customItems[0]);
+    const harness = stateHarness(created);
+    updateLinkedLiquidAsset(harness.get(), harness.setField, link, '10');
+    updateLinkedLiquidAsset(harness.get(), harness.setField, link, '');
+    updateLinkedLiquidAsset(harness.get(), harness.setField, link, '100');
+    expect(harness.get().assets.liquidAssets.customItems).toEqual([
+      { id: 'asset-new', name: '여행 적금', amount: 100 },
+    ]);
+    const restored = mergeDraft(initialFormData, JSON.parse(JSON.stringify(harness.get())));
+    expect(restored.assets.liquidAssets.customItems).toHaveLength(1);
+    expect(restored.assets.savingsPlan.customItems[0].linkedAssetId).toBe('asset-new');
+    expect(resolveAssetLink(restored, customSavingsAssetLink(restored.assets.savingsPlan.customItems[0])))
+      .toMatchObject({ value: 100, editable: true });
+  });
+
+  it('정확히 하나인 동일 이름 자산을 후보로 찾되 선택 전에는 어떤 데이터도 바꾸지 않는다', () => {
+    const formData = withCandidate();
+    const before = structuredClone(formData);
+    expect(getCustomSavingsAssetCandidates(formData, '여행 적금')).toEqual([{ name: '여행 적금', amount: 60 }]);
+    expect(formData).toEqual(before);
+  });
+
+  it('기존 자산과 연결을 선택하면 누적액을 표시하고 기존 갱신 경로로 같은 자산만 수정한다', () => {
+    const formData = withCandidate();
+    const connected = commitCustomSavingsNameData({
+      formData, customPath, index: 0, value: '여행 적금',
+      assetConnection: SAVINGS_ASSET_CONNECTION_LINKED, renameLinkedAsset: false,
+    });
+    const link = {
+      type: 'liquidCustomItem', name: '여행 적금', connection: SAVINGS_ASSET_CONNECTION_LINKED,
+    };
+    expect(resolveAssetLink(connected, link)).toMatchObject({ value: 60, editable: true, matchCount: 1 });
+
+    const harness = stateHarness(connected);
+    updateLinkedLiquidAsset(harness.get(), harness.setField, link, '70');
+    expect(harness.get().assets.liquidAssets.customItems).toEqual([{ name: '여행 적금', amount: 70 }]);
+  });
+
+  it('연결하지 않기는 기존 자산을 보존하고 자동저장·복원 후에도 연결 해제 상태를 유지한다', () => {
+    const formData = withCandidate();
+    const disconnected = commitCustomSavingsNameData({
+      formData, customPath, index: 0, value: '여행 적금',
+      assetConnection: SAVINGS_ASSET_CONNECTION_UNLINKED, renameLinkedAsset: false,
+    });
+    const restored = mergeDraft(initialFormData, JSON.parse(JSON.stringify(disconnected)));
+    const item = restored.assets.savingsPlan.customItems[0];
+    expect(item).toMatchObject({ name: '여행 적금', assetConnection: SAVINGS_ASSET_CONNECTION_UNLINKED });
+    expect(restored.assets.liquidAssets.customItems).toEqual([{ name: '여행 적금', amount: 60 }]);
+    expect(resolveAssetLink(restored, {
+      type: 'liquidCustomItem', name: item.name, connection: item.assetConnection,
+    })).toMatchObject({ value: '', editable: false, disconnected: true });
+  });
+
+  it('연결 선택창 취소에 해당하는 미확정 상태는 원본 데이터를 변경하지 않는다', () => {
+    const formData = withCandidate();
+    const before = structuredClone(formData);
+    getCustomSavingsAssetCandidates(formData, '여행 적금');
+    expect(formData).toEqual(before);
+  });
+
+  it('동일 이름 자산이 둘 이상이면 임의 연결하지 않고 연결하지 않기만 안전하게 저장할 수 있다', () => {
+    const formData = withCandidate(2);
+    expect(getCustomSavingsAssetCandidates(formData, '여행 적금')).toHaveLength(2);
+    const disconnected = commitCustomSavingsNameData({
+      formData, customPath, index: 0, value: '여행 적금',
+      assetConnection: SAVINGS_ASSET_CONNECTION_UNLINKED, renameLinkedAsset: false,
+    });
+    expect(disconnected.assets.liquidAssets.customItems).toEqual(formData.assets.liquidAssets.customItems);
+    expect(disconnected.assets.savingsPlan.customItems[0].assetConnection)
+      .toBe(SAVINGS_ASSET_CONNECTION_UNLINKED);
+  });
+
+  it('연결 메타데이터가 없는 기존 초안은 기존의 유일 이름 연결과 계산 결과를 유지한다', () => {
+    const formData = withCandidate();
+    formData.assets.savingsPlan.customItems[0] = {
+      name: '여행 적금', monthly: 10, remainingMonths: '', interestRate: '',
+    };
+    formData.assets.savingsPlan.monthly = 10;
+    formData.assets.savingsPlan.annual = 120;
+    const restored = mergeDraft(initialFormData, JSON.parse(JSON.stringify(formData)));
+    expect(restored.assets.savingsPlan.customItems[0]).not.toHaveProperty('assetConnection');
+    expect(resolveAssetLink(restored, { type: 'liquidCustomItem', name: '여행 적금' }))
+      .toMatchObject({ value: 60, editable: true, matchCount: 1 });
+    expect(buildAggregates(buildCanonicalInput(restored)).totalSavingsAnnual).toBe(120);
+    expect(buildCanonicalInput(restored).assets.liquidAssets.total).toBe(60);
+  });
+
+  it('연결하지 않은 저축을 삭제해도 같은 이름의 기존 자산은 삭제되지 않는다', () => {
+    const formData = withCandidate();
+    formData.assets.savingsPlan.customItems[0] = {
+      name: '여행 적금', monthly: 10, assetConnection: SAVINGS_ASSET_CONNECTION_UNLINKED,
+    };
+    const next = removeSavingsWithAssetChoice({
+      formData, kind: 'custom', index: 0,
+      assetLink: {
+        type: 'liquidCustomItem', name: '여행 적금', connection: SAVINGS_ASSET_CONNECTION_UNLINKED,
+      },
+      deleteAsset: false,
+      basePath: 'assets.savingsPlan.breakdown', customPath,
+      totalPath: 'assets.savingsPlan.monthly', annualPath: 'assets.savingsPlan.annual',
+      selectedPath: 'assets.savingsPlan.selectedCategories',
+      categoryKeys: SAVINGS_CATEGORIES.map(({ key }) => key),
+    });
+    expect(next.assets.savingsPlan.customItems).toEqual([]);
+    expect(next.assets.liquidAssets.customItems).toEqual([{ name: '여행 적금', amount: 60 }]);
+  });
+});
+
+describe('ID 기반 추가 저축 자산 연결과 연결 방식 변경', () => {
+  const customPath = 'assets.savingsPlan.customItems';
+  const linkedData = () => {
+    const formData = structuredClone(initialFormData);
+    formData.assets.savingsPlan.customItems = [{
+      name: '여행 적금', monthly: 10, remainingMonths: 12, interestRate: 2,
+      assetConnection: SAVINGS_ASSET_CONNECTION_LINKED, linkedAssetId: 'asset-a',
+    }];
+    formData.assets.savingsPlan.inputMode = 'detailed';
+    formData.assets.savingsPlan.monthly = 10;
+    formData.assets.savingsPlan.annual = 120;
+    Object.assign(formData.assets.liquidAssets, {
+      inputMode: 'detailed', total: 160,
+      customItems: [
+        { id: 'asset-a', name: '여행 자금', amount: 60 },
+        { id: 'asset-b', name: '여행 자금', amount: 100 },
+      ],
+    });
+    return formData;
+  };
+  const change = (formData, options) => applyCustomSavingsConnectionChange({
+    formData, customPath, index: 0, name: '여행 적금', ...options,
+  });
+
+  it('동일 이름 자산이 여러 개여도 선택한 ID의 금액만 표시하고 수정한다', () => {
+    const formData = linkedData();
+    const link = customSavingsAssetLink(formData.assets.savingsPlan.customItems[0]);
+    expect(resolveAssetLink(formData, link)).toMatchObject({ value: 60, editable: true });
+    const harness = stateHarness(formData);
+    updateLinkedLiquidAsset(harness.get(), harness.setField, link, '70');
+    expect(harness.get().assets.liquidAssets.customItems).toEqual([
+      { id: 'asset-a', name: '여행 자금', amount: 70 },
+      { id: 'asset-b', name: '여행 자금', amount: 100 },
+    ]);
+  });
+
+  it('ID 없는 기존 자산을 명시적으로 선택할 때만 ID를 부여하고 연결한다', () => {
+    const formData = linkedData();
+    formData.assets.savingsPlan.customItems[0] = {
+      name: '여행 적금', monthly: 10, assetConnection: SAVINGS_ASSET_CONNECTION_LATER,
+    };
+    delete formData.assets.liquidAssets.customItems[1].id;
+    const result = change(formData, {
+      mode: SAVINGS_ASSET_CONNECTION_LINKED, targetAssetIndex: 1, newAssetId: 'assigned-id',
+    });
+    expect(result.ok).toBe(true);
+    expect(result.formData.assets.liquidAssets.customItems[1]).toMatchObject({ id: 'assigned-id', amount: 100 });
+    expect(result.formData.assets.savingsPlan.customItems[0]).toMatchObject({
+      assetConnection: SAVINGS_ASSET_CONNECTION_LINKED, linkedAssetId: 'assigned-id',
+    });
+  });
+
+  it('새 자산은 사용자가 입력한 금액만 추가하고 기존 금액을 복사하지 않는다', () => {
+    const formData = linkedData();
+    formData.assets.savingsPlan.customItems[0] = {
+      name: '여행 적금', monthly: 10, assetConnection: SAVINGS_ASSET_CONNECTION_LATER,
+    };
+    const result = change(formData, {
+      mode: SAVINGS_ASSET_CONNECTION_SEPARATE, newAssetId: 'asset-new', newAssetAmount: '25',
+    });
+    expect(result.ok).toBe(true);
+    expect(result.formData.assets.liquidAssets.customItems).toContainEqual({
+      id: 'asset-new', name: '여행 적금', amount: 25,
+    });
+    expect(result.formData.assets.liquidAssets.total).toBe(185);
+    expect(result.formData.assets.savingsPlan.customItems[0].linkedAssetId).toBe('asset-new');
+  });
+
+  it('나중에 결정은 기존 이름 자산을 자동 연결하지 않고 월 저축액을 유지한다', () => {
+    const formData = linkedData();
+    formData.assets.savingsPlan.customItems[0] = { name: '여행 자금', monthly: 10 };
+    const result = change(formData, { mode: SAVINGS_ASSET_CONNECTION_LATER });
+    const item = result.formData.assets.savingsPlan.customItems[0];
+    expect(item).toMatchObject({ monthly: 10, assetConnection: SAVINGS_ASSET_CONNECTION_LATER });
+    expect(item).not.toHaveProperty('linkedAssetId');
+    expect(resolveAssetLink(result.formData, customSavingsAssetLink(item)))
+      .toMatchObject({ value: '', editable: false, disconnected: true });
+  });
+
+  it('A에서 B로 변경하며 A를 유지하면 두 자산과 합계가 불변이다', () => {
+    const formData = linkedData();
+    const result = change(formData, {
+      mode: SAVINGS_ASSET_CONNECTION_LINKED, targetAssetIndex: 1, newAssetId: 'asset-b',
+      deletePreviousAsset: false,
+    });
+    expect(result.formData.assets.liquidAssets.customItems).toEqual(formData.assets.liquidAssets.customItems);
+    expect(result.formData.assets.liquidAssets.total).toBe(160);
+    expect(result.formData.assets.savingsPlan.customItems[0].linkedAssetId).toBe('asset-b');
+  });
+
+  it('A에서 B로 변경하며 A 삭제를 선택하면 A만 삭제하고 합계를 다시 계산한다', () => {
+    const result = change(linkedData(), {
+      mode: SAVINGS_ASSET_CONNECTION_LINKED, targetAssetIndex: 1, newAssetId: 'asset-b',
+      deletePreviousAsset: true,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.formData.assets.liquidAssets.customItems).toEqual([
+      { id: 'asset-b', name: '여행 자금', amount: 100 },
+    ]);
+    expect(result.formData.assets.liquidAssets.total).toBe(100);
+  });
+
+  it('동일 이름 자산이 여러 개여도 저축 삭제 시 연결 ID의 자산만 삭제한다', () => {
+    const formData = linkedData();
+    const next = removeSavingsWithAssetChoice({
+      formData, kind: 'custom', index: 0,
+      assetLink: customSavingsAssetLink(formData.assets.savingsPlan.customItems[0]),
+      deleteAsset: true,
+      basePath: 'assets.savingsPlan.breakdown', customPath,
+      totalPath: 'assets.savingsPlan.monthly', annualPath: 'assets.savingsPlan.annual',
+      selectedPath: 'assets.savingsPlan.selectedCategories',
+      categoryKeys: SAVINGS_CATEGORIES.map(({ key }) => key),
+    });
+    expect(next.assets.liquidAssets.customItems).toEqual([
+      { id: 'asset-b', name: '여행 자금', amount: 100 },
+    ]);
+  });
+
+  it.each([
+    [false, 185, ['asset-a', 'asset-b', 'asset-new']],
+    [true, 125, ['asset-b', 'asset-new']],
+  ])('A에서 새 자산으로 변경할 때 이전 자산 삭제=%s 정책을 원자적으로 적용한다', (deletePreviousAsset, total, ids) => {
+    const result = change(linkedData(), {
+      mode: SAVINGS_ASSET_CONNECTION_SEPARATE, newAssetId: 'asset-new', newAssetAmount: 25,
+      deletePreviousAsset,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.formData.assets.liquidAssets.customItems.map((asset) => asset.id)).toEqual(ids);
+    expect(result.formData.assets.liquidAssets.total).toBe(total);
+  });
+
+  it('다른 저축이 이전 자산을 참조하면 삭제와 연결 변경 전체를 중단한다', () => {
+    const formData = linkedData();
+    formData.assets.savingsPlan.customItems.push({
+      name: '공동 여행비', monthly: 5,
+      assetConnection: SAVINGS_ASSET_CONNECTION_LINKED, linkedAssetId: 'asset-a',
+    });
+    const result = change(formData, {
+      mode: SAVINGS_ASSET_CONNECTION_LINKED, targetAssetIndex: 1, newAssetId: 'asset-b',
+      deletePreviousAsset: true,
+    });
+    expect(result).toMatchObject({ ok: false, reason: 'shared_previous_asset', formData });
+  });
+
+  it('다른 저축이 참조하는 ID 자산은 기존 저축 삭제 선택창 경로에서도 삭제하지 않는다', () => {
+    const formData = linkedData();
+    formData.assets.savingsPlan.customItems.push({
+      name: '공동 여행비', monthly: 5,
+      assetConnection: SAVINGS_ASSET_CONNECTION_LINKED, linkedAssetId: 'asset-a',
+    });
+    const next = removeSavingsWithAssetChoice({
+      formData, kind: 'custom', index: 0,
+      assetLink: customSavingsAssetLink(formData.assets.savingsPlan.customItems[0]),
+      deleteAsset: true,
+      basePath: 'assets.savingsPlan.breakdown', customPath,
+      totalPath: 'assets.savingsPlan.monthly', annualPath: 'assets.savingsPlan.annual',
+      selectedPath: 'assets.savingsPlan.selectedCategories',
+      categoryKeys: SAVINGS_CATEGORIES.map(({ key }) => key),
+    });
+    expect(next).toBe(formData);
+  });
+
+  it('유효하지 않은 새 자산 금액은 자산 행이나 연결을 만들지 않는다', () => {
+    const formData = linkedData();
+    const result = change(formData, {
+      mode: SAVINGS_ASSET_CONNECTION_SEPARATE, newAssetId: 'asset-new', newAssetAmount: '',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.formData).toBe(formData);
+  });
+
+  it('ID 연결 후 저축 이름만 바꾸고 자산 이름·금액·연결 ID는 유지한다', () => {
+    const formData = linkedData();
+    const next = commitCustomSavingsNameData({
+      formData, customPath, index: 0, value: '유럽 여행 적금',
+      assetConnection: SAVINGS_ASSET_CONNECTION_LINKED,
+      linkedAssetId: 'asset-a', renameLinkedAsset: false,
+    });
+    expect(next.assets.savingsPlan.customItems[0]).toMatchObject({
+      name: '유럽 여행 적금', linkedAssetId: 'asset-a',
+    });
+    expect(next.assets.liquidAssets.customItems).toEqual(formData.assets.liquidAssets.customItems);
+  });
+
+  it('자산 이름이 바뀌어도 ID 연결은 유지된다', () => {
+    const formData = linkedData();
+    formData.assets.liquidAssets.customItems[0].name = '유럽 여행 자금';
+    expect(resolveAssetLink(formData, customSavingsAssetLink(formData.assets.savingsPlan.customItems[0])))
+      .toMatchObject({ value: 60, editable: true, asset: { name: '유럽 여행 자금' } });
+  });
+
+  it('연결 자산 삭제 후 끊김을 표시하고 같은 이름 자산에 자동 재연결하지 않는다', () => {
+    const formData = linkedData();
+    formData.assets.liquidAssets.customItems = [{ id: 'asset-c', name: '여행 적금', amount: 999 }];
+    const resolved = resolveAssetLink(formData, customSavingsAssetLink(formData.assets.savingsPlan.customItems[0]));
+    expect(resolved).toMatchObject({ value: '', editable: false, broken: true, matchCount: 0 });
+  });
+
+  it('연결 끊김 후 사용자가 새 자산을 선택하면 해당 ID로 정상 재연결한다', () => {
+    const formData = linkedData();
+    formData.assets.liquidAssets.customItems = [{ id: 'asset-c', name: '새 여행 자금', amount: 90 }];
+    const result = change(formData, {
+      mode: SAVINGS_ASSET_CONNECTION_LINKED, targetAssetIndex: 0, newAssetId: 'asset-c',
+    });
+    expect(result.ok).toBe(true);
+    expect(result.formData.assets.savingsPlan.customItems[0].linkedAssetId).toBe('asset-c');
+    expect(resolveAssetLink(result.formData, customSavingsAssetLink(result.formData.assets.savingsPlan.customItems[0])))
+      .toMatchObject({ value: 90, editable: true });
+  });
+
+  it('linked ID와 기존 unlinked 값을 초안 저장·복원 후 각각 유지한다', () => {
+    const formData = linkedData();
+    formData.assets.savingsPlan.customItems.push({
+      name: '보류 저축', monthly: 5, assetConnection: SAVINGS_ASSET_CONNECTION_UNLINKED,
+    });
+    const restored = mergeDraft(initialFormData, JSON.parse(JSON.stringify(formData)));
+    expect(restored.assets.savingsPlan.customItems[0]).toMatchObject({
+      assetConnection: SAVINGS_ASSET_CONNECTION_LINKED, linkedAssetId: 'asset-a',
+    });
+    expect(resolveAssetLink(restored, customSavingsAssetLink(restored.assets.savingsPlan.customItems[1])))
+      .toMatchObject({ disconnected: true, editable: false });
+  });
+
+  it('ID 기반 새 자산도 canonical 현금성 자산 합계에는 정확히 한 번만 포함된다', () => {
+    const result = change(linkedData(), {
+      mode: SAVINGS_ASSET_CONNECTION_SEPARATE, newAssetId: 'asset-new', newAssetAmount: 25,
+      deletePreviousAsset: false,
+    });
+    const canonical = buildCanonicalInput(result.formData);
+    expect(canonical.assets.liquidAssets.total).toBe(185);
+    expect(buildAggregates(canonical).totalSavingsAnnual).toBe(120);
+  });
+
+  it('간편 총액 모드에서도 새 자산 금액만 기존 총액에 더하고 보관 총액을 함께 갱신한다', () => {
+    const formData = linkedData();
+    Object.assign(formData.assets.liquidAssets, {
+      inputMode: 'simple', total: 1000, simpleTotal: 1000, simpleInputStored: true,
+    });
+    formData.assets.savingsPlan.customItems[0].assetConnection = SAVINGS_ASSET_CONNECTION_LATER;
+    delete formData.assets.savingsPlan.customItems[0].linkedAssetId;
+    const result = change(formData, {
+      mode: SAVINGS_ASSET_CONNECTION_SEPARATE, newAssetId: 'asset-new', newAssetAmount: 25,
+    });
+    expect(result.formData.assets.liquidAssets).toMatchObject({ total: 1025, simpleTotal: 1025 });
   });
 });
 

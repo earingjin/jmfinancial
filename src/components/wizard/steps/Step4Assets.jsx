@@ -335,6 +335,7 @@ export default function Step4Assets({ subStepIndex }) {
           customNamePlaceholder="예: 외화예금"
           customAmountLabel="금액"
           addItemLabel="현금성 자산 항목 추가"
+          trackSavingsConnections
         /></TotalInputModeField> : <p className="field-helper">현금성 자산 없음으로 선택했습니다.</p>}
       </section></Activity>
 
