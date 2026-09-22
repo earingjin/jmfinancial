@@ -53,7 +53,7 @@ export default function TotalInputModeField({
     {mode === 'simple' ? <>
       <label className="field" style={{ marginBottom: 14 }}>
         <span className="field-label">{inputLabel || totalLabel}</span>
-        <div className="field-input-row"><FormattedNumberInput min={0} value={total ?? ''} onChange={(e) => updateSimple(e.target.value)} /><span className="field-unit">만원</span></div>
+        <div className="field-input-row"><FormattedNumberInput id={totalPath} min={0} value={total ?? ''} onChange={(e) => updateSimple(e.target.value)} /><span className="field-unit">만원</span></div>
       </label>
       {beforeTotal}
       <TotalAmountBox label={totalLabel} amount={amount(total)} valueLabel="총액은" />

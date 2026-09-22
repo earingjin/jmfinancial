@@ -37,6 +37,10 @@ function getWizardFieldLabels(formData) {
   return new Map(Object.values(definitions).flat().map(([path, label]) => [path, label]));
 }
 
+export function getWizardFieldLabel(path, formData) {
+  return getWizardFieldLabels(formData).get(path) || null;
+}
+
 function extractInternalPath(message) {
   const text = typeof message === 'string' ? message.trim() : '';
   if (!text.match(INTERNAL_PATH_START)) return null;
