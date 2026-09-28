@@ -16,7 +16,7 @@ export default function WizardErrorSummary({ issues, currentStepKey, onSelect })
     <section className="wizard-error-summary" role="alert" aria-labelledby="wizard-error-summary-title">
       <div className="wizard-error-summary-head">
         <div>
-          <h3 id="wizard-error-summary-title">입력 오류가 있어 수정할 단계로 돌아왔습니다.</h3>
+          <h3 id="wizard-error-summary-title">입력이 안된 부분이 있어 수정할 단계로 돌아왔습니다.</h3>
           <p>
             {activeCount > 0 && `수정 필요 ${activeCount}개`}
             {activeCount > 0 && pendingCount > 0 && ' · '}
