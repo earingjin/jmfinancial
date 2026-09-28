@@ -306,6 +306,17 @@ export function computeWizardRequiredFields(formData) {
   const firstMissingGroup = groups.find(({ missingFields }) => missingFields.length > 0) || null;
   const requiredErrorMessage = firstMissingGroup
     ? `"${firstMissingGroup.title}"에서 다음 항목을 입력해 주세요: ${firstMissingGroup.missingFields.map(([, label]) => label).join(', ')}` : '';
+  const requiredIssues = groups.flatMap(({ stepKey, missingFields }) => missingFields.map(([path, label], order) => ({
+    key: `required:${path}`,
+    source: 'client',
+    status: 'active',
+    path,
+    label,
+    message: `${label} 입력값을 확인해 주세요.`,
+    messages: [`${label} 입력값을 확인해 주세요.`],
+    stepKey,
+    order,
+  })));
 
   return {
     missingIncomeFields: byStep.income,
@@ -318,5 +329,6 @@ export function computeWizardRequiredFields(formData) {
     currentFinanceMissing: groups.some(({ missingFields }) => missingFields.length > 0),
     firstMissingGroup,
     requiredErrorMessage,
+    requiredIssues,
   };
 }

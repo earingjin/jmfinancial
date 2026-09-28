@@ -3,6 +3,7 @@ import { useFormData } from '../../../state/formState';
 import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from './FormattedNumberInput';
+import { WizardValidatedTextInput } from '../WizardValidationContext';
 import TotalAmountBox from './TotalAmountBox';
 import { createLinkedAssetId } from './linkedAssetId';
 
@@ -161,6 +162,7 @@ export default function CategoryBreakdownField({
               <span className="field-label">{c.label}</span>
               <div className="field-input-row">
                 <FormattedNumberInput
+                  id={`${basePath}.${c.key}`}
                   type="number"
                   min={0}
                   inputMode="numeric"
@@ -189,7 +191,8 @@ export default function CategoryBreakdownField({
             <div className="field-grid three-col">
               <label className="field">
                 <span className="field-label">{customNameLabel}</span>
-                <input
+                <WizardValidatedTextInput
+                  path={`${customPath}.${index}.name`}
                   type="text"
                   placeholder={customNamePlaceholder}
                   value={item.name}
@@ -200,6 +203,7 @@ export default function CategoryBreakdownField({
                 <span className="field-label">{customAmountLabel}</span>
                 <div className="field-input-row">
                   <FormattedNumberInput
+                    id={`${customPath}.${index}.amount`}
                     type="number"
                     min={0}
                     inputMode="numeric"

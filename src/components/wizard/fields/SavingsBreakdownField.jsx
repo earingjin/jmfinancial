@@ -11,6 +11,11 @@ import {
   savingsDiagnosticsEnabled,
 } from './savingsDiagnostics';
 import { createLinkedAssetId } from './linkedAssetId';
+import {
+  useWizardFieldIssue,
+  validationMessageId,
+  WizardFieldValidationMessage,
+} from '../WizardValidationContext';
 
 // Step4Assets.jsx의 LIQUID_ASSET_CATEGORIES(assets.liquidAssets.breakdown)와 반드시 동일한 키
 // 목록을 유지한다 - 여기 없는 항목이 있으면 저축 쪽에서 다른 항목을 수정할 때마다 그 항목 금액이
@@ -134,6 +139,14 @@ export function commitCustomSavingsNameData({
 export function CustomSavingsNameField({
   index, value, error, onChange, onBlur, onCompositionStart, onCompositionEnd, savingsDiagnostic,
 }) {
+  const path = `assets.savingsPlan.customItems.${index}.name`;
+  const validationIssue = useWizardFieldIssue(path);
+  const localErrorId = `savings-custom-name-error-${index}`;
+  const describedBy = error
+    ? localErrorId
+    : validationIssue
+      ? validationMessageId(path)
+      : undefined;
   return <label className="field" style={{ marginBottom: 10 }}>
     <span className="field-label">저축 이름</span>
     <input
@@ -142,9 +155,10 @@ export function CustomSavingsNameField({
       autoComplete="off"
       placeholder="예: 저축보험"
       value={value}
-      id={`assets.savingsPlan.customItems.${index}.name`}
-      aria-invalid={error ? true : undefined}
-      aria-describedby={error ? `savings-custom-name-error-${index}` : undefined}
+      id={path}
+      aria-invalid={error || validationIssue?.status === 'active' ? true : undefined}
+      aria-describedby={describedBy}
+      data-validation-pending={validationIssue?.status === 'pending' ? 'true' : undefined}
       onChange={(event) => {
         if (savingsDiagnostic) logSavingsDiagnostic('name_native_change', savingsDiagnostic);
         onChange(event.target.value);
@@ -163,11 +177,12 @@ export function CustomSavingsNameField({
       }}
     />
     {error && <span
-      id={`savings-custom-name-error-${index}`}
+      id={localErrorId}
       className="field-helper"
       style={{ color: 'var(--red)' }}
       role="alert"
     >{error}</span>}
+    {!error && <WizardFieldValidationMessage path={path} />}
   </label>;
 }
 
@@ -633,13 +648,16 @@ export function resolveAssetLink(formData, assetLink) {
 }
 
 // oxlint-disable-next-line react/only-export-components
-export function SavingsItemFields({ item, onChange, accumulated, disabled = false, savingsDiagnostic }) {
+export function SavingsItemFields({
+  item, onChange, accumulated, disabled = false, savingsDiagnostic, fieldPaths = {},
+}) {
   return (
     <div className="field-grid three-col">
       <label className="field">
         <span className="field-label">월 저축액</span>
         <div className="field-input-row">
           <FormattedNumberInput
+            id={fieldPaths.monthly}
             type="number"
             min={0}
             inputMode="numeric"
@@ -655,6 +673,7 @@ export function SavingsItemFields({ item, onChange, accumulated, disabled = fals
         <span className="field-label">앞으로 저축할 개월수</span>
         <div className="field-input-row">
           <FormattedNumberInput
+            id={fieldPaths.remainingMonths}
             type="number"
             min={0}
             inputMode="numeric"
@@ -669,6 +688,7 @@ export function SavingsItemFields({ item, onChange, accumulated, disabled = fals
         <span className="field-label">수익률(이자율, 배당율)</span>
         <div className="field-input-row">
           <FormattedNumberInput
+            id={fieldPaths.interestRate}
             type="number"
             inputMode="numeric"
             value={item.interestRate ?? ''}
@@ -682,6 +702,7 @@ export function SavingsItemFields({ item, onChange, accumulated, disabled = fals
         <span className="field-label">현재까지 누적된 금액</span>
         <div className="field-input-row">
           <FormattedNumberInput
+            id={fieldPaths.accumulated}
             type="number"
             min={0}
             inputMode="numeric"
@@ -1310,7 +1331,17 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
         return (
           <Fragment key={c.key}>
             <p className="field-label" style={{ marginTop: 14, marginBottom: 8 }}>{c.label}</p>
-            <SavingsItemFields item={item} onChange={(field, value) => update(c.key, field, value)} accumulated={accumulated} />
+            <SavingsItemFields
+              item={item}
+              onChange={(field, value) => update(c.key, field, value)}
+              accumulated={accumulated}
+              fieldPaths={{
+                monthly: `${basePath}.${c.key}.monthly`,
+                remainingMonths: `${basePath}.${c.key}.remainingMonths`,
+                interestRate: `${basePath}.${c.key}.interestRate`,
+                accumulated: `${basePath}.${c.key}.accumulated`,
+              }}
+            />
             <button type="button" className="repeatable-remove" onClick={() => removePresetItem(c.key, c.label, c.assetLink)}>
               이 항목 삭제
             </button>
@@ -1398,6 +1429,12 @@ export default function SavingsBreakdownField({ basePath, customPath, totalPath,
                 accumulated={accumulated}
                 disabled={Boolean(nameError) || namePending}
                 savingsDiagnostic={{ itemId: diagnosticIdAt(index), index }}
+                fieldPaths={{
+                  monthly: `${customPath}.${index}.monthly`,
+                  remainingMonths: `${customPath}.${index}.remainingMonths`,
+                  interestRate: `${customPath}.${index}.interestRate`,
+                  accumulated: `${customPath}.${index}.accumulated`,
+                }}
               />
               {hasName && <button
                 type="button"

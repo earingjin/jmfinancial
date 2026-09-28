@@ -493,7 +493,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
       <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
         <h3><span className="step-icon">📝</span> 기본 정보</h3>
         <Activity mode={showPart('basic-self') ? 'visible' : 'hidden'}>
-        <div className="field-grid">
+        <div id="wizard-region-income-basic-self" tabIndex={-1} className="field-grid">
           <NumberField path="basic.birthYear" label="본인 출생년도 *" placeholder="예: 1968" required integerOnly useGrouping={false} />
           <NumberField path="basic.retirementAge" label="은퇴(예정) 연령 *" unit="세" max={120} required />
           <NumberField
@@ -546,7 +546,7 @@ export default function Step1Income({ subStepIndex, screenId }) {
           </div>
         </div>
         {hasSpouse && (
-          <div className="field-grid" style={{ marginTop: 14 }}>
+          <div id="wizard-region-income-basic-spouse" tabIndex={-1} className="field-grid" style={{ marginTop: 14 }}>
             <NumberField
               path="spouse.birthYear"
               label="배우자 출생년도 *"

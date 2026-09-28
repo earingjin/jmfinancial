@@ -7,6 +7,7 @@ vi.mock('react', async () => {
   const actual = await vi.importActual('react');
   return {
     ...actual,
+    useContext: () => [],
     useState: (initial) => {
       const index = hookRuntime.cursor++;
       if (!(index in hookRuntime.values)) hookRuntime.values[index] = typeof initial === 'function' ? initial() : initial;

@@ -1,6 +1,7 @@
 import { forwardRef, useState } from 'react';
 import { formatNumericText, getNumericInputUpdate } from './numericInputText';
 import { logSavingsDiagnostic } from './savingsDiagnostics';
+import { useWizardFieldIssue, validationMessageId, WizardFieldValidationMessage } from '../WizardValidationContext';
 
 /**
  * A text-backed numeric input that displays thousands separators while keeping
@@ -17,6 +18,9 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
   // 포커스가 있는 동안에는 입력 문자열을 별도로 유지해 "2." 다음에 "5"를 이어서 입력할 수 있게 한다.
   const [editingValue, setEditingValue] = useState(null);
   const [inputError, setInputError] = useState(null);
+  const validationIssue = useWizardFieldIssue(props.id);
+  const validationDescriptionId = validationIssue ? validationMessageId(props.id) : null;
+  const describedBy = [props['aria-describedby'], validationDescriptionId].filter(Boolean).join(' ') || undefined;
 
   const handleChange = (event) => {
     if (savingsDiagnostic) logSavingsDiagnostic('numeric_native_change', {
@@ -81,11 +85,14 @@ const FormattedNumberInput = forwardRef(function FormattedNumberInput(
           setEditingValue(null);
           onBlur?.(event);
         }}
-        aria-invalid={inputError ? true : props['aria-invalid']}
+        aria-invalid={inputError || validationIssue?.status === 'active' ? true : props['aria-invalid']}
+        aria-describedby={describedBy}
+        data-validation-pending={validationIssue?.status === 'pending' ? true : undefined}
         data-min={min}
         data-max={max}
       />
       {errorMessage && <span className="field-helper field-helper--error">{errorMessage}</span>}
+      {!errorMessage && <WizardFieldValidationMessage path={props.id} />}
     </>
   );
 });

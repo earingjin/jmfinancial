@@ -30,7 +30,7 @@ export default function Step5Debt() {
     <div className="step">
       <h2 className="step-title">5. 부채</h2>
 
-      <section className="step-section">
+      <section id="wizard-region-debt" tabIndex={-1} className="step-section">
         <h3><span className="step-icon">💳</span> 부채 상태</h3>
         <PresenceField label="부채 여부" present={hasDebt} onChange={setHasDebt} presentLabel="부채 있음" absentLabel="부채 없음" />
         {hasDebt ? <DebtBreakdownField

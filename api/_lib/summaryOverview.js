@@ -266,7 +266,7 @@ function formatFeedbackWon(value) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. 은퇴 준비 현황 (섹션 6)
+// 3. 은퇴 준비 자산 현황 (섹션 6)
 // ---------------------------------------------------------------------------
 
 export function buildRetirementReadiness({ input, simulation, indicators, aggregates }) {

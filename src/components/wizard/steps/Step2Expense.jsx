@@ -9,6 +9,7 @@ import { getIn } from '../../../state/pathUtils';
 import { formatWon } from '../../../utils/format';
 import FormattedNumberInput from '../fields/FormattedNumberInput';
 import { getRetirementLumpSumAgeErrors } from '../../../state/retirementLumpSumValidation';
+import { WizardValidatedTextInput } from '../WizardValidationContext';
 
 // 국민연금연구원 조사 2024년 기준 적정 노후생활비(단위: 만원, 외부 공식 자료 - 계산에는 쓰이지 않는 참고용 표).
 // 원 자료는 천원 단위이며, 이 앱의 금액 단위(만원)에 맞춰 표시만 변환했다(예: 3,328천원 → 332.8만원).
@@ -125,7 +126,7 @@ export default function Step2Expense({ subStepIndex, showCrossValidationErrors =
     <div className="step">
       <h2 className="step-title">2. 지출</h2>
 
-      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section className="step-section">
+      <Activity mode={showSubStep(0) ? 'visible' : 'hidden'}><section id="wizard-region-expense-current-living" tabIndex={-1} className="step-section">
         <h3><span className="step-icon">🧾</span> 현재 생활비 상세</h3>
         <p className="field-helper" style={{ marginBottom: 10 }}>
           대출 원리금상환액(차량대출 포함)은 여기가 아닌 "5. 부채" 단계에서 입력해 주세요. 두 곳에 중복으로 입력하면 총지출이 실제보다 크게 계산됩니다.
@@ -204,8 +205,8 @@ export default function Step2Expense({ subStepIndex, showCrossValidationErrors =
             <div className="field-grid three-col">
               <label className="field">
                 <span className="field-label">지출 용도{nameRequired ? ' *' : ''}</span>
-                <input
-                  id={`expense.retirementLumpSumExpenses.${i}.name`}
+                <WizardValidatedTextInput
+                  path={`expense.retirementLumpSumExpenses.${i}.name`}
                   type="text"
                   placeholder="예: 자녀 결혼지원 또는 학자금"
                   value={item.name}
@@ -262,7 +263,7 @@ export default function Step2Expense({ subStepIndex, showCrossValidationErrors =
           label="기타 보험료(국민건강보험료 등)"
           addLabel="기타 추가"
           emptyItem={{ name: '', monthly: '' }}
-          renderItem={(item, _i, update) => {
+          renderItem={(item, i, update) => {
             // 서버 검증(validate.js)과 동일한 기준: 이름·월 보험료 중 하나라도 입력된 항목은 이름이 필수다.
             const isBlank = (v) => v === '' || v === null || v === undefined;
             const nameRequired = !isBlank(item.name) || !isBlank(item.monthly);
@@ -270,12 +271,24 @@ export default function Step2Expense({ subStepIndex, showCrossValidationErrors =
             <div className="field-grid three-col">
               <label className="field">
                 <span className="field-label">항목 이름{nameRequired ? ' *' : ''}</span>
-                <input type="text" placeholder="예: 국민건강보험료" value={item.name} onChange={(e) => update('name', e.target.value)} required={nameRequired} />
+                <WizardValidatedTextInput
+                  path={`expense.healthInsurance.items.${i}.name`}
+                  type="text"
+                  placeholder="예: 국민건강보험료"
+                  value={item.name}
+                  onChange={(e) => update('name', e.target.value)}
+                  required={nameRequired}
+                />
               </label>
               <label className="field">
                 <span className="field-label">월 보험료</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput min={0} value={item.monthly} onChange={(e) => update('monthly', Number(e.target.value))} />
+                  <FormattedNumberInput
+                    id={`expense.healthInsurance.items.${i}.monthly`}
+                    min={0}
+                    value={item.monthly}
+                    onChange={(e) => update('monthly', Number(e.target.value))}
+                  />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
@@ -292,7 +305,7 @@ export default function Step2Expense({ subStepIndex, showCrossValidationErrors =
           label="경조사비 등 추가로 예상되는 지출"
           addLabel="지출 항목 추가"
           emptyItem={{ name: '', annual: '', years: '' }}
-          renderItem={(item, _i, update) => {
+          renderItem={(item, i, update) => {
             // 서버 검증(validate.js)과 동일한 기준: 이름·연간 금액·기간 중 하나라도 입력된 항목은 이름이 필수다.
             const isBlank = (v) => v === '' || v === null || v === undefined;
             const nameRequired = !isBlank(item.name) || !isBlank(item.annual) || !isBlank(item.years);
@@ -300,19 +313,35 @@ export default function Step2Expense({ subStepIndex, showCrossValidationErrors =
             <div className="field-grid three-col">
               <label className="field">
                 <span className="field-label">지출 항목 이름{nameRequired ? ' *' : ''}</span>
-                <input type="text" placeholder="예: 경조사비" value={item.name} onChange={(e) => update('name', e.target.value)} required={nameRequired} />
+                <WizardValidatedTextInput
+                  path={`expense.otherExpenses.${i}.name`}
+                  type="text"
+                  placeholder="예: 경조사비"
+                  value={item.name}
+                  onChange={(e) => update('name', e.target.value)}
+                  required={nameRequired}
+                />
               </label>
               <label className="field">
                 <span className="field-label">연간 지출 금액</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput min={0} value={item.annual} onChange={(e) => update('annual', Number(e.target.value))} />
+                  <FormattedNumberInput
+                    id={`expense.otherExpenses.${i}.annual`}
+                    min={0}
+                    value={item.annual}
+                    onChange={(e) => update('annual', Number(e.target.value))}
+                  />
                   <span className="field-unit">만원</span>
                 </div>
               </label>
               <label className="field">
                 <span className="field-label">지출 기간</span>
                 <div className="field-input-row">
-                  <FormattedNumberInput value={item.years} onChange={(e) => update('years', Number(e.target.value))} />
+                  <FormattedNumberInput
+                    id={`expense.otherExpenses.${i}.years`}
+                    value={item.years}
+                    onChange={(e) => update('years', Number(e.target.value))}
+                  />
                   <span className="field-unit">년</span>
                 </div>
               </label>
