@@ -10,6 +10,10 @@ async function readAppSource() {
   return readFile(new URL('./App.jsx', import.meta.url), 'utf8');
 }
 
+async function readWizardSource() {
+  return readFile(new URL('./components/wizard/Wizard.jsx', import.meta.url), 'utf8');
+}
+
 function extractFunctionBody(source, functionSignature) {
   const start = source.indexOf(functionSignature);
   if (start === -1) throw new Error(`function not found in App.jsx: ${functionSignature}`);
@@ -148,7 +152,16 @@ describe('App.jsx handleSubmit/finishSubmission - 실패 시 사용자에게 명
     expect(source).toContain('res.status === 400 && details.length > 0');
     expect(source).toContain("authError.kind = 'auth'");
     expect(source).toContain("errorKind === 'validation' ? '입력값 수정하기' : '처음부터 다시 입력하기'");
-    expect(source).toContain('initialFocusPath={errorKind === \'validation\' ? errorTarget?.path : null}');
+    const wizardSource = await readWizardSource();
+    expect(source).toContain('normalizeServerValidationIssues(details, formData)');
+    expect(source).toContain("setServerValidationIssues(err?.kind === 'validation' ? err?.validationIssues || [] : [])");
+    expect(source).toContain("serverValidationIssues={errorKind === 'validation' ? serverValidationIssues : []}");
+    expect(wizardSource).toContain('mergeWizardValidationIssues([...clientRequiredIssues, ...clientCrossIssues], serverValidationIssues, formData)');
+    expect(wizardSource).toContain('<WizardValidationProvider issues={validationIssues}>');
+    expect(wizardSource).toContain('setPendingIssueFocus(issue)');
+    expect(wizardSource).toContain("target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })");
+    expect(wizardSource).toContain("target.classList.add('wizard-error-target-highlight')");
+    expect(wizardSource).toContain('target.focus({ preventScroll: true })');
   });
 
   it('finishSubmission: 최종 결과 저장 실패 시 입력값을 보존한 채 save-error 화면으로 전환한다', async () => {
