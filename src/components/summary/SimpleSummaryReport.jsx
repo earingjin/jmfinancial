@@ -722,7 +722,7 @@ function RetirementAssetProjectionChart({ projection }) {
   );
 }
 
-export default function SimpleSummaryReport({ result, input, onBack, onEdit, onHome, onSummaryReport, onDownload, onShare }) {
+export default function SimpleSummaryReport({ result, input, onBack, onEdit, onHome, onSummaryReport, onDownload }) {
   const { generatedAt, peerComparison, webSummary, aggregates, indicators } = result;
   const { overviewDetail: od, donuts, retirementReadiness } = webSummary;
   const rr = retirementReadiness;
@@ -1464,7 +1464,6 @@ export default function SimpleSummaryReport({ result, input, onBack, onEdit, onH
           {onEdit && (
             <button type="button" className="btn-secondary" onClick={onEdit}>수정하기</button>
           )}
-          <button type="button" className="btn-secondary" onClick={onShare}>공유하기</button>
         </div>
       </section>
     </div>

@@ -61,6 +61,8 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [name, setName] = useState('');
+  const [company, setCompany] = useState('');
+  const [noCompany, setNoCompany] = useState(false);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -93,10 +95,14 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
       setError('아이디는 본인 휴대폰 번호 뒤 8자리 숫자로 입력해 주세요.');
       return;
     }
+    if (mode === 'signup' && !noCompany && !company.trim()) {
+      setError('소속 기업을 입력하거나 소속 없음에 체크해 주세요.');
+      return;
+    }
     setSubmitting(true);
     try {
       if (mode === 'signup') {
-        const { data, error: err } = await signUp(loginId, password, name);
+        const { data, error: err } = await signUp(loginId, password, name, noCompany ? '소속 없음' : company.trim());
         if (err) throw err;
         if (!data.session) {
           setNotice('회원가입이 완료되었습니다.');
@@ -163,6 +169,16 @@ export default function AuthGate({ title = '잭앤리치', allowSignup = true, i
                 <span className="field-label">이름 (닉네임)</span>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="홍길동" />
               </label>
+            )}
+            {mode === 'signup' && (
+              <div className="field">
+                <label className="field-label" htmlFor="signup-company">소속 기업</label>
+                <input id="signup-company" type="text" value={company} onChange={(e) => setCompany(e.target.value)} disabled={noCompany} required={!noCompany} maxLength={100} placeholder="소속 기업명" />
+                <label className="auth-consent-checkbox auth-company-checkbox">
+                  <input type="checkbox" checked={noCompany} onChange={(e) => setNoCompany(e.target.checked)} />
+                  <span>소속 없음</span>
+                </label>
+              </div>
             )}
             <label className="field">
               <span className="field-label">휴대폰 번호 8자리 (010 제외)</span>
