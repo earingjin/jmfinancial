@@ -1025,6 +1025,7 @@ body:has(.report-print-mode) .web-brand-bar { display: none; }
   min-width: 0; color: var(--ink); font-size: 12.5px; font-weight: 650; cursor: pointer;
 }
 .auth-consent-checkbox input { width: 17px; height: 17px; margin: 0; accent-color: #ff8612; flex: 0 0 auto; }
+.auth-form .field .auth-company-checkbox input { width: 17px; padding: 0; }
 .auth-consent-details {
   flex: 0 0 auto; padding: 6px 10px; border: 1px solid #e6c795; border-radius: 999px;
   background: rgba(255, 255, 255, .68); color: #a85d0c; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer;

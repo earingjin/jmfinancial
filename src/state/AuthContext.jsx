@@ -21,9 +21,9 @@ export function AuthProvider({ children }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const signUp = useCallback(async (loginId, password, name) => {
+  const signUp = useCallback(async (loginId, password, name, company) => {
     const email = toAuthEmail(loginId);
-    return supabase.auth.signUp({ email, password, options: { data: { name, login_id: loginId } } });
+    return supabase.auth.signUp({ email, password, options: { data: { name, login_id: loginId, company } } });
   }, []);
 
   const signIn = useCallback(async (identifier, password) => {
